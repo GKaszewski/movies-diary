@@ -1,0 +1,33 @@
+[workspace]
+members = [
+    "crates/adapters/auth",
+    "crates/adapters/metadata",
+    "crates/adapters/rss",
+    "crates/adapters/sqlite",
+    "crates/application",
+    "crates/common",
+    "crates/domain",
+    "crates/presentation",
+]
+resolver = "2"
+
+[workspace.dependencies]
+tokio = { version = "1.0", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+anyhow = "1.0"
+thiserror = "2.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+async-trait = "0.1"
+uuid = { version = "1.23.0", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+domain = { path = "crates/domain" }
+common = { path = "crates/common" }
+application = { path = "crates/application" }
+presentation = { path = "crates/presentation" }
+auth = { path = "crates/adapters/auth" }
+metadata = { path = "crates/adapters/metadata" }
+rss = { path = "crates/adapters/rss" }
+sqlite = { path = "crates/adapters/sqlite" }

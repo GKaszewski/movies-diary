@@ -1,0 +1,8 @@
+/target
+.DS_Store
+**/.DS_Store
+.idea
+.vscode
+
+.env
+.env.prod
