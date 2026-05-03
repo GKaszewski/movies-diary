@@ -1,0 +1,92 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,\n                        r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at\n                 FROM reviews r\n                 INNER JOIN movies m ON m.id = r.movie_id\n                 WHERE r.movie_id = ?\n                 ORDER BY r.watched_at ASC\n                 LIMIT ? OFFSET ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "external_metadata_id",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "title",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "release_year",
+        "ordinal": 3,
+        "type_info": "Integer"
+      },
+      {
+        "name": "director",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "poster_path",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "review_id",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "movie_id",
+        "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "user_id",
+        "ordinal": 8,
+        "type_info": "Text"
+      },
+      {
+        "name": "rating",
+        "ordinal": 9,
+        "type_info": "Integer"
+      },
+      {
+        "name": "comment",
+        "ordinal": 10,
+        "type_info": "Text"
+      },
+      {
+        "name": "watched_at",
+        "ordinal": 11,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 12,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "01a08873b7fa815ad98a56a0902b60414cfcdc2c7a8570351320c4bc425347c6"
+}

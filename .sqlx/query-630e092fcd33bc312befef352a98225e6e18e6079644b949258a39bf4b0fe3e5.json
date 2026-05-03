@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO reviews (id, movie_id, user_id, rating, comment, watched_at, created_at)\n             VALUES (?, ?, ?, ?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 7
+    },
+    "nullable": []
+  },
+  "hash": "630e092fcd33bc312befef352a98225e6e18e6079644b949258a39bf4b0fe3e5"
+}
