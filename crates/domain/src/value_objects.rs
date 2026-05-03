@@ -206,3 +206,23 @@ impl PasswordHash {
         &self.0
     }
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PosterUrl(String);
+
+impl PosterUrl {
+    pub fn new(url: String) -> Result<Self, DomainError> {
+        let trimmed = url.trim();
+        if trimmed.is_empty() {
+            Err(DomainError::ValidationError(
+                "Poster URL cannot be empty".into(),
+            ))
+        } else {
+            Ok(Self(trimmed.to_string()))
+        }
+    }
+
+    pub fn value(&self) -> &str {
+        &self.0
+    }
+}

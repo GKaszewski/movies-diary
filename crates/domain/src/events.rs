@@ -1,6 +1,6 @@
 use chrono::NaiveDateTime;
 
-use crate::value_objects::{MovieId, Rating, ReviewId, UserId};
+use crate::value_objects::{ExternalMetadataId, MovieId, Rating, ReviewId, UserId};
 
 #[derive(Clone, Debug)]
 pub enum DomainEvent {
@@ -10,5 +10,9 @@ pub enum DomainEvent {
         user_id: UserId,
         rating: Rating,
         watched_at: NaiveDateTime,
+    },
+    MovieDiscovered {
+        movie_id: MovieId,
+        external_metadata_id: ExternalMetadataId,
     },
 }

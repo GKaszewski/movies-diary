@@ -27,7 +27,7 @@ pub struct DiaryFilter {
 #[derive(Clone, Debug)]
 pub struct Movie {
     id: MovieId,
-    external_metadata_id: ExternalMetadataId,
+    external_metadata_id: Option<ExternalMetadataId>,
     title: MovieTitle,
     release_year: ReleaseYear,
     director: Option<String>,
@@ -36,7 +36,7 @@ pub struct Movie {
 
 impl Movie {
     pub fn new(
-        external_metadata_id: ExternalMetadataId,
+        external_metadata_id: Option<ExternalMetadataId>,
         title: MovieTitle,
         release_year: ReleaseYear,
         director: Option<String>,
@@ -52,11 +52,15 @@ impl Movie {
         }
     }
 
+    pub fn update_poster(&mut self, poster_path: PosterPath) {
+        self.poster_path = Some(poster_path);
+    }
+
     pub fn id(&self) -> &MovieId {
         &self.id
     }
-    pub fn external_metadata_id(&self) -> &ExternalMetadataId {
-        &self.external_metadata_id
+    pub fn external_metadata_id(&self) -> Option<&ExternalMetadataId> {
+        self.external_metadata_id.as_ref()
     }
     pub fn title(&self) -> &MovieTitle {
         &self.title
@@ -69,6 +73,24 @@ impl Movie {
     }
     pub fn poster_path(&self) -> Option<&PosterPath> {
         self.poster_path.as_ref()
+    }
+}
+
+impl Movie {
+    pub fn is_manual_match(
+        &self,
+        title: &MovieTitle,
+        year: &ReleaseYear,
+        director: Option<&str>,
+    ) -> bool {
+        if self.title != *title || self.release_year != *year {
+            return false;
+        }
+
+        match (self.director(), director) {
+            (Some(existing_dir), Some(new_dir)) => existing_dir.eq_ignore_ascii_case(new_dir),
+            _ => true,
+        }
     }
 }
 
@@ -135,14 +157,43 @@ impl Review {
 
 #[derive(Clone, Debug)]
 pub struct DiaryEntry {
-    pub movie: Movie,
-    pub review: Review,
+    movie: Movie,
+    review: Review,
+}
+
+impl DiaryEntry {
+    pub fn new(movie: Movie, review: Review) -> Self {
+        Self { movie, review }
+    }
+
+    pub fn movie(&self) -> &Movie {
+        &self.movie
+    }
+    pub fn review(&self) -> &Review {
+        &self.review
+    }
 }
 
 #[derive(Clone, Debug)]
 pub struct ReviewHistory {
-    pub movie: Movie,
-    pub viewings: Vec<Review>,
+    movie: Movie,
+    viewings: Vec<Review>,
+}
+
+impl ReviewHistory {
+    pub fn new(movie: Movie, viewings: Vec<Review>) -> Self {
+        Self { movie, viewings }
+    }
+
+    pub fn movie(&self) -> &Movie {
+        &self.movie
+    }
+    pub fn viewings(&self) -> &[Review] {
+        &self.viewings
+    }
+    pub fn viewings_mut(&mut self) -> &mut Vec<Review> {
+        &mut self.viewings
+    }
 }
 
 #[derive(Clone, Debug)]

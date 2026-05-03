@@ -4,11 +4,25 @@ use crate::{
     errors::DomainError,
     events::DomainEvent,
     models::{DiaryEntry, DiaryFilter, Movie, Review, ReviewHistory, collections::Paginated},
-    value_objects::{ExternalMetadataId, MovieId, PasswordHash, PosterPath, UserId},
+    value_objects::{
+        ExternalMetadataId, MovieId, MovieTitle, PasswordHash, PosterPath, PosterUrl, ReleaseYear,
+        UserId,
+    },
 };
 
 #[async_trait]
 pub trait MovieRepository: Send + Sync {
+    async fn get_movie_by_external_id(
+        &self,
+        external_metadata_id: &ExternalMetadataId,
+    ) -> Result<Option<Movie>, DomainError>;
+    async fn get_movie_by_id(&self, movie_id: &MovieId) -> Result<Option<Movie>, DomainError>;
+    async fn get_movies_by_title_and_year(
+        &self,
+        title: &MovieTitle,
+        year: &ReleaseYear,
+    ) -> Result<Vec<Movie>, DomainError>;
+
     async fn upsert_movie(&self, movie: &Movie) -> Result<(), DomainError>;
 
     async fn save_review(&self, review: &Review) -> Result<DomainEvent, DomainError>;
@@ -25,11 +39,15 @@ pub trait MetadataClient: Send + Sync {
         &self,
         external_metadata_id: &ExternalMetadataId,
     ) -> Result<Movie, DomainError>;
+    async fn get_poster_url(
+        &self,
+        external_metadata_id: &ExternalMetadataId,
+    ) -> Result<Option<PosterUrl>, DomainError>;
 }
 
 #[async_trait]
 pub trait PosterFetcherClient: Send + Sync {
-    async fn fetch_poster_bytes(&self, poster_url: &str) -> Result<Vec<u8>, DomainError>;
+    async fn fetch_poster_bytes(&self, poster_url: &PosterUrl) -> Result<Vec<u8>, DomainError>;
 }
 
 #[async_trait]
