@@ -52,6 +52,24 @@ impl Movie {
         }
     }
 
+    pub fn from_persistence(
+        id: MovieId,
+        external_metadata_id: Option<ExternalMetadataId>,
+        title: MovieTitle,
+        release_year: ReleaseYear,
+        director: Option<String>,
+        poster_path: Option<PosterPath>,
+    ) -> Self {
+        Self {
+            id,
+            external_metadata_id,
+            title,
+            release_year,
+            director,
+            poster_path,
+        }
+    }
+
     pub fn update_poster(&mut self, poster_path: PosterPath) {
         self.poster_path = Some(poster_path);
     }
@@ -130,6 +148,26 @@ impl Review {
             watched_at,
             created_at: now,
         })
+    }
+
+    pub fn from_persistence(
+        id: ReviewId,
+        movie_id: MovieId,
+        user_id: UserId,
+        rating: Rating,
+        comment: Option<Comment>,
+        watched_at: NaiveDateTime,
+        created_at: NaiveDateTime,
+    ) -> Self {
+        Self {
+            id,
+            movie_id,
+            user_id,
+            rating,
+            comment,
+            watched_at,
+            created_at,
+        }
     }
 
     pub fn id(&self) -> &ReviewId {

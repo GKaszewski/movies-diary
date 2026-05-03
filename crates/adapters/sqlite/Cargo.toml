@@ -10,3 +10,9 @@ sqlx = { version = "0.8.6", features = [
     "uuid",
     "macros",
 ] }
+
+domain = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+tracing = { workspace = true }
+async-trait = { workspace = true }

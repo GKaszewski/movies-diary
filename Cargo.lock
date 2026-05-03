@@ -1260,7 +1260,12 @@ dependencies = [
 name = "sqlite"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
+ "chrono",
+ "domain",
  "sqlx",
+ "tracing",
+ "uuid",
 ]
 
 [[package]]
