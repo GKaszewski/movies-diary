@@ -43,6 +43,8 @@ pub mod html {
             user_id: uuid,
             register_enabled: state.app_ctx.config.allow_registration,
             rss_url: "/feed.rss".to_string(),
+            page_title: "Movies Diary".to_string(),
+            canonical_url: state.app_ctx.config.base_url.clone(),
         }
     }
 
@@ -74,6 +76,8 @@ pub mod html {
             user_id: None,
             register_enabled: state.app_ctx.config.allow_registration,
             rss_url: "/feed.rss".to_string(),
+            page_title: "Login — Movies Diary".to_string(),
+            canonical_url: format!("{}/login", state.app_ctx.config.base_url),
         };
         let html = state
             .html_renderer
@@ -125,6 +129,8 @@ pub mod html {
             user_id: None,
             register_enabled: true,
             rss_url: "/feed.rss".to_string(),
+            page_title: "Register — Movies Diary".to_string(),
+            canonical_url: format!("{}/register", state.app_ctx.config.base_url),
         };
         let html = state
             .html_renderer
@@ -175,7 +181,9 @@ pub mod html {
         State(state): State<AppState>,
         Query(params): Query<ErrorQuery>,
     ) -> impl IntoResponse {
-        let ctx = build_page_context(&state, Some(user_id)).await;
+        let mut ctx = build_page_context(&state, Some(user_id)).await;
+        ctx.page_title = "Log a Review — Movies Diary".to_string();
+        ctx.canonical_url = format!("{}/reviews/new", state.app_ctx.config.base_url);
         let html = state
             .html_renderer
             .render_new_review_page(NewReviewPageData {
@@ -262,7 +270,9 @@ pub mod html {
         OptionalCookieUser(user_id): OptionalCookieUser,
         State(state): State<AppState>,
     ) -> impl IntoResponse {
-        let ctx = build_page_context(&state, user_id).await;
+        let mut ctx = build_page_context(&state, user_id).await;
+        ctx.page_title = "Members — Movies Diary".to_string();
+        ctx.canonical_url = format!("{}/users", state.app_ctx.config.base_url);
         match application::use_cases::get_users::execute(&state.app_ctx, application::queries::GetUsersQuery).await {
             Ok(users) => {
                 let data = application::ports::UsersPageData { ctx, users };
@@ -292,6 +302,11 @@ pub mod html {
             Ok(None) => return (StatusCode::NOT_FOUND, "User not found").into_response(),
             Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
         };
+
+        let display_name = profile_user.email().value()
+            .split('@').next().unwrap_or("User");
+        ctx.page_title = format!("{}'s Diary — Movies Diary", display_name);
+        ctx.canonical_url = format!("{}/users/{}", state.app_ctx.config.base_url, profile_user_uuid);
 
         let query = application::queries::GetUserProfileQuery {
             user_id: profile_user_uuid,

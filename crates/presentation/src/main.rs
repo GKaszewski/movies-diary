@@ -32,8 +32,11 @@ async fn main() -> anyhow::Result<()> {
 
     let app = routes::build_router(state);
 
-    let listener = TcpListener::bind("0.0.0.0:3000").await?;
-    tracing::info!("Listening on 0.0.0.0:3000");
+    let host = std::env::var("HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
+    let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
+    let addr = format!("{}:{}", host, port);
+    let listener = TcpListener::bind(&addr).await?;
+    tracing::info!("Listening on {}", addr);
     axum::serve(listener, app).await?;
 
     Ok(())

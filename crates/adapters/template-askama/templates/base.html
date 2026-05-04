@@ -3,7 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Movies Diary</title>
+  <title>{{ ctx.page_title }}</title>
+  <meta name="description" content="A personal movie diary — track what you watch, rate and review films.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Movies Diary">
+  <meta property="og:title" content="{{ ctx.page_title }}">
+  <meta property="og:url" content="{{ ctx.canonical_url }}">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="{{ ctx.page_title }}">
+  <link rel="canonical" href="{{ ctx.canonical_url }}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
