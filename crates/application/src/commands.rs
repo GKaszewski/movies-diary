@@ -14,6 +14,7 @@ pub struct LogReviewCommand {
     pub watched_at: NaiveDateTime,
 }
 
+#[derive(Clone)]
 pub struct SyncPosterCommand {
     pub movie_id: Uuid,
     pub external_metadata_id: String,
