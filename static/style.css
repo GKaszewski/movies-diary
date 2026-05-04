@@ -471,6 +471,7 @@ form button[type="submit"]:hover {
   text-align: center;
   min-height: 48px;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: oklch(85.2% 0.199 91.936 / var(--alpha, 0.05));
 }
 .heatmap-count { font-size: 0.85rem; font-weight: 700; }
 .heatmap-month { font-size: 0.65rem; opacity: 0.6; margin-top: 2px; }

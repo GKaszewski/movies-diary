@@ -37,7 +37,7 @@
     <div class="heatmap-label">Movies watched this year</div>
     <div class="heatmap">
       {% for cell in heatmap %}
-      <div class="heatmap-cell" style="background: rgba(74, 158, 255, {{ cell.alpha }})">
+      <div class="heatmap-cell" style="--alpha: {{ cell.alpha }}">
         <div class="heatmap-count">{{ cell.count }}</div>
         <div class="heatmap-month">{{ cell.month_label }}</div>
       </div>
