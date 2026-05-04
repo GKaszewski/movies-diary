@@ -375,6 +375,7 @@ pub mod rss {
             offset: Some(0),
             sort_by: Some(SortDirection::Descending),
             movie_id: None,
+            user_id: None,
         };
         let page = get_diary::execute(&state.app_ctx, query).await?;
         let xml = state

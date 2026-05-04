@@ -219,6 +219,7 @@ impl From<DiaryQueryParams> for GetDiaryQuery {
                 }
             }),
             movie_id: p.movie_id,
+            user_id: None,
         }
     }
 }

@@ -6,6 +6,7 @@ pub struct GetDiaryQuery {
     pub offset: Option<u32>,
     pub sort_by: Option<SortDirection>,
     pub movie_id: Option<Uuid>,
+    pub user_id: Option<Uuid>,
 }
 
 pub struct GetReviewHistoryQuery {
