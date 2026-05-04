@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="users-list">
+  <h2 class="page-title">Members</h2>
+  {% for user in users %}
+  <div class="user-row">
+    <div class="user-avatar">{{ user.initial() }}</div>
+    <div class="user-info">
+      <div class="user-name">{{ user.display_name() }}</div>
+      <div class="user-meta">{{ user.total_movies }} movies · avg {{ user.avg_rating_display() }}★</div>
+    </div>
+    <a href="/users/{{ user.user_id.value() }}" class="btn-secondary">View profile →</a>
+  </div>
+  {% else %}
+  <p class="empty">No users yet.</p>
+  {% endfor %}
+</div>
+{% endblock %}

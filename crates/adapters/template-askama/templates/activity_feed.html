@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="diary">
+  {% for entry in entries %}
+  <article class="entry">
+    {% if let Some(poster) = entry.movie().poster_path() %}
+    <div class="poster">
+      <img src="/posters/{{ poster.value() }}" alt="">
+    </div>
+    {% endif %}
+    <div class="entry-body">
+      <div class="entry-title">
+        {{ entry.movie().title().value() }}
+        <span class="year">({{ entry.movie().release_year().value() }})</span>
+      </div>
+      {% if let Some(dir) = entry.movie().director() %}
+      <div class="director">{{ dir }}</div>
+      {% endif %}
+      <div class="rating">
+        {% for filled in entry.review().stars() %}
+          <span class="star {% if filled %}filled{% else %}empty{% endif %}">★</span>
+        {% endfor %}
+      </div>
+      {% if let Some(comment) = entry.review().comment() %}
+      <div class="comment">{{ comment.value() }}</div>
+      {% endif %}
+      <div class="feed-meta">
+        <a href="/users/{{ entry.review().user_id().value() }}" class="feed-user">{{ entry.user_display_name() }}</a>
+        <span class="feed-time">{{ entry.review().watched_at().format("%b %-d, %Y") }}</span>
+      </div>
+      {% if ctx.is_current_user(entry.review().user_id().value()) %}
+      <form method="post" action="/reviews/{{ entry.review().id().value() }}/delete" class="delete-form">
+        <button type="submit">Delete</button>
+      </form>
+      {% endif %}
+    </div>
+  </article>
+  {% else %}
+  <p class="empty">No movies logged yet.</p>
+  {% endfor %}
+</div>
+<nav class="pagination">
+  {% if current_offset > 0 %}
+  <a href="/?offset={{ current_offset - limit }}">&larr; Prev</a>
+  {% endif %}
+  {% if has_more %}
+  <a href="/?offset={{ current_offset + limit }}">Next &rarr;</a>
+  {% endif %}
+</nav>
+{% endblock %}

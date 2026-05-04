@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="profile">
+
+  <div class="stats-header">
+    <div class="profile-name">{{ profile_display_name }}</div>
+    <div class="stats-grid">
+      <div class="stat-tile">
+        <div class="stat-value">{{ stats.total_movies }}</div>
+        <div class="stat-label">movies</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-value">{{ stats.avg_rating_display() }}★</div>
+        <div class="stat-label">avg rating</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-value">{{ stats.favorite_director_display() }}</div>
+        <div class="stat-label">fav director</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-value">{{ stats.most_active_month_display() }}</div>
+        <div class="stat-label">most active</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="view-tabs">
+    <a href="?view=recent" class="view-tab {% if view == "recent" %}active{% endif %}">Recent</a>
+    <a href="?view=ratings" class="view-tab {% if view == "ratings" %}active{% endif %}">Top Rated</a>
+    <a href="?view=history" class="view-tab {% if view == "history" %}active{% endif %}">History</a>
+    <a href="?view=trends" class="view-tab {% if view == "trends" %}active{% endif %}">Trends</a>
+  </div>
+
+  {% if view == "history" %}
+  {% if let Some(hist) = history %}
+  <div class="heatmap-section">
+    <div class="heatmap-label">Movies watched this year</div>
+    <div class="heatmap">
+      {% for cell in heatmap %}
+      <div class="heatmap-cell" style="{{ cell.bg_style|safe }}">
+        <div class="heatmap-count">{{ cell.count }}</div>
+        <div class="heatmap-month">{{ cell.month_label }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% for month in hist %}
+  <div class="history-month">
+    <h3 class="month-heading">{{ month.month_label }} <span class="month-count">{{ month.count }}</span></h3>
+    <div class="diary">
+      {% for entry in month.entries %}
+      <article class="entry">
+        {% if let Some(poster) = entry.movie().poster_path() %}
+        <div class="poster"><img src="/posters/{{ poster.value() }}" alt=""></div>
+        {% endif %}
+        <div class="entry-body">
+          <div class="entry-title">{{ entry.movie().title().value() }} <span class="year">({{ entry.movie().release_year().value() }})</span></div>
+          {% if let Some(dir) = entry.movie().director() %}<div class="director">{{ dir }}</div>{% endif %}
+          <div class="rating">
+            {% for filled in entry.review().stars() %}
+              <span class="star {% if filled %}filled{% else %}empty{% endif %}">★</span>
+            {% endfor %}
+          </div>
+          <div class="watched-at">{{ entry.review().watched_at().format("%b %-d") }}</div>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+  {% else %}
+  <p class="empty">No movies logged yet.</p>
+  {% endfor %}
+  {% endif %}
+
+  {% elif view == "trends" %}
+  {% if let Some(t) = trends %}
+  <div class="trends-section">
+    {% if !t.monthly_ratings.is_empty() %}
+    <div class="chart-block">
+      <div class="chart-label">Average rating per month</div>
+      <div class="bar-chart">
+        {% for m in t.monthly_ratings %}
+        <div class="bar-col">
+          <div class="bar-fill" style="height: {{ m.bar_height_pct() }}%"></div>
+          <div class="bar-month">{{ m.month_label }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    {% if !t.top_directors.is_empty() %}
+    <div class="chart-block">
+      <div class="chart-label">Most watched directors</div>
+      <div class="director-chart">
+        {% for d in t.top_directors %}
+        <div class="director-row">
+          <div class="director-name">{{ d.director }}</div>
+          <div class="director-bar">
+            {% if t.max_director_count > 0 %}
+            <div class="director-bar-fill" style="width: {{ d.count * 100 / t.max_director_count }}%"></div>
+            {% else %}
+            <div class="director-bar-fill" style="width: 0%"></div>
+            {% endif %}
+          </div>
+          <div class="director-count">{{ d.count }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% else %}
+  {% if let Some(paged) = entries %}
+  <div class="diary">
+    {% for entry in paged.items %}
+    <article class="entry">
+      {% if let Some(poster) = entry.movie().poster_path() %}
+      <div class="poster">
+        <img src="/posters/{{ poster.value() }}" alt="">
+      </div>
+      {% endif %}
+      <div class="entry-body">
+        <div class="entry-title">
+          {{ entry.movie().title().value() }}
+          <span class="year">({{ entry.movie().release_year().value() }})</span>
+        </div>
+        {% if let Some(dir) = entry.movie().director() %}
+        <div class="director">{{ dir }}</div>
+        {% endif %}
+        <div class="rating">
+          {% for filled in entry.review().stars() %}
+            <span class="star {% if filled %}filled{% else %}empty{% endif %}">★</span>
+          {% endfor %}
+        </div>
+        {% if let Some(comment) = entry.review().comment() %}
+        <div class="comment">{{ comment.value() }}</div>
+        {% endif %}
+        <div class="watched-at">{{ entry.review().watched_at().format("%Y-%m-%d") }}</div>
+        {% if ctx.is_current_user(entry.review().user_id().value()) %}
+        <form method="post" action="/reviews/{{ entry.review().id().value() }}/delete" class="delete-form">
+          <button type="submit">Delete</button>
+        </form>
+        {% endif %}
+      </div>
+    </article>
+    {% else %}
+    <p class="empty">No reviews yet.</p>
+    {% endfor %}
+  </div>
+  <nav class="pagination">
+    {% if current_offset > 0 %}
+    <a href="?view={{ view }}&offset={{ current_offset - limit }}">&larr; Prev</a>
+    {% endif %}
+    {% if has_more %}
+    <a href="?view={{ view }}&offset={{ current_offset + limit }}">Next &rarr;</a>
+    {% endif %}
+  </nav>
+  {% endif %}
+  {% endif %}
+
+</div>
+{% endblock %}

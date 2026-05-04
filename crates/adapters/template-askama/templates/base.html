@@ -13,6 +13,8 @@
   <header>
     <a href="/" class="site-title">Movies Diary</a>
     <nav>
+      <a href="/">Feed</a>
+      <a href="/users">Users</a>
       <a href="/feed.rss">RSS</a>
       {% if let Some(email) = ctx.user_email %}
         <a href="/reviews/new">Add Review</a>
