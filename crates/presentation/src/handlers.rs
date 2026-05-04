@@ -362,13 +362,14 @@ pub mod posters {
 
 pub mod rss {
     use axum::{
-        extract::State,
+        extract::{Path, State},
         http::header,
         response::IntoResponse,
     };
+    use uuid::Uuid;
 
     use application::{queries::GetDiaryQuery, use_cases::get_diary};
-    use domain::{errors::DomainError, models::SortDirection};
+    use domain::{errors::DomainError, models::SortDirection, value_objects::UserId};
 
     use crate::{errors::ApiError, state::AppState};
 
@@ -385,6 +386,38 @@ pub mod rss {
             .rss_renderer
             .render_feed(&page.items, "Movie Diary")
             .map_err(|e| ApiError(DomainError::InfrastructureError(e)))?;
+        Ok(([(header::CONTENT_TYPE, "application/rss+xml; charset=utf-8")], xml))
+    }
+
+    pub async fn get_user_feed(
+        State(state): State<AppState>,
+        Path(user_id): Path<Uuid>,
+    ) -> Result<impl IntoResponse, ApiError> {
+        let user = state
+            .app_ctx
+            .user_repository
+            .find_by_id(&UserId::from_uuid(user_id))
+            .await
+            .map_err(ApiError)?
+            .ok_or_else(|| ApiError(DomainError::NotFound(format!("User {user_id}"))))?;
+
+        let query = GetDiaryQuery {
+            limit: Some(50),
+            offset: Some(0),
+            sort_by: Some(SortDirection::Descending),
+            movie_id: None,
+            user_id: Some(user_id),
+        };
+        let page = get_diary::execute(&state.app_ctx, query).await?;
+
+        let display_name = user.email().value().split('@').next().unwrap_or("User");
+        let title = format!("{}'s Movie Diary", display_name);
+
+        let xml = state
+            .rss_renderer
+            .render_feed(&page.items, &title)
+            .map_err(|e| ApiError(DomainError::InfrastructureError(e)))?;
+
         Ok(([(header::CONTENT_TYPE, "application/rss+xml; charset=utf-8")], xml))
     }
 }

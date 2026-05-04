@@ -33,6 +33,7 @@ fn html_routes() -> Router<AppState> {
         .route("/reviews/{id}/delete", routing::post(handlers::html::post_delete_review))
         .route("/posters/{path}", routing::get(handlers::posters::get_poster))
         .route("/feed.rss", routing::get(handlers::rss::get_feed))
+        .route("/users/{id}/feed.rss", routing::get(handlers::rss::get_user_feed))
 }
 
 fn api_routes() -> Router<AppState> {
