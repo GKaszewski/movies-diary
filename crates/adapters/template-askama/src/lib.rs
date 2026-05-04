@@ -1,6 +1,6 @@
 use askama::Template;
+use application::ports::HtmlRenderer;
 use domain::models::{DiaryEntry, collections::Paginated};
-use presentation::ports::HtmlRenderer; // Assuming you exposed the port
 
 #[derive(Template)]
 #[template(path = "diary.html")]

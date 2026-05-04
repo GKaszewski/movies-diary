@@ -4,7 +4,7 @@ use axum::{
 };
 use domain::errors::DomainError;
 
-pub struct ApiError(DomainError);
+pub struct ApiError(pub DomainError);
 
 impl From<DomainError> for ApiError {
     fn from(err: DomainError) -> Self {

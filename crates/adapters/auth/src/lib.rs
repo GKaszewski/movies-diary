@@ -1,14 +1,13 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+use async_trait::async_trait;
+use domain::{errors::DomainError, ports::AuthService, value_objects::UserId};
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+pub struct StubAuthService;
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+#[async_trait]
+impl AuthService for StubAuthService {
+    async fn validate_token(&self, _token: &str) -> Result<UserId, DomainError> {
+        Err(DomainError::InfrastructureError(
+            "auth service not implemented".into(),
+        ))
     }
 }

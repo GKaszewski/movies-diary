@@ -9,4 +9,4 @@ askama = { version = "0.16.0" }
 serde = { workspace = true }
 
 domain = { workspace = true }
-presentation = { workspace = true }
+application = { workspace = true }

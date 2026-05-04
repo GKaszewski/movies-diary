@@ -22,6 +22,8 @@ tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 async-trait = "0.1"
 uuid = { version = "1.23.0", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
+sqlx = { version = "0.8.6", features = ["runtime-tokio-rustls", "sqlite", "uuid", "macros"] }
+template-askama = { path = "crates/adapters/template-askama" }
 
 domain = { path = "crates/domain" }
 common = { path = "crates/common" }

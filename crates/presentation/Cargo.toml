@@ -15,6 +15,16 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 tokio = { workspace = true }
 uuid = { workspace = true }
+chrono = { workspace = true }
+async-trait = { workspace = true }
 
 domain = { workspace = true }
 application = { workspace = true }
+auth = { workspace = true }
+sqlite = { workspace = true }
+sqlx = { workspace = true }
+template-askama = { workspace = true }
+
+[dev-dependencies]
+tower = { version = "0.5", features = ["util"] }
+http-body-util = "0.1"
