@@ -76,7 +76,10 @@ mod tests {
 
         struct PanicRenderer;
         impl crate::ports::HtmlRenderer for PanicRenderer {
-            fn render_diary_page(&self, _: &domain::models::collections::Paginated<domain::models::DiaryEntry>) -> Result<String, String> { panic!() }
+            fn render_diary_page(&self, _: &domain::models::collections::Paginated<domain::models::DiaryEntry>, _: application::ports::HtmlPageContext) -> Result<String, String> { panic!() }
+            fn render_login_page(&self, _: application::ports::LoginPageData<'_>) -> Result<String, String> { panic!() }
+            fn render_register_page(&self, _: application::ports::RegisterPageData<'_>) -> Result<String, String> { panic!() }
+            fn render_new_review_page(&self, _: application::ports::NewReviewPageData<'_>) -> Result<String, String> { panic!() }
         }
 
         struct PanicRssRenderer;
@@ -91,7 +94,7 @@ mod tests {
         #[async_trait::async_trait] impl domain::ports::EventPublisher for PanicEvent { async fn publish(&self, _: &domain::events::DomainEvent) -> Result<(), domain::errors::DomainError> { panic!() } }
         #[async_trait::async_trait] impl domain::ports::PasswordHasher for PanicHasher { async fn hash(&self, _: &str) -> Result<domain::value_objects::PasswordHash, domain::errors::DomainError> { panic!() } async fn verify(&self, _: &str, _: &domain::value_objects::PasswordHash) -> Result<bool, domain::errors::DomainError> { panic!() } }
         #[async_trait::async_trait] impl domain::ports::AuthService for PanicAuth { async fn generate_token(&self, _: &domain::value_objects::UserId) -> Result<domain::ports::GeneratedToken, domain::errors::DomainError> { panic!() } async fn validate_token(&self, _: &str) -> Result<domain::value_objects::UserId, domain::errors::DomainError> { panic!() } }
-        #[async_trait::async_trait] impl domain::ports::UserRepository for PanicUserRepo { async fn find_by_email(&self, _: &domain::value_objects::Email) -> Result<Option<domain::models::User>, domain::errors::DomainError> { panic!() } async fn save(&self, _: &domain::models::User) -> Result<(), domain::errors::DomainError> { panic!() } }
+        #[async_trait::async_trait] impl domain::ports::UserRepository for PanicUserRepo { async fn find_by_email(&self, _: &domain::value_objects::Email) -> Result<Option<domain::models::User>, domain::errors::DomainError> { panic!() } async fn save(&self, _: &domain::models::User) -> Result<(), domain::errors::DomainError> { panic!() } async fn find_by_id(&self, _: &domain::value_objects::UserId) -> Result<Option<domain::models::User>, domain::errors::DomainError> { panic!() } }
 
         let state = crate::state::AppState {
             app_ctx: AppContext {
