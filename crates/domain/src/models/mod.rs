@@ -352,12 +352,6 @@ pub struct MonthlyRating {
     pub count: i64,
 }
 
-impl MonthlyRating {
-    pub fn bar_height_pct(&self) -> i64 {
-        (self.avg_rating / 5.0 * 100.0) as i64
-    }
-}
-
 #[derive(Clone, Debug)]
 pub struct DirectorStat {
     pub director: String,

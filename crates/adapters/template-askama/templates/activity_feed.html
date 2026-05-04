@@ -40,7 +40,7 @@
   {% endfor %}
 </div>
 <nav class="pagination">
-  {% if current_offset > 0 %}
+  {% if current_offset >= limit %}
   <a href="/?offset={{ current_offset - limit }}">&larr; Prev</a>
   {% endif %}
   {% if has_more %}

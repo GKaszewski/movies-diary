@@ -5,7 +5,7 @@ use application::ports::{
     NewReviewPageData, ProfilePageData, RegisterPageData, UsersPageData,
 };
 use domain::models::{
-    DiaryEntry, FeedEntry, MonthActivity, UserStats, UserSummary, UserTrends,
+    DiaryEntry, FeedEntry, MonthActivity, MonthlyRating, UserStats, UserSummary, UserTrends,
     collections::Paginated,
 };
 
@@ -57,6 +57,11 @@ struct UsersTemplate<'a> {
     ctx: &'a HtmlPageContext,
 }
 
+struct MonthlyRatingRow<'a> {
+    rating: &'a MonthlyRating,
+    bar_height_pct: i64,
+}
+
 #[derive(Template)]
 #[template(path = "profile.html")]
 struct ProfileTemplate<'a> {
@@ -70,13 +75,14 @@ struct ProfileTemplate<'a> {
     limit: u32,
     history: Option<&'a Vec<MonthActivity>>,
     trends: Option<&'a UserTrends>,
+    monthly_rating_rows: Vec<MonthlyRatingRow<'a>>,
     heatmap: Vec<HeatmapCell>,
 }
 
 struct HeatmapCell {
     month_label: String,
     count: i64,
-    bg_style: String,
+    alpha: f64,
 }
 
 #[allow(dead_code)]
@@ -114,9 +120,13 @@ fn build_heatmap(history: &[MonthActivity]) -> Vec<HeatmapCell> {
         HeatmapCell {
             month_label: label.to_string(),
             count,
-            bg_style: format!("background: rgba(74, 158, 255, {:.2})", alpha),
+            alpha,
         }
     }).collect()
+}
+
+fn bar_height_pct(avg_rating: f64) -> i64 {
+    (avg_rating / 5.0 * 100.0) as i64
 }
 
 pub struct AskamaHtmlRenderer;
@@ -195,6 +205,12 @@ impl HtmlRenderer for AskamaHtmlRenderer {
             .unwrap_or_default();
         let profile_display_name = data.profile_user_email
             .split('@').next().unwrap_or(&data.profile_user_email).to_string();
+        let monthly_rating_rows: Vec<MonthlyRatingRow<'_>> = data.trends.as_ref()
+            .map(|t| t.monthly_ratings.iter().map(|r| MonthlyRatingRow {
+                bar_height_pct: bar_height_pct(r.avg_rating),
+                rating: r,
+            }).collect())
+            .unwrap_or_default();
         ProfileTemplate {
             ctx: &data.ctx,
             profile_display_name,
@@ -206,6 +222,7 @@ impl HtmlRenderer for AskamaHtmlRenderer {
             limit: data.limit,
             history: data.history.as_ref(),
             trends: data.trends.as_ref(),
+            monthly_rating_rows,
             heatmap,
         }
         .render()

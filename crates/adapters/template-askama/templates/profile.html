@@ -37,7 +37,7 @@
     <div class="heatmap-label">Movies watched this year</div>
     <div class="heatmap">
       {% for cell in heatmap %}
-      <div class="heatmap-cell" style="{{ cell.bg_style|safe }}">
+      <div class="heatmap-cell" style="background: rgba(74, 158, 255, {{ cell.alpha }})">
         <div class="heatmap-count">{{ cell.count }}</div>
         <div class="heatmap-month">{{ cell.month_label }}</div>
       </div>
@@ -75,14 +75,14 @@
   {% elif view == "trends" %}
   {% if let Some(t) = trends %}
   <div class="trends-section">
-    {% if !t.monthly_ratings.is_empty() %}
+    {% if !monthly_rating_rows.is_empty() %}
     <div class="chart-block">
       <div class="chart-label">Average rating per month</div>
       <div class="bar-chart">
-        {% for m in t.monthly_ratings %}
+        {% for row in monthly_rating_rows %}
         <div class="bar-col">
-          <div class="bar-fill" style="height: {{ m.bar_height_pct() }}%"></div>
-          <div class="bar-month">{{ m.month_label }}</div>
+          <div class="bar-fill" style="height: {{ row.bar_height_pct }}%"></div>
+          <div class="bar-month">{{ row.rating.month_label }}</div>
         </div>
         {% endfor %}
       </div>
@@ -150,7 +150,7 @@
     {% endfor %}
   </div>
   <nav class="pagination">
-    {% if current_offset > 0 %}
+    {% if current_offset >= limit %}
     <a href="?view={{ view }}&offset={{ current_offset - limit }}">&larr; Prev</a>
     {% endif %}
     {% if has_more %}
