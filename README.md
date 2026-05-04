@@ -17,7 +17,6 @@ Hexagonal (Ports & Adapters) with Domain-Driven Design:
 
 ```
 domain        — pure types and trait definitions, no external deps
-common        — shared error types
 application   — use cases / business logic orchestration
 presentation  — Axum HTTP router, wires all adapters together
 adapters/
