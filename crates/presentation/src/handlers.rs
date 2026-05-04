@@ -1,4 +1,4 @@
-const DEFAULT_PAGE_LIMIT: u32 = 20;
+const DEFAULT_PAGE_LIMIT: u32 = 5;
 
 pub mod html {
     use axum::{
