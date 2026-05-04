@@ -24,6 +24,8 @@ pub async fn execute(
 
     match query.view.as_str() {
         "history" => {
+            // V1: loads all entries into memory. Personal diaries are bounded in size;
+            // spec calls for showing every movie grouped by month, so full load is intentional.
             let all_entries = ctx.repository.get_user_history(&user_id).await?;
             let history = group_by_month(all_entries);
             Ok(UserProfileData { stats, entries: None, history: Some(history), trends: None })
@@ -43,8 +45,7 @@ pub async fn execute(
             let entries = ctx.repository.query_diary(&filter).await?;
             Ok(UserProfileData { stats, entries: Some(entries), history: None, trends: None })
         }
-        _ => {
-            // "recent" (default)
+        "recent" => {
             let page = PageParams::new(query.limit, query.offset)?;
             let filter = DiaryFilter {
                 sort_by: SortDirection::Descending,
@@ -55,6 +56,7 @@ pub async fn execute(
             let entries = ctx.repository.query_diary(&filter).await?;
             Ok(UserProfileData { stats, entries: Some(entries), history: None, trends: None })
         }
+        other => Err(DomainError::ValidationError(format!("unknown view: {}", other))),
     }
 }
 
