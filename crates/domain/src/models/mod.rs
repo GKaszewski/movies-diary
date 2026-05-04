@@ -293,7 +293,7 @@ impl FeedEntry {
 
 #[derive(Clone, Debug)]
 pub struct UserSummary {
-    pub user_id: uuid::Uuid,
+    pub user_id: UserId,
     pub email: String,
     pub total_movies: i64,
     pub avg_rating: Option<f64>,
