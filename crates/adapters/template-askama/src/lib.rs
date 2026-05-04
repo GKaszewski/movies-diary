@@ -59,7 +59,7 @@ struct UsersTemplate<'a> {
 
 struct MonthlyRatingRow<'a> {
     rating: &'a MonthlyRating,
-    bar_height_pct: i64,
+    bar_height_px: i64,
 }
 
 #[derive(Template)]
@@ -125,8 +125,8 @@ fn build_heatmap(history: &[MonthActivity]) -> Vec<HeatmapCell> {
     }).collect()
 }
 
-fn bar_height_pct(avg_rating: f64) -> i64 {
-    (avg_rating / 5.0 * 100.0) as i64
+fn bar_height_px(avg_rating: f64) -> i64 {
+    (avg_rating / 5.0 * 60.0) as i64
 }
 
 pub struct AskamaHtmlRenderer;
@@ -207,7 +207,7 @@ impl HtmlRenderer for AskamaHtmlRenderer {
             .split('@').next().unwrap_or(&data.profile_user_email).to_string();
         let monthly_rating_rows: Vec<MonthlyRatingRow<'_>> = data.trends.as_ref()
             .map(|t| t.monthly_ratings.iter().map(|r| MonthlyRatingRow {
-                bar_height_pct: bar_height_pct(r.avg_rating),
+                bar_height_px: bar_height_px(r.avg_rating),
                 rating: r,
             }).collect())
             .unwrap_or_default();

@@ -81,7 +81,8 @@
       <div class="bar-chart">
         {% for row in monthly_rating_rows %}
         <div class="bar-col">
-          <div class="bar-fill" style="height: {{ row.bar_height_pct }}%"></div>
+          <div class="bar-value">{{ "{:.1}"|format(row.rating.avg_rating) }}</div>
+          <div class="bar-fill" style="height: {{ row.bar_height_px }}px"></div>
           <div class="bar-month">{{ row.rating.month_label }}</div>
         </div>
         {% endfor %}
