@@ -51,7 +51,7 @@ impl EventHandler for PosterSyncHandler {
             }
         }
 
-        let err = last_err.unwrap();
+        let err = last_err.expect("loop runs at least once and always sets last_err on Err");
         tracing::error!(
             attempts = self.max_retries + 1,
             "poster sync failed after all attempts: {err}"
@@ -79,6 +79,8 @@ mod tests {
         },
     };
 
+    // Panic-stub ports: each method panics so any accidental dispatch into a service
+    // fails the test loudly rather than silently succeeding.
     struct PanicRepo;
     struct PanicMetadata;
     struct PanicFetcher;
@@ -161,7 +163,7 @@ mod tests {
             movie_id: MovieId::generate(),
             user_id: UserId::generate(),
             rating: Rating::new(4).unwrap(),
-            watched_at: chrono::NaiveDateTime::from_timestamp_opt(0, 0).unwrap(),
+            watched_at: chrono::NaiveDate::from_ymd_opt(2024, 1, 1).unwrap().and_hms_opt(0, 0, 0).unwrap(),
         };
         assert!(handler.handle(&event).await.is_ok());
     }
