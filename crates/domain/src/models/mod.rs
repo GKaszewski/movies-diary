@@ -193,6 +193,11 @@ impl Review {
     pub fn created_at(&self) -> &NaiveDateTime {
         &self.created_at
     }
+    /// Returns [star1_filled, star2_filled, ..., star5_filled]
+    pub fn stars(&self) -> [bool; 5] {
+        let r = self.rating.value();
+        [r >= 1, r >= 2, r >= 3, r >= 4, r >= 5]
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -306,6 +311,9 @@ impl UserSummary {
     pub fn avg_rating_display(&self) -> String {
         self.avg_rating.map(|r| format!("{:.1}", r)).unwrap_or_else(|| "—".to_string())
     }
+    pub fn initial(&self) -> char {
+        self.display_name().chars().next().unwrap_or('?').to_ascii_uppercase()
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -342,6 +350,12 @@ pub struct MonthlyRating {
     pub month_label: String,
     pub avg_rating: f64,
     pub count: i64,
+}
+
+impl MonthlyRating {
+    pub fn bar_height_pct(&self) -> i64 {
+        (self.avg_rating / 5.0 * 100.0) as i64
+    }
 }
 
 #[derive(Clone, Debug)]

@@ -8,6 +8,12 @@ pub struct HtmlPageContext {
     pub register_enabled: bool,
 }
 
+impl HtmlPageContext {
+    pub fn is_current_user(&self, id: Uuid) -> bool {
+        self.user_id == Some(id)
+    }
+}
+
 pub struct LoginPageData<'a> {
     pub ctx: HtmlPageContext,
     pub error: Option<&'a str>,

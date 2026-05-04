@@ -61,7 +61,7 @@ struct UsersTemplate<'a> {
 #[template(path = "profile.html")]
 struct ProfileTemplate<'a> {
     ctx: &'a HtmlPageContext,
-    profile_user_email: &'a str,
+    profile_display_name: String,
     stats: &'a UserStats,
     view: &'a str,
     entries: Option<&'a Paginated<DiaryEntry>>,
@@ -79,6 +79,7 @@ struct HeatmapCell {
     bg_style: String,
 }
 
+#[allow(dead_code)]
 fn relative_time(dt: chrono::NaiveDateTime) -> String {
     let now = chrono::Utc::now().naive_utc();
     let diff = now.signed_duration_since(dt);
@@ -192,9 +193,11 @@ impl HtmlRenderer for AskamaHtmlRenderer {
         let heatmap = data.history.as_deref()
             .map(|h| build_heatmap(h))
             .unwrap_or_default();
+        let profile_display_name = data.profile_user_email
+            .split('@').next().unwrap_or(&data.profile_user_email).to_string();
         ProfileTemplate {
             ctx: &data.ctx,
-            profile_user_email: &data.profile_user_email,
+            profile_display_name,
             stats: &data.stats,
             view: &data.view,
             entries: data.entries.as_ref(),
