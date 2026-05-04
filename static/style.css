@@ -1,50 +1,143 @@
-*, *::before, *::after { box-sizing: border-box; }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+:root {
+  --glass-bg: rgba(255, 255, 255, 0.15);
+  --glass-border: rgba(255, 255, 255, 0.35);
+  --glass-shadow: 0 8px 32px oklch(85.2% 0.199 91.936 / 0.15);
+  --glass-inset: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  --blur: blur(12px);
+
+  --aqua: oklch(85.2% 0.199 91.936);
+  --aqua-mid: oklch(89% 0.13 91.936);
+  --aqua-light: oklch(93% 0.07 91.936);
+  --aqua-glow: oklch(85.2% 0.199 91.936 / 0.3);
+
+  --text: #fff;
+  --text-muted: rgba(255, 255, 255, 0.7);
+  --text-light: rgba(255, 255, 255, 0.5);
+}
+
+html {
+  height: 100%;
+}
 
 body {
-  font-family: monospace;
+  font-family: "Nunito", sans-serif;
   max-width: 720px;
   margin: 0 auto;
   padding: 20px;
-  color: #222;
-  background: #fff;
+  color: var(--text);
+  background: url("/static/background.avif") center / cover no-repeat fixed;
+  min-height: 100%;
   line-height: 1.5;
 }
 
-a { color: inherit; }
+a {
+  color: inherit;
+}
 
 /* Header */
 header {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
-  border-bottom: 1px solid #ccc;
-  padding-bottom: 8px;
-  margin-bottom: 28px;
+  align-items: center;
+  background: var(--glass-bg);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  padding: 12px 20px;
+  margin-bottom: 24px;
+  box-shadow: var(--glass-shadow), var(--glass-inset);
 }
 
 .site-title {
-  font-weight: bold;
-  text-decoration: none;
+  font-weight: 800;
   font-size: 1.1em;
+  text-decoration: none;
+  color: var(--aqua);
+  text-shadow: 0 0 20px var(--aqua-glow);
 }
 
 nav {
   display: flex;
-  gap: 14px;
-  font-size: 0.88em;
+  gap: 8px;
+  align-items: center;
 }
 
-nav a { text-decoration: none; }
-nav a:hover { text-decoration: underline; }
+nav a {
+  text-decoration: none;
+  color: var(--aqua);
+  font-weight: 600;
+  font-size: 0.85em;
+  padding: 4px 14px;
+  border-radius: 20px;
+  background: oklch(85.2% 0.199 91.936 / 0.08);
+  border: 1px solid oklch(85.2% 0.199 91.936 / 0.2);
+  transition:
+    background 0.2s,
+    box-shadow 0.2s;
+}
 
-.user-email { color: #666; }
+nav a:hover {
+  background: oklch(85.2% 0.199 91.936 / 0.2);
+  box-shadow: 0 0 12px var(--aqua-glow);
+}
+
+.user-email {
+  color: var(--text-muted);
+  font-size: 0.85em;
+}
 
 /* Diary entries */
+.diary {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .entry {
   display: flex;
-  gap: 14px;
-  padding: 14px 0;
-  border-bottom: 1px solid #eee;
+  gap: 16px;
+  padding: 16px;
+  background: var(--glass-bg);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  box-shadow: var(--glass-shadow), var(--glass-inset);
+  position: relative;
+  overflow: hidden;
+  transition:
+    box-shadow 0.2s,
+    transform 0.2s;
+}
+
+.entry::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.12),
+    transparent
+  );
+  border-radius: 16px 16px 0 0;
+  pointer-events: none;
+}
+
+.entry:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 12px 40px var(--aqua-glow),
+    var(--glass-inset);
 }
 
 .poster {
@@ -55,56 +148,89 @@ nav a:hover { text-decoration: underline; }
 .poster img {
   width: 100%;
   display: block;
-  border: 1px solid #ddd;
+  border-radius: 8px;
+  border: 2px solid var(--aqua-mid);
+  box-shadow: 0 4px 12px var(--aqua-glow);
 }
 
-.entry-body { flex: 1; }
+.entry-body {
+  flex: 1;
+}
 
 .entry-title {
-  font-weight: bold;
+  font-weight: 700;
   margin-bottom: 2px;
+  color: var(--text);
 }
 
-.year { color: #666; font-weight: normal; }
+.year {
+  color: var(--text-muted);
+  font-weight: 400;
+}
 
 .director {
-  color: #666;
+  color: var(--text-muted);
   font-size: 0.88em;
   margin-bottom: 2px;
 }
 
 .rating {
   font-size: 0.88em;
+  font-weight: 700;
+  color: var(--aqua);
   margin-bottom: 2px;
 }
 
 .comment {
   font-style: italic;
-  color: #444;
+  color: var(--text-light);
   font-size: 0.9em;
   margin-bottom: 2px;
 }
 
 .watched-at {
   font-size: 0.8em;
-  color: #888;
+  color: var(--text-muted);
 }
 
-.empty { color: #999; margin-top: 20px; }
+.empty {
+  color: var(--text-muted);
+  margin-top: 20px;
+}
 
 /* Pagination */
 .pagination {
   margin-top: 24px;
   display: flex;
-  gap: 20px;
+  gap: 10px;
   font-size: 0.9em;
 }
 
-.pagination a { text-decoration: none; }
-.pagination a:hover { text-decoration: underline; }
+.pagination a {
+  text-decoration: none;
+  color: var(--aqua);
+  font-weight: 600;
+  padding: 4px 16px;
+  border-radius: 20px;
+  background: oklch(85.2% 0.199 91.936 / 0.08);
+  border: 1px solid oklch(85.2% 0.199 91.936 / 0.2);
+  transition:
+    background 0.2s,
+    box-shadow 0.2s;
+}
+
+.pagination a:hover {
+  background: oklch(85.2% 0.199 91.936 / 0.2);
+  box-shadow: 0 0 12px var(--aqua-glow);
+}
 
 /* Forms */
-h1 { font-size: 1.2em; margin-bottom: 20px; }
+h1 {
+  font-size: 1.4em;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 20px;
+}
 
 form {
   max-width: 400px;
@@ -114,6 +240,8 @@ form label {
   display: block;
   margin-bottom: 14px;
   font-size: 0.9em;
+  font-weight: 600;
+  color: var(--text);
 }
 
 form input[type="text"],
@@ -124,14 +252,26 @@ form input[type="datetime-local"],
 form textarea {
   display: block;
   width: 100%;
-  font-family: monospace;
+  font-family: "Nunito", sans-serif;
   font-size: 1em;
-  margin-top: 3px;
-  padding: 5px 6px;
-  border: 1px solid #bbb;
-  border-radius: 0;
-  background: #fff;
-  color: #222;
+  margin-top: 4px;
+  padding: 8px 12px;
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  color: var(--text);
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+form input:focus,
+form textarea:focus {
+  outline: none;
+  border-color: var(--aqua);
+  box-shadow: 0 0 0 3px oklch(85.2% 0.199 91.936 / 0.2);
 }
 
 form textarea {
@@ -141,27 +281,100 @@ form textarea {
 
 form hr {
   border: none;
-  border-top: 1px solid #eee;
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
   margin: 18px 0;
 }
 
 form button[type="submit"] {
-  font-family: monospace;
+  font-family: "Nunito", sans-serif;
   font-size: 1em;
-  padding: 6px 18px;
+  font-weight: 700;
+  padding: 10px 28px;
   cursor: pointer;
-  background: #222;
+  background: linear-gradient(
+    135deg,
+    var(--aqua-mid) 0%,
+    var(--aqua) 60%,
+    oklch(72% 0.199 91.936) 100%
+  );
   color: #fff;
   border: none;
+  border-radius: 24px;
+  box-shadow:
+    0 4px 16px var(--aqua-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  position: relative;
+  overflow: hidden;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
 }
 
-form button[type="submit"]:hover { background: #444; }
+form button[type="submit"]::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.28),
+    transparent
+  );
+  border-radius: 24px 24px 0 0;
+  pointer-events: none;
+}
 
-.optional { color: #888; font-size: 0.85em; }
+form button[type="submit"]:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 6px 24px var(--aqua-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.delete-form {
+  display: inline;
+  margin-top: 6px;
+}
+
+.delete-form button[type="submit"] {
+  background: rgba(200, 60, 60, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  color: #fff;
+  border-radius: 16px;
+  padding: 3px 12px;
+  font-size: 0.8em;
+  font-weight: 600;
+  border: 1px solid rgba(220, 80, 80, 0.3);
+  box-shadow: none;
+  transition: background 0.2s;
+}
+
+.delete-form button[type="submit"]::after {
+  display: none;
+}
+
+.delete-form button[type="submit"]:hover {
+  background: rgba(220, 60, 60, 0.85);
+  transform: none;
+  box-shadow: none;
+}
+
+.optional {
+  color: var(--text-muted);
+  font-size: 0.85em;
+  font-weight: 400;
+}
 
 /* Errors */
 .error {
-  color: #c00;
+  color: #e05050;
+  background: rgba(220, 50, 50, 0.1);
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(220, 50, 50, 0.2);
   margin-bottom: 16px;
   font-size: 0.9em;
 }

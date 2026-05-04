@@ -23,7 +23,7 @@
       <div class="watched-at">{{ entry.review().watched_at().format("%Y-%m-%d") }}</div>
       {% if let Some(uid) = ctx.user_id %}
         {% if *uid == entry.review().user_id().value() %}
-        <form method="post" action="/reviews/{{ entry.review().id().value() }}/delete">
+        <form method="post" action="/reviews/{{ entry.review().id().value() }}/delete" class="delete-form">
           <button type="submit">Delete</button>
         </form>
         {% endif %}
