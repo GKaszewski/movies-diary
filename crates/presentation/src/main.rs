@@ -5,9 +5,8 @@ use async_trait::async_trait;
 use domain::{
     errors::DomainError,
     events::DomainEvent,
-    models::Movie,
-    ports::{EventPublisher, MetadataClient, PosterFetcherClient, PosterStorage},
-    value_objects::{ExternalMetadataId, MovieId, PosterPath, PosterUrl},
+    ports::{EventPublisher, PosterFetcherClient, PosterStorage},
+    value_objects::{MovieId, PosterPath, PosterUrl},
 };
 use sqlx::SqlitePool;
 use tokio::net::TcpListener;
@@ -15,30 +14,11 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use application::{config::AppConfig, context::AppContext};
 use auth::{AuthConfig, Argon2PasswordHasher, JwtAuthService};
+use metadata::MetadataClientImpl;
 use sqlite::{SqliteMovieRepository, SqliteUserRepository};
 use template_askama::AskamaHtmlRenderer;
 
 use presentation::{routes, state::AppState};
-
-struct StubMetadataClient;
-
-#[async_trait]
-impl MetadataClient for StubMetadataClient {
-    async fn fetch_movie_metadata(&self, _id: &ExternalMetadataId) -> Result<Movie, DomainError> {
-        Err(DomainError::InfrastructureError(
-            "metadata client not implemented".into(),
-        ))
-    }
-
-    async fn get_poster_url(
-        &self,
-        _id: &ExternalMetadataId,
-    ) -> Result<Option<PosterUrl>, DomainError> {
-        Err(DomainError::InfrastructureError(
-            "metadata client not implemented".into(),
-        ))
-    }
-}
 
 struct StubPosterFetcher;
 
@@ -102,6 +82,7 @@ async fn main() -> anyhow::Result<()> {
 async fn wire_dependencies() -> anyhow::Result<AppState> {
     let auth_config = AuthConfig::from_env()?;
     let app_config = AppConfig::from_env();
+    let omdb_api_key = std::env::var("OMDB_API_KEY").context("OMDB_API_KEY must be set")?;
 
     let pool = SqlitePool::connect("sqlite://reviews.db")
         .await
@@ -118,7 +99,7 @@ async fn wire_dependencies() -> anyhow::Result<AppState> {
 
     let app_ctx = AppContext {
         repository: Arc::new(movie_repo),
-        metadata_client: Arc::new(StubMetadataClient),
+        metadata_client: Arc::new(MetadataClientImpl::new_omdb(omdb_api_key)),
         poster_fetcher: Arc::new(StubPosterFetcher),
         poster_storage: Arc::new(StubPosterStorage),
         event_publisher: Arc::new(StubEventPublisher),

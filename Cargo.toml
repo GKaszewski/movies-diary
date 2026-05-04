@@ -3,7 +3,8 @@ members = [
     "crates/adapters/auth",
     "crates/adapters/metadata",
     "crates/adapters/rss",
-    "crates/adapters/sqlite", "crates/adapters/template-askama",
+    "crates/adapters/sqlite",
+    "crates/adapters/template-askama",
     "crates/application",
     "crates/common",
     "crates/domain",
@@ -23,8 +24,13 @@ tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 async-trait = "0.1"
 uuid = { version = "1.23.0", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
-sqlx = { version = "0.8.6", features = ["runtime-tokio-rustls", "sqlite", "uuid", "macros"] }
-template-askama = { path = "crates/adapters/template-askama" }
+sqlx = { version = "0.8.6", features = [
+    "runtime-tokio-rustls",
+    "sqlite",
+    "uuid",
+    "macros",
+] }
+reqwest = { version = "0.13", features = ["json", "query"] }
 
 domain = { path = "crates/domain" }
 common = { path = "crates/common" }
@@ -34,3 +40,4 @@ auth = { path = "crates/adapters/auth" }
 metadata = { path = "crates/adapters/metadata" }
 rss = { path = "crates/adapters/rss" }
 sqlite = { path = "crates/adapters/sqlite" }
+template-askama = { path = "crates/adapters/template-askama" }

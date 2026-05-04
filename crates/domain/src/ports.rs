@@ -34,11 +34,16 @@ pub trait MovieRepository: Send + Sync {
     async fn get_review_history(&self, movie_id: &MovieId) -> Result<ReviewHistory, DomainError>;
 }
 
+pub enum MetadataSearchCriteria {
+    ImdbId(ExternalMetadataId),
+    Title { title: String, year: Option<u16> },
+}
+
 #[async_trait]
 pub trait MetadataClient: Send + Sync {
     async fn fetch_movie_metadata(
         &self,
-        external_metadata_id: &ExternalMetadataId,
+        criteria: &MetadataSearchCriteria,
     ) -> Result<Movie, DomainError>;
     async fn get_poster_url(
         &self,

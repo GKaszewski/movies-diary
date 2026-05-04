@@ -2,6 +2,7 @@ use domain::{
     errors::DomainError,
     events::DomainEvent,
     models::{Movie, Review},
+    ports::MetadataSearchCriteria,
     value_objects::{Comment, ExternalMetadataId, MovieTitle, Rating, ReleaseYear, UserId},
 };
 
@@ -47,7 +48,11 @@ async fn resolve_external_movie(
         return Ok(Some((m, false)));
     }
 
-    match ctx.metadata_client.fetch_movie_metadata(&tmdb_id).await {
+    match ctx
+        .metadata_client
+        .fetch_movie_metadata(&MetadataSearchCriteria::ImdbId(tmdb_id))
+        .await
+    {
         Ok(m) => Ok(Some((m, true))),
         Err(e) => {
             tracing::warn!(

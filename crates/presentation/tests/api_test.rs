@@ -12,8 +12,8 @@ use domain::{
     events::DomainEvent,
     models::{Movie, User},
     ports::{
-        AuthService, EventPublisher, GeneratedToken, MetadataClient, PasswordHasher,
-        PosterFetcherClient, PosterStorage, UserRepository,
+        AuthService, EventPublisher, GeneratedToken, MetadataClient, MetadataSearchCriteria,
+        PasswordHasher, PosterFetcherClient, PosterStorage, UserRepository,
     },
     value_objects::{
         Email, ExternalMetadataId, MovieId, PasswordHash, PosterPath, PosterUrl, UserId,
@@ -37,7 +37,7 @@ impl EventPublisher for NoopEventPublisher {
 struct PanicMeta;
 #[async_trait]
 impl MetadataClient for PanicMeta {
-    async fn fetch_movie_metadata(&self, _: &ExternalMetadataId) -> Result<Movie, DomainError> {
+    async fn fetch_movie_metadata(&self, _: &MetadataSearchCriteria) -> Result<Movie, DomainError> {
         panic!("metadata not wired in tests")
     }
     async fn get_poster_url(&self, _: &ExternalMetadataId) -> Result<Option<PosterUrl>, DomainError> {
