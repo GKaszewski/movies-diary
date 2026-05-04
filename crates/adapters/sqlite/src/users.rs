@@ -113,10 +113,7 @@ impl UserRepository for SqliteUserRepository {
         )
         .fetch_all(&self.pool)
         .await
-        .map_err(|e| {
-            tracing::error!("Database error: {:?}", e);
-            DomainError::InfrastructureError("Database operation failed".into())
-        })?
+        .map_err(Self::map_err)?
         .into_iter()
         .map(UserSummaryRow::to_domain)
         .collect()

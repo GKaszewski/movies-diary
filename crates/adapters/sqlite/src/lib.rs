@@ -76,6 +76,7 @@ impl SqliteMovieRepository {
         offset: i64,
     ) -> Result<Vec<DiaryRow>, DomainError> {
         match sort {
+            // ByRatingDesc only applies to user-scoped queries; falls back to date sort here
             SortDirection::Descending | SortDirection::ByRatingDesc => sqlx::query_as!(
                 DiaryRow,
                 "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
@@ -116,6 +117,7 @@ impl SqliteMovieRepository {
         offset: i64,
     ) -> Result<Vec<DiaryRow>, DomainError> {
         match sort {
+            // ByRatingDesc only applies to user-scoped queries; falls back to date sort here
             SortDirection::Descending | SortDirection::ByRatingDesc => sqlx::query_as!(
                 DiaryRow,
                 "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
@@ -438,13 +440,10 @@ impl MovieRepository for SqliteMovieRepository {
                     )?,
                 }
             }
-            (Some(mid), Some(uid)) => {
-                let mid_str = mid.value().to_string();
-                let uid_str = uid.value().to_string();
-                tokio::try_join!(
-                    self.count_user_diary_entries(&uid_str),
-                    self.fetch_movie_diary_rows(&mid_str, &filter.sort_by, limit, offset)
-                )?
+            (Some(_), Some(_)) => {
+                return Err(DomainError::ValidationError(
+                    "Combined movie_id + user_id filter not supported".into(),
+                ));
             }
         };
 

@@ -184,12 +184,6 @@ pub(crate) struct DirectorCountRow {
 }
 
 #[derive(sqlx::FromRow)]
-pub(crate) struct MonthCountRow {
-    pub month: String,
-    pub count: i64,
-}
-
-#[derive(sqlx::FromRow)]
 pub(crate) struct MonthlyRatingRow {
     pub month: String,
     pub avg_rating: f64,
