@@ -15,6 +15,7 @@ pub enum SortDirection {
     #[default]
     Descending,
     Ascending,
+    ByRatingDesc,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -22,6 +23,7 @@ pub struct DiaryFilter {
     pub sort_by: SortDirection,
     pub page: PageParams,
     pub movie_id: Option<MovieId>,
+    pub user_id: Option<UserId>,
 }
 
 #[derive(Clone, Debug)]
@@ -269,4 +271,88 @@ impl User {
     pub fn password_hash(&self) -> &PasswordHash {
         &self.password_hash
     }
+}
+
+#[derive(Clone, Debug)]
+pub struct FeedEntry {
+    entry: DiaryEntry,
+    user_email: String,
+}
+
+impl FeedEntry {
+    pub fn new(entry: DiaryEntry, user_email: String) -> Self {
+        Self { entry, user_email }
+    }
+    pub fn movie(&self) -> &Movie { self.entry.movie() }
+    pub fn review(&self) -> &Review { self.entry.review() }
+    pub fn user_email(&self) -> &str { &self.user_email }
+    pub fn user_display_name(&self) -> &str {
+        self.user_email.split('@').next().unwrap_or(&self.user_email)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct UserSummary {
+    pub user_id: uuid::Uuid,
+    pub email: String,
+    pub total_movies: i64,
+    pub avg_rating: Option<f64>,
+}
+
+impl UserSummary {
+    pub fn display_name(&self) -> &str {
+        self.email.split('@').next().unwrap_or(&self.email)
+    }
+    pub fn avg_rating_display(&self) -> String {
+        self.avg_rating.map(|r| format!("{:.1}", r)).unwrap_or_else(|| "—".to_string())
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct UserStats {
+    pub total_movies: i64,
+    pub avg_rating: Option<f64>,
+    pub favorite_director: Option<String>,
+    pub most_active_month: Option<String>,
+}
+
+impl UserStats {
+    pub fn avg_rating_display(&self) -> String {
+        self.avg_rating.map(|r| format!("{:.1}", r)).unwrap_or_else(|| "—".to_string())
+    }
+    pub fn favorite_director_display(&self) -> &str {
+        self.favorite_director.as_deref().unwrap_or("—")
+    }
+    pub fn most_active_month_display(&self) -> &str {
+        self.most_active_month.as_deref().unwrap_or("—")
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct MonthActivity {
+    pub year_month: String,
+    pub month_label: String,
+    pub count: i64,
+    pub entries: Vec<DiaryEntry>,
+}
+
+#[derive(Clone, Debug)]
+pub struct MonthlyRating {
+    pub year_month: String,
+    pub month_label: String,
+    pub avg_rating: f64,
+    pub count: i64,
+}
+
+#[derive(Clone, Debug)]
+pub struct DirectorStat {
+    pub director: String,
+    pub count: i64,
+}
+
+#[derive(Clone, Debug)]
+pub struct UserTrends {
+    pub monthly_ratings: Vec<MonthlyRating>,
+    pub top_directors: Vec<DirectorStat>,
+    pub max_director_count: i64,
 }
