@@ -16,7 +16,7 @@ pub struct PageParams {
 
 impl PageParams {
     const MAX_LIMIT: u32 = 100;
-    const DEFAULT_LIMIT: u32 = 20;
+    const DEFAULT_LIMIT: u32 = 5;
 
     pub fn new(limit: Option<u32>, offset: Option<u32>) -> Result<Self, DomainError> {
         let l = limit.unwrap_or(Self::DEFAULT_LIMIT);
