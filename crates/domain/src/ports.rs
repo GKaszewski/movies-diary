@@ -4,7 +4,11 @@ use chrono::{DateTime, Utc};
 use crate::{
     errors::DomainError,
     events::DomainEvent,
-    models::{DiaryEntry, DiaryFilter, Movie, Review, ReviewHistory, User, collections::Paginated},
+    models::{
+        DiaryEntry, DiaryFilter, FeedEntry, Movie, Review, ReviewHistory, User, UserStats,
+        UserTrends, UserSummary,
+        collections::{PageParams, Paginated},
+    },
     value_objects::{
         Email, ExternalMetadataId, MovieId, MovieTitle, PasswordHash, PosterPath, PosterUrl,
         ReleaseYear, ReviewId, UserId,
@@ -38,6 +42,17 @@ pub trait MovieRepository: Send + Sync {
     async fn delete_review(&self, review_id: &ReviewId) -> Result<(), DomainError>;
 
     async fn delete_movie(&self, movie_id: &MovieId) -> Result<(), DomainError>;
+
+    async fn query_activity_feed(
+        &self,
+        page: &PageParams,
+    ) -> Result<Paginated<FeedEntry>, DomainError>;
+
+    async fn get_user_stats(&self, user_id: &UserId) -> Result<UserStats, DomainError>;
+
+    async fn get_user_history(&self, user_id: &UserId) -> Result<Vec<DiaryEntry>, DomainError>;
+
+    async fn get_user_trends(&self, user_id: &UserId) -> Result<UserTrends, DomainError>;
 }
 
 pub enum MetadataSearchCriteria {
@@ -89,6 +104,8 @@ pub trait UserRepository: Send + Sync {
     async fn find_by_email(&self, email: &Email) -> Result<Option<User>, DomainError>;
     async fn save(&self, user: &User) -> Result<(), DomainError>;
     async fn find_by_id(&self, id: &UserId) -> Result<Option<User>, DomainError>;
+
+    async fn list_with_stats(&self) -> Result<Vec<UserSummary>, DomainError>;
 }
 
 #[async_trait]
