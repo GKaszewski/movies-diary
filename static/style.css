@@ -175,10 +175,18 @@ nav a:hover {
 }
 
 .rating {
-  font-size: 0.88em;
-  font-weight: 700;
+  margin-bottom: 4px;
+  font-size: 1.15em;
+  letter-spacing: 3px;
+}
+
+.star.filled {
   color: var(--aqua);
-  margin-bottom: 2px;
+  text-shadow: 0 0 8px var(--aqua-glow), 0 0 2px var(--aqua);
+}
+
+.star.empty {
+  color: rgba(255, 255, 255, 0.2);
 }
 
 .comment {

@@ -16,7 +16,13 @@
       {% if let Some(dir) = entry.movie().director() %}
       <div class="director">{{ dir }}</div>
       {% endif %}
-      <div class="rating">{{ entry.review().rating().value() }}/5</div>
+      <div class="rating">
+        <span class="star {% if entry.review().rating().value() >= 1 %}filled{% else %}empty{% endif %}">★</span>
+        <span class="star {% if entry.review().rating().value() >= 2 %}filled{% else %}empty{% endif %}">★</span>
+        <span class="star {% if entry.review().rating().value() >= 3 %}filled{% else %}empty{% endif %}">★</span>
+        <span class="star {% if entry.review().rating().value() >= 4 %}filled{% else %}empty{% endif %}">★</span>
+        <span class="star {% if entry.review().rating().value() >= 5 %}filled{% else %}empty{% endif %}">★</span>
+      </div>
       {% if let Some(comment) = entry.review().comment() %}
       <div class="comment">{{ comment.value() }}</div>
       {% endif %}
