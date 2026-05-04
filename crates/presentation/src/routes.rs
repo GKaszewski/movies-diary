@@ -14,7 +14,9 @@ pub fn build_router(state: AppState) -> Router {
 
 fn html_routes() -> Router<AppState> {
     Router::new()
-        .route("/", routing::get(handlers::html::get_index))
+        .route("/", routing::get(handlers::html::get_activity_feed))
+        .route("/users", routing::get(handlers::html::get_users_list))
+        .route("/users/{id}", routing::get(handlers::html::get_user_profile))
         .route(
             "/login",
             routing::get(handlers::html::get_login_page)

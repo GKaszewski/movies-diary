@@ -235,6 +235,109 @@ pub mod html {
             }
         }
     }
+
+    pub async fn get_activity_feed(
+        OptionalCookieUser(user_id): OptionalCookieUser,
+        State(state): State<AppState>,
+        Query(params): Query<DiaryQueryParams>,
+    ) -> impl IntoResponse {
+        let ctx = build_page_context(&state, user_id).await;
+        let query = application::queries::GetActivityFeedQuery {
+            limit: params.limit,
+            offset: params.offset,
+        };
+        match application::use_cases::get_activity_feed::execute(&state.app_ctx, query).await {
+            Ok(entries) => {
+                let limit = entries.limit;
+                let offset = entries.offset;
+                let has_more = (offset + limit) < entries.total_count as u32;
+                let data = application::ports::ActivityFeedPageData {
+                    ctx,
+                    current_offset: offset,
+                    has_more,
+                    limit,
+                    entries,
+                };
+                match state.html_renderer.render_activity_feed_page(data) {
+                    Ok(html) => Html(html).into_response(),
+                    Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
+                }
+            }
+            Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+        }
+    }
+
+    pub async fn get_users_list(
+        OptionalCookieUser(user_id): OptionalCookieUser,
+        State(state): State<AppState>,
+    ) -> impl IntoResponse {
+        let ctx = build_page_context(&state, user_id).await;
+        match application::use_cases::get_users::execute(&state.app_ctx, application::queries::GetUsersQuery).await {
+            Ok(users) => {
+                let data = application::ports::UsersPageData { ctx, users };
+                match state.html_renderer.render_users_page(data) {
+                    Ok(html) => Html(html).into_response(),
+                    Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
+                }
+            }
+            Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+        }
+    }
+
+    pub async fn get_user_profile(
+        OptionalCookieUser(user_id): OptionalCookieUser,
+        State(state): State<AppState>,
+        Path(profile_user_uuid): Path<Uuid>,
+        Query(params): Query<crate::dtos::ProfileQueryParams>,
+    ) -> impl IntoResponse {
+        let ctx = build_page_context(&state, user_id).await;
+        let view = params.view.clone().unwrap_or_else(|| "recent".to_string());
+
+        let profile_user = match state.app_ctx.user_repository
+            .find_by_id(&domain::value_objects::UserId::from_uuid(profile_user_uuid))
+            .await
+        {
+            Ok(Some(u)) => u,
+            Ok(None) => return (StatusCode::NOT_FOUND, "User not found").into_response(),
+            Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+        };
+
+        let query = application::queries::GetUserProfileQuery {
+            user_id: profile_user_uuid,
+            view: view.clone(),
+            limit: params.limit,
+            offset: params.offset,
+        };
+
+        match application::use_cases::get_user_profile::execute(&state.app_ctx, query).await {
+            Ok(profile) => {
+                let (offset, has_more, limit) = profile.entries.as_ref()
+                    .map(|e| {
+                        let has_more = (e.offset + e.limit) < e.total_count as u32;
+                        (e.offset, has_more, e.limit)
+                    })
+                    .unwrap_or((0, false, 20));
+                let data = application::ports::ProfilePageData {
+                    ctx,
+                    profile_user_id: profile_user_uuid,
+                    profile_user_email: profile_user.email().value().to_string(),
+                    stats: profile.stats,
+                    view,
+                    entries: profile.entries,
+                    current_offset: offset,
+                    has_more,
+                    limit,
+                    history: profile.history,
+                    trends: profile.trends,
+                };
+                match state.html_renderer.render_profile_page(data) {
+                    Ok(html) => Html(html).into_response(),
+                    Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
+                }
+            }
+            Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+        }
+    }
 }
 
 pub mod posters {

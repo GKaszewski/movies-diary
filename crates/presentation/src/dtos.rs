@@ -223,6 +223,13 @@ impl From<DiaryQueryParams> for GetDiaryQuery {
     }
 }
 
+#[derive(serde::Deserialize, Default)]
+pub struct ProfileQueryParams {
+    pub view: Option<String>,
+    pub limit: Option<u32>,
+    pub offset: Option<u32>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
