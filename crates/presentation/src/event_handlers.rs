@@ -99,6 +99,9 @@ mod tests {
         async fn save_review(&self, _: &Review) -> Result<DomainEvent, DomainError> { panic!("unexpected") }
         async fn query_diary(&self, _: &DiaryFilter) -> Result<Paginated<DiaryEntry>, DomainError> { panic!("unexpected") }
         async fn get_review_history(&self, _: &MovieId) -> Result<ReviewHistory, DomainError> { panic!("unexpected") }
+        async fn get_review_by_id(&self, _: &ReviewId) -> Result<Option<Review>, DomainError> { panic!("unexpected") }
+        async fn delete_review(&self, _: &ReviewId) -> Result<(), DomainError> { panic!("unexpected") }
+        async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> { panic!("unexpected") }
     }
 
     #[async_trait]
