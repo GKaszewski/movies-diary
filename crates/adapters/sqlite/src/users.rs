@@ -8,6 +8,7 @@ use domain::{
     ports::UserRepository,
     value_objects::{Email, PasswordHash, UserId},
 };
+use super::models::UserSummaryRow;
 
 pub struct SqliteUserRepository {
     pool: SqlitePool,
@@ -96,6 +97,29 @@ impl UserRepository for SqliteUserRepository {
                 Ok(Some(User::from_persistence(UserId::from_uuid(uuid), email, hash)))
             }
         }
+    }
+
+    async fn list_with_stats(&self) -> Result<Vec<domain::models::UserSummary>, DomainError> {
+        sqlx::query_as!(
+            UserSummaryRow,
+            r#"SELECT u.id,
+                      u.email,
+                      COUNT(r.id) AS "total_movies!: i64",
+                      AVG(CAST(r.rating AS REAL)) AS "avg_rating: Option<f64>"
+               FROM users u
+               LEFT JOIN reviews r ON r.user_id = u.id
+               GROUP BY u.id, u.email
+               ORDER BY u.email ASC"#
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| {
+            tracing::error!("Database error: {:?}", e);
+            DomainError::InfrastructureError("Database operation failed".into())
+        })?
+        .into_iter()
+        .map(UserSummaryRow::to_domain)
+        .collect()
     }
 }
 
