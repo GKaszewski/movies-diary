@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "crates/adapters/auth",
+    "crates/adapters/auth", "crates/adapters/event-publisher",
     "crates/adapters/metadata", "crates/adapters/poster-fetcher", "crates/adapters/poster-storage",
     "crates/adapters/rss",
     "crates/adapters/sqlite",
@@ -41,6 +41,7 @@ auth = { path = "crates/adapters/auth" }
 metadata = { path = "crates/adapters/metadata" }
 poster-fetcher = { path = "crates/adapters/poster-fetcher" }
 poster-storage = { path = "crates/adapters/poster-storage" }
+event-publisher = { path = "crates/adapters/event-publisher" }
 rss = { path = "crates/adapters/rss" }
 sqlite = { path = "crates/adapters/sqlite" }
 template-askama = { path = "crates/adapters/template-askama" }

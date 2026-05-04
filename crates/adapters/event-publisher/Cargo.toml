@@ -1,0 +1,10 @@
+[package]
+name = "event-publisher"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+domain      = { workspace = true }
+async-trait = { workspace = true }
+tokio       = { workspace = true }
+tracing     = { workspace = true }

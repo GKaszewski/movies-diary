@@ -682,6 +682,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "event-publisher"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "domain",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "find-msvc-tools"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1779,6 +1789,7 @@ dependencies = [
  "chrono",
  "domain",
  "dotenvy",
+ "event-publisher",
  "http-body-util",
  "metadata",
  "poster-fetcher",

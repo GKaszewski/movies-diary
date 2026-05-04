@@ -1,8 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::Context;
-use async_trait::async_trait;
-use domain::{errors::DomainError, events::DomainEvent, ports::EventPublisher};
+use event_publisher::{EventPublisherConfig, create_event_channel};
 use sqlx::SqlitePool;
 use tokio::net::TcpListener;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -17,15 +16,6 @@ use rss::RssAdapter;
 use template_askama::AskamaHtmlRenderer;
 
 use presentation::{routes, state::AppState};
-
-struct StubEventPublisher;
-
-#[async_trait]
-impl EventPublisher for StubEventPublisher {
-    async fn publish(&self, _event: &DomainEvent) -> Result<(), DomainError> {
-        Ok(())
-    }
-}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -64,12 +54,15 @@ async fn wire_dependencies() -> anyhow::Result<AppState> {
 
     let user_repo = SqliteUserRepository::new(pool);
 
+    let (event_publisher, event_worker) = create_event_channel(EventPublisherConfig::from_env());
+    tokio::spawn(event_worker.run());
+
     let app_ctx = AppContext {
         repository: Arc::new(movie_repo),
         metadata_client: Arc::new(MetadataClientImpl::new_omdb(omdb_api_key)),
         poster_fetcher: Arc::new(ReqwestPosterFetcher::new(PosterFetcherConfig::from_env())?),
         poster_storage: Arc::new(PosterStorageAdapter::from_config(storage_config)?),
-        event_publisher: Arc::new(StubEventPublisher),
+        event_publisher: Arc::new(event_publisher),
         auth_service: Arc::new(JwtAuthService::new(auth_config)),
         password_hasher: Arc::new(Argon2PasswordHasher),
         user_repository: Arc::new(user_repo),

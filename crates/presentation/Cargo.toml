@@ -28,6 +28,7 @@ poster-storage = { workspace = true }
 sqlite = { workspace = true }
 sqlx = { workspace = true }
 template-askama = { workspace = true }
+event-publisher = { workspace = true }
 rss = { workspace = true }
 
 [dev-dependencies]
