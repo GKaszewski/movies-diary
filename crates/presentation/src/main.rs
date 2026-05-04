@@ -3,7 +3,10 @@ use std::sync::Arc;
 use anyhow::Context;
 use event_publisher::{EventPublisherConfig, NoopEventPublisher, create_event_channel};
 use presentation::event_handlers::PosterSyncHandler;
+use std::str::FromStr;
+
 use sqlx::SqlitePool;
+use sqlx::sqlite::SqliteConnectOptions;
 use tokio::net::TcpListener;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -42,7 +45,11 @@ async fn wire_dependencies() -> anyhow::Result<AppState> {
     let app_config = AppConfig::from_env();
     let omdb_api_key = std::env::var("OMDB_API_KEY").context("OMDB_API_KEY must be set")?;
 
-    let pool = SqlitePool::connect("sqlite://reviews.db")
+    let database_url = std::env::var("DATABASE_URL").context("DATABASE_URL must be set")?;
+    let opts = SqliteConnectOptions::from_str(&database_url)
+        .context("Invalid DATABASE_URL")?
+        .create_if_missing(true);
+    let pool = SqlitePool::connect_with(opts)
         .await
         .context("Failed to connect to SQLite database")?;
 
