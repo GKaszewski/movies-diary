@@ -88,11 +88,6 @@ nav a:hover {
   box-shadow: 0 0 12px var(--primary-glow);
 }
 
-.user-email {
-  color: var(--text-muted);
-  font-size: 0.85em;
-}
-
 /* Diary entries */
 .diary {
   display: flex;
