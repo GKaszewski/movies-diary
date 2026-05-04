@@ -1,4 +1,5 @@
 const DEFAULT_PAGE_LIMIT: u32 = 5;
+const RSS_FEED_LIMIT: u32 = 50;
 
 pub mod html {
     use axum::{
@@ -280,7 +281,6 @@ pub mod html {
         Query(params): Query<crate::dtos::ProfileQueryParams>,
     ) -> impl IntoResponse {
         let mut ctx = build_page_context(&state, user_id).await;
-        ctx.rss_url = format!("/users/{}/feed.rss", profile_user_uuid);
         let view = params.view.unwrap_or_else(|| "recent".to_string());
 
         let profile_user = match state.app_ctx.user_repository
@@ -307,6 +307,7 @@ pub mod html {
                         (e.offset, has_more, e.limit)
                     })
                     .unwrap_or((0, false, super::DEFAULT_PAGE_LIMIT));
+                ctx.rss_url = format!("/users/{}/feed.rss", profile_user_uuid);
                 let data = application::ports::ProfilePageData {
                     ctx,
                     profile_user_id: profile_user_uuid,
@@ -376,7 +377,7 @@ pub mod rss {
 
     pub async fn get_feed(State(state): State<AppState>) -> Result<impl IntoResponse, ApiError> {
         let query = GetDiaryQuery {
-            limit: Some(50),
+            limit: Some(super::RSS_FEED_LIMIT),
             offset: Some(0),
             sort_by: Some(SortDirection::Descending),
             movie_id: None,
@@ -403,7 +404,7 @@ pub mod rss {
             .ok_or_else(|| ApiError(DomainError::NotFound(format!("User {user_id}"))))?;
 
         let query = GetDiaryQuery {
-            limit: Some(50),
+            limit: Some(super::RSS_FEED_LIMIT),
             offset: Some(0),
             sort_by: Some(SortDirection::Descending),
             movie_id: None,
