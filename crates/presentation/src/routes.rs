@@ -14,7 +14,19 @@ pub fn build_router(state: AppState) -> Router {
 
 fn html_routes() -> Router<AppState> {
     Router::new()
-        .route("/diary", routing::get(handlers::html::get_diary_page))
+        .route("/", routing::get(handlers::html::get_index))
+        .route(
+            "/login",
+            routing::get(handlers::html::get_login_page)
+                .post(handlers::html::post_login),
+        )
+        .route("/logout", routing::get(handlers::html::get_logout))
+        .route(
+            "/register",
+            routing::get(handlers::html::get_register_page)
+                .post(handlers::html::post_register),
+        )
+        .route("/reviews/new", routing::get(handlers::html::get_new_review_page))
         .route("/reviews", routing::post(handlers::html::post_review))
         .route("/feed.rss", routing::get(handlers::rss::get_feed))
 }
