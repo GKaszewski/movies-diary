@@ -7,7 +7,7 @@ use crate::{
     models::{DiaryEntry, DiaryFilter, Movie, Review, ReviewHistory, User, collections::Paginated},
     value_objects::{
         Email, ExternalMetadataId, MovieId, MovieTitle, PasswordHash, PosterPath, PosterUrl,
-        ReleaseYear, UserId,
+        ReleaseYear, ReviewId, UserId,
     },
 };
 
@@ -32,6 +32,12 @@ pub trait MovieRepository: Send + Sync {
     -> Result<Paginated<DiaryEntry>, DomainError>;
 
     async fn get_review_history(&self, movie_id: &MovieId) -> Result<ReviewHistory, DomainError>;
+
+    async fn get_review_by_id(&self, review_id: &ReviewId) -> Result<Option<Review>, DomainError>;
+
+    async fn delete_review(&self, review_id: &ReviewId) -> Result<(), DomainError>;
+
+    async fn delete_movie(&self, movie_id: &MovieId) -> Result<(), DomainError>;
 }
 
 pub enum MetadataSearchCriteria {
