@@ -1,8 +1,13 @@
 use askama::Template;
+use chrono::Datelike;
 use application::ports::{
-    HtmlPageContext, HtmlRenderer, LoginPageData, NewReviewPageData, RegisterPageData,
+    ActivityFeedPageData, HtmlPageContext, HtmlRenderer, LoginPageData,
+    NewReviewPageData, ProfilePageData, RegisterPageData, UsersPageData,
 };
-use domain::models::{DiaryEntry, collections::Paginated};
+use domain::models::{
+    DiaryEntry, FeedEntry, MonthActivity, UserStats, UserSummary, UserTrends,
+    collections::Paginated,
+};
 
 #[derive(Template)]
 #[template(path = "diary.html")]
@@ -33,6 +38,83 @@ struct RegisterTemplate<'a> {
 struct NewReviewTemplate<'a> {
     error: Option<&'a str>,
     ctx: &'a HtmlPageContext,
+}
+
+#[derive(Template)]
+#[template(path = "activity_feed.html")]
+struct ActivityFeedTemplate<'a> {
+    entries: &'a [FeedEntry],
+    current_offset: u32,
+    limit: u32,
+    has_more: bool,
+    ctx: &'a HtmlPageContext,
+}
+
+#[derive(Template)]
+#[template(path = "users.html")]
+struct UsersTemplate<'a> {
+    users: &'a [UserSummary],
+    ctx: &'a HtmlPageContext,
+}
+
+#[derive(Template)]
+#[template(path = "profile.html")]
+struct ProfileTemplate<'a> {
+    ctx: &'a HtmlPageContext,
+    profile_user_email: &'a str,
+    stats: &'a UserStats,
+    view: &'a str,
+    entries: Option<&'a Paginated<DiaryEntry>>,
+    current_offset: u32,
+    has_more: bool,
+    limit: u32,
+    history: Option<&'a Vec<MonthActivity>>,
+    trends: Option<&'a UserTrends>,
+    heatmap: Vec<HeatmapCell>,
+}
+
+struct HeatmapCell {
+    month_label: String,
+    count: i64,
+    bg_style: String,
+}
+
+fn relative_time(dt: chrono::NaiveDateTime) -> String {
+    let now = chrono::Utc::now().naive_utc();
+    let diff = now.signed_duration_since(dt);
+    let minutes = diff.num_minutes();
+    let hours = diff.num_hours();
+    let days = diff.num_days();
+    if minutes < 1 { return "just now".to_string(); }
+    if minutes < 60 { return format!("{} min ago", minutes); }
+    if hours < 24 { return format!("{} h ago", hours); }
+    if days == 1 { return "yesterday".to_string(); }
+    if days < 30 { return format!("{} days ago", days); }
+    dt.format("%b %-d, %Y").to_string()
+}
+
+fn build_heatmap(history: &[MonthActivity]) -> Vec<HeatmapCell> {
+    let current_year = chrono::Utc::now().year();
+    let count_for = |m: &str| -> i64 {
+        history.iter().find(|a| a.year_month.starts_with(&format!("{}-{}", current_year, m)))
+            .map(|a| a.count)
+            .unwrap_or(0)
+    };
+    let months = [
+        ("01", "Jan"), ("02", "Feb"), ("03", "Mar"), ("04", "Apr"),
+        ("05", "May"), ("06", "Jun"), ("07", "Jul"), ("08", "Aug"),
+        ("09", "Sep"), ("10", "Oct"), ("11", "Nov"), ("12", "Dec"),
+    ];
+    let counts: Vec<i64> = months.iter().map(|(m, _)| count_for(m)).collect();
+    let max = *counts.iter().max().unwrap_or(&1).max(&1);
+    months.iter().zip(counts.iter()).map(|((_, label), &count)| {
+        let alpha = if count == 0 { 0.05 } else { 0.15 + 0.75 * (count as f64 / max as f64) };
+        HeatmapCell {
+            month_label: label.to_string(),
+            count,
+            bg_style: format!("background: rgba(74, 158, 255, {:.2})", alpha),
+        }
+    }).collect()
 }
 
 pub struct AskamaHtmlRenderer;
@@ -79,6 +161,48 @@ impl HtmlRenderer for AskamaHtmlRenderer {
         NewReviewTemplate {
             error: data.error,
             ctx: &data.ctx,
+        }
+        .render()
+        .map_err(|e| e.to_string())
+    }
+
+    fn render_activity_feed_page(&self, data: ActivityFeedPageData) -> Result<String, String> {
+        ActivityFeedTemplate {
+            entries: &data.entries.items,
+            current_offset: data.current_offset,
+            limit: data.limit,
+            has_more: data.has_more,
+            ctx: &data.ctx,
+        }
+        .render()
+        .map_err(|e| e.to_string())
+    }
+
+    fn render_users_page(&self, data: UsersPageData) -> Result<String, String> {
+        UsersTemplate {
+            users: &data.users,
+            ctx: &data.ctx,
+        }
+        .render()
+        .map_err(|e| e.to_string())
+    }
+
+    fn render_profile_page(&self, data: ProfilePageData) -> Result<String, String> {
+        let heatmap = data.history.as_deref()
+            .map(|h| build_heatmap(h))
+            .unwrap_or_default();
+        ProfileTemplate {
+            ctx: &data.ctx,
+            profile_user_email: &data.profile_user_email,
+            stats: &data.stats,
+            view: &data.view,
+            entries: data.entries.as_ref(),
+            current_offset: data.current_offset,
+            has_more: data.has_more,
+            limit: data.limit,
+            history: data.history.as_ref(),
+            trends: data.trends.as_ref(),
+            heatmap,
         }
         .render()
         .map_err(|e| e.to_string())
