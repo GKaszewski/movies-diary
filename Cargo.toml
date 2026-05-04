@@ -1,12 +1,14 @@
 [workspace]
 members = [
-    "crates/adapters/auth", "crates/adapters/event-publisher",
-    "crates/adapters/metadata", "crates/adapters/poster-fetcher", "crates/adapters/poster-storage",
+    "crates/adapters/auth",
+    "crates/adapters/event-publisher",
+    "crates/adapters/metadata",
+    "crates/adapters/poster-fetcher",
+    "crates/adapters/poster-storage",
     "crates/adapters/rss",
     "crates/adapters/sqlite",
     "crates/adapters/template-askama",
     "crates/application",
-    "crates/common",
     "crates/domain",
     "crates/presentation",
 ]
@@ -34,7 +36,6 @@ reqwest = { version = "0.13", features = ["json", "query"] }
 object_store = { version = "0.11", features = ["aws"] }
 
 domain = { path = "crates/domain" }
-common = { path = "crates/common" }
 application = { path = "crates/application" }
 presentation = { path = "crates/presentation" }
 auth = { path = "crates/adapters/auth" }
