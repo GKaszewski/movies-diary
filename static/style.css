@@ -11,10 +11,10 @@
   --glass-inset: inset 0 1px 0 rgba(255, 255, 255, 0.5);
   --blur: blur(12px);
 
-  --aqua: oklch(85.2% 0.199 91.936);
-  --aqua-mid: oklch(89% 0.13 91.936);
-  --aqua-light: oklch(93% 0.07 91.936);
-  --aqua-glow: oklch(85.2% 0.199 91.936 / 0.3);
+  --primary: oklch(85.2% 0.199 91.936);
+  --primary-mid: oklch(89% 0.13 91.936);
+  --primary-light: oklch(93% 0.07 91.936);
+  --primary-glow: oklch(85.2% 0.199 91.936 / 0.3);
 
   --text: #fff;
   --text-muted: rgba(255, 255, 255, 0.7);
@@ -59,8 +59,8 @@ header {
   font-weight: 800;
   font-size: 1.1em;
   text-decoration: none;
-  color: var(--aqua);
-  text-shadow: 0 0 20px var(--aqua-glow);
+  color: var(--primary);
+  text-shadow: 0 0 20px var(--primary-glow);
 }
 
 nav {
@@ -71,7 +71,7 @@ nav {
 
 nav a {
   text-decoration: none;
-  color: var(--aqua);
+  color: var(--primary);
   font-weight: 600;
   font-size: 0.85em;
   padding: 4px 14px;
@@ -85,7 +85,7 @@ nav a {
 
 nav a:hover {
   background: oklch(85.2% 0.199 91.936 / 0.2);
-  box-shadow: 0 0 12px var(--aqua-glow);
+  box-shadow: 0 0 12px var(--primary-glow);
 }
 
 .user-email {
@@ -136,7 +136,7 @@ nav a:hover {
 .entry:hover {
   transform: translateY(-2px);
   box-shadow:
-    0 12px 40px var(--aqua-glow),
+    0 12px 40px var(--primary-glow),
     var(--glass-inset);
 }
 
@@ -149,8 +149,8 @@ nav a:hover {
   width: 100%;
   display: block;
   border-radius: 8px;
-  border: 2px solid var(--aqua-mid);
-  box-shadow: 0 4px 12px var(--aqua-glow);
+  border: 2px solid var(--primary-mid);
+  box-shadow: 0 4px 12px var(--primary-glow);
 }
 
 .entry-body {
@@ -181,8 +181,8 @@ nav a:hover {
 }
 
 .star.filled {
-  color: var(--aqua);
-  text-shadow: 0 0 8px var(--aqua-glow), 0 0 2px var(--aqua);
+  color: var(--primary);
+  text-shadow: 0 0 8px var(--primary-glow), 0 0 2px var(--primary);
 }
 
 .star.empty {
@@ -216,7 +216,7 @@ nav a:hover {
 
 .pagination a {
   text-decoration: none;
-  color: var(--aqua);
+  color: var(--primary);
   font-weight: 600;
   padding: 4px 16px;
   border-radius: 20px;
@@ -229,7 +229,7 @@ nav a:hover {
 
 .pagination a:hover {
   background: oklch(85.2% 0.199 91.936 / 0.2);
-  box-shadow: 0 0 12px var(--aqua-glow);
+  box-shadow: 0 0 12px var(--primary-glow);
 }
 
 /* Forms */
@@ -278,7 +278,7 @@ form textarea {
 form input:focus,
 form textarea:focus {
   outline: none;
-  border-color: var(--aqua);
+  border-color: var(--primary);
   box-shadow: 0 0 0 3px oklch(85.2% 0.199 91.936 / 0.2);
 }
 
@@ -301,15 +301,15 @@ form button[type="submit"] {
   cursor: pointer;
   background: linear-gradient(
     135deg,
-    var(--aqua-mid) 0%,
-    var(--aqua) 60%,
+    var(--primary-mid) 0%,
+    var(--primary) 60%,
     oklch(72% 0.199 91.936) 100%
   );
   color: #fff;
   border: none;
   border-radius: 24px;
   box-shadow:
-    0 4px 16px var(--aqua-glow),
+    0 4px 16px var(--primary-glow),
     inset 0 1px 0 rgba(255, 255, 255, 0.4);
   position: relative;
   overflow: hidden;
@@ -337,7 +337,7 @@ form button[type="submit"]::after {
 form button[type="submit"]:hover {
   transform: translateY(-1px);
   box-shadow:
-    0 6px 24px var(--aqua-glow),
+    0 6px 24px var(--primary-glow),
     inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
