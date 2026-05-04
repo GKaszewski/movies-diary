@@ -13,6 +13,7 @@ use metadata::MetadataClientImpl;
 use poster_fetcher::{PosterFetcherConfig, ReqwestPosterFetcher};
 use poster_storage::{PosterStorageAdapter, StorageConfig};
 use sqlite::{SqliteMovieRepository, SqliteUserRepository};
+use rss::RssAdapter;
 use template_askama::AskamaHtmlRenderer;
 
 use presentation::{routes, state::AppState};
@@ -78,6 +79,10 @@ async fn wire_dependencies() -> anyhow::Result<AppState> {
     Ok(AppState {
         app_ctx,
         html_renderer: Arc::new(AskamaHtmlRenderer::new()),
+        rss_renderer: Arc::new(RssAdapter::new(
+            "Movie Diary".into(),
+            "http://localhost:3000".into(),
+        )),
     })
 }
 

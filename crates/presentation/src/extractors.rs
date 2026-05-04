@@ -79,6 +79,11 @@ mod tests {
             fn render_diary_page(&self, _: &domain::models::collections::Paginated<domain::models::DiaryEntry>) -> Result<String, String> { panic!() }
         }
 
+        struct PanicRssRenderer;
+        impl crate::ports::RssFeedRenderer for PanicRssRenderer {
+            fn render_feed(&self, _: &[domain::models::DiaryEntry]) -> Result<String, String> { panic!() }
+        }
+
         struct PanicMeta; struct PanicFetcher; struct PanicStorage; struct PanicEvent; struct PanicHasher; struct PanicAuth; struct PanicUserRepo;
         #[async_trait::async_trait] impl domain::ports::MetadataClient for PanicMeta { async fn fetch_movie_metadata(&self, _: &domain::ports::MetadataSearchCriteria) -> Result<domain::models::Movie, domain::errors::DomainError> { panic!() } async fn get_poster_url(&self, _: &domain::value_objects::ExternalMetadataId) -> Result<Option<domain::value_objects::PosterUrl>, domain::errors::DomainError> { panic!() } }
         #[async_trait::async_trait] impl domain::ports::PosterFetcherClient for PanicFetcher { async fn fetch_poster_bytes(&self, _: &domain::value_objects::PosterUrl) -> Result<Vec<u8>, domain::errors::DomainError> { panic!() } }
@@ -101,6 +106,7 @@ mod tests {
                 config: application::config::AppConfig { allow_registration: false },
             },
             html_renderer: Arc::new(PanicRenderer),
+            rss_renderer: Arc::new(PanicRssRenderer),
         };
 
         let app = test_router(state);

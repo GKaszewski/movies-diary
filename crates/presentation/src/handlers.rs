@@ -75,6 +75,34 @@ pub mod html {
     }
 }
 
+pub mod rss {
+    use axum::{
+        extract::State,
+        http::header,
+        response::IntoResponse,
+    };
+
+    use application::{queries::GetDiaryQuery, use_cases::get_diary};
+    use domain::{errors::DomainError, models::SortDirection};
+
+    use crate::{errors::ApiError, state::AppState};
+
+    pub async fn get_feed(State(state): State<AppState>) -> Result<impl IntoResponse, ApiError> {
+        let query = GetDiaryQuery {
+            limit: Some(50),
+            offset: Some(0),
+            sort_by: Some(SortDirection::Descending),
+            movie_id: None,
+        };
+        let page = get_diary::execute(&state.app_ctx, query).await?;
+        let xml = state
+            .rss_renderer
+            .render_feed(&page.items)
+            .map_err(|e| ApiError(DomainError::InfrastructureError(e)))?;
+        Ok(([(header::CONTENT_TYPE, "application/rss+xml; charset=utf-8")], xml))
+    }
+}
+
 pub mod api {
     use axum::{
         Json,

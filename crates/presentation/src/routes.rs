@@ -16,6 +16,7 @@ fn html_routes() -> Router<AppState> {
     Router::new()
         .route("/diary", routing::get(handlers::html::get_diary_page))
         .route("/reviews", routing::post(handlers::html::post_review))
+        .route("/feed.rss", routing::get(handlers::rss::get_feed))
 }
 
 fn api_routes() -> Router<AppState> {

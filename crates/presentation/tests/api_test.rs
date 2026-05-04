@@ -23,6 +23,7 @@ use http_body_util::BodyExt;
 use presentation::{routes, state::AppState};
 use sqlite::SqliteMovieRepository;
 use sqlx::SqlitePool;
+use rss::RssAdapter;
 use template_askama::AskamaHtmlRenderer;
 use tower::ServiceExt;
 
@@ -105,6 +106,7 @@ async fn test_app() -> Router {
             config: AppConfig { allow_registration: false },
         },
         html_renderer: Arc::new(AskamaHtmlRenderer::new()),
+        rss_renderer: Arc::new(RssAdapter::new("Movie Diary".into(), "http://localhost:3000".into())),
     };
 
     routes::build_router(state)
