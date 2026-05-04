@@ -1,3 +1,4 @@
+pub mod delete_review;
 pub mod get_diary;
 pub mod get_review_history;
 pub mod log_review;

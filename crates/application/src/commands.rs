@@ -29,3 +29,8 @@ pub struct RegisterCommand {
     pub email: String,
     pub password: String,
 }
+
+pub struct DeleteReviewCommand {
+    pub review_id: Uuid,
+    pub requesting_user_id: Uuid,
+}
