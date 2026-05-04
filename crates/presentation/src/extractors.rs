@@ -134,6 +134,10 @@ mod tests {
             async fn get_review_by_id(&self, _: &domain::value_objects::ReviewId) -> Result<Option<domain::models::Review>, domain::errors::DomainError> { panic!() }
             async fn delete_review(&self, _: &domain::value_objects::ReviewId) -> Result<(), domain::errors::DomainError> { panic!() }
             async fn delete_movie(&self, _: &domain::value_objects::MovieId) -> Result<(), domain::errors::DomainError> { panic!() }
+            async fn query_activity_feed(&self, _: &domain::models::collections::PageParams) -> Result<domain::models::collections::Paginated<domain::models::FeedEntry>, domain::errors::DomainError> { panic!() }
+            async fn get_user_stats(&self, _: &domain::value_objects::UserId) -> Result<domain::models::UserStats, domain::errors::DomainError> { panic!() }
+            async fn get_user_history(&self, _: &domain::value_objects::UserId) -> Result<Vec<domain::models::DiaryEntry>, domain::errors::DomainError> { panic!() }
+            async fn get_user_trends(&self, _: &domain::value_objects::UserId) -> Result<domain::models::UserTrends, domain::errors::DomainError> { panic!() }
         }
 
         struct PanicRenderer;
@@ -142,6 +146,9 @@ mod tests {
             fn render_login_page(&self, _: application::ports::LoginPageData<'_>) -> Result<String, String> { panic!() }
             fn render_register_page(&self, _: application::ports::RegisterPageData<'_>) -> Result<String, String> { panic!() }
             fn render_new_review_page(&self, _: application::ports::NewReviewPageData<'_>) -> Result<String, String> { panic!() }
+            fn render_activity_feed_page(&self, _: application::ports::ActivityFeedPageData) -> Result<String, String> { panic!() }
+            fn render_users_page(&self, _: application::ports::UsersPageData) -> Result<String, String> { panic!() }
+            fn render_profile_page(&self, _: application::ports::ProfilePageData) -> Result<String, String> { panic!() }
         }
 
         struct PanicRssRenderer;
@@ -156,7 +163,7 @@ mod tests {
         #[async_trait::async_trait] impl domain::ports::EventPublisher for PanicEvent { async fn publish(&self, _: &domain::events::DomainEvent) -> Result<(), domain::errors::DomainError> { panic!() } }
         #[async_trait::async_trait] impl domain::ports::PasswordHasher for PanicHasher { async fn hash(&self, _: &str) -> Result<domain::value_objects::PasswordHash, domain::errors::DomainError> { panic!() } async fn verify(&self, _: &str, _: &domain::value_objects::PasswordHash) -> Result<bool, domain::errors::DomainError> { panic!() } }
         #[async_trait::async_trait] impl domain::ports::AuthService for PanicAuth { async fn generate_token(&self, _: &domain::value_objects::UserId) -> Result<domain::ports::GeneratedToken, domain::errors::DomainError> { panic!() } async fn validate_token(&self, _: &str) -> Result<domain::value_objects::UserId, domain::errors::DomainError> { panic!() } }
-        #[async_trait::async_trait] impl domain::ports::UserRepository for PanicUserRepo { async fn find_by_email(&self, _: &domain::value_objects::Email) -> Result<Option<domain::models::User>, domain::errors::DomainError> { panic!() } async fn save(&self, _: &domain::models::User) -> Result<(), domain::errors::DomainError> { panic!() } async fn find_by_id(&self, _: &domain::value_objects::UserId) -> Result<Option<domain::models::User>, domain::errors::DomainError> { panic!() } }
+        #[async_trait::async_trait] impl domain::ports::UserRepository for PanicUserRepo { async fn find_by_email(&self, _: &domain::value_objects::Email) -> Result<Option<domain::models::User>, domain::errors::DomainError> { panic!() } async fn save(&self, _: &domain::models::User) -> Result<(), domain::errors::DomainError> { panic!() } async fn find_by_id(&self, _: &domain::value_objects::UserId) -> Result<Option<domain::models::User>, domain::errors::DomainError> { panic!() } async fn list_with_stats(&self) -> Result<Vec<domain::models::UserSummary>, domain::errors::DomainError> { panic!() } }
 
         let state = crate::state::AppState {
             app_ctx: AppContext {
@@ -237,6 +244,10 @@ mod tests {
             async fn get_review_by_id(&self, _: &domain::value_objects::ReviewId) -> Result<Option<domain::models::Review>, domain::errors::DomainError> { panic!() }
             async fn delete_review(&self, _: &domain::value_objects::ReviewId) -> Result<(), domain::errors::DomainError> { panic!() }
             async fn delete_movie(&self, _: &domain::value_objects::MovieId) -> Result<(), domain::errors::DomainError> { panic!() }
+            async fn query_activity_feed(&self, _: &domain::models::collections::PageParams) -> Result<domain::models::collections::Paginated<domain::models::FeedEntry>, domain::errors::DomainError> { panic!() }
+            async fn get_user_stats(&self, _: &domain::value_objects::UserId) -> Result<domain::models::UserStats, domain::errors::DomainError> { panic!() }
+            async fn get_user_history(&self, _: &domain::value_objects::UserId) -> Result<Vec<domain::models::DiaryEntry>, domain::errors::DomainError> { panic!() }
+            async fn get_user_trends(&self, _: &domain::value_objects::UserId) -> Result<domain::models::UserTrends, domain::errors::DomainError> { panic!() }
         }
         struct PanicMeta2; struct PanicFetcher2; struct PanicStorage2; struct PanicEvent2; struct PanicHasher2; struct PanicUserRepo2;
         #[async_trait::async_trait] impl domain::ports::MetadataClient for PanicMeta2 { async fn fetch_movie_metadata(&self, _: &domain::ports::MetadataSearchCriteria) -> Result<domain::models::Movie, domain::errors::DomainError> { panic!() } async fn get_poster_url(&self, _: &domain::value_objects::ExternalMetadataId) -> Result<Option<domain::value_objects::PosterUrl>, domain::errors::DomainError> { panic!() } }
@@ -245,13 +256,16 @@ mod tests {
         #[async_trait::async_trait] impl domain::ports::EventPublisher for PanicEvent2 { async fn publish(&self, _: &domain::events::DomainEvent) -> Result<(), domain::errors::DomainError> { panic!() } }
         #[async_trait::async_trait] impl domain::ports::PasswordHasher for PanicHasher2 { async fn hash(&self, _: &str) -> Result<domain::value_objects::PasswordHash, domain::errors::DomainError> { panic!() } async fn verify(&self, _: &str, _: &domain::value_objects::PasswordHash) -> Result<bool, domain::errors::DomainError> { panic!() } }
         #[async_trait::async_trait] impl domain::ports::AuthService for PanicAuth2 { async fn generate_token(&self, _: &domain::value_objects::UserId) -> Result<domain::ports::GeneratedToken, domain::errors::DomainError> { panic!() } async fn validate_token(&self, _: &str) -> Result<domain::value_objects::UserId, domain::errors::DomainError> { panic!() } }
-        #[async_trait::async_trait] impl domain::ports::UserRepository for PanicUserRepo2 { async fn find_by_email(&self, _: &domain::value_objects::Email) -> Result<Option<domain::models::User>, domain::errors::DomainError> { panic!() } async fn save(&self, _: &domain::models::User) -> Result<(), domain::errors::DomainError> { panic!() } async fn find_by_id(&self, _: &domain::value_objects::UserId) -> Result<Option<domain::models::User>, domain::errors::DomainError> { panic!() } }
+        #[async_trait::async_trait] impl domain::ports::UserRepository for PanicUserRepo2 { async fn find_by_email(&self, _: &domain::value_objects::Email) -> Result<Option<domain::models::User>, domain::errors::DomainError> { panic!() } async fn save(&self, _: &domain::models::User) -> Result<(), domain::errors::DomainError> { panic!() } async fn find_by_id(&self, _: &domain::value_objects::UserId) -> Result<Option<domain::models::User>, domain::errors::DomainError> { panic!() } async fn list_with_stats(&self) -> Result<Vec<domain::models::UserSummary>, domain::errors::DomainError> { panic!() } }
         struct PanicRenderer2;
         impl crate::ports::HtmlRenderer for PanicRenderer2 {
             fn render_diary_page(&self, _: &domain::models::collections::Paginated<domain::models::DiaryEntry>, _: application::ports::HtmlPageContext) -> Result<String, String> { panic!() }
             fn render_login_page(&self, _: application::ports::LoginPageData<'_>) -> Result<String, String> { panic!() }
             fn render_register_page(&self, _: application::ports::RegisterPageData<'_>) -> Result<String, String> { panic!() }
             fn render_new_review_page(&self, _: application::ports::NewReviewPageData<'_>) -> Result<String, String> { panic!() }
+            fn render_activity_feed_page(&self, _: application::ports::ActivityFeedPageData) -> Result<String, String> { panic!() }
+            fn render_users_page(&self, _: application::ports::UsersPageData) -> Result<String, String> { panic!() }
+            fn render_profile_page(&self, _: application::ports::ProfilePageData) -> Result<String, String> { panic!() }
         }
         struct PanicRssRenderer2;
         impl crate::ports::RssFeedRenderer for PanicRssRenderer2 {
@@ -291,6 +305,10 @@ mod tests {
             async fn get_review_by_id(&self, _: &domain::value_objects::ReviewId) -> Result<Option<domain::models::Review>, domain::errors::DomainError> { panic!() }
             async fn delete_review(&self, _: &domain::value_objects::ReviewId) -> Result<(), domain::errors::DomainError> { panic!() }
             async fn delete_movie(&self, _: &domain::value_objects::MovieId) -> Result<(), domain::errors::DomainError> { panic!() }
+            async fn query_activity_feed(&self, _: &domain::models::collections::PageParams) -> Result<domain::models::collections::Paginated<domain::models::FeedEntry>, domain::errors::DomainError> { panic!() }
+            async fn get_user_stats(&self, _: &domain::value_objects::UserId) -> Result<domain::models::UserStats, domain::errors::DomainError> { panic!() }
+            async fn get_user_history(&self, _: &domain::value_objects::UserId) -> Result<Vec<domain::models::DiaryEntry>, domain::errors::DomainError> { panic!() }
+            async fn get_user_trends(&self, _: &domain::value_objects::UserId) -> Result<domain::models::UserTrends, domain::errors::DomainError> { panic!() }
         }
         struct PanicMeta3; struct PanicFetcher3; struct PanicStorage3; struct PanicEvent3; struct PanicHasher3; struct PanicUserRepo3;
         #[async_trait::async_trait] impl domain::ports::MetadataClient for PanicMeta3 { async fn fetch_movie_metadata(&self, _: &domain::ports::MetadataSearchCriteria) -> Result<domain::models::Movie, domain::errors::DomainError> { panic!() } async fn get_poster_url(&self, _: &domain::value_objects::ExternalMetadataId) -> Result<Option<domain::value_objects::PosterUrl>, domain::errors::DomainError> { panic!() } }
@@ -298,13 +316,16 @@ mod tests {
         #[async_trait::async_trait] impl domain::ports::PosterStorage for PanicStorage3 { async fn store_poster(&self, _: &domain::value_objects::MovieId, _: &[u8]) -> Result<domain::value_objects::PosterPath, domain::errors::DomainError> { panic!() } async fn get_poster(&self, _: &domain::value_objects::PosterPath) -> Result<Vec<u8>, domain::errors::DomainError> { panic!() } }
         #[async_trait::async_trait] impl domain::ports::EventPublisher for PanicEvent3 { async fn publish(&self, _: &domain::events::DomainEvent) -> Result<(), domain::errors::DomainError> { panic!() } }
         #[async_trait::async_trait] impl domain::ports::PasswordHasher for PanicHasher3 { async fn hash(&self, _: &str) -> Result<domain::value_objects::PasswordHash, domain::errors::DomainError> { panic!() } async fn verify(&self, _: &str, _: &domain::value_objects::PasswordHash) -> Result<bool, domain::errors::DomainError> { panic!() } }
-        #[async_trait::async_trait] impl domain::ports::UserRepository for PanicUserRepo3 { async fn find_by_email(&self, _: &domain::value_objects::Email) -> Result<Option<domain::models::User>, domain::errors::DomainError> { panic!() } async fn save(&self, _: &domain::models::User) -> Result<(), domain::errors::DomainError> { panic!() } async fn find_by_id(&self, _: &domain::value_objects::UserId) -> Result<Option<domain::models::User>, domain::errors::DomainError> { panic!() } }
+        #[async_trait::async_trait] impl domain::ports::UserRepository for PanicUserRepo3 { async fn find_by_email(&self, _: &domain::value_objects::Email) -> Result<Option<domain::models::User>, domain::errors::DomainError> { panic!() } async fn save(&self, _: &domain::models::User) -> Result<(), domain::errors::DomainError> { panic!() } async fn find_by_id(&self, _: &domain::value_objects::UserId) -> Result<Option<domain::models::User>, domain::errors::DomainError> { panic!() } async fn list_with_stats(&self) -> Result<Vec<domain::models::UserSummary>, domain::errors::DomainError> { panic!() } }
         struct PanicRenderer3;
         impl crate::ports::HtmlRenderer for PanicRenderer3 {
             fn render_diary_page(&self, _: &domain::models::collections::Paginated<domain::models::DiaryEntry>, _: application::ports::HtmlPageContext) -> Result<String, String> { panic!() }
             fn render_login_page(&self, _: application::ports::LoginPageData<'_>) -> Result<String, String> { panic!() }
             fn render_register_page(&self, _: application::ports::RegisterPageData<'_>) -> Result<String, String> { panic!() }
             fn render_new_review_page(&self, _: application::ports::NewReviewPageData<'_>) -> Result<String, String> { panic!() }
+            fn render_activity_feed_page(&self, _: application::ports::ActivityFeedPageData) -> Result<String, String> { panic!() }
+            fn render_users_page(&self, _: application::ports::UsersPageData) -> Result<String, String> { panic!() }
+            fn render_profile_page(&self, _: application::ports::ProfilePageData) -> Result<String, String> { panic!() }
         }
         struct PanicRssRenderer3;
         impl crate::ports::RssFeedRenderer for PanicRssRenderer3 {

@@ -102,6 +102,10 @@ mod tests {
         async fn get_review_by_id(&self, _: &ReviewId) -> Result<Option<Review>, DomainError> { panic!("unexpected") }
         async fn delete_review(&self, _: &ReviewId) -> Result<(), DomainError> { panic!("unexpected") }
         async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> { panic!("unexpected") }
+        async fn query_activity_feed(&self, _: &domain::models::collections::PageParams) -> Result<domain::models::collections::Paginated<domain::models::FeedEntry>, DomainError> { panic!("unexpected") }
+        async fn get_user_stats(&self, _: &UserId) -> Result<domain::models::UserStats, DomainError> { panic!("unexpected") }
+        async fn get_user_history(&self, _: &UserId) -> Result<Vec<DiaryEntry>, DomainError> { panic!("unexpected") }
+        async fn get_user_trends(&self, _: &UserId) -> Result<domain::models::UserTrends, DomainError> { panic!("unexpected") }
     }
 
     #[async_trait]
@@ -138,6 +142,7 @@ mod tests {
         async fn find_by_email(&self, _: &Email) -> Result<Option<User>, DomainError> { panic!("unexpected") }
         async fn save(&self, _: &User) -> Result<(), DomainError> { panic!("unexpected") }
         async fn find_by_id(&self, _: &domain::value_objects::UserId) -> Result<Option<User>, DomainError> { panic!("unexpected") }
+        async fn list_with_stats(&self) -> Result<Vec<domain::models::UserSummary>, DomainError> { panic!("unexpected") }
     }
 
     #[async_trait]

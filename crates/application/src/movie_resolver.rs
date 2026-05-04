@@ -253,6 +253,10 @@ mod tests {
         async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> {
             panic!("unexpected")
         }
+        async fn query_activity_feed(&self, _: &domain::models::collections::PageParams) -> Result<domain::models::collections::Paginated<domain::models::FeedEntry>, DomainError> { panic!("unexpected") }
+        async fn get_user_stats(&self, _: &domain::value_objects::UserId) -> Result<domain::models::UserStats, DomainError> { panic!("unexpected") }
+        async fn get_user_history(&self, _: &domain::value_objects::UserId) -> Result<Vec<domain::models::DiaryEntry>, DomainError> { panic!("unexpected") }
+        async fn get_user_trends(&self, _: &domain::value_objects::UserId) -> Result<domain::models::UserTrends, DomainError> { panic!("unexpected") }
     }
 
     #[async_trait]
@@ -300,6 +304,10 @@ mod tests {
         async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> {
             panic!("unexpected")
         }
+        async fn query_activity_feed(&self, _: &domain::models::collections::PageParams) -> Result<domain::models::collections::Paginated<domain::models::FeedEntry>, DomainError> { panic!("unexpected") }
+        async fn get_user_stats(&self, _: &domain::value_objects::UserId) -> Result<domain::models::UserStats, DomainError> { panic!("unexpected") }
+        async fn get_user_history(&self, _: &domain::value_objects::UserId) -> Result<Vec<domain::models::DiaryEntry>, DomainError> { panic!("unexpected") }
+        async fn get_user_trends(&self, _: &domain::value_objects::UserId) -> Result<domain::models::UserTrends, DomainError> { panic!("unexpected") }
     }
 
     #[async_trait]
@@ -347,6 +355,10 @@ mod tests {
         async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> {
             panic!("unexpected")
         }
+        async fn query_activity_feed(&self, _: &domain::models::collections::PageParams) -> Result<domain::models::collections::Paginated<domain::models::FeedEntry>, DomainError> { panic!("unexpected") }
+        async fn get_user_stats(&self, _: &domain::value_objects::UserId) -> Result<domain::models::UserStats, DomainError> { panic!("unexpected") }
+        async fn get_user_history(&self, _: &domain::value_objects::UserId) -> Result<Vec<domain::models::DiaryEntry>, DomainError> { panic!("unexpected") }
+        async fn get_user_trends(&self, _: &domain::value_objects::UserId) -> Result<domain::models::UserTrends, DomainError> { panic!("unexpected") }
     }
 
     struct MetaReturnsMovie(Movie);
