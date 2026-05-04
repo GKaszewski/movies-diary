@@ -48,7 +48,9 @@ async fn wire_dependencies() -> anyhow::Result<AppState> {
     let database_url = std::env::var("DATABASE_URL").context("DATABASE_URL must be set")?;
     let opts = SqliteConnectOptions::from_str(&database_url)
         .context("Invalid DATABASE_URL")?
-        .create_if_missing(true);
+        .create_if_missing(true)
+        .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal)
+        .busy_timeout(std::time::Duration::from_secs(5));
     let pool = SqlitePool::connect_with(opts)
         .await
         .context("Failed to connect to SQLite database")?;

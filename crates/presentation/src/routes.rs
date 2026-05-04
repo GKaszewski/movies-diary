@@ -35,14 +35,15 @@ impl RateLimiter {
             .unwrap_or_default()
             .as_secs()
             / 60;
-        let prev = self.window.load(Ordering::Relaxed);
+        let prev = self.window.load(Ordering::Acquire);
         if now != prev {
-            self.window.store(now, Ordering::Relaxed);
-            self.count.store(1, Ordering::Relaxed);
-            true
-        } else {
-            self.count.fetch_add(1, Ordering::Relaxed) + 1 <= self.limit
+            // compare_exchange ensures only one thread wins the window reset
+            if self.window.compare_exchange(prev, now, Ordering::AcqRel, Ordering::Relaxed).is_ok() {
+                self.count.store(1, Ordering::Release);
+                return true;
+            }
         }
+        self.count.fetch_add(1, Ordering::Relaxed) + 1 <= self.limit
     }
 }
 
