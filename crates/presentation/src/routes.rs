@@ -28,6 +28,7 @@ fn html_routes() -> Router<AppState> {
         )
         .route("/reviews/new", routing::get(handlers::html::get_new_review_page))
         .route("/reviews", routing::post(handlers::html::post_review))
+        .route("/reviews/:id/delete", routing::post(handlers::html::post_delete_review))
         .route("/posters/{path}", routing::get(handlers::posters::get_poster))
         .route("/feed.rss", routing::get(handlers::rss::get_feed))
 }

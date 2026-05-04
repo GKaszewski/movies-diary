@@ -1,17 +1,18 @@
 pub mod html {
     use axum::{
-        extract::{Query, State},
-        http::{HeaderValue, header::SET_COOKIE},
+        extract::{Path, Query, State},
+        http::{HeaderValue, StatusCode, header::SET_COOKIE},
         response::{Html, IntoResponse, Redirect},
         Form,
     };
     use chrono::{NaiveDateTime, Utc};
+    use uuid::Uuid;
 
     use application::{
-        commands::{LoginCommand, LogReviewCommand, RegisterCommand},
+        commands::{DeleteReviewCommand, LoginCommand, LogReviewCommand, RegisterCommand},
         ports::{HtmlPageContext, LoginPageData, NewReviewPageData, RegisterPageData},
         queries::GetDiaryQuery,
-        use_cases::{get_diary, log_review, login as login_uc, register as register_uc},
+        use_cases::{delete_review, get_diary, log_review, login as login_uc, register as register_uc},
     };
     use domain::{errors::DomainError, models::SortDirection, value_objects::UserId};
 
@@ -233,6 +234,26 @@ pub mod html {
             Err(e) => {
                 let msg = encode_error(&e.to_string());
                 Redirect::to(&format!("/reviews/new?error={}", msg)).into_response()
+            }
+        }
+    }
+
+    pub async fn post_delete_review(
+        State(state): State<AppState>,
+        RequiredCookieUser(user_id): RequiredCookieUser,
+        Path(review_id): Path<Uuid>,
+    ) -> impl IntoResponse {
+        let cmd = DeleteReviewCommand {
+            review_id,
+            requesting_user_id: user_id.value(),
+        };
+        match delete_review::execute(&state.app_ctx, cmd).await {
+            Ok(()) => Redirect::to("/").into_response(),
+            Err(DomainError::NotFound(_)) => StatusCode::NOT_FOUND.into_response(),
+            Err(DomainError::Unauthorized(_)) => StatusCode::FORBIDDEN.into_response(),
+            Err(e) => {
+                tracing::error!("delete_review html error: {:?}", e);
+                StatusCode::INTERNAL_SERVER_ERROR.into_response()
             }
         }
     }
