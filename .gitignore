@@ -8,3 +8,5 @@
 .env.prod
 
 *.db
+
+.worktrees/
