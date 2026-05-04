@@ -129,7 +129,7 @@ async fn get_api_diary_returns_empty_list() {
 
     assert_eq!(json["total_count"], 0);
     assert_eq!(json["items"], serde_json::json!([]));
-    assert_eq!(json["limit"], 20);
+    assert_eq!(json["limit"], 5);
     assert_eq!(json["offset"], 0);
 }
 
