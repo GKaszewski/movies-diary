@@ -108,7 +108,7 @@ async fn test_app() -> Router {
             config: AppConfig { allow_registration: false },
         },
         html_renderer: Arc::new(AskamaHtmlRenderer::new()),
-        rss_renderer: Arc::new(RssAdapter::new("Movie Diary".into(), "http://localhost:3000".into())),
+        rss_renderer: Arc::new(RssAdapter::new("http://localhost:3000".into())),
     };
 
     routes::build_router(state)

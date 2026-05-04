@@ -3,13 +3,12 @@ use domain::models::DiaryEntry;
 use rss_feed::{ChannelBuilder, GuidBuilder, ItemBuilder};
 
 pub struct RssAdapter {
-    feed_title: String,
     feed_link: String,
 }
 
 impl RssAdapter {
-    pub fn new(feed_title: String, feed_link: String) -> Self {
-        Self { feed_title, feed_link }
+    pub fn new(feed_link: String) -> Self {
+        Self { feed_link }
     }
 }
 
@@ -63,14 +62,14 @@ mod tests {
 
     #[test]
     fn render_feed_uses_provided_title() {
-        let adapter = RssAdapter::new("ignored".into(), "http://example.com".into());
+        let adapter = RssAdapter::new("http://example.com".into());
         let xml = adapter.render_feed(&[], "Custom Title").unwrap();
         assert!(xml.contains("<title>Custom Title</title>"));
     }
 
     #[test]
     fn render_feed_empty_entries_produces_valid_xml() {
-        let adapter = RssAdapter::new("ignored".into(), "http://example.com".into());
+        let adapter = RssAdapter::new("http://example.com".into());
         let xml = adapter.render_feed(&[], "My Feed").unwrap();
         assert!(xml.starts_with("<?xml") || xml.starts_with("<rss"));
     }

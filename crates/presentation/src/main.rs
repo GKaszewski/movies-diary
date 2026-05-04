@@ -109,7 +109,6 @@ async fn wire_dependencies() -> anyhow::Result<AppState> {
         app_ctx,
         html_renderer: Arc::new(AskamaHtmlRenderer::new()),
         rss_renderer: Arc::new(RssAdapter::new(
-            "Movie Diary".into(),
             "http://localhost:3000".into(),
         )),
     })
