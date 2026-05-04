@@ -18,6 +18,7 @@ impl IntoResponse for ApiError {
             DomainError::InvalidRating { .. } => (StatusCode::BAD_REQUEST, self.0.to_string()),
             DomainError::ValidationError(msg) => (StatusCode::BAD_REQUEST, msg),
             DomainError::NotFound(msg) => (StatusCode::NOT_FOUND, msg),
+            DomainError::Unauthorized(msg) => (StatusCode::UNAUTHORIZED, msg),
             DomainError::InfrastructureError(_) => {
                 tracing::error!("Internal Infrastructure Error: {:?}", self.0);
                 (

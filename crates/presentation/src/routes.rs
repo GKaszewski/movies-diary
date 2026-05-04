@@ -32,6 +32,7 @@ fn api_routes() -> Router<AppState> {
                 "/movies/{id}/sync-poster",
                 routing::post(handlers::api::sync_poster),
             )
-            .route("/auth/login", routing::post(handlers::api::login)),
+            .route("/auth/login", routing::post(handlers::api::login))
+            .route("/auth/register", routing::post(handlers::api::register)),
     )
 }

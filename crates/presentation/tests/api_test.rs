@@ -1,8 +1,7 @@
 use std::sync::Arc;
 
-use application::context::AppContext;
+use application::{config::AppConfig, context::AppContext};
 use async_trait::async_trait;
-use auth::StubAuthService;
 use axum::{
     Router,
     body::Body,
@@ -11,9 +10,14 @@ use axum::{
 use domain::{
     errors::DomainError,
     events::DomainEvent,
-    models::Movie,
-    ports::{EventPublisher, MetadataClient, PasswordHasher, PosterFetcherClient, PosterStorage},
-    value_objects::{ExternalMetadataId, MovieId, PasswordHash, PosterPath, PosterUrl},
+    models::{Movie, User},
+    ports::{
+        AuthService, EventPublisher, GeneratedToken, MetadataClient, PasswordHasher,
+        PosterFetcherClient, PosterStorage, UserRepository,
+    },
+    value_objects::{
+        Email, ExternalMetadataId, MovieId, PasswordHash, PosterPath, PosterUrl, UserId,
+    },
 };
 use http_body_util::BodyExt;
 use presentation::{routes, state::AppState};
@@ -36,10 +40,7 @@ impl MetadataClient for PanicMeta {
     async fn fetch_movie_metadata(&self, _: &ExternalMetadataId) -> Result<Movie, DomainError> {
         panic!("metadata not wired in tests")
     }
-    async fn get_poster_url(
-        &self,
-        _: &ExternalMetadataId,
-    ) -> Result<Option<PosterUrl>, DomainError> {
+    async fn get_poster_url(&self, _: &ExternalMetadataId) -> Result<Option<PosterUrl>, DomainError> {
         panic!()
     }
 }
@@ -66,12 +67,22 @@ impl PosterStorage for PanicStorage {
 struct PanicHasher;
 #[async_trait]
 impl PasswordHasher for PanicHasher {
-    async fn hash(&self, _: &str) -> Result<PasswordHash, DomainError> {
-        panic!()
-    }
-    async fn verify(&self, _: &str, _: &PasswordHash) -> Result<bool, DomainError> {
-        panic!()
-    }
+    async fn hash(&self, _: &str) -> Result<PasswordHash, DomainError> { panic!() }
+    async fn verify(&self, _: &str, _: &PasswordHash) -> Result<bool, DomainError> { panic!() }
+}
+
+struct PanicAuth;
+#[async_trait]
+impl AuthService for PanicAuth {
+    async fn generate_token(&self, _: &UserId) -> Result<GeneratedToken, DomainError> { panic!() }
+    async fn validate_token(&self, _: &str) -> Result<UserId, DomainError> { panic!() }
+}
+
+struct NobodyUserRepo;
+#[async_trait]
+impl UserRepository for NobodyUserRepo {
+    async fn find_by_email(&self, _: &Email) -> Result<Option<User>, DomainError> { Ok(None) }
+    async fn save(&self, _: &User) -> Result<(), DomainError> { panic!() }
 }
 
 async fn test_app() -> Router {
@@ -88,8 +99,10 @@ async fn test_app() -> Router {
             poster_fetcher: Arc::new(PanicFetcher),
             poster_storage: Arc::new(PanicStorage),
             event_publisher: Arc::new(NoopEventPublisher),
-            auth_service: Arc::new(StubAuthService),
+            auth_service: Arc::new(PanicAuth),
             password_hasher: Arc::new(PanicHasher),
+            user_repository: Arc::new(NobodyUserRepo),
+            config: AppConfig { allow_registration: false },
         },
         html_renderer: Arc::new(AskamaHtmlRenderer::new()),
     };
@@ -101,12 +114,7 @@ async fn test_app() -> Router {
 async fn get_api_diary_returns_empty_list() {
     let app = test_app().await;
     let response = app
-        .oneshot(
-            Request::builder()
-                .uri("/api/diary")
-                .body(Body::empty())
-                .unwrap(),
-        )
+        .oneshot(Request::builder().uri("/api/diary").body(Body::empty()).unwrap())
         .await
         .unwrap();
 
@@ -122,7 +130,7 @@ async fn get_api_diary_returns_empty_list() {
 }
 
 #[tokio::test]
-async fn post_api_reviews_without_auth_returns_400() {
+async fn post_api_reviews_without_auth_returns_401() {
     let app = test_app().await;
     let response = app
         .oneshot(
@@ -138,11 +146,11 @@ async fn post_api_reviews_without_auth_returns_400() {
         .await
         .unwrap();
 
-    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 }
 
 #[tokio::test]
-async fn post_api_auth_login_returns_stub_token() {
+async fn post_api_auth_login_unknown_user_returns_401() {
     let app = test_app().await;
     let response = app
         .oneshot(
@@ -156,9 +164,5 @@ async fn post_api_auth_login_returns_stub_token() {
         .await
         .unwrap();
 
-    assert_eq!(response.status(), StatusCode::OK);
-
-    let bytes = response.into_body().collect().await.unwrap().to_bytes();
-    let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
-    assert_eq!(json["token"], "stub-token");
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 }

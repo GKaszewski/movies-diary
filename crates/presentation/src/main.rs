@@ -6,16 +6,16 @@ use domain::{
     errors::DomainError,
     events::DomainEvent,
     models::Movie,
-    ports::{EventPublisher, MetadataClient, PasswordHasher, PosterFetcherClient, PosterStorage},
-    value_objects::{ExternalMetadataId, MovieId, PasswordHash, PosterPath, PosterUrl},
+    ports::{EventPublisher, MetadataClient, PosterFetcherClient, PosterStorage},
+    value_objects::{ExternalMetadataId, MovieId, PosterPath, PosterUrl},
 };
 use sqlx::SqlitePool;
 use tokio::net::TcpListener;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use application::context::AppContext;
-use auth::StubAuthService;
-use sqlite::SqliteMovieRepository;
+use application::{config::AppConfig, context::AppContext};
+use auth::{AuthConfig, Argon2PasswordHasher, JwtAuthService};
+use sqlite::{SqliteMovieRepository, SqliteUserRepository};
 use template_askama::AskamaHtmlRenderer;
 
 use presentation::{routes, state::AppState};
@@ -81,25 +81,9 @@ impl EventPublisher for StubEventPublisher {
     }
 }
 
-struct StubPasswordHasher;
-
-#[async_trait]
-impl PasswordHasher for StubPasswordHasher {
-    async fn hash(&self, _plain: &str) -> Result<PasswordHash, DomainError> {
-        Err(DomainError::InfrastructureError(
-            "password hasher not implemented".into(),
-        ))
-    }
-
-    async fn verify(&self, _plain: &str, _hash: &PasswordHash) -> Result<bool, DomainError> {
-        Err(DomainError::InfrastructureError(
-            "password hasher not implemented".into(),
-        ))
-    }
-}
-
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    dotenvy::dotenv().ok();
     init_tracing();
 
     let state = wire_dependencies()
@@ -116,24 +100,32 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn wire_dependencies() -> anyhow::Result<AppState> {
+    let auth_config = AuthConfig::from_env()?;
+    let app_config = AppConfig::from_env();
+
     let pool = SqlitePool::connect("sqlite://reviews.db")
         .await
         .context("Failed to connect to SQLite database")?;
 
-    let repo = SqliteMovieRepository::new(pool);
-    repo.migrate()
+    let movie_repo = SqliteMovieRepository::new(pool.clone());
+    movie_repo
+        .migrate()
         .await
         .map_err(|e| anyhow::anyhow!("{}", e))
         .context("Database migration failed")?;
 
+    let user_repo = SqliteUserRepository::new(pool);
+
     let app_ctx = AppContext {
-        repository: Arc::new(repo),
+        repository: Arc::new(movie_repo),
         metadata_client: Arc::new(StubMetadataClient),
         poster_fetcher: Arc::new(StubPosterFetcher),
         poster_storage: Arc::new(StubPosterStorage),
         event_publisher: Arc::new(StubEventPublisher),
-        auth_service: Arc::new(StubAuthService),
-        password_hasher: Arc::new(StubPasswordHasher),
+        auth_service: Arc::new(JwtAuthService::new(auth_config)),
+        password_hasher: Arc::new(Argon2PasswordHasher),
+        user_repository: Arc::new(user_repo),
+        config: app_config,
     };
 
     Ok(AppState {

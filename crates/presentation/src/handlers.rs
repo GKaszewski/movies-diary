@@ -86,9 +86,9 @@ pub mod api {
     use uuid::Uuid;
 
     use application::{
-        commands::{LogReviewCommand, SyncPosterCommand},
+        commands::{LoginCommand, LogReviewCommand, RegisterCommand, SyncPosterCommand},
         queries::{GetDiaryQuery, GetReviewHistoryQuery},
-        use_cases::{get_diary, get_review_history, log_review, sync_poster},
+        use_cases::{get_diary, get_review_history, log_review, login as login_uc, register as register_uc, sync_poster},
     };
     use domain::{
         errors::DomainError,
@@ -100,7 +100,7 @@ pub mod api {
     use crate::{
         dtos::{
             DiaryEntryDto, DiaryQueryParams, DiaryResponse, LoginRequest, LoginResponse,
-            LogReviewRequest, MovieDto, ReviewDto, ReviewHistoryResponse,
+            LogReviewRequest, MovieDto, RegisterRequest, ReviewDto, ReviewHistoryResponse,
         },
         errors::ApiError,
         extractors::AuthenticatedUser,
@@ -219,12 +219,32 @@ pub mod api {
     }
 
     pub async fn login(
-        State(_state): State<AppState>,
-        Json(_req): Json<LoginRequest>,
-    ) -> Json<LoginResponse> {
-        Json(LoginResponse {
-            token: "stub-token".to_string(),
+        State(state): State<AppState>,
+        Json(req): Json<LoginRequest>,
+    ) -> Result<Json<LoginResponse>, ApiError> {
+        let result = login_uc::execute(&state.app_ctx, LoginCommand {
+            email: req.email,
+            password: req.password,
         })
+        .await?;
+        Ok(Json(LoginResponse {
+            token: result.token,
+            user_id: result.user_id,
+            email: result.email,
+            expires_at: result.expires_at.to_rfc3339(),
+        }))
+    }
+
+    pub async fn register(
+        State(state): State<AppState>,
+        Json(req): Json<RegisterRequest>,
+    ) -> Result<StatusCode, ApiError> {
+        register_uc::execute(&state.app_ctx, RegisterCommand {
+            email: req.email,
+            password: req.password,
+        })
+        .await?;
+        Ok(StatusCode::CREATED)
     }
 
     fn movie_to_dto(movie: &Movie) -> MovieDto {

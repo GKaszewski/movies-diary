@@ -1,12 +1,13 @@
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 
 use crate::{
     errors::DomainError,
     events::DomainEvent,
-    models::{DiaryEntry, DiaryFilter, Movie, Review, ReviewHistory, collections::Paginated},
+    models::{DiaryEntry, DiaryFilter, Movie, Review, ReviewHistory, User, collections::Paginated},
     value_objects::{
-        ExternalMetadataId, MovieId, MovieTitle, PasswordHash, PosterPath, PosterUrl, ReleaseYear,
-        UserId,
+        Email, ExternalMetadataId, MovieId, MovieTitle, PasswordHash, PosterPath, PosterUrl,
+        ReleaseYear, UserId,
     },
 };
 
@@ -61,9 +62,21 @@ pub trait PosterStorage: Send + Sync {
     async fn get_poster(&self, poster_path: &PosterPath) -> Result<Vec<u8>, DomainError>;
 }
 
+pub struct GeneratedToken {
+    pub token: String,
+    pub expires_at: DateTime<Utc>,
+}
+
 #[async_trait]
 pub trait AuthService: Send + Sync {
+    async fn generate_token(&self, user_id: &UserId) -> Result<GeneratedToken, DomainError>;
     async fn validate_token(&self, token: &str) -> Result<UserId, DomainError>;
+}
+
+#[async_trait]
+pub trait UserRepository: Send + Sync {
+    async fn find_by_email(&self, email: &Email) -> Result<Option<User>, DomainError>;
+    async fn save(&self, user: &User) -> Result<(), DomainError>;
 }
 
 #[async_trait]

@@ -13,4 +13,7 @@ pub enum DomainError {
 
     #[error("Infrastructure failure: {0}")]
     InfrastructureError(String),
+
+    #[error("Unauthorized: {0}")]
+    Unauthorized(String),
 }

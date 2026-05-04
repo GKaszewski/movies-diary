@@ -250,6 +250,10 @@ impl User {
         }
     }
 
+    pub fn from_persistence(id: UserId, email: Email, password_hash: PasswordHash) -> Self {
+        Self { id, email, password_hash }
+    }
+
     pub fn update_password(&mut self, new_hash: PasswordHash) {
         self.password_hash = new_hash;
     }

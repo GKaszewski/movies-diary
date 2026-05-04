@@ -2,8 +2,10 @@ use std::sync::Arc;
 
 use domain::ports::{
     AuthService, EventPublisher, MetadataClient, MovieRepository, PasswordHasher,
-    PosterFetcherClient, PosterStorage,
+    PosterFetcherClient, PosterStorage, UserRepository,
 };
+
+use crate::config::AppConfig;
 
 #[derive(Clone)]
 pub struct AppContext {
@@ -14,4 +16,6 @@ pub struct AppContext {
     pub event_publisher: Arc<dyn EventPublisher>,
     pub auth_service: Arc<dyn AuthService>,
     pub password_hasher: Arc<dyn PasswordHasher>,
+    pub user_repository: Arc<dyn UserRepository>,
+    pub config: AppConfig,
 }

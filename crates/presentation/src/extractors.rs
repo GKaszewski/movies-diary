@@ -23,8 +23,8 @@ where
             .and_then(|v| v.to_str().ok())
             .and_then(|v| v.strip_prefix("Bearer "))
             .ok_or_else(|| {
-                ApiError(DomainError::ValidationError(
-                    "Missing auth token".into(),
+                ApiError(DomainError::Unauthorized(
+                    "Missing or invalid auth token".into(),
                 ))
             })?;
         let user_id = app_state
@@ -58,10 +58,9 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn missing_auth_header_returns_400() {
+    async fn missing_auth_header_returns_401() {
         use std::sync::Arc;
         use application::context::AppContext;
-        use auth::StubAuthService;
 
         struct PanicRepo;
         #[async_trait::async_trait]
@@ -80,12 +79,14 @@ mod tests {
             fn render_diary_page(&self, _: &domain::models::collections::Paginated<domain::models::DiaryEntry>) -> Result<String, String> { panic!() }
         }
 
-        struct PanicMeta; struct PanicFetcher; struct PanicStorage; struct PanicEvent; struct PanicHasher;
+        struct PanicMeta; struct PanicFetcher; struct PanicStorage; struct PanicEvent; struct PanicHasher; struct PanicAuth; struct PanicUserRepo;
         #[async_trait::async_trait] impl domain::ports::MetadataClient for PanicMeta { async fn fetch_movie_metadata(&self, _: &domain::value_objects::ExternalMetadataId) -> Result<domain::models::Movie, domain::errors::DomainError> { panic!() } async fn get_poster_url(&self, _: &domain::value_objects::ExternalMetadataId) -> Result<Option<domain::value_objects::PosterUrl>, domain::errors::DomainError> { panic!() } }
         #[async_trait::async_trait] impl domain::ports::PosterFetcherClient for PanicFetcher { async fn fetch_poster_bytes(&self, _: &domain::value_objects::PosterUrl) -> Result<Vec<u8>, domain::errors::DomainError> { panic!() } }
         #[async_trait::async_trait] impl domain::ports::PosterStorage for PanicStorage { async fn store_poster(&self, _: &domain::value_objects::MovieId, _: &[u8]) -> Result<domain::value_objects::PosterPath, domain::errors::DomainError> { panic!() } async fn get_poster(&self, _: &domain::value_objects::PosterPath) -> Result<Vec<u8>, domain::errors::DomainError> { panic!() } }
         #[async_trait::async_trait] impl domain::ports::EventPublisher for PanicEvent { async fn publish(&self, _: &domain::events::DomainEvent) -> Result<(), domain::errors::DomainError> { panic!() } }
         #[async_trait::async_trait] impl domain::ports::PasswordHasher for PanicHasher { async fn hash(&self, _: &str) -> Result<domain::value_objects::PasswordHash, domain::errors::DomainError> { panic!() } async fn verify(&self, _: &str, _: &domain::value_objects::PasswordHash) -> Result<bool, domain::errors::DomainError> { panic!() } }
+        #[async_trait::async_trait] impl domain::ports::AuthService for PanicAuth { async fn generate_token(&self, _: &domain::value_objects::UserId) -> Result<domain::ports::GeneratedToken, domain::errors::DomainError> { panic!() } async fn validate_token(&self, _: &str) -> Result<domain::value_objects::UserId, domain::errors::DomainError> { panic!() } }
+        #[async_trait::async_trait] impl domain::ports::UserRepository for PanicUserRepo { async fn find_by_email(&self, _: &domain::value_objects::Email) -> Result<Option<domain::models::User>, domain::errors::DomainError> { panic!() } async fn save(&self, _: &domain::models::User) -> Result<(), domain::errors::DomainError> { panic!() } }
 
         let state = crate::state::AppState {
             app_ctx: AppContext {
@@ -94,8 +95,10 @@ mod tests {
                 poster_fetcher: Arc::new(PanicFetcher),
                 poster_storage: Arc::new(PanicStorage),
                 event_publisher: Arc::new(PanicEvent),
-                auth_service: Arc::new(StubAuthService),
+                auth_service: Arc::new(PanicAuth),
                 password_hasher: Arc::new(PanicHasher),
+                user_repository: Arc::new(PanicUserRepo),
+                config: application::config::AppConfig { allow_registration: false },
             },
             html_renderer: Arc::new(PanicRenderer),
         };
@@ -111,6 +114,6 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
     }
 }

@@ -18,3 +18,13 @@ pub struct SyncPosterCommand {
     pub movie_id: Uuid,
     pub external_metadata_id: String,
 }
+
+pub struct LoginCommand {
+    pub email: String,
+    pub password: String,
+}
+
+pub struct RegisterCommand {
+    pub email: String,
+    pub password: String,
+}

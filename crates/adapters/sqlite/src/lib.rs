@@ -13,8 +13,11 @@ use sqlx::SqlitePool;
 
 mod migrations;
 mod models;
+mod users;
 
 use models::{DiaryRow, MovieRow, ReviewRow, datetime_to_str};
+
+pub use users::SqliteUserRepository;
 
 pub struct SqliteMovieRepository {
     pool: SqlitePool,

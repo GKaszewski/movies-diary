@@ -78,6 +78,15 @@ pub struct LoginRequest {
 #[derive(Serialize)]
 pub struct LoginResponse {
     pub token: String,
+    pub user_id: Uuid,
+    pub email: String,
+    pub expires_at: String,
+}
+
+#[derive(Deserialize)]
+pub struct RegisterRequest {
+    pub email: String,
+    pub password: String,
 }
 
 #[cfg(test)]
