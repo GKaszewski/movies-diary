@@ -218,7 +218,7 @@ pub mod html {
         };
 
         let cmd = LogReviewCommand {
-            external_metadata_id: form.external_metadata_id,
+            external_metadata_id: form.external_metadata_id.filter(|s| !s.trim().is_empty()),
             manual_title: form.manual_title,
             manual_release_year: form.manual_release_year,
             manual_director: form.manual_director,
@@ -234,6 +234,37 @@ pub mod html {
                 let msg = encode_error(&e.to_string());
                 Redirect::to(&format!("/reviews/new?error={}", msg)).into_response()
             }
+        }
+    }
+}
+
+pub mod posters {
+    use axum::{
+        extract::{Path, State},
+        http::{StatusCode, header},
+        response::IntoResponse,
+    };
+
+    use domain::value_objects::PosterPath;
+
+    use crate::state::AppState;
+
+    pub async fn get_poster(
+        State(state): State<AppState>,
+        Path(path): Path<String>,
+    ) -> impl IntoResponse {
+        let poster_path = match PosterPath::new(path) {
+            Ok(p) => p,
+            Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+        };
+        match state.app_ctx.poster_storage.get_poster(&poster_path).await {
+            Ok(bytes) => {
+                let mime = infer::get(&bytes)
+                    .map(|t| t.mime_type())
+                    .unwrap_or("application/octet-stream");
+                ([(header::CONTENT_TYPE, mime)], bytes).into_response()
+            }
+            Err(_) => StatusCode::NOT_FOUND.into_response(),
         }
     }
 }
@@ -360,7 +391,7 @@ pub mod api {
             })?;
 
         let cmd = LogReviewCommand {
-            external_metadata_id: req.external_metadata_id,
+            external_metadata_id: req.external_metadata_id.filter(|s| !s.trim().is_empty()),
             manual_title: req.manual_title,
             manual_release_year: req.manual_release_year,
             manual_director: req.manual_director,

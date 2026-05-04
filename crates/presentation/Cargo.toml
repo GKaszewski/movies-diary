@@ -30,6 +30,7 @@ sqlx = { workspace = true }
 template-askama = { workspace = true }
 event-publisher = { workspace = true }
 rss = { workspace = true }
+infer = "0.19.0"
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }

@@ -7,8 +7,14 @@ use domain::{
     ports::PosterStorage,
     value_objects::{MovieId, PosterPath},
 };
-use object_store::{path::Path, ObjectStore};
+use object_store::{Attribute, Attributes, PutOptions, path::Path, ObjectStore};
 use std::sync::Arc;
+
+fn detect_mime(bytes: &[u8]) -> &'static str {
+    infer::get(bytes)
+        .map(|t| t.mime_type())
+        .unwrap_or("application/octet-stream")
+}
 
 pub struct PosterStorageAdapter {
     store: Arc<dyn ObjectStore>,
@@ -32,8 +38,12 @@ impl PosterStorage for PosterStorageAdapter {
         image_bytes: &[u8],
     ) -> Result<PosterPath, DomainError> {
         let path = Path::from(movie_id.value().to_string());
+        let mime = detect_mime(image_bytes);
+        let mut attributes = Attributes::new();
+        attributes.insert(Attribute::ContentType, mime.into());
+        let opts = PutOptions { attributes, ..Default::default() };
         self.store
-            .put(&path, image_bytes.to_vec().into())
+            .put_opts(&path, image_bytes.to_vec().into(), opts)
             .await
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
         PosterPath::new(path.to_string())

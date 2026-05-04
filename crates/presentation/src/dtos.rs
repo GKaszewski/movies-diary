@@ -1,6 +1,19 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+fn empty_string_as_none<'de, D, T>(de: D) -> Result<Option<T>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: std::str::FromStr,
+    T::Err: std::fmt::Display,
+{
+    let s = Option::<String>::deserialize(de)?;
+    match s.as_deref() {
+        None | Some("") => Ok(None),
+        Some(s) => s.parse::<T>().map(Some).map_err(serde::de::Error::custom),
+    }
+}
+
 #[derive(Deserialize)]
 pub struct DiaryQueryParams {
     pub limit: Option<u32>,
@@ -11,11 +24,16 @@ pub struct DiaryQueryParams {
 
 #[derive(Deserialize)]
 pub struct LogReviewForm {
+    #[serde(default, deserialize_with = "empty_string_as_none")]
     pub external_metadata_id: Option<String>,
+    #[serde(default, deserialize_with = "empty_string_as_none")]
     pub manual_title: Option<String>,
+    #[serde(default, deserialize_with = "empty_string_as_none")]
     pub manual_release_year: Option<u16>,
+    #[serde(default, deserialize_with = "empty_string_as_none")]
     pub manual_director: Option<String>,
     pub rating: u8,
+    #[serde(default, deserialize_with = "empty_string_as_none")]
     pub comment: Option<String>,
     pub watched_at: String,
 }
