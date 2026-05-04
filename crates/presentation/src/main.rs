@@ -2,12 +2,7 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use async_trait::async_trait;
-use domain::{
-    errors::DomainError,
-    events::DomainEvent,
-    ports::{EventPublisher, PosterFetcherClient},
-    value_objects::PosterUrl,
-};
+use domain::{errors::DomainError, events::DomainEvent, ports::EventPublisher};
 use sqlx::SqlitePool;
 use tokio::net::TcpListener;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -15,22 +10,12 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use application::{config::AppConfig, context::AppContext};
 use auth::{AuthConfig, Argon2PasswordHasher, JwtAuthService};
 use metadata::MetadataClientImpl;
+use poster_fetcher::{PosterFetcherConfig, ReqwestPosterFetcher};
 use poster_storage::{PosterStorageAdapter, StorageConfig};
 use sqlite::{SqliteMovieRepository, SqliteUserRepository};
 use template_askama::AskamaHtmlRenderer;
 
 use presentation::{routes, state::AppState};
-
-struct StubPosterFetcher;
-
-#[async_trait]
-impl PosterFetcherClient for StubPosterFetcher {
-    async fn fetch_poster_bytes(&self, _url: &PosterUrl) -> Result<Vec<u8>, DomainError> {
-        Err(DomainError::InfrastructureError(
-            "poster fetcher not implemented".into(),
-        ))
-    }
-}
 
 struct StubEventPublisher;
 
@@ -81,7 +66,7 @@ async fn wire_dependencies() -> anyhow::Result<AppState> {
     let app_ctx = AppContext {
         repository: Arc::new(movie_repo),
         metadata_client: Arc::new(MetadataClientImpl::new_omdb(omdb_api_key)),
-        poster_fetcher: Arc::new(StubPosterFetcher),
+        poster_fetcher: Arc::new(ReqwestPosterFetcher::new(PosterFetcherConfig::from_env())?),
         poster_storage: Arc::new(PosterStorageAdapter::from_config(storage_config)?),
         event_publisher: Arc::new(StubEventPublisher),
         auth_service: Arc::new(JwtAuthService::new(auth_config)),

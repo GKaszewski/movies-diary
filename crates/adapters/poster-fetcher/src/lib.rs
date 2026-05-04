@@ -1,0 +1,38 @@
+mod config;
+pub use config::PosterFetcherConfig;
+
+use std::time::Duration;
+
+use async_trait::async_trait;
+use domain::{errors::DomainError, ports::PosterFetcherClient, value_objects::PosterUrl};
+
+pub struct ReqwestPosterFetcher {
+    client: reqwest::Client,
+}
+
+impl ReqwestPosterFetcher {
+    pub fn new(config: PosterFetcherConfig) -> anyhow::Result<Self> {
+        let client = reqwest::Client::builder()
+            .timeout(Duration::from_secs(config.timeout_seconds))
+            .build()?;
+        Ok(Self { client })
+    }
+}
+
+#[async_trait]
+impl PosterFetcherClient for ReqwestPosterFetcher {
+    async fn fetch_poster_bytes(&self, poster_url: &PosterUrl) -> Result<Vec<u8>, DomainError> {
+        let bytes = self
+            .client
+            .get(poster_url.value())
+            .send()
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?
+            .error_for_status()
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?
+            .bytes()
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(bytes.to_vec())
+    }
+}

@@ -1621,6 +1621,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b4596b6d070b27117e987119b4dac604f3c58cfb0b191112e24771b2faeac1a6"
 
 [[package]]
+name = "poster-fetcher"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "domain",
+ "reqwest 0.13.3",
+]
+
+[[package]]
 name = "poster-storage"
 version = "0.1.0"
 dependencies = [
@@ -1671,6 +1681,7 @@ dependencies = [
  "dotenvy",
  "http-body-util",
  "metadata",
+ "poster-fetcher",
  "poster-storage",
  "serde",
  "serde_json",

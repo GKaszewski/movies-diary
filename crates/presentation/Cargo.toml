@@ -23,6 +23,7 @@ domain = { workspace = true }
 application = { workspace = true }
 auth = { workspace = true }
 metadata = { workspace = true }
+poster-fetcher = { workspace = true }
 poster-storage = { workspace = true }
 sqlite = { workspace = true }
 sqlx = { workspace = true }

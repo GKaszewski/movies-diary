@@ -1,0 +1,10 @@
+[package]
+name = "poster-fetcher"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+domain = { workspace = true }
+async-trait = { workspace = true }
+reqwest = { workspace = true }
+anyhow = { workspace = true }
