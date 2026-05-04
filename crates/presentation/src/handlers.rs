@@ -8,6 +8,7 @@ pub mod html {
 
     use application::{
         commands::LogReviewCommand,
+        ports::HtmlPageContext,
         queries::GetDiaryQuery,
         use_cases::{get_diary, log_review},
     };
@@ -38,9 +39,10 @@ pub mod html {
         };
 
         let page = get_diary::execute(&state.app_ctx, query).await?;
+        let ctx = HtmlPageContext { user_email: None, register_enabled: state.app_ctx.config.allow_registration };
         let html = state
             .html_renderer
-            .render_diary_page(&page)
+            .render_diary_page(&page, ctx)
             .map_err(|e| ApiError(DomainError::InfrastructureError(e)))?;
 
         Ok(Html(html))

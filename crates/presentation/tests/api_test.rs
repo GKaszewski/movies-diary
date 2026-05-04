@@ -84,6 +84,7 @@ struct NobodyUserRepo;
 impl UserRepository for NobodyUserRepo {
     async fn find_by_email(&self, _: &Email) -> Result<Option<User>, DomainError> { Ok(None) }
     async fn save(&self, _: &User) -> Result<(), DomainError> { panic!() }
+    async fn find_by_id(&self, _: &UserId) -> Result<Option<User>, DomainError> { panic!() }
 }
 
 async fn test_app() -> Router {
