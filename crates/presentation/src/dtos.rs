@@ -21,6 +21,23 @@ pub struct LogReviewForm {
 }
 
 #[derive(Deserialize)]
+pub struct LoginForm {
+    pub email: String,
+    pub password: String,
+}
+
+#[derive(Deserialize)]
+pub struct RegisterForm {
+    pub email: String,
+    pub password: String,
+}
+
+#[derive(Deserialize)]
+pub struct ErrorQuery {
+    pub error: Option<String>,
+}
+
+#[derive(Deserialize)]
 pub struct LogReviewRequest {
     pub external_metadata_id: Option<String>,
     pub manual_title: Option<String>,
