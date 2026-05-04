@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
 use anyhow::Context;
-use event_publisher::{EventPublisherConfig, create_event_channel};
+use event_publisher::{EventPublisherConfig, NoopEventPublisher, create_event_channel};
+use presentation::event_handlers::PosterSyncHandler;
 use sqlx::SqlitePool;
 use tokio::net::TcpListener;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -52,20 +53,48 @@ async fn wire_dependencies() -> anyhow::Result<AppState> {
         .map_err(|e| anyhow::anyhow!("{}", e))
         .context("Database migration failed")?;
 
-    let user_repo = SqliteUserRepository::new(pool);
+    use domain::ports::{
+        AuthService, MetadataClient, MovieRepository, PasswordHasher,
+        PosterFetcherClient, PosterStorage, UserRepository,
+    };
+    let repository: Arc<dyn MovieRepository> = Arc::new(movie_repo);
+    let user_repository: Arc<dyn UserRepository> = Arc::new(SqliteUserRepository::new(pool));
+    let metadata_client: Arc<dyn MetadataClient> = Arc::new(MetadataClientImpl::new_omdb(omdb_api_key));
+    let poster_fetcher: Arc<dyn PosterFetcherClient> = Arc::new(ReqwestPosterFetcher::new(PosterFetcherConfig::from_env())?);
+    let poster_storage: Arc<dyn PosterStorage> = Arc::new(PosterStorageAdapter::from_config(storage_config)?);
+    let auth_service: Arc<dyn AuthService> = Arc::new(JwtAuthService::new(auth_config));
+    let password_hasher: Arc<dyn PasswordHasher> = Arc::new(Argon2PasswordHasher);
 
-    let (event_publisher, event_worker) = create_event_channel(EventPublisherConfig::from_env());
+    // Build a context for the poster handler. sync_poster doesn't publish events,
+    // so a noop publisher here is safe and avoids a circular dependency.
+    let handler_ctx = AppContext {
+        repository: Arc::clone(&repository),
+        metadata_client: Arc::clone(&metadata_client),
+        poster_fetcher: Arc::clone(&poster_fetcher),
+        poster_storage: Arc::clone(&poster_storage),
+        event_publisher: Arc::new(NoopEventPublisher),
+        auth_service: Arc::clone(&auth_service),
+        password_hasher: Arc::clone(&password_hasher),
+        user_repository: Arc::clone(&user_repository),
+        config: app_config.clone(),
+    };
+
+    let poster_handler = PosterSyncHandler::new(handler_ctx, 3);
+    let (event_publisher, event_worker) = create_event_channel(
+        EventPublisherConfig::from_env(),
+        vec![Box::new(poster_handler)],
+    );
     tokio::spawn(event_worker.run());
 
     let app_ctx = AppContext {
-        repository: Arc::new(movie_repo),
-        metadata_client: Arc::new(MetadataClientImpl::new_omdb(omdb_api_key)),
-        poster_fetcher: Arc::new(ReqwestPosterFetcher::new(PosterFetcherConfig::from_env())?),
-        poster_storage: Arc::new(PosterStorageAdapter::from_config(storage_config)?),
+        repository,
+        metadata_client,
+        poster_fetcher,
+        poster_storage,
         event_publisher: Arc::new(event_publisher),
-        auth_service: Arc::new(JwtAuthService::new(auth_config)),
-        password_hasher: Arc::new(Argon2PasswordHasher),
-        user_repository: Arc::new(user_repo),
+        auth_service,
+        password_hasher,
+        user_repository,
         config: app_config,
     };
 

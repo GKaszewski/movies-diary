@@ -81,6 +81,15 @@ impl EventWorker {
     }
 }
 
+pub struct NoopEventPublisher;
+
+#[async_trait]
+impl EventPublisher for NoopEventPublisher {
+    async fn publish(&self, _event: &DomainEvent) -> Result<(), DomainError> {
+        Ok(())
+    }
+}
+
 pub fn create_event_channel(
     config: EventPublisherConfig,
     handlers: Vec<Box<dyn EventHandler>>,
