@@ -53,10 +53,14 @@ pub mod html {
             .replace('"', "%22")
     }
 
+    fn secure_flag() -> &'static str {
+        if std::env::var("SECURE_COOKIES").as_deref() == Ok("true") { "; Secure" } else { "" }
+    }
+
     fn set_cookie_header(token: &str, max_age: i64) -> (axum::http::HeaderName, HeaderValue) {
         let val = format!(
-            "token={}; HttpOnly; Path=/; SameSite=Lax; Max-Age={}",
-            token, max_age
+            "token={}; HttpOnly; Path=/; SameSite=Strict; Max-Age={}{}",
+            token, max_age, secure_flag()
         );
         (SET_COOKIE, HeaderValue::from_str(&val).expect("valid cookie"))
     }
@@ -104,10 +108,8 @@ pub mod html {
     }
 
     pub async fn get_logout() -> impl IntoResponse {
-        let cookie = (
-            SET_COOKIE,
-            HeaderValue::from_static("token=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0"),
-        );
+        let val = format!("token=; HttpOnly; Path=/; SameSite=Strict; Max-Age=0{}", secure_flag());
+        let cookie = (SET_COOKIE, HeaderValue::from_str(&val).expect("valid cookie"));
         ([cookie], Redirect::to("/")).into_response()
     }
 
@@ -162,9 +164,8 @@ pub mod html {
                     Err(_) => Redirect::to("/login").into_response(),
                 }
             }
-            Err(e) => {
-                let msg = encode_error(&e.to_string());
-                Redirect::to(&format!("/register?error={}", msg)).into_response()
+            Err(_) => {
+                Redirect::to("/register?error=Registration+failed.+Please+try+again.").into_response()
             }
         }
     }

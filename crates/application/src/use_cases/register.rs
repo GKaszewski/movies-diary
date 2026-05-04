@@ -7,6 +7,12 @@ pub async fn execute(ctx: &AppContext, cmd: RegisterCommand) -> Result<(), Domai
         return Err(DomainError::Unauthorized("Registration is disabled".into()));
     }
 
+    if cmd.password.len() < 8 {
+        return Err(DomainError::ValidationError(
+            "Password must be at least 8 characters".into(),
+        ));
+    }
+
     let email = Email::new(cmd.email)?;
 
     if ctx.user_repository.find_by_email(&email).await?.is_some() {
