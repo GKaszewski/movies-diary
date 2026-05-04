@@ -21,6 +21,7 @@ pub async fn execute(
         sort_by: query.sort_by.unwrap_or(SortDirection::Descending),
         page,
         movie_id,
+        user_id: None,
     };
 
     let paginated_results = ctx.repository.query_diary(&filter).await?;
