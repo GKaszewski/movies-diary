@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Register</h1>
+{% if let Some(err) = error %}
+<p class="error">{{ err }}</p>
+{% endif %}
+<form method="POST" action="/register">
+  <label>
+    Email<br>
+    <input type="email" name="email" required autocomplete="email">
+  </label>
+  <label>
+    Password<br>
+    <input type="password" name="password" required autocomplete="new-password">
+  </label>
+  <button type="submit">Register</button>
+</form>
+{% endblock %}

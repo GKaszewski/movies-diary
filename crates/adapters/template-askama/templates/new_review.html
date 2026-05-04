@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Log a Review</h1>
+{% if let Some(err) = error %}
+<p class="error">{{ err }}</p>
+{% endif %}
+<form method="POST" action="/reviews">
+  <label>
+    OMDB ID <span class="optional">(optional)</span><br>
+    <input type="text" name="external_metadata_id" placeholder="tt0166924">
+  </label>
+  <hr>
+  <label>
+    Title<br>
+    <input type="text" name="manual_title">
+  </label>
+  <label>
+    Year<br>
+    <input type="number" name="manual_release_year" min="1888" max="2100">
+  </label>
+  <label>
+    Director<br>
+    <input type="text" name="manual_director">
+  </label>
+  <hr>
+  <label>
+    Rating (0–5)<br>
+    <input type="number" name="rating" min="0" max="5" required>
+  </label>
+  <label>
+    Watched<br>
+    <input type="datetime-local" name="watched_at" required>
+  </label>
+  <label>
+    Comment<br>
+    <textarea name="comment"></textarea>
+  </label>
+  <button type="submit">Log Review</button>
+</form>
+{% endblock %}

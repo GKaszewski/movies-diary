@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Movies Diary</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <a href="/" class="site-title">Movies Diary</a>
+    <nav>
+      {% if let Some(email) = ctx.user_email %}
+        <a href="/reviews/new">Add Review</a>
+        <span class="user-email">{{ email }}</span>
+        <a href="/logout">Logout</a>
+      {% else %}
+        <a href="/login">Login</a>
+        {% if ctx.register_enabled %}
+          <a href="/register">Register</a>
+        {% endif %}
+      {% endif %}
+    </nav>
+  </header>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

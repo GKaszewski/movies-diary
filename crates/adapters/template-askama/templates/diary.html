@@ -1,76 +1,38 @@
-<!-- crates/presentation/templates/diary.html -->
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>My Movie Diary</title>
-    <style>
-        /* Minimalist old-school styling */
-        body { font-family: monospace; max-width: 800px; margin: 0 auto; padding: 20px; }
-        .entry { border-bottom: 1px solid #ccc; padding: 10px 0; }
-        .poster { max-width: 100px; float: left; margin-right: 15px; }
-        .clear { clear: both; }
-        .error { color: red; }
-    </style>
-</head>
-<body>
-    <h1>Movie Diary</h1>
-
-    <!-- Zero-JS Form Submission -->
-    <form action="/reviews" method="POST">
-        <fieldset>
-            <legend>Log a Movie</legend>
-            
-            <label for="tmdb_id">TMDB ID (Optional):</label>
-            <input type="text" name="external_metadata_id" id="tmdb_id"><br><br>
-
-            <label for="title">Title (Fallback):</label>
-            <input type="text" name="manual_title" id="title"><br><br>
-
-            <label for="year">Year (Fallback):</label>
-            <input type="number" name="manual_release_year" id="year" min="1888"><br><br>
-
-            <label for="rating">Rating (0-5):</label>
-            <input type="number" name="rating" id="rating" min="0" max="5" required><br><br>
-
-            <button type="submit">Log Movie</button>
-        </fieldset>
-    </form>
-
-    <hr>
-
-    <!-- Rendering the Domain Models -->
-    <div class="diary-entries">
-        {% for entry in entries %}
-            <div class="entry">
-                {% if let Some(poster) = entry.movie().poster_path() %}
-                    <!-- Assuming you have a route to serve the raw images -->
-                    <img src="/static/posters/{{ poster.value() }}" class="poster" alt="Poster">
-                {% endif %}
-                
-                <h3>{{ entry.movie().title().value() }} ({{ entry.movie().release_year().value() }})</h3>
-                <p><strong>Rating:</strong> {{ entry.review().rating().value() }} / 5</p>
-                
-                {% if let Some(comment) = entry.review().comment() %}
-                    <p><em>"{{ comment.value() }}"</em></p>
-                {% endif %}
-                
-                <p><small>Watched on: {{ entry.review().watched_at().format("%Y-%m-%d") }}</small></p>
-                <div class="clear"></div>
-            </div>
-        {% else %}
-            <p>No movies logged yet. Go watch something!</p>
-        {% endfor %}
+{% extends "base.html" %}
+{% block content %}
+<div class="diary">
+  {% for entry in entries %}
+  <article class="entry">
+    {% if let Some(poster) = entry.movie().poster_path() %}
+    <div class="poster">
+      <img src="/static/posters/{{ poster.value() }}" alt="">
     </div>
-
-    <!-- Simple Pagination -->
-    <div>
-        {% if current_offset > 0 %}
-            <a href="/diary?offset={{ current_offset - limit }}">Previous Page</a>
-        {% endif %}
-        {% if has_more %}
-            <a href="/diary?offset={{ current_offset + limit }}">Next Page</a>
-        {% endif %}
+    {% endif %}
+    <div class="entry-body">
+      <div class="entry-title">
+        {{ entry.movie().title().value() }}
+        <span class="year">({{ entry.movie().release_year().value() }})</span>
+      </div>
+      {% if let Some(dir) = entry.movie().director() %}
+      <div class="director">{{ dir }}</div>
+      {% endif %}
+      <div class="rating">{{ entry.review().rating().value() }}/5</div>
+      {% if let Some(comment) = entry.review().comment() %}
+      <div class="comment">{{ comment.value() }}</div>
+      {% endif %}
+      <div class="watched-at">{{ entry.review().watched_at().format("%Y-%m-%d") }}</div>
     </div>
-</body>
-</html>
+  </article>
+  {% else %}
+  <p class="empty">No movies logged yet.</p>
+  {% endfor %}
+</div>
+<nav class="pagination">
+  {% if current_offset > 0 %}
+  <a href="/?offset={{ current_offset - limit }}">&larr; Prev</a>
+  {% endif %}
+  {% if has_more %}
+  <a href="/?offset={{ current_offset + limit }}">Next &rarr;</a>
+  {% endif %}
+</nav>
+{% endblock %}
