@@ -34,6 +34,21 @@ body {
   background: url("/static/background.avif") center / cover no-repeat fixed;
   min-height: 100%;
   line-height: 1.5;
+  position: relative;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.2);
+  z-index: 0;
+  pointer-events: none;
+}
+
+body > * {
+  position: relative;
+  z-index: 1;
 }
 
 a {
