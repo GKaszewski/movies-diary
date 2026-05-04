@@ -42,6 +42,7 @@ fn api_routes() -> Router<AppState> {
                 routing::get(handlers::api::get_review_history),
             )
             .route("/reviews", routing::post(handlers::api::post_review))
+            .route("/reviews/{id}", routing::delete(handlers::api::delete_review))
             .route(
                 "/movies/{id}/sync-poster",
                 routing::post(handlers::api::sync_poster),

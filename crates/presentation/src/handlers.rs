@@ -308,9 +308,9 @@ pub mod api {
     use uuid::Uuid;
 
     use application::{
-        commands::{LoginCommand, LogReviewCommand, RegisterCommand, SyncPosterCommand},
+        commands::{DeleteReviewCommand, LoginCommand, LogReviewCommand, RegisterCommand, SyncPosterCommand},
         queries::{GetDiaryQuery, GetReviewHistoryQuery},
-        use_cases::{get_diary, get_review_history, log_review, login as login_uc, register as register_uc, sync_poster},
+        use_cases::{delete_review, get_diary, get_review_history, log_review, login as login_uc, register as register_uc, sync_poster},
     };
     use domain::{
         errors::DomainError,
@@ -467,6 +467,26 @@ pub mod api {
         })
         .await?;
         Ok(StatusCode::CREATED)
+    }
+
+    pub async fn delete_review(
+        State(state): State<AppState>,
+        AuthenticatedUser(user_id): AuthenticatedUser,
+        Path(review_id): Path<Uuid>,
+    ) -> impl IntoResponse {
+        let cmd = DeleteReviewCommand {
+            review_id,
+            requesting_user_id: user_id.value(),
+        };
+        match delete_review::execute(&state.app_ctx, cmd).await {
+            Ok(()) => StatusCode::NO_CONTENT.into_response(),
+            Err(DomainError::NotFound(_)) => StatusCode::NOT_FOUND.into_response(),
+            Err(DomainError::Unauthorized(_)) => StatusCode::FORBIDDEN.into_response(),
+            Err(e) => {
+                tracing::error!("delete_review error: {:?}", e);
+                StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            }
+        }
     }
 
     fn movie_to_dto(movie: &Movie) -> MovieDto {
