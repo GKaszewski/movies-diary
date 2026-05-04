@@ -8,6 +8,8 @@
 .env.prod
 
 *.db
+*db-shm
+*db-wal
 
 .worktrees/
 .superpowers/

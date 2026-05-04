@@ -4,3 +4,7 @@ target/
 *.db
 *.db-shm
 *.db-wal
+.cargo/
+.sqlx/
+docs/
+dev.db
