@@ -240,7 +240,7 @@ impl SqliteMovieRepository {
     async fn fetch_user_totals(&self, user_id: &str) -> Result<UserTotalsRow, DomainError> {
         sqlx::query_as!(
             UserTotalsRow,
-            r#"SELECT COUNT(*) AS "total!: i64",
+            r#"SELECT COUNT(DISTINCT movie_id) AS "total!: i64",
                       AVG(CAST(rating AS REAL)) AS avg_rating
                FROM reviews WHERE user_id = ?"#,
             user_id

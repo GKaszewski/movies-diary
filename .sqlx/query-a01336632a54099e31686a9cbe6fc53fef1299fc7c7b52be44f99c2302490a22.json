@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT COUNT(*) AS \"total!: i64\",\n                      AVG(CAST(rating AS REAL)) AS avg_rating\n               FROM reviews WHERE user_id = ?",
+  "query": "SELECT COUNT(DISTINCT movie_id) AS \"total!: i64\",\n                      AVG(CAST(rating AS REAL)) AS avg_rating\n               FROM reviews WHERE user_id = ?",
   "describe": {
     "columns": [
       {
@@ -22,5 +22,5 @@
       true
     ]
   },
-  "hash": "d59e1a103fc56b9b4579add523f0f77b68500cf4c96002a4a17b1e40093504ba"
+  "hash": "a01336632a54099e31686a9cbe6fc53fef1299fc7c7b52be44f99c2302490a22"
 }
