@@ -99,7 +99,6 @@ pub fn create_event_channel(
 mod tests {
     use super::*;
     use std::sync::{Arc, Mutex};
-    use async_trait::async_trait;
     use domain::{
         errors::DomainError,
         events::DomainEvent,
@@ -129,14 +128,15 @@ mod tests {
         let config = EventPublisherConfig { channel_buffer: 8 };
         let (publisher, worker) = create_event_channel(config, vec![Box::new(handler)]);
 
-        tokio::spawn(worker.run());
+        let handle = tokio::spawn(worker.run());
 
         let event = DomainEvent::MovieDiscovered {
             movie_id: MovieId::generate(),
             external_metadata_id: ExternalMetadataId::new("tt1234567".into()).unwrap(),
         };
         publisher.publish(&event).await.unwrap();
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        drop(publisher);
+        handle.await.unwrap();
 
         assert_eq!(*calls.lock().unwrap(), vec!["movie_discovered"]);
     }
@@ -153,14 +153,15 @@ mod tests {
             vec![Box::new(handler1), Box::new(handler2)],
         );
 
-        tokio::spawn(worker.run());
+        let handle = tokio::spawn(worker.run());
 
         let event = DomainEvent::MovieDiscovered {
             movie_id: MovieId::generate(),
             external_metadata_id: ExternalMetadataId::new("tt9999999".into()).unwrap(),
         };
         publisher.publish(&event).await.unwrap();
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        drop(publisher);
+        handle.await.unwrap();
 
         assert_eq!(calls1.lock().unwrap().len(), 1);
         assert_eq!(calls2.lock().unwrap().len(), 1);
@@ -184,14 +185,15 @@ mod tests {
             vec![Box::new(FailingHandler), Box::new(good)],
         );
 
-        tokio::spawn(worker.run());
+        let handle = tokio::spawn(worker.run());
 
         let event = DomainEvent::MovieDiscovered {
             movie_id: MovieId::generate(),
             external_metadata_id: ExternalMetadataId::new("tt0000001".into()).unwrap(),
         };
         publisher.publish(&event).await.unwrap();
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        drop(publisher);
+        handle.await.unwrap();
 
         assert_eq!(calls.lock().unwrap().len(), 1);
     }
