@@ -35,6 +35,12 @@ async fn resolve_movie(
         }
     }
 
+    if let Some(title) = &cmd.manual_title {
+        if let Some(resolved) = resolve_by_title(ctx, title, cmd.manual_release_year).await? {
+            return Ok(resolved);
+        }
+    }
+
     resolve_manual_movie(ctx, cmd).await
 }
 
@@ -59,6 +65,21 @@ async fn resolve_external_movie(
                 "Failed to fetch from TMDB, falling back to manual entry: {:?}",
                 e
             );
+            Ok(None)
+        }
+    }
+}
+
+async fn resolve_by_title(
+    ctx: &AppContext,
+    title: &str,
+    year: Option<u16>,
+) -> Result<Option<(Movie, bool)>, DomainError> {
+    let criteria = MetadataSearchCriteria::Title { title: title.to_string(), year };
+    match ctx.metadata_client.fetch_movie_metadata(&criteria).await {
+        Ok(m) => Ok(Some((m, true))),
+        Err(e) => {
+            tracing::warn!("OMDb title search failed, falling back to manual: {:?}", e);
             Ok(None)
         }
     }
