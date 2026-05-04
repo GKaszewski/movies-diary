@@ -67,5 +67,5 @@ pub trait HtmlRenderer: Send + Sync {
 }
 
 pub trait RssFeedRenderer: Send + Sync {
-    fn render_feed(&self, entries: &[DiaryEntry]) -> Result<String, String>;
+    fn render_feed(&self, entries: &[DiaryEntry], title: &str) -> Result<String, String>;
 }

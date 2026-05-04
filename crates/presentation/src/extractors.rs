@@ -153,7 +153,7 @@ mod tests {
 
         struct PanicRssRenderer;
         impl crate::ports::RssFeedRenderer for PanicRssRenderer {
-            fn render_feed(&self, _: &[domain::models::DiaryEntry]) -> Result<String, String> { panic!() }
+            fn render_feed(&self, _: &[domain::models::DiaryEntry], _: &str) -> Result<String, String> { panic!() }
         }
 
         struct PanicMeta; struct PanicFetcher; struct PanicStorage; struct PanicEvent; struct PanicHasher; struct PanicAuth; struct PanicUserRepo;
@@ -269,7 +269,7 @@ mod tests {
         }
         struct PanicRssRenderer2;
         impl crate::ports::RssFeedRenderer for PanicRssRenderer2 {
-            fn render_feed(&self, _: &[domain::models::DiaryEntry]) -> Result<String, String> { panic!() }
+            fn render_feed(&self, _: &[domain::models::DiaryEntry], _: &str) -> Result<String, String> { panic!() }
         }
         struct PanicAuth2;
         crate::state::AppState {
@@ -329,7 +329,7 @@ mod tests {
         }
         struct PanicRssRenderer3;
         impl crate::ports::RssFeedRenderer for PanicRssRenderer3 {
-            fn render_feed(&self, _: &[domain::models::DiaryEntry]) -> Result<String, String> { panic!() }
+            fn render_feed(&self, _: &[domain::models::DiaryEntry], _: &str) -> Result<String, String> { panic!() }
         }
         crate::state::AppState {
             app_ctx: AppContext {

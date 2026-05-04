@@ -380,7 +380,7 @@ pub mod rss {
         let page = get_diary::execute(&state.app_ctx, query).await?;
         let xml = state
             .rss_renderer
-            .render_feed(&page.items)
+            .render_feed(&page.items, "Movie Diary")
             .map_err(|e| ApiError(DomainError::InfrastructureError(e)))?;
         Ok(([(header::CONTENT_TYPE, "application/rss+xml; charset=utf-8")], xml))
     }

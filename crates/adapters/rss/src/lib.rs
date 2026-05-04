@@ -14,11 +14,11 @@ impl RssAdapter {
 }
 
 impl RssFeedRenderer for RssAdapter {
-    fn render_feed(&self, entries: &[DiaryEntry]) -> Result<String, String> {
+    fn render_feed(&self, entries: &[DiaryEntry], title: &str) -> Result<String, String> {
         let items = entries
             .iter()
             .map(|e| {
-                let title = format!(
+                let item_title = format!(
                     "{} ({})",
                     e.movie().title().value(),
                     e.movie().release_year().value()
@@ -38,7 +38,7 @@ impl RssFeedRenderer for RssAdapter {
                     .permalink(false)
                     .build();
                 ItemBuilder::default()
-                    .title(Some(title))
+                    .title(Some(item_title))
                     .description(Some(description))
                     .pub_date(Some(pub_date))
                     .guid(Some(guid))
@@ -47,12 +47,31 @@ impl RssFeedRenderer for RssAdapter {
             .collect::<Vec<_>>();
 
         let channel = ChannelBuilder::default()
-            .title(self.feed_title.clone())
+            .title(title.to_string())
             .link(self.feed_link.clone())
-            .description(self.feed_title.clone())
+            .description(title.to_string())
             .items(items)
             .build();
 
         Ok(channel.to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn render_feed_uses_provided_title() {
+        let adapter = RssAdapter::new("ignored".into(), "http://example.com".into());
+        let xml = adapter.render_feed(&[], "Custom Title").unwrap();
+        assert!(xml.contains("<title>Custom Title</title>"));
+    }
+
+    #[test]
+    fn render_feed_empty_entries_produces_valid_xml() {
+        let adapter = RssAdapter::new("ignored".into(), "http://example.com".into());
+        let xml = adapter.render_feed(&[], "My Feed").unwrap();
+        assert!(xml.starts_with("<?xml") || xml.starts_with("<rss"));
     }
 }
