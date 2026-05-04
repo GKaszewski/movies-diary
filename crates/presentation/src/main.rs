@@ -109,7 +109,7 @@ async fn wire_dependencies() -> anyhow::Result<AppState> {
         app_ctx,
         html_renderer: Arc::new(AskamaHtmlRenderer::new()),
         rss_renderer: Arc::new(RssAdapter::new(
-            "http://localhost:3000".into(),
+            std::env::var("BASE_URL").unwrap_or_else(|_| "http://localhost:3000".into()),
         )),
     })
 }
