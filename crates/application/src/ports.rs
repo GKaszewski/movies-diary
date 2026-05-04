@@ -6,6 +6,7 @@ pub struct HtmlPageContext {
     pub user_email: Option<String>,
     pub user_id: Option<Uuid>,
     pub register_enabled: bool,
+    pub rss_url: String,
 }
 
 impl HtmlPageContext {

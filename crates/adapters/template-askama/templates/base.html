@@ -15,7 +15,7 @@
     <nav>
       <a href="/">Feed</a>
       <a href="/users">Users</a>
-      <a href="/feed.rss">RSS</a>
+      <a href="{{ ctx.rss_url }}">RSS</a>
       {% if let Some(email) = ctx.user_email %}
         <a href="/reviews/new">Add Review</a>
         <a href="/logout">Logout</a>

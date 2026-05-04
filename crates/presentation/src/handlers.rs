@@ -41,6 +41,7 @@ pub mod html {
             user_email,
             user_id: uuid,
             register_enabled: state.app_ctx.config.allow_registration,
+            rss_url: "/feed.rss".to_string(),
         }
     }
 
@@ -67,6 +68,7 @@ pub mod html {
             user_email: None,
             user_id: None,
             register_enabled: state.app_ctx.config.allow_registration,
+            rss_url: "/feed.rss".to_string(),
         };
         let html = state
             .html_renderer
@@ -119,6 +121,7 @@ pub mod html {
             user_email: None,
             user_id: None,
             register_enabled: true,
+            rss_url: "/feed.rss".to_string(),
         };
         let html = state
             .html_renderer
