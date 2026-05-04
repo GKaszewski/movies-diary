@@ -279,7 +279,8 @@ pub mod html {
         Path(profile_user_uuid): Path<Uuid>,
         Query(params): Query<crate::dtos::ProfileQueryParams>,
     ) -> impl IntoResponse {
-        let ctx = build_page_context(&state, user_id).await;
+        let mut ctx = build_page_context(&state, user_id).await;
+        ctx.rss_url = format!("/users/{}/feed.rss", profile_user_uuid);
         let view = params.view.unwrap_or_else(|| "recent".to_string());
 
         let profile_user = match state.app_ctx.user_repository
