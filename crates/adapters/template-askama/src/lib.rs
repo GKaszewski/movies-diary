@@ -82,6 +82,7 @@ struct HeatmapCell {
 fn relative_time(dt: chrono::NaiveDateTime) -> String {
     let now = chrono::Utc::now().naive_utc();
     let diff = now.signed_duration_since(dt);
+    if diff.num_seconds() <= 0 { return "just now".to_string(); }
     let minutes = diff.num_minutes();
     let hours = diff.num_hours();
     let days = diff.num_days();
@@ -96,7 +97,7 @@ fn relative_time(dt: chrono::NaiveDateTime) -> String {
 fn build_heatmap(history: &[MonthActivity]) -> Vec<HeatmapCell> {
     let current_year = chrono::Utc::now().year();
     let count_for = |m: &str| -> i64 {
-        history.iter().find(|a| a.year_month.starts_with(&format!("{}-{}", current_year, m)))
+        history.iter().find(|a| a.year_month == format!("{}-{}", current_year, m))
             .map(|a| a.count)
             .unwrap_or(0)
     };
@@ -106,7 +107,7 @@ fn build_heatmap(history: &[MonthActivity]) -> Vec<HeatmapCell> {
         ("09", "Sep"), ("10", "Oct"), ("11", "Nov"), ("12", "Dec"),
     ];
     let counts: Vec<i64> = months.iter().map(|(m, _)| count_for(m)).collect();
-    let max = *counts.iter().max().unwrap_or(&1).max(&1);
+    let max = counts.iter().copied().max().unwrap_or(0).max(1);
     months.iter().zip(counts.iter()).map(|((_, label), &count)| {
         let alpha = if count == 0 { 0.05 } else { 0.15 + 0.75 * (count as f64 / max as f64) };
         HeatmapCell {
