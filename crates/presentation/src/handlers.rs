@@ -1,3 +1,5 @@
+const DEFAULT_PAGE_LIMIT: u32 = 20;
+
 pub mod html {
     use axum::{
         extract::{Path, Query, State},
@@ -11,13 +13,12 @@ pub mod html {
     use application::{
         commands::{DeleteReviewCommand, LoginCommand, RegisterCommand},
         ports::{HtmlPageContext, LoginPageData, NewReviewPageData, RegisterPageData},
-        use_cases::{delete_review, get_diary, log_review, login as login_uc, register as register_uc},
+        use_cases::{delete_review, log_review, login as login_uc, register as register_uc},
     };
     use domain::{errors::DomainError, value_objects::UserId};
 
     use crate::{
         dtos::{DiaryQueryParams, ErrorQuery, LoginForm, LogReviewData, LogReviewForm, RegisterForm},
-        errors::ApiError,
         extractors::{OptionalCookieUser, RequiredCookieUser},
         state::AppState,
     };
@@ -56,21 +57,6 @@ pub mod html {
             token, max_age
         );
         (SET_COOKIE, HeaderValue::from_str(&val).expect("valid cookie"))
-    }
-
-    pub async fn get_index(
-        OptionalCookieUser(user_id): OptionalCookieUser,
-        State(state): State<AppState>,
-        Query(params): Query<DiaryQueryParams>,
-    ) -> Result<impl IntoResponse, ApiError> {
-        let query = params.into();
-        let ctx = build_page_context(&state, user_id).await;
-        let page = get_diary::execute(&state.app_ctx, query).await?;
-        let html = state
-            .html_renderer
-            .render_diary_page(&page, ctx)
-            .map_err(|e| ApiError(DomainError::InfrastructureError(e)))?;
-        Ok(Html(html))
     }
 
     pub async fn get_login_page(
@@ -250,7 +236,7 @@ pub mod html {
             Ok(entries) => {
                 let limit = entries.limit;
                 let offset = entries.offset;
-                let has_more = (offset + limit) < entries.total_count as u32;
+                let has_more = (offset as u64).saturating_add(limit as u64) < entries.total_count;
                 let data = application::ports::ActivityFeedPageData {
                     ctx,
                     current_offset: offset,
@@ -291,7 +277,7 @@ pub mod html {
         Query(params): Query<crate::dtos::ProfileQueryParams>,
     ) -> impl IntoResponse {
         let ctx = build_page_context(&state, user_id).await;
-        let view = params.view.clone().unwrap_or_else(|| "recent".to_string());
+        let view = params.view.unwrap_or_else(|| "recent".to_string());
 
         let profile_user = match state.app_ctx.user_repository
             .find_by_id(&domain::value_objects::UserId::from_uuid(profile_user_uuid))
@@ -313,10 +299,10 @@ pub mod html {
             Ok(profile) => {
                 let (offset, has_more, limit) = profile.entries.as_ref()
                     .map(|e| {
-                        let has_more = (e.offset + e.limit) < e.total_count as u32;
+                        let has_more = (e.offset as u64).saturating_add(e.limit as u64) < e.total_count;
                         (e.offset, has_more, e.limit)
                     })
-                    .unwrap_or((0, false, 20));
+                    .unwrap_or((0, false, super::DEFAULT_PAGE_LIMIT));
                 let data = application::ports::ProfilePageData {
                     ctx,
                     profile_user_id: profile_user_uuid,
