@@ -104,7 +104,7 @@ impl UserRepository for SqliteUserRepository {
             UserSummaryRow,
             r#"SELECT u.id,
                       u.email,
-                      COUNT(r.id) AS "total_movies!: i64",
+                      COUNT(DISTINCT r.movie_id) AS "total_movies!: i64",
                       AVG(CAST(r.rating AS REAL)) AS avg_rating
                FROM users u
                LEFT JOIN reviews r ON r.user_id = u.id

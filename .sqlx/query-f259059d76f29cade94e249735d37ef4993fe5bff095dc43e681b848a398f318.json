@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT u.id,\n                      u.email,\n                      COUNT(r.id) AS \"total_movies!: i64\",\n                      AVG(CAST(r.rating AS REAL)) AS avg_rating\n               FROM users u\n               LEFT JOIN reviews r ON r.user_id = u.id\n               GROUP BY u.id, u.email\n               ORDER BY u.email ASC",
+  "query": "SELECT u.id,\n                      u.email,\n                      COUNT(DISTINCT r.movie_id) AS \"total_movies!: i64\",\n                      AVG(CAST(r.rating AS REAL)) AS avg_rating\n               FROM users u\n               LEFT JOIN reviews r ON r.user_id = u.id\n               GROUP BY u.id, u.email\n               ORDER BY u.email ASC",
   "describe": {
     "columns": [
       {
@@ -34,5 +34,5 @@
       true
     ]
   },
-  "hash": "41273bd5f2ad4e86bb2f60d7b3144279f2ae77a95a8ea61bbf3dbfef2d861dd8"
+  "hash": "f259059d76f29cade94e249735d37ef4993fe5bff095dc43e681b848a398f318"
 }
