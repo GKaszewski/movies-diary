@@ -24,11 +24,12 @@ pub mod html {
     };
 
     async fn build_page_context(state: &AppState, user_id: Option<UserId>) -> HtmlPageContext {
-        let user_email = if let Some(id) = user_id {
+        let uuid = user_id.as_ref().map(|u| u.value());
+        let user_email = if let Some(ref id) = user_id {
             state
                 .app_ctx
                 .user_repository
-                .find_by_id(&id)
+                .find_by_id(id)
                 .await
                 .ok()
                 .flatten()
@@ -38,6 +39,7 @@ pub mod html {
         };
         HtmlPageContext {
             user_email,
+            user_id: uuid,
             register_enabled: state.app_ctx.config.allow_registration,
         }
     }
@@ -89,6 +91,7 @@ pub mod html {
     ) -> impl IntoResponse {
         let ctx = HtmlPageContext {
             user_email: None,
+            user_id: None,
             register_enabled: state.app_ctx.config.allow_registration,
         };
         let html = state
@@ -140,6 +143,7 @@ pub mod html {
         }
         let ctx = HtmlPageContext {
             user_email: None,
+            user_id: None,
             register_enabled: true,
         };
         let html = state
