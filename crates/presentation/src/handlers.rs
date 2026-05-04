@@ -192,11 +192,11 @@ pub mod html {
     }
 
     pub async fn get_new_review_page(
-        _: RequiredCookieUser,
+        RequiredCookieUser(user_id): RequiredCookieUser,
         State(state): State<AppState>,
         Query(params): Query<ErrorQuery>,
     ) -> impl IntoResponse {
-        let ctx = build_page_context(&state, None).await;
+        let ctx = build_page_context(&state, Some(user_id)).await;
         let html = state
             .html_renderer
             .render_new_review_page(NewReviewPageData {
