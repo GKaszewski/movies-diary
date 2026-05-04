@@ -52,17 +52,14 @@ impl SqliteMovieRepository {
         }
     }
 
-    async fn fetch_diary_rows(
+    async fn fetch_all_diary_rows(
         &self,
-        movie_id: Option<&str>,
         sort: &SortDirection,
         limit: i64,
         offset: i64,
     ) -> Result<Vec<DiaryRow>, DomainError> {
-        // sqlx macros require literal ORDER BY values; separate branches also let the
-        // query planner use the movie_id index instead of falling back to a filtered scan.
-        match (movie_id, sort) {
-            (None, SortDirection::Descending) => sqlx::query_as!(
+        match sort {
+            SortDirection::Descending => sqlx::query_as!(
                 DiaryRow,
                 "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
                         r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at
@@ -77,7 +74,7 @@ impl SqliteMovieRepository {
             .await
             .map_err(Self::map_err),
 
-            (None, SortDirection::Ascending) => sqlx::query_as!(
+            SortDirection::Ascending => sqlx::query_as!(
                 DiaryRow,
                 "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
                         r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at
@@ -91,8 +88,18 @@ impl SqliteMovieRepository {
             .fetch_all(&self.pool)
             .await
             .map_err(Self::map_err),
+        }
+    }
 
-            (Some(id), SortDirection::Descending) => sqlx::query_as!(
+    async fn fetch_movie_diary_rows(
+        &self,
+        movie_id: &str,
+        sort: &SortDirection,
+        limit: i64,
+        offset: i64,
+    ) -> Result<Vec<DiaryRow>, DomainError> {
+        match sort {
+            SortDirection::Descending => sqlx::query_as!(
                 DiaryRow,
                 "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
                         r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at
@@ -101,7 +108,7 @@ impl SqliteMovieRepository {
                  WHERE r.movie_id = ?
                  ORDER BY r.watched_at DESC
                  LIMIT ? OFFSET ?",
-                id,
+                movie_id,
                 limit,
                 offset
             )
@@ -109,7 +116,7 @@ impl SqliteMovieRepository {
             .await
             .map_err(Self::map_err),
 
-            (Some(id), SortDirection::Ascending) => sqlx::query_as!(
+            SortDirection::Ascending => sqlx::query_as!(
                 DiaryRow,
                 "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
                         r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at
@@ -118,7 +125,7 @@ impl SqliteMovieRepository {
                  WHERE r.movie_id = ?
                  ORDER BY r.watched_at ASC
                  LIMIT ? OFFSET ?",
-                id,
+                movie_id,
                 limit,
                 offset
             )
@@ -251,14 +258,22 @@ impl MovieRepository for SqliteMovieRepository {
     }
 
     async fn query_diary(&self, filter: &DiaryFilter) -> Result<Paginated<DiaryEntry>, DomainError> {
-        let movie_id: Option<String> = filter.movie_id.as_ref().map(|id| id.value().to_string());
         let limit = filter.page.limit as i64;
         let offset = filter.page.offset as i64;
 
-        let (total, rows) = tokio::try_join!(
-            self.count_diary_entries(movie_id.as_deref()),
-            self.fetch_diary_rows(movie_id.as_deref(), &filter.sort_by, limit, offset)
-        )?;
+        let (total, rows) = match &filter.movie_id {
+            None => tokio::try_join!(
+                self.count_diary_entries(None),
+                self.fetch_all_diary_rows(&filter.sort_by, limit, offset)
+            )?,
+            Some(id) => {
+                let id_str = id.value().to_string();
+                tokio::try_join!(
+                    self.count_diary_entries(Some(id_str.as_str())),
+                    self.fetch_movie_diary_rows(&id_str, &filter.sort_by, limit, offset)
+                )?
+            }
+        };
 
         let items = rows
             .into_iter()

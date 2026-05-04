@@ -5,19 +5,18 @@ pub mod html {
         response::{Html, IntoResponse, Redirect},
         Form,
     };
-    use chrono::{NaiveDateTime, Utc};
+    use chrono::Utc;
     use uuid::Uuid;
 
     use application::{
-        commands::{DeleteReviewCommand, LoginCommand, LogReviewCommand, RegisterCommand},
+        commands::{DeleteReviewCommand, LoginCommand, RegisterCommand},
         ports::{HtmlPageContext, LoginPageData, NewReviewPageData, RegisterPageData},
-        queries::GetDiaryQuery,
         use_cases::{delete_review, get_diary, log_review, login as login_uc, register as register_uc},
     };
-    use domain::{errors::DomainError, models::SortDirection, value_objects::UserId};
+    use domain::{errors::DomainError, value_objects::UserId};
 
     use crate::{
-        dtos::{DiaryQueryParams, ErrorQuery, LoginForm, LogReviewForm, RegisterForm},
+        dtos::{DiaryQueryParams, ErrorQuery, LoginForm, LogReviewData, LogReviewForm, RegisterForm},
         errors::ApiError,
         extractors::{OptionalCookieUser, RequiredCookieUser},
         state::AppState,
@@ -64,18 +63,7 @@ pub mod html {
         State(state): State<AppState>,
         Query(params): Query<DiaryQueryParams>,
     ) -> Result<impl IntoResponse, ApiError> {
-        let query = GetDiaryQuery {
-            limit: params.limit,
-            offset: params.offset,
-            sort_by: params.sort_by.as_deref().map(|s| {
-                if s == "asc" {
-                    SortDirection::Ascending
-                } else {
-                    SortDirection::Descending
-                }
-            }),
-            movie_id: params.movie_id,
-        };
+        let query = params.into();
         let ctx = build_page_context(&state, user_id).await;
         let page = get_diary::execute(&state.app_ctx, query).await?;
         let html = state
@@ -212,28 +200,14 @@ pub mod html {
         RequiredCookieUser(user_id): RequiredCookieUser,
         Form(form): Form<LogReviewForm>,
     ) -> impl IntoResponse {
-        let watched_at = NaiveDateTime::parse_from_str(&form.watched_at, "%Y-%m-%dT%H:%M:%S")
-            .or_else(|_| NaiveDateTime::parse_from_str(&form.watched_at, "%Y-%m-%dT%H:%M"));
-
-        let watched_at = match watched_at {
-            Ok(dt) => dt,
+        let data = match LogReviewData::try_from(form) {
+            Ok(d) => d,
             Err(_) => {
                 return Redirect::to("/reviews/new?error=Invalid+date+format").into_response()
             }
         };
 
-        let cmd = LogReviewCommand {
-            external_metadata_id: form.external_metadata_id.filter(|s| !s.trim().is_empty()),
-            manual_title: form.manual_title,
-            manual_release_year: form.manual_release_year,
-            manual_director: form.manual_director,
-            user_id: user_id.value(),
-            rating: form.rating,
-            comment: form.comment,
-            watched_at,
-        };
-
-        match log_review::execute(&state.app_ctx, cmd).await {
+        match log_review::execute(&state.app_ctx, data.into_command(user_id.value())).await {
             Ok(_) => Redirect::to("/").into_response(),
             Err(e) => {
                 let msg = encode_error(&e.to_string());
@@ -329,17 +303,16 @@ pub mod api {
         http::StatusCode,
         response::IntoResponse,
     };
-    use chrono::NaiveDateTime;
     use uuid::Uuid;
 
     use application::{
-        commands::{DeleteReviewCommand, LoginCommand, LogReviewCommand, RegisterCommand, SyncPosterCommand},
-        queries::{GetDiaryQuery, GetReviewHistoryQuery},
+        commands::{DeleteReviewCommand, LoginCommand, RegisterCommand, SyncPosterCommand},
+        queries::GetReviewHistoryQuery,
         use_cases::{delete_review, get_diary, get_review_history, log_review, login as login_uc, register as register_uc, sync_poster},
     };
     use domain::{
         errors::DomainError,
-        models::{DiaryEntry, Movie, Review, SortDirection},
+        models::{DiaryEntry, Movie, Review},
         services::review_history::Trend,
         value_objects::MovieId,
     };
@@ -347,7 +320,8 @@ pub mod api {
     use crate::{
         dtos::{
             DiaryEntryDto, DiaryQueryParams, DiaryResponse, LoginRequest, LoginResponse,
-            LogReviewRequest, MovieDto, RegisterRequest, ReviewDto, ReviewHistoryResponse,
+            LogReviewData, LogReviewRequest, MovieDto, RegisterRequest, ReviewDto,
+            ReviewHistoryResponse,
         },
         errors::ApiError,
         extractors::AuthenticatedUser,
@@ -358,20 +332,7 @@ pub mod api {
         State(state): State<AppState>,
         Query(params): Query<DiaryQueryParams>,
     ) -> Result<Json<DiaryResponse>, ApiError> {
-        let query = GetDiaryQuery {
-            limit: params.limit,
-            offset: params.offset,
-            sort_by: params.sort_by.as_deref().map(|s| {
-                if s == "asc" {
-                    SortDirection::Ascending
-                } else {
-                    SortDirection::Descending
-                }
-            }),
-            movie_id: params.movie_id,
-        };
-
-        let page = get_diary::execute(&state.app_ctx, query).await?;
+        let page = get_diary::execute(&state.app_ctx, params.into()).await?;
 
         Ok(Json(DiaryResponse {
             items: page.items.iter().map(entry_to_dto).collect(),
@@ -408,26 +369,8 @@ pub mod api {
         user: AuthenticatedUser,
         Json(req): Json<LogReviewRequest>,
     ) -> Result<impl IntoResponse, ApiError> {
-        let watched_at = NaiveDateTime::parse_from_str(&req.watched_at, "%Y-%m-%dT%H:%M:%S")
-            .map_err(|_| {
-                ApiError(DomainError::ValidationError(
-                    "Invalid watched_at format, expected YYYY-MM-DDTHH:MM:SS".into(),
-                ))
-            })?;
-
-        let cmd = LogReviewCommand {
-            external_metadata_id: req.external_metadata_id.filter(|s| !s.trim().is_empty()),
-            manual_title: req.manual_title,
-            manual_release_year: req.manual_release_year,
-            manual_director: req.manual_director,
-            user_id: user.0.value(),
-            rating: req.rating,
-            comment: req.comment,
-            watched_at,
-        };
-
-        log_review::execute(&state.app_ctx, cmd).await?;
-
+        let data = LogReviewData::try_from(req).map_err(ApiError)?;
+        log_review::execute(&state.app_ctx, data.into_command(user.0.value())).await?;
         Ok(StatusCode::CREATED)
     }
 
