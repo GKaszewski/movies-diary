@@ -133,14 +133,6 @@ impl Review {
         comment: Option<Comment>,
         watched_at: NaiveDateTime,
     ) -> Result<Self, DomainError> {
-        let now = Utc::now().naive_utc();
-
-        if watched_at > now {
-            return Err(DomainError::ValidationError(
-                "watched_at cannot be in the future".into(),
-            ));
-        }
-
         Ok(Self {
             id: ReviewId::generate(),
             movie_id,
@@ -148,7 +140,7 @@ impl Review {
             rating,
             comment,
             watched_at,
-            created_at: now,
+            created_at: Utc::now().naive_utc(),
         })
     }
 
