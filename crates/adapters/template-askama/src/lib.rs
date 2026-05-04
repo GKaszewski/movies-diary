@@ -1,9 +1,7 @@
-// crates/adapters/template-askama/src/lib.rs
 use askama::Template;
 use domain::models::{DiaryEntry, collections::Paginated};
 use presentation::ports::HtmlRenderer; // Assuming you exposed the port
 
-// The internal Askama template
 #[derive(Template)]
 #[template(path = "diary.html")]
 struct DiaryTemplate<'a> {
@@ -13,7 +11,6 @@ struct DiaryTemplate<'a> {
     has_more: bool,
 }
 
-// The public adapter struct
 pub struct AskamaHtmlRenderer;
 
 impl AskamaHtmlRenderer {
@@ -22,7 +19,6 @@ impl AskamaHtmlRenderer {
     }
 }
 
-// Implementing the presentation port
 impl HtmlRenderer for AskamaHtmlRenderer {
     fn render_diary_page(&self, data: &Paginated<DiaryEntry>) -> Result<String, String> {
         let has_more = (data.offset + data.limit) < data.total_count as u32;
