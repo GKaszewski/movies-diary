@@ -1,3 +1,4 @@
+pub mod event_handlers;
 pub mod dtos;
 pub mod errors;
 pub mod extractors;
