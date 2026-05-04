@@ -82,6 +82,7 @@ pub trait AuthService: Send + Sync {
 pub trait UserRepository: Send + Sync {
     async fn find_by_email(&self, email: &Email) -> Result<Option<User>, DomainError>;
     async fn save(&self, user: &User) -> Result<(), DomainError>;
+    async fn find_by_id(&self, id: &UserId) -> Result<Option<User>, DomainError>;
 }
 
 #[async_trait]
