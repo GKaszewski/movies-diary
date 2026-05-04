@@ -1,27 +1,63 @@
 pub mod html {
     use axum::{
         extract::{Query, State},
+        http::{HeaderValue, header::SET_COOKIE},
         response::{Html, IntoResponse, Redirect},
         Form,
     };
-    use chrono::NaiveDateTime;
+    use chrono::{NaiveDateTime, Utc};
 
     use application::{
-        commands::LogReviewCommand,
-        ports::HtmlPageContext,
+        commands::{LoginCommand, LogReviewCommand, RegisterCommand},
+        ports::{HtmlPageContext, LoginPageData, NewReviewPageData, RegisterPageData},
         queries::GetDiaryQuery,
-        use_cases::{get_diary, log_review},
+        use_cases::{get_diary, log_review, login as login_uc, register as register_uc},
     };
-    use domain::{errors::DomainError, models::SortDirection};
+    use domain::{errors::DomainError, models::SortDirection, value_objects::UserId};
 
     use crate::{
-        dtos::{DiaryQueryParams, LogReviewForm},
+        dtos::{DiaryQueryParams, ErrorQuery, LoginForm, LogReviewForm, RegisterForm},
         errors::ApiError,
-        extractors::AuthenticatedUser,
+        extractors::{OptionalCookieUser, RequiredCookieUser},
         state::AppState,
     };
 
-    pub async fn get_diary_page(
+    async fn build_page_context(state: &AppState, user_id: Option<UserId>) -> HtmlPageContext {
+        let user_email = if let Some(id) = user_id {
+            state
+                .app_ctx
+                .user_repository
+                .find_by_id(&id)
+                .await
+                .ok()
+                .flatten()
+                .map(|u| u.email().value().to_string())
+        } else {
+            None
+        };
+        HtmlPageContext {
+            user_email,
+            register_enabled: state.app_ctx.config.allow_registration,
+        }
+    }
+
+    fn encode_error(msg: &str) -> String {
+        msg.replace(' ', "+")
+            .replace('&', "%26")
+            .replace('=', "%3D")
+            .replace('"', "%22")
+    }
+
+    fn set_cookie_header(token: &str, max_age: i64) -> (axum::http::HeaderName, HeaderValue) {
+        let val = format!(
+            "token={}; HttpOnly; Path=/; SameSite=Lax; Max-Age={}",
+            token, max_age
+        );
+        (SET_COOKIE, HeaderValue::from_str(&val).expect("valid cookie"))
+    }
+
+    pub async fn get_index(
+        OptionalCookieUser(user_id): OptionalCookieUser,
         State(state): State<AppState>,
         Query(params): Query<DiaryQueryParams>,
     ) -> Result<impl IntoResponse, ApiError> {
@@ -37,43 +73,168 @@ pub mod html {
             }),
             movie_id: params.movie_id,
         };
-
+        let ctx = build_page_context(&state, user_id).await;
         let page = get_diary::execute(&state.app_ctx, query).await?;
-        let ctx = HtmlPageContext { user_email: None, register_enabled: state.app_ctx.config.allow_registration };
         let html = state
             .html_renderer
             .render_diary_page(&page, ctx)
             .map_err(|e| ApiError(DomainError::InfrastructureError(e)))?;
-
         Ok(Html(html))
+    }
+
+    pub async fn get_login_page(
+        State(state): State<AppState>,
+        Query(params): Query<ErrorQuery>,
+    ) -> impl IntoResponse {
+        let ctx = HtmlPageContext {
+            user_email: None,
+            register_enabled: state.app_ctx.config.allow_registration,
+        };
+        let html = state
+            .html_renderer
+            .render_login_page(LoginPageData {
+                ctx,
+                error: params.error.as_deref(),
+            })
+            .expect("login template failed");
+        Html(html)
+    }
+
+    pub async fn post_login(
+        State(state): State<AppState>,
+        Form(form): Form<LoginForm>,
+    ) -> impl IntoResponse {
+        match login_uc::execute(
+            &state.app_ctx,
+            LoginCommand {
+                email: form.email,
+                password: form.password,
+            },
+        )
+        .await
+        {
+            Ok(result) => {
+                let max_age = (result.expires_at - Utc::now()).num_seconds().max(0);
+                let cookie = set_cookie_header(&result.token, max_age);
+                ([cookie], Redirect::to("/")).into_response()
+            }
+            Err(_) => Redirect::to("/login?error=Invalid+credentials").into_response(),
+        }
+    }
+
+    pub async fn get_logout() -> impl IntoResponse {
+        let cookie = (
+            SET_COOKIE,
+            HeaderValue::from_static("token=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0"),
+        );
+        ([cookie], Redirect::to("/")).into_response()
+    }
+
+    pub async fn get_register_page(
+        State(state): State<AppState>,
+        Query(params): Query<ErrorQuery>,
+    ) -> impl IntoResponse {
+        if !state.app_ctx.config.allow_registration {
+            return Redirect::to("/").into_response();
+        }
+        let ctx = HtmlPageContext {
+            user_email: None,
+            register_enabled: true,
+        };
+        let html = state
+            .html_renderer
+            .render_register_page(RegisterPageData {
+                ctx,
+                error: params.error.as_deref(),
+            })
+            .expect("register template failed");
+        Html(html).into_response()
+    }
+
+    pub async fn post_register(
+        State(state): State<AppState>,
+        Form(form): Form<RegisterForm>,
+    ) -> impl IntoResponse {
+        if !state.app_ctx.config.allow_registration {
+            return Redirect::to("/").into_response();
+        }
+        let email = form.email.clone();
+        let password = form.password.clone();
+        match register_uc::execute(
+            &state.app_ctx,
+            RegisterCommand {
+                email: form.email,
+                password: form.password,
+            },
+        )
+        .await
+        {
+            Ok(_) => {
+                match login_uc::execute(&state.app_ctx, LoginCommand { email, password }).await {
+                    Ok(result) => {
+                        let max_age = (result.expires_at - Utc::now()).num_seconds().max(0);
+                        let cookie = set_cookie_header(&result.token, max_age);
+                        ([cookie], Redirect::to("/")).into_response()
+                    }
+                    Err(_) => Redirect::to("/login").into_response(),
+                }
+            }
+            Err(e) => {
+                let msg = encode_error(&e.to_string());
+                Redirect::to(&format!("/register?error={}", msg)).into_response()
+            }
+        }
+    }
+
+    pub async fn get_new_review_page(
+        RequiredCookieUser(user_id): RequiredCookieUser,
+        State(state): State<AppState>,
+        Query(params): Query<ErrorQuery>,
+    ) -> impl IntoResponse {
+        let ctx = build_page_context(&state, Some(user_id)).await;
+        let html = state
+            .html_renderer
+            .render_new_review_page(NewReviewPageData {
+                ctx,
+                error: params.error.as_deref(),
+            })
+            .expect("new_review template failed");
+        Html(html)
     }
 
     pub async fn post_review(
         State(state): State<AppState>,
-        user: AuthenticatedUser,
+        RequiredCookieUser(user_id): RequiredCookieUser,
         Form(form): Form<LogReviewForm>,
-    ) -> Result<impl IntoResponse, ApiError> {
+    ) -> impl IntoResponse {
         let watched_at = NaiveDateTime::parse_from_str(&form.watched_at, "%Y-%m-%dT%H:%M:%S")
-            .map_err(|_| {
-                ApiError(DomainError::ValidationError(
-                    "Invalid watched_at format, expected YYYY-MM-DDTHH:MM:SS".into(),
-                ))
-            })?;
+            .or_else(|_| NaiveDateTime::parse_from_str(&form.watched_at, "%Y-%m-%dT%H:%M"));
+
+        let watched_at = match watched_at {
+            Ok(dt) => dt,
+            Err(_) => {
+                return Redirect::to("/reviews/new?error=Invalid+date+format").into_response()
+            }
+        };
 
         let cmd = LogReviewCommand {
             external_metadata_id: form.external_metadata_id,
             manual_title: form.manual_title,
             manual_release_year: form.manual_release_year,
             manual_director: form.manual_director,
-            user_id: user.0.value(),
+            user_id: user_id.value(),
             rating: form.rating,
             comment: form.comment,
             watched_at,
         };
 
-        log_review::execute(&state.app_ctx, cmd).await?;
-
-        Ok(Redirect::to("/diary"))
+        match log_review::execute(&state.app_ctx, cmd).await {
+            Ok(_) => Redirect::to("/").into_response(),
+            Err(e) => {
+                let msg = encode_error(&e.to_string());
+                Redirect::to(&format!("/reviews/new?error={}", msg)).into_response()
+            }
+        }
     }
 }
 
