@@ -1,0 +1,56 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id, movie_id, user_id, rating, comment, watched_at, created_at\n             FROM reviews WHERE id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "movie_id",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "user_id",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "rating",
+        "ordinal": 3,
+        "type_info": "Integer"
+      },
+      {
+        "name": "comment",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "watched_at",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 6,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "70ee6050284475b5641af712e5923ba2091b8b70b1885ca6518dfa4bb01fdac2"
+}

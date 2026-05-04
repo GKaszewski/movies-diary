@@ -7,7 +7,7 @@ use domain::{
         collections::Paginated,
     },
     ports::MovieRepository,
-    value_objects::{ExternalMetadataId, MovieId, MovieTitle, ReleaseYear},
+    value_objects::{ExternalMetadataId, MovieId, MovieTitle, ReleaseYear, ReviewId},
 };
 use sqlx::SqlitePool;
 
@@ -271,6 +271,39 @@ impl MovieRepository for SqliteMovieRepository {
             limit: filter.page.limit,
             offset: filter.page.offset,
         })
+    }
+
+    async fn get_review_by_id(&self, review_id: &ReviewId) -> Result<Option<Review>, DomainError> {
+        let id = review_id.value().to_string();
+        sqlx::query_as!(
+            ReviewRow,
+            "SELECT id, movie_id, user_id, rating, comment, watched_at, created_at
+             FROM reviews WHERE id = ?",
+            id
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(Self::map_err)?
+        .map(ReviewRow::to_domain)
+        .transpose()
+    }
+
+    async fn delete_review(&self, review_id: &ReviewId) -> Result<(), DomainError> {
+        let id = review_id.value().to_string();
+        sqlx::query!("DELETE FROM reviews WHERE id = ?", id)
+            .execute(&self.pool)
+            .await
+            .map_err(Self::map_err)?;
+        Ok(())
+    }
+
+    async fn delete_movie(&self, movie_id: &MovieId) -> Result<(), DomainError> {
+        let id = movie_id.value().to_string();
+        sqlx::query!("DELETE FROM movies WHERE id = ?", id)
+            .execute(&self.pool)
+            .await
+            .map_err(Self::map_err)?;
+        Ok(())
     }
 
     async fn get_review_history(&self, movie_id: &MovieId) -> Result<ReviewHistory, DomainError> {
