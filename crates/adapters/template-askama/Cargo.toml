@@ -1,0 +1,12 @@
+[package]
+name = "template-askama"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+askama = { version = "0.16.0" }
+
+serde = { workspace = true }
+
+domain = { workspace = true }
+presentation = { workspace = true }
