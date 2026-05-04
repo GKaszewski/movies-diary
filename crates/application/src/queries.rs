@@ -11,3 +11,17 @@ pub struct GetDiaryQuery {
 pub struct GetReviewHistoryQuery {
     pub movie_id: Uuid,
 }
+
+pub struct GetActivityFeedQuery {
+    pub limit: Option<u32>,
+    pub offset: Option<u32>,
+}
+
+pub struct GetUsersQuery;
+
+pub struct GetUserProfileQuery {
+    pub user_id: Uuid,
+    pub view: String,
+    pub limit: Option<u32>,
+    pub offset: Option<u32>,
+}

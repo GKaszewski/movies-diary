@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-use domain::models::{DiaryEntry, collections::Paginated};
+use domain::models::{DiaryEntry, FeedEntry, MonthActivity, UserStats, UserSummary, UserTrends, collections::Paginated};
 
 pub struct HtmlPageContext {
     pub user_email: Option<String>,
@@ -23,11 +23,41 @@ pub struct NewReviewPageData<'a> {
     pub error: Option<&'a str>,
 }
 
+pub struct ActivityFeedPageData {
+    pub ctx: HtmlPageContext,
+    pub entries: Paginated<FeedEntry>,
+    pub current_offset: u32,
+    pub has_more: bool,
+    pub limit: u32,
+}
+
+pub struct UsersPageData {
+    pub ctx: HtmlPageContext,
+    pub users: Vec<UserSummary>,
+}
+
+pub struct ProfilePageData {
+    pub ctx: HtmlPageContext,
+    pub profile_user_id: Uuid,
+    pub profile_user_email: String,
+    pub stats: UserStats,
+    pub view: String,
+    pub entries: Option<Paginated<DiaryEntry>>,
+    pub current_offset: u32,
+    pub has_more: bool,
+    pub limit: u32,
+    pub history: Option<Vec<MonthActivity>>,
+    pub trends: Option<UserTrends>,
+}
+
 pub trait HtmlRenderer: Send + Sync {
     fn render_diary_page(&self, data: &Paginated<DiaryEntry>, ctx: HtmlPageContext) -> Result<String, String>;
     fn render_login_page(&self, data: LoginPageData<'_>) -> Result<String, String>;
     fn render_register_page(&self, data: RegisterPageData<'_>) -> Result<String, String>;
     fn render_new_review_page(&self, data: NewReviewPageData<'_>) -> Result<String, String>;
+    fn render_activity_feed_page(&self, data: ActivityFeedPageData) -> Result<String, String>;
+    fn render_users_page(&self, data: UsersPageData) -> Result<String, String>;
+    fn render_profile_page(&self, data: ProfilePageData) -> Result<String, String>;
 }
 
 pub trait RssFeedRenderer: Send + Sync {

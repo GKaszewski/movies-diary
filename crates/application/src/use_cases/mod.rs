@@ -1,6 +1,9 @@
 pub mod delete_review;
+pub mod get_activity_feed;
 pub mod get_diary;
 pub mod get_review_history;
+pub mod get_user_profile;
+pub mod get_users;
 pub mod log_review;
 pub mod login;
 pub mod register;
