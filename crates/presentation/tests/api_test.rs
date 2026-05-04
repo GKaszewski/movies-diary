@@ -11,7 +11,7 @@ use axum::{
 use domain::{
     errors::DomainError,
     events::DomainEvent,
-    models::{DiaryEntry, DiaryFilter, Movie, Review, ReviewHistory, collections::Paginated},
+    models::Movie,
     ports::{EventPublisher, MetadataClient, PasswordHasher, PosterFetcherClient, PosterStorage},
     value_objects::{ExternalMetadataId, MovieId, PasswordHash, PosterPath, PosterUrl},
 };
