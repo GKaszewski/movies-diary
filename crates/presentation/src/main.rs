@@ -5,8 +5,8 @@ use async_trait::async_trait;
 use domain::{
     errors::DomainError,
     events::DomainEvent,
-    ports::{EventPublisher, PosterFetcherClient, PosterStorage},
-    value_objects::{MovieId, PosterPath, PosterUrl},
+    ports::{EventPublisher, PosterFetcherClient},
+    value_objects::PosterUrl,
 };
 use sqlx::SqlitePool;
 use tokio::net::TcpListener;
@@ -15,6 +15,7 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use application::{config::AppConfig, context::AppContext};
 use auth::{AuthConfig, Argon2PasswordHasher, JwtAuthService};
 use metadata::MetadataClientImpl;
+use poster_storage::{PosterStorageAdapter, StorageConfig};
 use sqlite::{SqliteMovieRepository, SqliteUserRepository};
 use template_askama::AskamaHtmlRenderer;
 
@@ -27,27 +28,6 @@ impl PosterFetcherClient for StubPosterFetcher {
     async fn fetch_poster_bytes(&self, _url: &PosterUrl) -> Result<Vec<u8>, DomainError> {
         Err(DomainError::InfrastructureError(
             "poster fetcher not implemented".into(),
-        ))
-    }
-}
-
-struct StubPosterStorage;
-
-#[async_trait]
-impl PosterStorage for StubPosterStorage {
-    async fn store_poster(
-        &self,
-        _movie_id: &MovieId,
-        _bytes: &[u8],
-    ) -> Result<PosterPath, DomainError> {
-        Err(DomainError::InfrastructureError(
-            "poster storage not implemented".into(),
-        ))
-    }
-
-    async fn get_poster(&self, _path: &PosterPath) -> Result<Vec<u8>, DomainError> {
-        Err(DomainError::InfrastructureError(
-            "poster storage not implemented".into(),
         ))
     }
 }
@@ -81,6 +61,7 @@ async fn main() -> anyhow::Result<()> {
 
 async fn wire_dependencies() -> anyhow::Result<AppState> {
     let auth_config = AuthConfig::from_env()?;
+    let storage_config = StorageConfig::from_env()?;
     let app_config = AppConfig::from_env();
     let omdb_api_key = std::env::var("OMDB_API_KEY").context("OMDB_API_KEY must be set")?;
 
@@ -101,7 +82,7 @@ async fn wire_dependencies() -> anyhow::Result<AppState> {
         repository: Arc::new(movie_repo),
         metadata_client: Arc::new(MetadataClientImpl::new_omdb(omdb_api_key)),
         poster_fetcher: Arc::new(StubPosterFetcher),
-        poster_storage: Arc::new(StubPosterStorage),
+        poster_storage: Arc::new(PosterStorageAdapter::from_config(storage_config)?),
         event_publisher: Arc::new(StubEventPublisher),
         auth_service: Arc::new(JwtAuthService::new(auth_config)),
         password_hasher: Arc::new(Argon2PasswordHasher),
