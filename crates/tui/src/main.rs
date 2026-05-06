@@ -246,6 +246,7 @@ fn key_to_action(app: &App, key: ratatui::crossterm::event::KeyEvent) -> Option<
                 KeyCode::Tab => Some(Action::TabNext),
                 KeyCode::BackTab => Some(Action::TabPrev),
                 KeyCode::Char('>') | KeyCode::Char('m') => Some(Action::LoadMore),
+                KeyCode::Char('<') | KeyCode::Char('b') => Some(Action::LoadPrev),
                 KeyCode::Char('1') => Some(Action::TabSelect(Tab::Diary)),
                 KeyCode::Char('2') => Some(Action::TabSelect(Tab::AddReview)),
                 KeyCode::Char('3') => Some(Action::TabSelect(Tab::BulkImport)),
@@ -279,6 +280,10 @@ fn key_to_action(app: &App, key: ratatui::crossterm::event::KeyEvent) -> Option<
                     KeyCode::Tab if !in_path => Some(Action::TabNext),
                     KeyCode::BackTab if !in_path => Some(Action::TabPrev),
                     KeyCode::Char('q') if !in_path => Some(Action::Quit),
+                    KeyCode::Char('1') if !in_path => Some(Action::TabSelect(Tab::Diary)),
+                    KeyCode::Char('2') if !in_path => Some(Action::TabSelect(Tab::AddReview)),
+                    KeyCode::Char('3') if !in_path => Some(Action::TabSelect(Tab::BulkImport)),
+                    KeyCode::Char('4') if !in_path => Some(Action::TabSelect(Tab::Settings)),
                     _ => None,
                 }
             }
@@ -296,6 +301,10 @@ fn key_to_action(app: &App, key: ratatui::crossterm::event::KeyEvent) -> Option<
                     },
                     KeyCode::Esc => Some(Action::Escape),
                     KeyCode::Char('q') => Some(Action::Quit),
+                    KeyCode::Char('1') if !on_url => Some(Action::TabSelect(Tab::Diary)),
+                    KeyCode::Char('2') if !on_url => Some(Action::TabSelect(Tab::AddReview)),
+                    KeyCode::Char('3') if !on_url => Some(Action::TabSelect(Tab::BulkImport)),
+                    KeyCode::Char('4') if !on_url => Some(Action::TabSelect(Tab::Settings)),
                     _ => None,
                 }
             }

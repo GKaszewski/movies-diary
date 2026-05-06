@@ -173,7 +173,7 @@ pub enum Action {
     SetupSubmit,
     InputChar(char), Backspace, FocusNext, FocusPrev,
     LoginSubmit,
-    ScrollDown, ScrollUp, OpenHistory, LoadMore,
+    ScrollDown, ScrollUp, OpenHistory, LoadMore, LoadPrev,
     DeleteInit, DeleteConfirm, DeleteCancel,
     RatingUp, RatingDown, ReviewSubmit,
     BulkParseFile, BulkImportAll, BulkCancel,
@@ -301,7 +301,7 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
                             m.bulk_import.stage = BulkImportStage::EnterPath;
                         }
                     }
-                    _ => {}
+                    Tab::AddReview | Tab::Settings => { m.tab = Tab::Diary; }
                 }
             }
             vec![]
@@ -435,8 +435,14 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
                     return vec![];
                 }
                 app.api_url = url.clone();
-                app.screen = Screen::Login(LoginState::default());
-                return vec![Command::SaveConfig(url)];
+                let cmds = if app.token.is_some() {
+                    app.screen = Screen::Main(MainState::new(url.clone()));
+                    vec![Command::SaveConfig(url), Command::LoadDiary { offset: 0 }]
+                } else {
+                    app.screen = Screen::Login(LoginState::default());
+                    vec![Command::SaveConfig(url)]
+                };
+                return cmds;
             }
             vec![]
         }
@@ -510,6 +516,17 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
                 if (next as u64) < m.diary.total {
                     m.diary.offset = next;
                     return vec![Command::LoadDiary { offset: next }];
+                }
+            }
+            vec![]
+        }
+
+        Action::LoadPrev => {
+            if let Screen::Main(m) = &mut app.screen {
+                if m.diary.offset > 0 {
+                    let prev = m.diary.offset.saturating_sub(20);
+                    m.diary.offset = prev;
+                    return vec![Command::LoadDiary { offset: prev }];
                 }
             }
             vec![]
@@ -701,7 +718,11 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
 
         Action::BulkCancel => {
             if let Screen::Main(m) = &mut app.screen {
-                m.bulk_import = BulkImportState::default();
+                if m.bulk_import.stage == BulkImportStage::EnterPath {
+                    m.tab = Tab::Diary;
+                } else {
+                    m.bulk_import = BulkImportState::default();
+                }
             }
             vec![]
         }

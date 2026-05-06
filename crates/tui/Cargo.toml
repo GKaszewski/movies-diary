@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 ratatui = "0.30.0"
 
-keyring = "3"
+keyring = { version = "3", features = ["apple-native"] }
 directories = "6"
 csv = "1"
 

@@ -215,11 +215,13 @@ fn draw_diary(frame: &mut Frame, area: Rect, state: &DiaryState) {
         .collect();
 
     let can_load_more = (state.offset as u64 + state.entries.len() as u64) < state.total;
-    let list_title = if can_load_more {
-        format!(" Diary ({} entries) [m: load more] ", state.total)
-    } else {
-        format!(" Diary ({} entries) ", state.total)
-    };
+    let can_load_prev = state.offset > 0;
+    let page = state.offset / 20 + 1;
+    let total_pages = state.total.div_ceil(20).max(1);
+    let mut hints = format!(" Diary ({} entries, page {}/{}) ", state.total, page, total_pages);
+    if can_load_prev { hints.push_str("[b: prev] "); }
+    if can_load_more { hints.push_str("[m: next] "); }
+    let list_title = hints;
     let mut list_state = ListState::default();
     list_state.select(Some(state.selected));
     let list = List::new(items).block(Block::default().title(list_title).borders(Borders::ALL));
