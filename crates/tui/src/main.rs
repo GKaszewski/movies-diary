@@ -122,10 +122,7 @@ fn handle_command(cmd: Command, app: &App, client: &Arc<ApiClient>, tx: &mpsc::S
         }
 
         Command::LoadDiary { offset } => {
-            let token = match &app.token {
-                Some(t) => t.clone(),
-                None => return,
-            };
+            let Some(token) = app.token.clone() else { return };
             let c = client.clone();
             let tx = tx.clone();
             tokio::spawn(async move {
@@ -138,10 +135,7 @@ fn handle_command(cmd: Command, app: &App, client: &Arc<ApiClient>, tx: &mpsc::S
         }
 
         Command::LoadHistory { movie_id } => {
-            let token = match &app.token {
-                Some(t) => t.clone(),
-                None => return,
-            };
+            let Some(token) = app.token.clone() else { return };
             let c = client.clone();
             let tx = tx.clone();
             tokio::spawn(async move {
@@ -154,10 +148,7 @@ fn handle_command(cmd: Command, app: &App, client: &Arc<ApiClient>, tx: &mpsc::S
         }
 
         Command::CreateReview(req) => {
-            let token = match &app.token {
-                Some(t) => t.clone(),
-                None => return,
-            };
+            let Some(token) = app.token.clone() else { return };
             let c = client.clone();
             let tx = tx.clone();
             tokio::spawn(async move {
@@ -170,10 +161,7 @@ fn handle_command(cmd: Command, app: &App, client: &Arc<ApiClient>, tx: &mpsc::S
         }
 
         Command::DeleteReview(id) => {
-            let token = match &app.token {
-                Some(t) => t.clone(),
-                None => return,
-            };
+            let Some(token) = app.token.clone() else { return };
             let c = client.clone();
             let tx = tx.clone();
             tokio::spawn(async move {
@@ -186,10 +174,7 @@ fn handle_command(cmd: Command, app: &App, client: &Arc<ApiClient>, tx: &mpsc::S
         }
 
         Command::ImportNext(index) => {
-            let token = match &app.token {
-                Some(t) => t.clone(),
-                None => return,
-            };
+            let Some(token) = app.token.clone() else { return };
             let req = match &app.screen {
                 Screen::Main(m) => match m.bulk_import.valid_requests.get(index) {
                     Some(r) => r.clone(),
@@ -208,6 +193,16 @@ fn handle_command(cmd: Command, app: &App, client: &Arc<ApiClient>, tx: &mpsc::S
 }
 
 // ── Key → Action ──────────────────────────────────────────────────────────────
+
+fn tab_shortcut(code: KeyCode) -> Option<Action> {
+    match code {
+        KeyCode::Char('1') => Some(Action::TabSelect(Tab::Diary)),
+        KeyCode::Char('2') => Some(Action::TabSelect(Tab::AddReview)),
+        KeyCode::Char('3') => Some(Action::TabSelect(Tab::BulkImport)),
+        KeyCode::Char('4') => Some(Action::TabSelect(Tab::Settings)),
+        _ => None,
+    }
+}
 
 fn key_to_action(app: &App, key: ratatui::crossterm::event::KeyEvent) -> Option<Action> {
     // Ctrl+C always quits
@@ -247,11 +242,7 @@ fn key_to_action(app: &App, key: ratatui::crossterm::event::KeyEvent) -> Option<
                 KeyCode::BackTab => Some(Action::TabPrev),
                 KeyCode::Char('>') | KeyCode::Char('m') => Some(Action::LoadMore),
                 KeyCode::Char('<') | KeyCode::Char('b') => Some(Action::LoadPrev),
-                KeyCode::Char('1') => Some(Action::TabSelect(Tab::Diary)),
-                KeyCode::Char('2') => Some(Action::TabSelect(Tab::AddReview)),
-                KeyCode::Char('3') => Some(Action::TabSelect(Tab::BulkImport)),
-                KeyCode::Char('4') => Some(Action::TabSelect(Tab::Settings)),
-                _ => None,
+                _ => tab_shortcut(key.code),
             },
 
             Tab::AddReview => match key.code {
@@ -280,10 +271,7 @@ fn key_to_action(app: &App, key: ratatui::crossterm::event::KeyEvent) -> Option<
                     KeyCode::Tab if !in_path => Some(Action::TabNext),
                     KeyCode::BackTab if !in_path => Some(Action::TabPrev),
                     KeyCode::Char('q') if !in_path => Some(Action::Quit),
-                    KeyCode::Char('1') if !in_path => Some(Action::TabSelect(Tab::Diary)),
-                    KeyCode::Char('2') if !in_path => Some(Action::TabSelect(Tab::AddReview)),
-                    KeyCode::Char('3') if !in_path => Some(Action::TabSelect(Tab::BulkImport)),
-                    KeyCode::Char('4') if !in_path => Some(Action::TabSelect(Tab::Settings)),
+                    _ if !in_path => tab_shortcut(key.code),
                     _ => None,
                 }
             }
@@ -301,10 +289,7 @@ fn key_to_action(app: &App, key: ratatui::crossterm::event::KeyEvent) -> Option<
                     },
                     KeyCode::Esc => Some(Action::Escape),
                     KeyCode::Char('q') => Some(Action::Quit),
-                    KeyCode::Char('1') if !on_url => Some(Action::TabSelect(Tab::Diary)),
-                    KeyCode::Char('2') if !on_url => Some(Action::TabSelect(Tab::AddReview)),
-                    KeyCode::Char('3') if !on_url => Some(Action::TabSelect(Tab::BulkImport)),
-                    KeyCode::Char('4') if !on_url => Some(Action::TabSelect(Tab::Settings)),
+                    _ if !on_url => tab_shortcut(key.code),
                     _ => None,
                 }
             }
