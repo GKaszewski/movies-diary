@@ -10,7 +10,7 @@ members = [
     "crates/adapters/template-askama",
     "crates/application",
     "crates/domain",
-    "crates/presentation",
+    "crates/presentation", "crates/tui",
 ]
 resolver = "2"
 
