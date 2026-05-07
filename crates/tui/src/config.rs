@@ -1,5 +1,6 @@
 use anyhow::Result;
 use directories::ProjectDirs;
+use keyring_core::Entry;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -31,21 +32,59 @@ impl Config {
         Ok(())
     }
 
+    pub fn init_keyring() -> Result<()> {
+        #[cfg(feature = "macos")]
+        {
+            use apple_native_keyring_store::keychain::Store;
+            keyring_core::set_default_store(Store::new()?);
+            return Ok(());
+        }
+
+        #[cfg(feature = "linux-zbus")]
+        {
+            keyring_core::set_default_store(zbus_secret_service_keyring_store::Store::new()?);
+            return Ok(());
+        }
+
+        #[cfg(feature = "windows")]
+        {
+            keyring_core::set_default_store(windows_native_keyring_store::Store::new()?);
+            return Ok(());
+        }
+
+        #[cfg(feature = "sqlite")]
+        {
+            let path = ProjectDirs::from("com", "movies", "movie-tui")
+                .ok_or_else(|| anyhow::anyhow!("cannot find data dir for sqlite keystore"))?
+                .data_dir()
+                .join("keystore.db");
+            std::fs::create_dir_all(path.parent().unwrap())?;
+            let config = db_keystore::DbKeyStoreConfig { path, ..Default::default() };
+            keyring_core::set_default_store(db_keystore::DbKeyStore::new(config)?);
+            return Ok(());
+        }
+
+        #[allow(unreachable_code)]
+        anyhow::bail!(
+            "no keyring backend compiled in — build with --features macos|linux-zbus|windows|sqlite"
+        )
+    }
+
     pub fn load_token() -> Option<String> {
-        keyring::Entry::new(KEYRING_SERVICE, KEYRING_USER)
+        Entry::new(KEYRING_SERVICE, KEYRING_USER)
             .ok()
             .and_then(|e| e.get_password().ok())
     }
 
     pub fn save_token(token: &str) -> Result<()> {
-        let entry = keyring::Entry::new(KEYRING_SERVICE, KEYRING_USER)?;
+        let entry = Entry::new(KEYRING_SERVICE, KEYRING_USER)?;
         entry.set_password(token)?;
         Ok(())
     }
 
     pub fn clear_token() -> Result<()> {
-        let entry = keyring::Entry::new(KEYRING_SERVICE, KEYRING_USER)?;
-        let _ = entry.delete_credential(); // ignore NotFound
+        let entry = Entry::new(KEYRING_SERVICE, KEYRING_USER)?;
+        let _ = entry.delete_credential();
         Ok(())
     }
 }
@@ -64,7 +103,6 @@ mod tests {
 
     #[test]
     fn load_returns_none_when_no_file() {
-        // Tests that load() doesn't panic — may return Some or None depending on system state
         let _ = Config::load();
     }
 }
