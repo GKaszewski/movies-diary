@@ -24,6 +24,7 @@ async fn main() -> anyhow::Result<()> {
 
     let initial_url = config.as_ref().map(|c| c.api_url.as_str()).unwrap_or("http://localhost:3000");
     let client = Arc::new(ApiClient::new(initial_url));
+    Config::init_keyring()?;
     let saved_token = Config::load_token();
     let mut app = App::new(config, saved_token.clone());
 
