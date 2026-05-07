@@ -10,8 +10,15 @@ use tui::app::{
 use tui::client::ApiClient;
 use tui::config::Config;
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
+fn main() -> anyhow::Result<()> {
+    Config::init_keyring()?;
+    tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()?
+        .block_on(run())
+}
+
+async fn run() -> anyhow::Result<()> {
     let mut config = Config::load();
 
     // env var override
@@ -24,8 +31,7 @@ async fn main() -> anyhow::Result<()> {
 
     let initial_url = config.as_ref().map(|c| c.api_url.as_str()).unwrap_or("http://localhost:3000");
     let client = Arc::new(ApiClient::new(initial_url));
-    Config::init_keyring()?;
-    let saved_token = Config::load_token();
+    let saved_token = tokio::task::spawn_blocking(Config::load_token).await.unwrap_or(None);
     let mut app = App::new(config, saved_token.clone());
 
     let (tx, mut rx) = mpsc::channel::<Action>(64);
@@ -99,15 +105,22 @@ fn handle_command(cmd: Command, app: &App, client: &Arc<ApiClient>, tx: &mpsc::S
         }
 
         Command::SaveToken(token) => {
-            if let Err(e) = Config::save_token(&token) {
-                let tx2 = tx.clone();
-                let msg = format!("Token not saved to keychain: {e}");
-                tokio::spawn(async move { let _ = tx2.send(Action::DiaryLoadFailed(msg)).await; });
-            }
+            let tx2 = tx.clone();
+            tokio::spawn(async move {
+                if let Err(e) = tokio::task::spawn_blocking(move || Config::save_token(&token))
+                    .await
+                    .unwrap_or_else(|e| Err(anyhow::anyhow!(e)))
+                {
+                    let msg = format!("Token not saved to keychain: {e}");
+                    let _ = tx2.send(Action::DiaryLoadFailed(msg)).await;
+                }
+            });
         }
 
         Command::ClearToken => {
-            let _ = Config::clear_token(); // ignore NotFound errors on logout
+            tokio::spawn(async {
+                let _ = tokio::task::spawn_blocking(Config::clear_token).await;
+            });
         }
 
         Command::Login { email, password } => {

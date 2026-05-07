@@ -32,6 +32,7 @@ impl Config {
         Ok(())
     }
 
+    #[allow(unreachable_code)]
     pub fn init_keyring() -> Result<()> {
         #[cfg(feature = "macos")]
         {
@@ -52,21 +53,8 @@ impl Config {
             return Ok(());
         }
 
-        #[cfg(feature = "sqlite")]
-        {
-            let path = ProjectDirs::from("com", "movies", "movie-tui")
-                .ok_or_else(|| anyhow::anyhow!("cannot find data dir for sqlite keystore"))?
-                .data_dir()
-                .join("keystore.db");
-            std::fs::create_dir_all(path.parent().unwrap())?;
-            let config = db_keystore::DbKeyStoreConfig { path, ..Default::default() };
-            keyring_core::set_default_store(db_keystore::DbKeyStore::new(config)?);
-            return Ok(());
-        }
-
-        #[allow(unreachable_code)]
         anyhow::bail!(
-            "no keyring backend compiled in — build with --features macos|linux-zbus|windows|sqlite"
+            "no keyring backend compiled in — build with --features macos|linux-zbus|windows"
         )
     }
 
