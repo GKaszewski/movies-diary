@@ -1,7 +1,7 @@
 use chrono::NaiveDateTime;
 use domain::{
     errors::DomainError,
-    models::{DiaryEntry, FeedEntry, Movie, Review, UserSummary},
+    models::{DiaryEntry, FeedEntry, Movie, Review, ReviewSource, UserSummary},
     value_objects::{
         Comment, ExternalMetadataId, MovieId, MovieTitle, PosterPath, Rating, ReleaseYear,
         ReviewId, UserId,
@@ -49,6 +49,7 @@ pub(crate) struct ReviewRow {
     pub comment: Option<String>,
     pub watched_at: String,
     pub created_at: String,
+    pub remote_actor_url: Option<String>,
 }
 
 impl ReviewRow {
@@ -60,8 +61,12 @@ impl ReviewRow {
         let comment = self.comment.map(Comment::new).transpose()?;
         let watched_at = parse_datetime(&self.watched_at)?;
         let created_at = parse_datetime(&self.created_at)?;
+        let source = match self.remote_actor_url {
+            None => ReviewSource::Local,
+            Some(url) => ReviewSource::Remote { actor_url: url },
+        };
         Ok(Review::from_persistence(
-            id, movie_id, user_id, rating, comment, watched_at, created_at,
+            id, movie_id, user_id, rating, comment, watched_at, created_at, source,
         ))
     }
 }
@@ -82,6 +87,7 @@ pub(crate) struct DiaryRow {
     pub comment: Option<String>,
     pub watched_at: String,
     pub created_at: String,
+    pub remote_actor_url: Option<String>,
 }
 
 impl DiaryRow {
@@ -104,6 +110,7 @@ impl DiaryRow {
             comment: self.comment,
             watched_at: self.watched_at,
             created_at: self.created_at,
+            remote_actor_url: self.remote_actor_url,
         }
         .to_domain()?;
 
@@ -127,6 +134,7 @@ pub(crate) struct FeedRow {
     pub comment: Option<String>,
     pub watched_at: String,
     pub created_at: String,
+    pub remote_actor_url: Option<String>,
     pub user_email: String,
 }
 
@@ -146,6 +154,7 @@ impl FeedRow {
             comment: self.comment,
             watched_at: self.watched_at,
             created_at: self.created_at,
+            remote_actor_url: self.remote_actor_url,
         }
         .to_domain()?;
         Ok(FeedEntry::new(diary, self.user_email))

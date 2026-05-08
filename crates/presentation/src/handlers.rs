@@ -13,13 +13,13 @@ pub mod html {
 
     use application::{
         commands::{DeleteReviewCommand, LoginCommand, RegisterCommand},
-        ports::{HtmlPageContext, LoginPageData, NewReviewPageData, RegisterPageData},
+        ports::{FollowingPageData, HtmlPageContext, LoginPageData, NewReviewPageData, RegisterPageData, RemoteActorView},
         use_cases::{delete_review, log_review, login as login_uc, register as register_uc},
     };
     use domain::{errors::DomainError, value_objects::UserId};
 
     use crate::{
-        dtos::{DiaryQueryParams, ErrorQuery, LoginForm, LogReviewData, LogReviewForm, RegisterForm},
+        dtos::{DiaryQueryParams, ErrorQuery, FollowForm, LoginForm, LogReviewData, LogReviewForm, RegisterForm, UnfollowForm},
         extractors::{OptionalCookieUser, RequiredCookieUser},
         state::AppState,
     };
@@ -49,10 +49,8 @@ pub mod html {
     }
 
     fn encode_error(msg: &str) -> String {
-        msg.replace(' ', "+")
-            .replace('&', "%26")
-            .replace('=', "%3D")
-            .replace('"', "%22")
+        use percent_encoding::{NON_ALPHANUMERIC, utf8_percent_encode};
+        utf8_percent_encode(msg, NON_ALPHANUMERIC).to_string()
     }
 
     fn secure_flag() -> &'static str {
@@ -298,7 +296,7 @@ pub mod html {
         Path(profile_user_uuid): Path<Uuid>,
         Query(params): Query<crate::dtos::ProfileQueryParams>,
     ) -> impl IntoResponse {
-        let mut ctx = build_page_context(&state, user_id).await;
+        let mut ctx = build_page_context(&state, user_id.clone()).await;
         let view = params.view.unwrap_or_else(|| "recent".to_string());
 
         let profile_user = match state.app_ctx.user_repository
@@ -314,6 +312,21 @@ pub mod html {
             .split('@').next().unwrap_or("User");
         ctx.page_title = format!("{}'s Diary — Movies Diary", display_name);
         ctx.canonical_url = format!("{}/users/{}", state.app_ctx.config.base_url, profile_user_uuid);
+
+        let is_own_profile = user_id.as_ref()
+            .map(|u| u.value() == profile_user_uuid)
+            .unwrap_or(false);
+
+        let following_count = if is_own_profile {
+            if let Some(ref uid) = user_id {
+                state.ap_service.count_following(uid.clone()).await
+                    .unwrap_or(0)
+            } else {
+                0
+            }
+        } else {
+            0
+        };
 
         let query = application::queries::GetUserProfileQuery {
             user_id: profile_user_uuid,
@@ -343,6 +356,9 @@ pub mod html {
                     limit,
                     history: profile.history,
                     trends: profile.trends,
+                    is_own_profile,
+                    error: params.error,
+                    following_count,
                 };
                 match state.html_renderer.render_profile_page(data) {
                     Ok(html) => Html(html).into_response(),
@@ -350,6 +366,80 @@ pub mod html {
                 }
             }
             Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+        }
+    }
+
+    pub async fn follow_remote_user(
+        RequiredCookieUser(user_id): RequiredCookieUser,
+        State(state): State<AppState>,
+        Path(profile_user_uuid): Path<Uuid>,
+        Form(form): Form<FollowForm>,
+    ) -> impl IntoResponse {
+        if user_id.value() != profile_user_uuid {
+            return StatusCode::FORBIDDEN.into_response();
+        }
+        match state.ap_service.follow(user_id.clone(), &form.handle).await {
+            Ok(()) => Redirect::to(&format!("/users/{}", profile_user_uuid)).into_response(),
+            Err(e) => {
+                tracing::error!("follow error: {:?}", e);
+                let msg = encode_error(&e.to_string());
+                Redirect::to(&format!("/users/{}?error={}", profile_user_uuid, msg)).into_response()
+            }
+        }
+    }
+
+    pub async fn unfollow_remote_user(
+        RequiredCookieUser(user_id): RequiredCookieUser,
+        State(state): State<AppState>,
+        Path(profile_user_uuid): Path<Uuid>,
+        Form(form): Form<UnfollowForm>,
+    ) -> impl IntoResponse {
+        if user_id.value() != profile_user_uuid {
+            return StatusCode::FORBIDDEN.into_response();
+        }
+        match state.ap_service.unfollow(user_id.clone(), &form.actor_url).await {
+            Ok(()) => Redirect::to(&format!("/users/{}/following-list", profile_user_uuid)).into_response(),
+            Err(e) => {
+                let msg = encode_error(&e.to_string());
+                Redirect::to(&format!("/users/{}/following-list?error={}", profile_user_uuid, msg)).into_response()
+            }
+        }
+    }
+
+    pub async fn get_following_page(
+        RequiredCookieUser(user_id): RequiredCookieUser,
+        State(state): State<AppState>,
+        Path(profile_user_uuid): Path<Uuid>,
+        Query(params): Query<crate::dtos::ErrorQuery>,
+    ) -> impl IntoResponse {
+        if user_id.value() != profile_user_uuid {
+            return StatusCode::FORBIDDEN.into_response();
+        }
+        let mut ctx = build_page_context(&state, Some(user_id.clone())).await;
+        ctx.page_title = "Following — Movies Diary".to_string();
+        ctx.canonical_url = format!("{}/users/{}/following-list", state.app_ctx.config.base_url, profile_user_uuid);
+        match state.ap_service.get_following(user_id).await {
+            Ok(following) => {
+                let actors = following.into_iter().map(|a| RemoteActorView {
+                    handle: a.handle,
+                    display_name: a.display_name,
+                    url: a.url,
+                }).collect();
+                let data = FollowingPageData {
+                    ctx,
+                    user_id: profile_user_uuid,
+                    actors,
+                    error: params.error,
+                };
+                match state.html_renderer.render_following_page(data) {
+                    Ok(html) => Html(html).into_response(),
+                    Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
+                }
+            }
+            Err(e) => {
+                tracing::error!("get_following error: {:?}", e);
+                (StatusCode::INTERNAL_SERVER_ERROR, "Failed to load following list").into_response()
+            }
         }
     }
 }

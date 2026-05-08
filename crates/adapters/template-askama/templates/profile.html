@@ -24,6 +24,20 @@
     </div>
   </div>
 
+  {% if is_own_profile %}
+  <section class="follow-section">
+    <h3>Follow remote user</h3>
+    <form method="POST" action="/users/{{ profile_user_id }}/follow">
+      <input type="text" name="handle" placeholder="user@instance.example.com" required>
+      <button type="submit">Follow</button>
+    </form>
+    {% if let Some(err) = error %}
+    <p class="error">{{ err }}</p>
+    {% endif %}
+  </section>
+  <a href="/users/{{ profile_user_id }}/following-list">View following ({{ following_count }})</a>
+  {% endif %}
+
   <div class="view-tabs">
     <a href="?view=recent" class="view-tab {% if view == "recent" %}active{% endif %}">Recent</a>
     <a href="?view=ratings" class="view-tab {% if view == "ratings" %}active{% endif %}">Top Rated</a>

@@ -12,6 +12,8 @@ sqlx = { version = "0.8.6", features = [
 ] }
 
 domain = { workspace = true }
+activitypub = { workspace = true }
+anyhow = { workspace = true }
 uuid = { workspace = true }
 chrono = { workspace = true }
 tracing = { workspace = true }

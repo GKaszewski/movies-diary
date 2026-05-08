@@ -15,7 +15,8 @@ use auth::{AuthConfig, Argon2PasswordHasher, JwtAuthService};
 use metadata::MetadataClientImpl;
 use poster_fetcher::{PosterFetcherConfig, ReqwestPosterFetcher};
 use poster_storage::{PosterStorageAdapter, StorageConfig};
-use sqlite::{SqliteMovieRepository, SqliteUserRepository};
+use activitypub::ActivityPubService;
+use sqlite::{SqliteFederationRepository, SqliteMovieRepository, SqliteUserRepository};
 use rss::RssAdapter;
 use template_askama::AskamaHtmlRenderer;
 
@@ -70,7 +71,7 @@ async fn wire_dependencies() -> anyhow::Result<AppState> {
         PosterFetcherClient, PosterStorage, UserRepository,
     };
     let repository: Arc<dyn MovieRepository> = Arc::new(movie_repo);
-    let user_repository: Arc<dyn UserRepository> = Arc::new(SqliteUserRepository::new(pool));
+    let user_repository: Arc<dyn UserRepository> = Arc::new(SqliteUserRepository::new(pool.clone()));
     let metadata_client: Arc<dyn MetadataClient> = Arc::new(MetadataClientImpl::new_omdb(omdb_api_key));
     let poster_fetcher: Arc<dyn PosterFetcherClient> = Arc::new(ReqwestPosterFetcher::new(PosterFetcherConfig::from_env())?);
     let poster_storage: Arc<dyn PosterStorage> = Arc::new(PosterStorageAdapter::from_config(storage_config)?);
@@ -91,10 +92,23 @@ async fn wire_dependencies() -> anyhow::Result<AppState> {
         config: app_config.clone(),
     };
 
+    // Federation
+    let federation_repo = Arc::new(SqliteFederationRepository::new(pool));
+    let ap_service = Arc::new(
+        ActivityPubService::new(
+            federation_repo,
+            Arc::clone(&user_repository),
+            app_config.base_url.clone(),
+            cfg!(debug_assertions),
+        )
+        .await?,
+    );
+    let ap_event_handler = ap_service.event_handler();
+
     let poster_handler = PosterSyncHandler::new(handler_ctx, 3);
     let (event_publisher, event_worker) = create_event_channel(
         EventPublisherConfig::from_env(),
-        vec![Box::new(poster_handler)],
+        vec![Box::new(poster_handler), Box::new(ap_event_handler)],
     );
     tokio::spawn(event_worker.run());
 
@@ -116,6 +130,7 @@ async fn wire_dependencies() -> anyhow::Result<AppState> {
         rss_renderer: Arc::new(RssAdapter::new(
             std::env::var("BASE_URL").unwrap_or_else(|_| "http://localhost:3000".into()),
         )),
+        ap_service,
     })
 }
 

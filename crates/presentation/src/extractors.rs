@@ -149,6 +149,7 @@ mod tests {
             fn render_activity_feed_page(&self, _: application::ports::ActivityFeedPageData) -> Result<String, String> { panic!() }
             fn render_users_page(&self, _: application::ports::UsersPageData) -> Result<String, String> { panic!() }
             fn render_profile_page(&self, _: application::ports::ProfilePageData) -> Result<String, String> { panic!() }
+            fn render_following_page(&self, _: application::ports::FollowingPageData) -> Result<String, String> { panic!() }
         }
 
         struct PanicRssRenderer;
@@ -179,6 +180,7 @@ mod tests {
             },
             html_renderer: Arc::new(PanicRenderer),
             rss_renderer: Arc::new(PanicRssRenderer),
+            ap_service: test_ap_service().await,
         };
 
         let app = test_router(state);
@@ -228,7 +230,33 @@ mod tests {
         }
     }
 
-    fn panic_state() -> crate::state::AppState {
+    async fn test_ap_service() -> std::sync::Arc<activitypub::ActivityPubService> {
+        use std::sync::Arc;
+        let pool = sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE IF NOT EXISTS ap_keypairs (user_id TEXT PRIMARY KEY, public_key TEXT NOT NULL, private_key TEXT NOT NULL)")
+            .execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE IF NOT EXISTS ap_remote_actors (url TEXT PRIMARY KEY, handle TEXT NOT NULL, inbox_url TEXT NOT NULL, shared_inbox_url TEXT, display_name TEXT)")
+            .execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE IF NOT EXISTS ap_followers (local_user_id TEXT NOT NULL, remote_actor_url TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending', PRIMARY KEY (local_user_id, remote_actor_url))")
+            .execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE IF NOT EXISTS ap_following (local_user_id TEXT NOT NULL, remote_actor_url TEXT NOT NULL, PRIMARY KEY (local_user_id, remote_actor_url))")
+            .execute(&pool).await.unwrap();
+        let fed_repo = Arc::new(sqlite::SqliteFederationRepository::new(pool));
+        struct DummyUserRepo;
+        #[async_trait::async_trait] impl domain::ports::UserRepository for DummyUserRepo {
+            async fn find_by_email(&self, _: &domain::value_objects::Email) -> Result<Option<domain::models::User>, domain::errors::DomainError> { Ok(None) }
+            async fn save(&self, _: &domain::models::User) -> Result<(), domain::errors::DomainError> { Ok(()) }
+            async fn find_by_id(&self, _: &domain::value_objects::UserId) -> Result<Option<domain::models::User>, domain::errors::DomainError> { Ok(None) }
+            async fn list_with_stats(&self) -> Result<Vec<domain::models::UserSummary>, domain::errors::DomainError> { Ok(vec![]) }
+        }
+        Arc::new(
+            activitypub::ActivityPubService::new(fed_repo, Arc::new(DummyUserRepo), "http://localhost:3000".to_string(), true)
+                .await
+                .unwrap(),
+        )
+    }
+
+    async fn panic_state() -> crate::state::AppState {
         use std::sync::Arc;
         use application::context::AppContext;
         struct PanicRepo2;
@@ -266,6 +294,7 @@ mod tests {
             fn render_activity_feed_page(&self, _: application::ports::ActivityFeedPageData) -> Result<String, String> { panic!() }
             fn render_users_page(&self, _: application::ports::UsersPageData) -> Result<String, String> { panic!() }
             fn render_profile_page(&self, _: application::ports::ProfilePageData) -> Result<String, String> { panic!() }
+            fn render_following_page(&self, _: application::ports::FollowingPageData) -> Result<String, String> { panic!() }
         }
         struct PanicRssRenderer2;
         impl crate::ports::RssFeedRenderer for PanicRssRenderer2 {
@@ -286,10 +315,11 @@ mod tests {
             },
             html_renderer: Arc::new(PanicRenderer2),
             rss_renderer: Arc::new(PanicRssRenderer2),
+            ap_service: test_ap_service().await,
         }
     }
 
-    fn rejecting_state() -> crate::state::AppState {
+    async fn rejecting_state() -> crate::state::AppState {
         use std::sync::Arc;
         use application::context::AppContext;
         struct PanicRepo3;
@@ -326,6 +356,7 @@ mod tests {
             fn render_activity_feed_page(&self, _: application::ports::ActivityFeedPageData) -> Result<String, String> { panic!() }
             fn render_users_page(&self, _: application::ports::UsersPageData) -> Result<String, String> { panic!() }
             fn render_profile_page(&self, _: application::ports::ProfilePageData) -> Result<String, String> { panic!() }
+            fn render_following_page(&self, _: application::ports::FollowingPageData) -> Result<String, String> { panic!() }
         }
         struct PanicRssRenderer3;
         impl crate::ports::RssFeedRenderer for PanicRssRenderer3 {
@@ -345,12 +376,13 @@ mod tests {
             },
             html_renderer: Arc::new(PanicRenderer3),
             rss_renderer: Arc::new(PanicRssRenderer3),
+            ap_service: test_ap_service().await,
         }
     }
 
     #[tokio::test]
     async fn optional_cookie_user_returns_none_without_cookie() {
-        let app = test_router_optional(panic_state());
+        let app = test_router_optional(panic_state().await);
         let response = app
             .oneshot(Request::builder().uri("/optional").body(Body::empty()).unwrap())
             .await
@@ -362,7 +394,7 @@ mod tests {
 
     #[tokio::test]
     async fn optional_cookie_user_returns_none_with_invalid_token() {
-        let app = test_router_optional(rejecting_state());
+        let app = test_router_optional(rejecting_state().await);
         let response = app
             .oneshot(
                 Request::builder()
@@ -380,7 +412,7 @@ mod tests {
 
     #[tokio::test]
     async fn required_cookie_user_redirects_without_cookie() {
-        let app = test_router_required(panic_state());
+        let app = test_router_required(panic_state().await);
         let response = app
             .oneshot(Request::builder().uri("/required").body(Body::empty()).unwrap())
             .await
@@ -391,7 +423,7 @@ mod tests {
 
     #[tokio::test]
     async fn required_cookie_user_redirects_with_invalid_token() {
-        let app = test_router_required(rejecting_state());
+        let app = test_router_required(rejecting_state().await);
         let response = app
             .oneshot(
                 Request::builder()

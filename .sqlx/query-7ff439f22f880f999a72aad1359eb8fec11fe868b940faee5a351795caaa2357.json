@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id, movie_id, user_id, rating, comment, watched_at, created_at\n             FROM reviews WHERE id = ?",
+  "query": "SELECT id, movie_id, user_id, rating, comment, watched_at, created_at, remote_actor_url\n             FROM reviews WHERE movie_id = ? ORDER BY watched_at ASC",
   "describe": {
     "columns": [
       {
@@ -37,6 +37,11 @@
         "name": "created_at",
         "ordinal": 6,
         "type_info": "Text"
+      },
+      {
+        "name": "remote_actor_url",
+        "ordinal": 7,
+        "type_info": "Text"
       }
     ],
     "parameters": {
@@ -49,8 +54,9 @@
       false,
       true,
       false,
-      false
+      false,
+      true
     ]
   },
-  "hash": "70ee6050284475b5641af712e5923ba2091b8b70b1885ca6518dfa4bb01fdac2"
+  "hash": "7ff439f22f880f999a72aad1359eb8fec11fe868b940faee5a351795caaa2357"
 }

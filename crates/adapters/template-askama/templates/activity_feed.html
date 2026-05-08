@@ -27,6 +27,11 @@
       <div class="feed-meta">
         <a href="/users/{{ entry.review().user_id().value() }}" class="feed-user">{{ entry.user_display_name() }}</a>
         <span class="feed-time">{{ entry.review().watched_at().format("%b %-d, %Y") }}</span>
+        {% match entry.review().source() %}
+        {% when ReviewSource::Remote with { actor_url } %}
+        <span class="remote-badge" title="{{ actor_url }}">&#8599; federated</span>
+        {% when ReviewSource::Local %}
+        {% endmatch %}
       </div>
       {% if ctx.is_current_user(entry.review().user_id().value()) %}
       <form method="post" action="/reviews/{{ entry.review().id().value() }}/delete" class="delete-form">

@@ -1,12 +1,12 @@
 use askama::Template;
 use chrono::Datelike;
 use application::ports::{
-    ActivityFeedPageData, HtmlPageContext, HtmlRenderer, LoginPageData,
+    ActivityFeedPageData, FollowingPageData, HtmlPageContext, HtmlRenderer, LoginPageData,
     NewReviewPageData, ProfilePageData, RegisterPageData, UsersPageData,
 };
 use domain::models::{
-    DiaryEntry, FeedEntry, MonthActivity, MonthlyRating, UserStats, UserSummary, UserTrends,
-    collections::Paginated,
+    DiaryEntry, FeedEntry, MonthActivity, MonthlyRating, ReviewSource, UserStats, UserSummary,
+    UserTrends, collections::Paginated,
 };
 
 struct PageItem {
@@ -110,6 +110,24 @@ struct ProfileTemplate<'a> {
     monthly_rating_rows: Vec<MonthlyRatingRow<'a>>,
     heatmap: Vec<HeatmapCell>,
     page_items: Vec<PageItem>,
+    is_own_profile: bool,
+    error: Option<String>,
+    following_count: usize,
+}
+
+struct RemoteActorData {
+    handle: String,
+    display_name: Option<String>,
+    url: String,
+}
+
+#[derive(Template)]
+#[template(path = "following.html")]
+struct FollowingTemplate {
+    ctx: HtmlPageContext,
+    user_id: uuid::Uuid,
+    actors: Vec<RemoteActorData>,
+    error: Option<String>,
 }
 
 struct HeatmapCell {
@@ -276,6 +294,24 @@ impl HtmlRenderer for AskamaHtmlRenderer {
             monthly_rating_rows,
             heatmap,
             page_items: build_page_items(total_pages, current_page),
+            is_own_profile: data.is_own_profile,
+            error: data.error,
+            following_count: data.following_count,
+        }
+        .render()
+        .map_err(|e| e.to_string())
+    }
+
+    fn render_following_page(&self, data: FollowingPageData) -> Result<String, String> {
+        FollowingTemplate {
+            ctx: data.ctx,
+            user_id: data.user_id,
+            actors: data.actors.into_iter().map(|a| RemoteActorData {
+                handle: a.handle,
+                display_name: a.display_name,
+                url: a.url,
+            }).collect(),
+            error: data.error,
         }
         .render()
         .map_err(|e| e.to_string())

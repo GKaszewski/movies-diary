@@ -4,7 +4,7 @@ use domain::{
     events::DomainEvent,
     models::{
         DiaryEntry, DiaryFilter, DirectorStat, FeedEntry, Movie, MonthlyRating,
-        Review, ReviewHistory, SortDirection, UserStats, UserTrends,
+        Review, ReviewHistory, ReviewSource, SortDirection, UserStats, UserTrends,
         collections::{PageParams, Paginated},
     },
     ports::MovieRepository,
@@ -12,6 +12,7 @@ use domain::{
 };
 use sqlx::SqlitePool;
 
+mod federation;
 mod migrations;
 mod models;
 mod users;
@@ -21,6 +22,7 @@ use models::{
     UserTotalsRow, datetime_to_str,
 };
 
+pub use federation::SqliteFederationRepository;
 pub use users::SqliteUserRepository;
 
 fn format_year_month(ym: &str) -> String {
@@ -80,7 +82,7 @@ impl SqliteMovieRepository {
             SortDirection::Descending | SortDirection::ByRatingDesc => sqlx::query_as!(
                 DiaryRow,
                 "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
-                        r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at
+                        r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url
                  FROM reviews r
                  INNER JOIN movies m ON m.id = r.movie_id
                  ORDER BY r.watched_at DESC
@@ -95,7 +97,7 @@ impl SqliteMovieRepository {
             SortDirection::Ascending => sqlx::query_as!(
                 DiaryRow,
                 "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
-                        r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at
+                        r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url
                  FROM reviews r
                  INNER JOIN movies m ON m.id = r.movie_id
                  ORDER BY r.watched_at ASC
@@ -121,7 +123,7 @@ impl SqliteMovieRepository {
             SortDirection::Descending | SortDirection::ByRatingDesc => sqlx::query_as!(
                 DiaryRow,
                 "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
-                        r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at
+                        r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url
                  FROM reviews r
                  INNER JOIN movies m ON m.id = r.movie_id
                  WHERE r.movie_id = ?
@@ -138,7 +140,7 @@ impl SqliteMovieRepository {
             SortDirection::Ascending => sqlx::query_as!(
                 DiaryRow,
                 "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
-                        r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at
+                        r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url
                  FROM reviews r
                  INNER JOIN movies m ON m.id = r.movie_id
                  WHERE r.movie_id = ?
@@ -173,7 +175,7 @@ impl SqliteMovieRepository {
         sqlx::query_as!(
             DiaryRow,
             "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
-                    r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at
+                    r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url
              FROM reviews r
              INNER JOIN movies m ON m.id = r.movie_id
              WHERE r.user_id = ?
@@ -195,7 +197,7 @@ impl SqliteMovieRepository {
         sqlx::query_as!(
             DiaryRow,
             "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
-                    r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at
+                    r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url
              FROM reviews r
              INNER JOIN movies m ON m.id = r.movie_id
              WHERE r.user_id = ?
@@ -223,7 +225,7 @@ impl SqliteMovieRepository {
         sqlx::query_as!(
             FeedRow,
             "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
-                    r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at,
+                    r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url,
                     u.email AS user_email
              FROM reviews r
              INNER JOIN movies m ON m.id = r.movie_id
@@ -386,17 +388,22 @@ impl MovieRepository for SqliteMovieRepository {
         let comment = review.comment().map(|c| c.value().to_string());
         let watched_at = datetime_to_str(review.watched_at());
         let created_at = datetime_to_str(review.created_at());
+        let remote_actor_url = match review.source() {
+            ReviewSource::Local => None,
+            ReviewSource::Remote { actor_url } => Some(actor_url.clone()),
+        };
 
         sqlx::query!(
-            "INSERT INTO reviews (id, movie_id, user_id, rating, comment, watched_at, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO reviews (id, movie_id, user_id, rating, comment, watched_at, created_at, remote_actor_url)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             id,
             movie_id,
             user_id,
             rating,
             comment,
             watched_at,
-            created_at
+            created_at,
+            remote_actor_url
         )
         .execute(&self.pool)
         .await
@@ -464,7 +471,7 @@ impl MovieRepository for SqliteMovieRepository {
         let id = review_id.value().to_string();
         sqlx::query_as!(
             ReviewRow,
-            "SELECT id, movie_id, user_id, rating, comment, watched_at, created_at
+            "SELECT id, movie_id, user_id, rating, comment, watched_at, created_at, remote_actor_url
              FROM reviews WHERE id = ?",
             id
         )
@@ -510,7 +517,7 @@ impl MovieRepository for SqliteMovieRepository {
 
         let viewings = sqlx::query_as!(
             ReviewRow,
-            "SELECT id, movie_id, user_id, rating, comment, watched_at, created_at
+            "SELECT id, movie_id, user_id, rating, comment, watched_at, created_at, remote_actor_url
              FROM reviews WHERE movie_id = ? ORDER BY watched_at ASC",
             id_str
         )
@@ -573,7 +580,7 @@ impl MovieRepository for SqliteMovieRepository {
         let rows = sqlx::query_as!(
             DiaryRow,
             "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
-                    r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at
+                    r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url
              FROM reviews r
              INNER JOIN movies m ON m.id = r.movie_id
              WHERE r.user_id = ?

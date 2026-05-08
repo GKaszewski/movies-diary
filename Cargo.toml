@@ -8,9 +8,11 @@ members = [
     "crates/adapters/rss",
     "crates/adapters/sqlite",
     "crates/adapters/template-askama",
+    "crates/adapters/activitypub",
     "crates/application",
     "crates/domain",
-    "crates/presentation", "crates/tui",
+    "crates/presentation",
+    "crates/tui",
 ]
 resolver = "2"
 
@@ -24,7 +26,7 @@ thiserror = "2.0"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 async-trait = "0.1"
-uuid = { version = "1.23.0", features = ["v4", "serde"] }
+uuid = { version = "1.23.0", features = ["v4", "v5", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 sqlx = { version = "0.8.6", features = [
     "runtime-tokio-rustls",
@@ -46,3 +48,4 @@ event-publisher = { path = "crates/adapters/event-publisher" }
 rss = { path = "crates/adapters/rss" }
 sqlite = { path = "crates/adapters/sqlite" }
 template-askama = { path = "crates/adapters/template-askama" }
+activitypub = { path = "crates/adapters/activitypub" }

@@ -114,6 +114,18 @@ impl Movie {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ReviewSource {
+    Local,
+    Remote { actor_url: String },
+}
+
+impl Default for ReviewSource {
+    fn default() -> Self {
+        ReviewSource::Local
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Review {
     id: ReviewId,
@@ -123,6 +135,7 @@ pub struct Review {
     comment: Option<Comment>,
     watched_at: chrono::NaiveDateTime,
     created_at: chrono::NaiveDateTime,
+    source: ReviewSource,
 }
 
 impl Review {
@@ -141,6 +154,7 @@ impl Review {
             comment,
             watched_at,
             created_at: Utc::now().naive_utc(),
+            source: ReviewSource::Local,
         })
     }
 
@@ -152,6 +166,7 @@ impl Review {
         comment: Option<Comment>,
         watched_at: NaiveDateTime,
         created_at: NaiveDateTime,
+        source: ReviewSource,
     ) -> Self {
         Self {
             id,
@@ -161,6 +176,7 @@ impl Review {
             comment,
             watched_at,
             created_at,
+            source,
         }
     }
 
@@ -184,6 +200,9 @@ impl Review {
     }
     pub fn created_at(&self) -> &NaiveDateTime {
         &self.created_at
+    }
+    pub fn source(&self) -> &ReviewSource {
+        &self.source
     }
     /// Returns [star1_filled, star2_filled, ..., star5_filled]
     pub fn stars(&self) -> [bool; 5] {

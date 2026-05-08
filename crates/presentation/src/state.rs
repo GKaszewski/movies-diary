@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use activitypub::ActivityPubService;
 use application::context::AppContext;
 
 use crate::ports::{HtmlRenderer, RssFeedRenderer};
@@ -9,4 +10,5 @@ pub struct AppState {
     pub app_ctx: AppContext,
     pub html_renderer: Arc<dyn HtmlRenderer>,
     pub rss_renderer: Arc<dyn RssFeedRenderer>,
+    pub ap_service: Arc<ActivityPubService>,
 }

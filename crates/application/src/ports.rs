@@ -2,6 +2,12 @@ use uuid::Uuid;
 
 use domain::models::{DiaryEntry, FeedEntry, MonthActivity, UserStats, UserSummary, UserTrends, collections::Paginated};
 
+pub struct RemoteActorView {
+    pub handle: String,
+    pub display_name: Option<String>,
+    pub url: String,
+}
+
 pub struct HtmlPageContext {
     pub user_email: Option<String>,
     pub user_id: Option<Uuid>,
@@ -57,6 +63,16 @@ pub struct ProfilePageData {
     pub limit: u32,
     pub history: Option<Vec<MonthActivity>>,
     pub trends: Option<UserTrends>,
+    pub is_own_profile: bool,
+    pub error: Option<String>,
+    pub following_count: usize,
+}
+
+pub struct FollowingPageData {
+    pub ctx: HtmlPageContext,
+    pub user_id: Uuid,
+    pub actors: Vec<RemoteActorView>,
+    pub error: Option<String>,
 }
 
 pub trait HtmlRenderer: Send + Sync {
@@ -67,6 +83,7 @@ pub trait HtmlRenderer: Send + Sync {
     fn render_activity_feed_page(&self, data: ActivityFeedPageData) -> Result<String, String>;
     fn render_users_page(&self, data: UsersPageData) -> Result<String, String>;
     fn render_profile_page(&self, data: ProfilePageData) -> Result<String, String>;
+    fn render_following_page(&self, data: FollowingPageData) -> Result<String, String>;
 }
 
 pub trait RssFeedRenderer: Send + Sync {

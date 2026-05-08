@@ -234,11 +234,22 @@ impl From<DiaryQueryParams> for GetDiaryQuery {
     }
 }
 
+#[derive(Deserialize)]
+pub struct FollowForm {
+    pub handle: String,
+}
+
+#[derive(Deserialize)]
+pub struct UnfollowForm {
+    pub actor_url: String,
+}
+
 #[derive(serde::Deserialize, Default)]
 pub struct ProfileQueryParams {
     pub view: Option<String>,
     pub limit: Option<u32>,
     pub offset: Option<u32>,
+    pub error: Option<String>,
 }
 
 #[cfg(test)]
