@@ -17,6 +17,8 @@ struct DiaryTemplate<'a> {
     limit: u32,
     has_more: bool,
     ctx: &'a HtmlPageContext,
+    total_pages: u32,
+    current_page: u32,
 }
 
 #[derive(Template)]
@@ -48,6 +50,8 @@ struct ActivityFeedTemplate<'a> {
     limit: u32,
     has_more: bool,
     ctx: &'a HtmlPageContext,
+    total_pages: u32,
+    current_page: u32,
 }
 
 #[derive(Template)]
@@ -77,6 +81,8 @@ struct ProfileTemplate<'a> {
     trends: Option<&'a UserTrends>,
     monthly_rating_rows: Vec<MonthlyRatingRow<'a>>,
     heatmap: Vec<HeatmapCell>,
+    total_pages: u32,
+    current_page: u32,
 }
 
 struct HeatmapCell {
@@ -140,12 +146,16 @@ impl AskamaHtmlRenderer {
 impl HtmlRenderer for AskamaHtmlRenderer {
     fn render_diary_page(&self, data: &Paginated<DiaryEntry>, ctx: HtmlPageContext) -> Result<String, String> {
         let has_more = (data.offset + data.limit) < data.total_count as u32;
+        let total_pages = ((data.total_count + data.limit as u64 - 1) / data.limit as u64) as u32;
+        let current_page = if data.limit > 0 { data.offset / data.limit } else { 0 };
         DiaryTemplate {
             entries: &data.items,
             current_offset: data.offset,
             limit: data.limit,
             has_more,
             ctx: &ctx,
+            total_pages,
+            current_page,
         }
         .render()
         .map_err(|e| e.to_string())
@@ -179,12 +189,18 @@ impl HtmlRenderer for AskamaHtmlRenderer {
     }
 
     fn render_activity_feed_page(&self, data: ActivityFeedPageData) -> Result<String, String> {
+        let total_count = data.entries.total_count;
+        let limit = data.limit;
+        let total_pages = ((total_count + limit as u64 - 1) / limit as u64) as u32;
+        let current_page = if limit > 0 { data.current_offset / limit } else { 0 };
         ActivityFeedTemplate {
             entries: &data.entries.items,
             current_offset: data.current_offset,
-            limit: data.limit,
+            limit,
             has_more: data.has_more,
             ctx: &data.ctx,
+            total_pages,
+            current_page,
         }
         .render()
         .map_err(|e| e.to_string())
@@ -211,6 +227,10 @@ impl HtmlRenderer for AskamaHtmlRenderer {
                 rating: r,
             }).collect())
             .unwrap_or_default();
+        let total_pages = data.entries.as_ref()
+            .map(|e| ((e.total_count + e.limit as u64 - 1) / e.limit as u64) as u32)
+            .unwrap_or(0);
+        let current_page = if data.limit > 0 { data.current_offset / data.limit } else { 0 };
         ProfileTemplate {
             ctx: &data.ctx,
             profile_display_name,
@@ -224,6 +244,8 @@ impl HtmlRenderer for AskamaHtmlRenderer {
             trends: data.trends.as_ref(),
             monthly_rating_rows,
             heatmap,
+            total_pages,
+            current_page,
         }
         .render()
         .map_err(|e| e.to_string())

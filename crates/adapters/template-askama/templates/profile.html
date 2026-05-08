@@ -153,10 +153,17 @@
   </div>
   <nav class="pagination">
     {% if current_offset >= limit %}
-    <a href="?view={{ view }}&offset={{ current_offset - limit }}">&larr; Prev</a>
+    <a href="?view={{ view }}&offset={{ current_offset - limit }}" class="page-nav">&larr; Prev</a>
     {% endif %}
+    {% for p in (0..total_pages) %}
+    {% if p == current_page %}
+    <span class="page-num current">{{ p + 1 }}</span>
+    {% else %}
+    <a href="?view={{ view }}&offset={{ p * limit }}" class="page-num">{{ p + 1 }}</a>
+    {% endif %}
+    {% endfor %}
     {% if has_more %}
-    <a href="?view={{ view }}&offset={{ current_offset + limit }}">Next &rarr;</a>
+    <a href="?view={{ view }}&offset={{ current_offset + limit }}" class="page-nav">Next &rarr;</a>
     {% endif %}
   </nav>
   {% endif %}
