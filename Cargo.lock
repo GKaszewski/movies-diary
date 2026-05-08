@@ -3951,6 +3951,7 @@ dependencies = [
  "chrono",
  "domain",
  "serde",
+ "uuid",
 ]
 
 [[package]]
