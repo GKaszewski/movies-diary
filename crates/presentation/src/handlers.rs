@@ -219,13 +219,20 @@ pub mod html {
         State(state): State<AppState>,
         RequiredCookieUser(user_id): RequiredCookieUser,
         Path(review_id): Path<Uuid>,
+        Form(form): Form<crate::dtos::DeleteRedirectForm>,
     ) -> impl IntoResponse {
         let cmd = DeleteReviewCommand {
             review_id,
             requesting_user_id: user_id.value(),
         };
         match delete_review::execute(&state.app_ctx, cmd).await {
-            Ok(()) => Redirect::to("/").into_response(),
+            Ok(()) => {
+                let redirect_url = form
+                    .redirect_after
+                    .filter(|url| url.starts_with('/') || url.starts_with('?'))
+                    .unwrap_or_else(|| "/".to_string());
+                Redirect::to(&redirect_url).into_response()
+            }
             Err(DomainError::NotFound(_)) => StatusCode::NOT_FOUND.into_response(),
             Err(DomainError::Unauthorized(_)) => StatusCode::FORBIDDEN.into_response(),
             Err(e) => {

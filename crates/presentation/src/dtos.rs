@@ -59,6 +59,12 @@ pub struct ErrorQuery {
     pub error: Option<String>,
 }
 
+#[derive(Deserialize, Default)]
+pub struct DeleteRedirectForm {
+    #[serde(default)]
+    pub redirect_after: Option<String>,
+}
+
 #[derive(Deserialize)]
 pub struct LogReviewRequest {
     pub external_metadata_id: Option<String>,
