@@ -44,11 +44,13 @@
   {% if current_offset >= limit %}
   <a href="/?offset={{ current_offset - limit }}" class="page-nav">&larr; Prev</a>
   {% endif %}
-  {% for p in (0..total_pages) %}
-  {% if p == current_page %}
-  <span class="page-num current">{{ p + 1 }}</span>
+  {% for item in page_items %}
+  {% if item.is_ellipsis %}
+  <span class="page-ellipsis">&hellip;</span>
+  {% elif item.is_current %}
+  <span class="page-num current">{{ item.number + 1 }}</span>
   {% else %}
-  <a href="/?offset={{ p * limit }}" class="page-num">{{ p + 1 }}</a>
+  <a href="/?offset={{ item.number * limit }}" class="page-num">{{ item.number + 1 }}</a>
   {% endif %}
   {% endfor %}
   {% if has_more %}

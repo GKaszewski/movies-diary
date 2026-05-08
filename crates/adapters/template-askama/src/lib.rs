@@ -9,6 +9,35 @@ use domain::models::{
     collections::Paginated,
 };
 
+struct PageItem {
+    number: u32,
+    is_current: bool,
+    is_ellipsis: bool,
+}
+
+fn build_page_items(total_pages: u32, current_page: u32) -> Vec<PageItem> {
+    if total_pages <= 1 {
+        return vec![];
+    }
+    let mut set = std::collections::BTreeSet::new();
+    set.insert(0u32);
+    set.insert(total_pages - 1);
+    let start = current_page.saturating_sub(2);
+    let end = (current_page + 2).min(total_pages - 1);
+    for p in start..=end {
+        set.insert(p);
+    }
+    let pages: Vec<u32> = set.into_iter().collect();
+    let mut items = Vec::new();
+    for (i, &p) in pages.iter().enumerate() {
+        if i > 0 && p > pages[i - 1] + 1 {
+            items.push(PageItem { number: 0, is_current: false, is_ellipsis: true });
+        }
+        items.push(PageItem { number: p, is_current: p == current_page, is_ellipsis: false });
+    }
+    items
+}
+
 #[derive(Template)]
 #[template(path = "diary.html")]
 struct DiaryTemplate<'a> {
@@ -17,8 +46,7 @@ struct DiaryTemplate<'a> {
     limit: u32,
     has_more: bool,
     ctx: &'a HtmlPageContext,
-    total_pages: u32,
-    current_page: u32,
+    page_items: Vec<PageItem>,
 }
 
 #[derive(Template)]
@@ -50,8 +78,7 @@ struct ActivityFeedTemplate<'a> {
     limit: u32,
     has_more: bool,
     ctx: &'a HtmlPageContext,
-    total_pages: u32,
-    current_page: u32,
+    page_items: Vec<PageItem>,
 }
 
 #[derive(Template)]
@@ -82,8 +109,7 @@ struct ProfileTemplate<'a> {
     trends: Option<&'a UserTrends>,
     monthly_rating_rows: Vec<MonthlyRatingRow<'a>>,
     heatmap: Vec<HeatmapCell>,
-    total_pages: u32,
-    current_page: u32,
+    page_items: Vec<PageItem>,
 }
 
 struct HeatmapCell {
@@ -148,9 +174,8 @@ impl HtmlRenderer for AskamaHtmlRenderer {
     fn render_diary_page(&self, data: &Paginated<DiaryEntry>, ctx: HtmlPageContext) -> Result<String, String> {
         let has_more = (data.offset + data.limit) < data.total_count as u32;
         let (total_pages, current_page) = if data.limit > 0 {
-            let total_pages = ((data.total_count + data.limit as u64 - 1) / data.limit as u64) as u32;
-            let current_page = data.offset / data.limit;
-            (total_pages, current_page)
+            let tp = ((data.total_count + data.limit as u64 - 1) / data.limit as u64) as u32;
+            (tp, data.offset / data.limit)
         } else {
             (0, 0)
         };
@@ -160,8 +185,7 @@ impl HtmlRenderer for AskamaHtmlRenderer {
             limit: data.limit,
             has_more,
             ctx: &ctx,
-            total_pages,
-            current_page,
+            page_items: build_page_items(total_pages, current_page),
         }
         .render()
         .map_err(|e| e.to_string())
@@ -195,9 +219,10 @@ impl HtmlRenderer for AskamaHtmlRenderer {
     }
 
     fn render_activity_feed_page(&self, data: ActivityFeedPageData) -> Result<String, String> {
-        let total_count = data.entries.total_count;
         let limit = data.limit;
-        let total_pages = ((total_count + limit as u64 - 1) / limit as u64) as u32;
+        let total_pages = if limit > 0 {
+            ((data.entries.total_count + limit as u64 - 1) / limit as u64) as u32
+        } else { 0 };
         let current_page = if limit > 0 { data.current_offset / limit } else { 0 };
         ActivityFeedTemplate {
             entries: &data.entries.items,
@@ -205,8 +230,7 @@ impl HtmlRenderer for AskamaHtmlRenderer {
             limit,
             has_more: data.has_more,
             ctx: &data.ctx,
-            total_pages,
-            current_page,
+            page_items: build_page_items(total_pages, current_page),
         }
         .render()
         .map_err(|e| e.to_string())
@@ -234,7 +258,7 @@ impl HtmlRenderer for AskamaHtmlRenderer {
             }).collect())
             .unwrap_or_default();
         let total_pages = data.entries.as_ref()
-            .map(|e| ((e.total_count + e.limit as u64 - 1) / e.limit as u64) as u32)
+            .map(|e| if e.limit > 0 { ((e.total_count + e.limit as u64 - 1) / e.limit as u64) as u32 } else { 0 })
             .unwrap_or(0);
         let current_page = if data.limit > 0 { data.current_offset / data.limit } else { 0 };
         ProfileTemplate {
@@ -251,8 +275,7 @@ impl HtmlRenderer for AskamaHtmlRenderer {
             trends: data.trends.as_ref(),
             monthly_rating_rows,
             heatmap,
-            total_pages,
-            current_page,
+            page_items: build_page_items(total_pages, current_page),
         }
         .render()
         .map_err(|e| e.to_string())
