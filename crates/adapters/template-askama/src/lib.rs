@@ -146,8 +146,13 @@ impl AskamaHtmlRenderer {
 impl HtmlRenderer for AskamaHtmlRenderer {
     fn render_diary_page(&self, data: &Paginated<DiaryEntry>, ctx: HtmlPageContext) -> Result<String, String> {
         let has_more = (data.offset + data.limit) < data.total_count as u32;
-        let total_pages = ((data.total_count + data.limit as u64 - 1) / data.limit as u64) as u32;
-        let current_page = if data.limit > 0 { data.offset / data.limit } else { 0 };
+        let (total_pages, current_page) = if data.limit > 0 {
+            let total_pages = ((data.total_count + data.limit as u64 - 1) / data.limit as u64) as u32;
+            let current_page = data.offset / data.limit;
+            (total_pages, current_page)
+        } else {
+            (0, 0)
+        };
         DiaryTemplate {
             entries: &data.items,
             current_offset: data.offset,
