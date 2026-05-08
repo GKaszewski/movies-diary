@@ -18,6 +18,7 @@ COPY crates/adapters/template-askama/Cargo.toml   crates/adapters/template-askam
 COPY crates/application/Cargo.toml                crates/application/Cargo.toml
 COPY crates/domain/Cargo.toml                     crates/domain/Cargo.toml
 COPY crates/presentation/Cargo.toml               crates/presentation/Cargo.toml
+COPY crates/tui/Cargo.toml                        crates/tui/Cargo.toml
 
 # Stub every crate so cargo can resolve and fetch deps
 RUN find crates -name "Cargo.toml" | sed 's|/Cargo.toml||' | \

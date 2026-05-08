@@ -160,7 +160,7 @@ mod tests {
             auth_service: Arc::new(PanicAuth),
             password_hasher: Arc::new(PanicHasher),
             user_repository: Arc::new(PanicUserRepo),
-            config: AppConfig { allow_registration: false, base_url: "http://localhost:3000".to_string() },
+            config: AppConfig { allow_registration: false, base_url: "http://localhost:3000".to_string(), rate_limit: 20 },
         }
     }
 

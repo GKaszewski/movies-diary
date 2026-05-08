@@ -9,8 +9,6 @@ use tower_http::{services::ServeDir, trace::TraceLayer};
 
 use crate::{handlers, state::AppState};
 
-const API_RATE_LIMIT: u64 = 20; // 20 requests per minute globally for API routes
-
 /// Simple global rate limiter: tracks request count per 60-second window.
 /// Not per-IP — suitable for a low-traffic personal app.
 #[derive(Clone)]
@@ -48,17 +46,17 @@ impl RateLimiter {
 }
 
 pub fn build_router(state: AppState) -> Router {
+    let rate_limit = state.app_ctx.config.rate_limit;
     Router::new()
-        .merge(html_routes())
-        .merge(api_routes())
+        .merge(html_routes(rate_limit))
+        .merge(api_routes(rate_limit))
         .nest_service("/static", ServeDir::new("static"))
         .layer(TraceLayer::new_for_http())
         .with_state(state)
 }
 
-fn html_routes() -> Router<AppState> {
-    // Auth routes: 20 requests per minute globally.
-    let limiter = RateLimiter::new(API_RATE_LIMIT);
+fn html_routes(rate_limit: u64) -> Router<AppState> {
+    let limiter = RateLimiter::new(rate_limit);
     let auth = Router::new()
         .route(
             "/login",
@@ -110,8 +108,8 @@ fn html_routes() -> Router<AppState> {
         )
 }
 
-fn api_routes() -> Router<AppState> {
-    let limiter = RateLimiter::new(API_RATE_LIMIT);
+fn api_routes(rate_limit: u64) -> Router<AppState> {
+    let limiter = RateLimiter::new(rate_limit);
     let auth_rate_limit =
         middleware::from_fn(move |req: axum::extract::Request, next: middleware::Next| {
             let limiter = limiter.clone();

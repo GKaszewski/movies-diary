@@ -105,7 +105,7 @@ async fn test_app() -> Router {
             auth_service: Arc::new(PanicAuth),
             password_hasher: Arc::new(PanicHasher),
             user_repository: Arc::new(NobodyUserRepo),
-            config: AppConfig { allow_registration: false, base_url: "http://localhost:3000".to_string() },
+            config: AppConfig { allow_registration: false, base_url: "http://localhost:3000".to_string(), rate_limit: 20 },
         },
         html_renderer: Arc::new(AskamaHtmlRenderer::new()),
         rss_renderer: Arc::new(RssAdapter::new("http://localhost:3000".into())),
