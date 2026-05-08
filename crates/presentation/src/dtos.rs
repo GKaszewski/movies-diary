@@ -150,10 +150,14 @@ impl TryFrom<LogReviewForm> for LogReviewData {
     fn try_from(form: LogReviewForm) -> Result<Self, Self::Error> {
         let watched_at = NaiveDateTime::parse_from_str(&form.watched_at, "%Y-%m-%dT%H:%M:%S")
             .or_else(|_| NaiveDateTime::parse_from_str(&form.watched_at, "%Y-%m-%dT%H:%M"))
+            .or_else(|_| {
+                chrono::NaiveDate::parse_from_str(&form.watched_at, "%Y-%m-%d")
+                    .map(|d| d.and_hms_opt(0, 0, 0).expect("midnight always valid"))
+            })
             .map_err(|_| ParseReviewError {
                 field: "watched_at",
                 message: format!(
-                    "invalid date '{}'; expected YYYY-MM-DDTHH:MM[:SS]",
+                    "invalid date '{}'; expected YYYY-MM-DD or YYYY-MM-DDTHH:MM[:SS]",
                     form.watched_at
                 ),
             })?;
@@ -370,5 +374,12 @@ mod tests {
         let json = r#"{"email":"a@b.com","password":"secret"}"#;
         let req: LoginRequest = serde_json::from_str(json).unwrap();
         assert_eq!(req.email, "a@b.com");
+    }
+
+    #[test]
+    fn form_accepts_date_only() {
+        let data = LogReviewData::try_from(make_form("2024-03-15")).unwrap();
+        assert_eq!(data.watched_at.format("%H:%M:%S").to_string(), "00:00:00");
+        assert_eq!(data.watched_at.format("%Y-%m-%d").to_string(), "2024-03-15");
     }
 }
