@@ -141,7 +141,7 @@
         <div class="watched-at">{{ entry.review().watched_at().format("%Y-%m-%d") }}</div>
         {% if ctx.is_current_user(entry.review().user_id().value()) %}
         <form method="post" action="/reviews/{{ entry.review().id().value() }}/delete" class="delete-form">
-          <input type="hidden" name="redirect_after" value="?view={{ view }}&offset={{ current_offset }}">
+          <input type="hidden" name="redirect_after" value="/users/{{ profile_user_id }}?view={{ view }}&offset={{ current_offset }}">
           <button type="submit">Delete</button>
         </form>
         {% endif %}

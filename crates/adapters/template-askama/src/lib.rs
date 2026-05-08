@@ -71,6 +71,7 @@ struct MonthlyRatingRow<'a> {
 struct ProfileTemplate<'a> {
     ctx: &'a HtmlPageContext,
     profile_display_name: String,
+    profile_user_id: uuid::Uuid,
     stats: &'a UserStats,
     view: &'a str,
     entries: Option<&'a Paginated<DiaryEntry>>,
@@ -239,6 +240,7 @@ impl HtmlRenderer for AskamaHtmlRenderer {
         ProfileTemplate {
             ctx: &data.ctx,
             profile_display_name,
+            profile_user_id: data.profile_user_id,
             stats: &data.stats,
             view: &data.view,
             entries: data.entries.as_ref(),

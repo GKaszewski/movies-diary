@@ -229,7 +229,7 @@ pub mod html {
             Ok(()) => {
                 let redirect_url = form
                     .redirect_after
-                    .filter(|url| url.starts_with('/') || url.starts_with('?'))
+                    .filter(|url| (url.starts_with('/') && !url.starts_with("//")) || url.starts_with('?'))
                     .unwrap_or_else(|| "/".to_string());
                 Redirect::to(&redirect_url).into_response()
             }

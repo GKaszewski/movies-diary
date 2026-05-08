@@ -8,6 +8,7 @@ askama = { version = "0.16.0" }
 
 serde = { workspace = true }
 chrono = { workspace = true }
+uuid = { workspace = true }
 
 domain = { workspace = true }
 application = { workspace = true }
