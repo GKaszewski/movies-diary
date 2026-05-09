@@ -1440,6 +1440,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "export"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "domain",
+ "serde_json",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
 name = "fancy-regex"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3055,6 +3067,7 @@ dependencies = [
  "domain",
  "dotenvy",
  "event-publisher",
+ "export",
  "http-body-util",
  "infer",
  "metadata",

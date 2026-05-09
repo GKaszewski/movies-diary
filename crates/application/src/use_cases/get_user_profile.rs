@@ -1,3 +1,7 @@
+use crate::{
+    context::AppContext,
+    queries::{GetUserProfileQuery, ProfileView},
+};
 use chrono::Datelike;
 use domain::{
     errors::DomainError,
@@ -7,7 +11,6 @@ use domain::{
     },
     value_objects::UserId,
 };
-use crate::{context::AppContext, queries::{GetUserProfileQuery, ProfileView}};
 
 pub struct UserProfileData {
     pub stats: UserStats,
@@ -27,26 +30,61 @@ pub async fn execute(
         ProfileView::History => {
             let all_entries = ctx.diary_repository.get_user_history(&user_id).await?;
             let history = group_by_month(all_entries);
-            Ok(UserProfileData { stats, entries: None, history: Some(history), trends: None })
+            Ok(UserProfileData {
+                stats,
+                entries: None,
+                history: Some(history),
+                trends: None,
+            })
         }
         ProfileView::Trends => {
             let trends = ctx.stats_repository.get_user_trends(&user_id).await?;
-            Ok(UserProfileData { stats, entries: None, history: None, trends: Some(trends) })
+            Ok(UserProfileData {
+                stats,
+                entries: None,
+                history: None,
+                trends: Some(trends),
+            })
         }
         ProfileView::Ratings => {
-            let filter = paged_user_filter(user_id, SortDirection::ByRatingDesc, query.limit, query.offset)?;
+            let filter = paged_user_filter(
+                user_id,
+                SortDirection::ByRatingDesc,
+                query.limit,
+                query.offset,
+            )?;
             let entries = ctx.diary_repository.query_diary(&filter).await?;
-            Ok(UserProfileData { stats, entries: Some(entries), history: None, trends: None })
+            Ok(UserProfileData {
+                stats,
+                entries: Some(entries),
+                history: None,
+                trends: None,
+            })
         }
         ProfileView::Recent => {
-            let filter = paged_user_filter(user_id, SortDirection::Descending, query.limit, query.offset)?;
+            let filter = paged_user_filter(
+                user_id,
+                SortDirection::Descending,
+                query.limit,
+                query.offset,
+            )?;
             let entries = ctx.diary_repository.query_diary(&filter).await?;
-            Ok(UserProfileData { stats, entries: Some(entries), history: None, trends: None })
+            Ok(UserProfileData {
+                stats,
+                entries: Some(entries),
+                history: None,
+                trends: None,
+            })
         }
     }
 }
 
-fn paged_user_filter(user_id: UserId, sort_by: SortDirection, limit: Option<u32>, offset: Option<u32>) -> Result<DiaryFilter, DomainError> {
+fn paged_user_filter(
+    user_id: UserId,
+    sort_by: SortDirection,
+    limit: Option<u32>,
+    offset: Option<u32>,
+) -> Result<DiaryFilter, DomainError> {
     let page = PageParams::new(limit, offset)?;
     Ok(DiaryFilter {
         sort_by,
@@ -81,11 +119,22 @@ fn group_by_month(entries: Vec<DiaryEntry>) -> Vec<MonthActivity> {
 
 fn format_year_month_long(ym: &str) -> String {
     let parts: Vec<&str> = ym.splitn(2, '-').collect();
-    if parts.len() != 2 { return ym.to_string(); }
+    if parts.len() != 2 {
+        return ym.to_string();
+    }
     let month = match parts[1] {
-        "01" => "January", "02" => "February", "03" => "March", "04" => "April",
-        "05" => "May", "06" => "June", "07" => "July", "08" => "August",
-        "09" => "September", "10" => "October", "11" => "November", "12" => "December",
+        "01" => "January",
+        "02" => "February",
+        "03" => "March",
+        "04" => "April",
+        "05" => "May",
+        "06" => "June",
+        "07" => "July",
+        "08" => "August",
+        "09" => "September",
+        "10" => "October",
+        "11" => "November",
+        "12" => "December",
         _ => parts[1],
     };
     format!("{} {}", month, parts[0])

@@ -1,7 +1,9 @@
 use activitypub_federation::{
     config::Data,
     fetch::object_id::ObjectId,
-    kinds::activity::{AcceptType, CreateType, DeleteType, FollowType, RejectType, UndoType, UpdateType},
+    kinds::activity::{
+        AcceptType, CreateType, DeleteType, FollowType, RejectType, UndoType, UpdateType,
+    },
     traits::Activity,
 };
 use serde::{Deserialize, Serialize};
@@ -42,10 +44,16 @@ impl Activity for FollowActivity {
         let target_domain = match (target_url.host_str(), target_url.port()) {
             (Some(host), Some(port)) => format!("{}:{}", host, port),
             (Some(host), None) => host.to_string(),
-            _ => return Err(Error::bad_request(anyhow::anyhow!("invalid follow target URL"))),
+            _ => {
+                return Err(Error::bad_request(anyhow::anyhow!(
+                    "invalid follow target URL"
+                )));
+            }
         };
         if target_domain != data.domain {
-            return Err(Error::bad_request(anyhow::anyhow!("follow target is not a local actor")));
+            return Err(Error::bad_request(anyhow::anyhow!(
+                "follow target is not a local actor"
+            )));
         }
         Ok(())
     }
@@ -105,7 +113,11 @@ impl Activity for AcceptActivity {
         let local_user_id = crate::urls::extract_user_id_from_url(self.object.actor.inner())
             .ok_or_else(|| Error::bad_request(anyhow::anyhow!("invalid actor URL in Follow")))?;
         data.federation_repo
-            .update_following_status(local_user_id, self.actor.inner().as_str(), FollowingStatus::Accepted)
+            .update_following_status(
+                local_user_id,
+                self.actor.inner().as_str(),
+                FollowingStatus::Accepted,
+            )
             .await?;
         tracing::info!(remote_actor = %self.actor.inner(), "follow accepted by remote");
         Ok(())

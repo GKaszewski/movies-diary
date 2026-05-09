@@ -4,9 +4,7 @@ use tokio::sync::mpsc;
 
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyModifiers};
 
-use tui::app::{
-    self, Action, App, BulkImportStage, Command, Screen, SettingsField, Tab,
-};
+use tui::app::{self, Action, App, BulkImportStage, Command, Screen, SettingsField, Tab};
 use tui::client::ApiClient;
 use tui::config::Config;
 
@@ -29,9 +27,14 @@ async fn run() -> anyhow::Result<()> {
         }
     }
 
-    let initial_url = config.as_ref().map(|c| c.api_url.as_str()).unwrap_or("http://localhost:3000");
+    let initial_url = config
+        .as_ref()
+        .map(|c| c.api_url.as_str())
+        .unwrap_or("http://localhost:3000");
     let client = Arc::new(ApiClient::new(initial_url));
-    let saved_token = tokio::task::spawn_blocking(Config::load_token).await.unwrap_or(None);
+    let saved_token = tokio::task::spawn_blocking(Config::load_token)
+        .await
+        .unwrap_or(None);
     let mut app = App::new(config, saved_token.clone());
 
     let (tx, mut rx) = mpsc::channel::<Action>(64);
@@ -45,7 +48,10 @@ async fn run() -> anyhow::Result<()> {
             let tx2 = tx.clone();
             tokio::spawn(async move {
                 let action = match c.get_diary(&t, 0, 20).await {
-                    Ok(r) => Action::DiaryLoaded { entries: r.items, total: r.total_count },
+                    Ok(r) => Action::DiaryLoaded {
+                        entries: r.items,
+                        total: r.total_count,
+                    },
                     Err(e) => Action::DiaryLoadFailed(e.to_string()),
                 };
                 let _ = tx2.send(action).await;
@@ -84,7 +90,8 @@ async fn run() -> anyhow::Result<()> {
             }
         }
         Ok::<(), anyhow::Error>(())
-    }.await;
+    }
+    .await;
 
     ratatui::restore();
     result
@@ -95,11 +102,15 @@ async fn run() -> anyhow::Result<()> {
 fn handle_command(cmd: Command, app: &App, client: &Arc<ApiClient>, tx: &mpsc::Sender<Action>) {
     match cmd {
         Command::SaveConfig(url) => {
-            let config = Config { api_url: url.clone() };
+            let config = Config {
+                api_url: url.clone(),
+            };
             if let Err(e) = config.save() {
                 let tx2 = tx.clone();
                 let msg = format!("Failed to save config: {e}");
-                tokio::spawn(async move { let _ = tx2.send(Action::DiaryLoadFailed(msg)).await; });
+                tokio::spawn(async move {
+                    let _ = tx2.send(Action::DiaryLoadFailed(msg)).await;
+                });
             }
             client.update_url(&url);
         }
@@ -136,12 +147,17 @@ fn handle_command(cmd: Command, app: &App, client: &Arc<ApiClient>, tx: &mpsc::S
         }
 
         Command::LoadDiary { offset } => {
-            let Some(token) = app.token.clone() else { return };
+            let Some(token) = app.token.clone() else {
+                return;
+            };
             let c = client.clone();
             let tx = tx.clone();
             tokio::spawn(async move {
                 let action = match c.get_diary(&token, offset, 20).await {
-                    Ok(r) => Action::DiaryLoaded { entries: r.items, total: r.total_count },
+                    Ok(r) => Action::DiaryLoaded {
+                        entries: r.items,
+                        total: r.total_count,
+                    },
                     Err(e) => Action::DiaryLoadFailed(e.to_string()),
                 };
                 let _ = tx.send(action).await;
@@ -149,7 +165,9 @@ fn handle_command(cmd: Command, app: &App, client: &Arc<ApiClient>, tx: &mpsc::S
         }
 
         Command::LoadHistory { movie_id } => {
-            let Some(token) = app.token.clone() else { return };
+            let Some(token) = app.token.clone() else {
+                return;
+            };
             let c = client.clone();
             let tx = tx.clone();
             tokio::spawn(async move {
@@ -162,7 +180,9 @@ fn handle_command(cmd: Command, app: &App, client: &Arc<ApiClient>, tx: &mpsc::S
         }
 
         Command::CreateReview(req) => {
-            let Some(token) = app.token.clone() else { return };
+            let Some(token) = app.token.clone() else {
+                return;
+            };
             let c = client.clone();
             let tx = tx.clone();
             tokio::spawn(async move {
@@ -175,7 +195,9 @@ fn handle_command(cmd: Command, app: &App, client: &Arc<ApiClient>, tx: &mpsc::S
         }
 
         Command::DeleteReview(id) => {
-            let Some(token) = app.token.clone() else { return };
+            let Some(token) = app.token.clone() else {
+                return;
+            };
             let c = client.clone();
             let tx = tx.clone();
             tokio::spawn(async move {
@@ -188,7 +210,9 @@ fn handle_command(cmd: Command, app: &App, client: &Arc<ApiClient>, tx: &mpsc::S
         }
 
         Command::ImportNext(index) => {
-            let Some(token) = app.token.clone() else { return };
+            let Some(token) = app.token.clone() else {
+                return;
+            };
             let req = match &app.screen {
                 Screen::Main(m) => match m.bulk_import.valid_requests.get(index) {
                     Some(r) => r.clone(),
@@ -199,7 +223,11 @@ fn handle_command(cmd: Command, app: &App, client: &Arc<ApiClient>, tx: &mpsc::S
             let c = client.clone();
             let tx = tx.clone();
             tokio::spawn(async move {
-                let error = c.create_review(&token, &req).await.err().map(|e| e.to_string());
+                let error = c
+                    .create_review(&token, &req)
+                    .await
+                    .err()
+                    .map(|e| e.to_string());
                 let _ = tx.send(Action::BulkItemDone { index, error }).await;
             });
         }
@@ -248,8 +276,12 @@ fn key_to_action(app: &App, key: ratatui::crossterm::event::KeyEvent) -> Option<
                 KeyCode::Down | KeyCode::Char('j') => Some(Action::ScrollDown),
                 KeyCode::Enter => Some(Action::OpenHistory),
                 KeyCode::Char('d') => Some(Action::DeleteInit),
-                KeyCode::Char('y') if m.diary.delete_pending.is_some() => Some(Action::DeleteConfirm),
-                KeyCode::Char('n') if m.diary.delete_pending.is_some() => Some(Action::DeleteCancel),
+                KeyCode::Char('y') if m.diary.delete_pending.is_some() => {
+                    Some(Action::DeleteConfirm)
+                }
+                KeyCode::Char('n') if m.diary.delete_pending.is_some() => {
+                    Some(Action::DeleteCancel)
+                }
                 KeyCode::Esc => Some(Action::Escape),
                 KeyCode::Char('q') => Some(Action::Quit),
                 KeyCode::Tab => Some(Action::TabNext),

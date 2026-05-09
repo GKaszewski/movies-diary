@@ -21,9 +21,9 @@ use domain::{
 };
 use http_body_util::BodyExt;
 use presentation::{routes, state::AppState};
+use rss::RssAdapter;
 use sqlite::SqliteMovieRepository;
 use sqlx::SqlitePool;
-use rss::RssAdapter;
 use template_askama::AskamaHtmlRenderer;
 use tower::ServiceExt;
 
@@ -41,7 +41,10 @@ impl MetadataClient for PanicMeta {
     async fn fetch_movie_metadata(&self, _: &MetadataSearchCriteria) -> Result<Movie, DomainError> {
         panic!("metadata not wired in tests")
     }
-    async fn get_poster_url(&self, _: &ExternalMetadataId) -> Result<Option<PosterUrl>, DomainError> {
+    async fn get_poster_url(
+        &self,
+        _: &ExternalMetadataId,
+    ) -> Result<Option<PosterUrl>, DomainError> {
         panic!()
     }
 }
@@ -68,25 +71,58 @@ impl PosterStorage for PanicStorage {
 struct PanicHasher;
 #[async_trait]
 impl PasswordHasher for PanicHasher {
-    async fn hash(&self, _: &str) -> Result<PasswordHash, DomainError> { panic!() }
-    async fn verify(&self, _: &str, _: &PasswordHash) -> Result<bool, DomainError> { panic!() }
+    async fn hash(&self, _: &str) -> Result<PasswordHash, DomainError> {
+        panic!()
+    }
+    async fn verify(&self, _: &str, _: &PasswordHash) -> Result<bool, DomainError> {
+        panic!()
+    }
 }
 
 struct PanicAuth;
 #[async_trait]
 impl AuthService for PanicAuth {
-    async fn generate_token(&self, _: &UserId) -> Result<GeneratedToken, DomainError> { panic!() }
-    async fn validate_token(&self, _: &str) -> Result<UserId, DomainError> { panic!() }
+    async fn generate_token(&self, _: &UserId) -> Result<GeneratedToken, DomainError> {
+        panic!()
+    }
+    async fn validate_token(&self, _: &str) -> Result<UserId, DomainError> {
+        panic!()
+    }
 }
 
 struct NobodyUserRepo;
 #[async_trait]
 impl UserRepository for NobodyUserRepo {
-    async fn find_by_email(&self, _: &Email) -> Result<Option<User>, DomainError> { Ok(None) }
-    async fn find_by_username(&self, _: &domain::value_objects::Username) -> Result<Option<User>, DomainError> { Ok(None) }
-    async fn save(&self, _: &User) -> Result<(), DomainError> { panic!() }
-    async fn find_by_id(&self, _: &UserId) -> Result<Option<User>, DomainError> { panic!() }
-    async fn list_with_stats(&self) -> Result<Vec<domain::models::UserSummary>, DomainError> { panic!() }
+    async fn find_by_email(&self, _: &Email) -> Result<Option<User>, DomainError> {
+        Ok(None)
+    }
+    async fn find_by_username(
+        &self,
+        _: &domain::value_objects::Username,
+    ) -> Result<Option<User>, DomainError> {
+        Ok(None)
+    }
+    async fn save(&self, _: &User) -> Result<(), DomainError> {
+        panic!()
+    }
+    async fn find_by_id(&self, _: &UserId) -> Result<Option<User>, DomainError> {
+        panic!()
+    }
+    async fn list_with_stats(&self) -> Result<Vec<domain::models::UserSummary>, DomainError> {
+        panic!()
+    }
+}
+
+struct PanicExporter;
+#[async_trait]
+impl domain::ports::DiaryExporter for PanicExporter {
+    async fn serialize_entries(
+        &self,
+        _: &[domain::models::DiaryEntry],
+        _: domain::models::ExportFormat,
+    ) -> Result<Vec<u8>, DomainError> {
+        panic!()
+    }
 }
 
 async fn test_app() -> Router {
@@ -102,6 +138,7 @@ async fn test_app() -> Router {
             movie_repository: Arc::clone(&repo) as _,
             review_repository: Arc::clone(&repo) as _,
             diary_repository: Arc::clone(&repo) as _,
+            diary_exporter: Arc::new(PanicExporter),
             stats_repository: Arc::clone(&repo) as _,
             metadata_client: Arc::new(PanicMeta),
             poster_fetcher: Arc::new(PanicFetcher),
@@ -110,7 +147,11 @@ async fn test_app() -> Router {
             auth_service: Arc::new(PanicAuth),
             password_hasher: Arc::new(PanicHasher),
             user_repository: Arc::new(NobodyUserRepo),
-            config: AppConfig { allow_registration: false, base_url: "http://localhost:3000".to_string(), rate_limit: 20 },
+            config: AppConfig {
+                allow_registration: false,
+                base_url: "http://localhost:3000".to_string(),
+                rate_limit: 20,
+            },
         },
         html_renderer: Arc::new(AskamaHtmlRenderer::new()),
         rss_renderer: Arc::new(RssAdapter::new("http://localhost:3000".into())),
@@ -124,7 +165,12 @@ async fn test_app() -> Router {
 async fn get_api_diary_returns_empty_list() {
     let app = test_app().await;
     let response = app
-        .oneshot(Request::builder().uri("/api/diary").body(Body::empty()).unwrap())
+        .oneshot(
+            Request::builder()
+                .uri("/api/diary")
+                .body(Body::empty())
+                .unwrap(),
+        )
         .await
         .unwrap();
 

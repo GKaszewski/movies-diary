@@ -20,7 +20,9 @@ pub async fn execute(ctx: &AppContext, cmd: LogReviewCommand) -> Result<(), Doma
         repository: ctx.movie_repository.as_ref(),
         metadata_client: ctx.metadata_client.as_ref(),
     };
-    let (movie, is_new_movie) = MovieResolver::default_pipeline().resolve(&cmd, &deps).await?;
+    let (movie, is_new_movie) = MovieResolver::default_pipeline()
+        .resolve(&cmd, &deps)
+        .await?;
 
     ctx.movie_repository.upsert_movie(&movie).await?;
 

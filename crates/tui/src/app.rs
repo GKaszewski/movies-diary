@@ -1,6 +1,6 @@
-use uuid::Uuid;
 use crate::client::{DiaryEntryDto, LogReviewRequest, ReviewHistoryResponse};
 use crate::config::Config;
+use uuid::Uuid;
 
 // ── Screens ───────────────────────────────────────────────────────────────────
 
@@ -25,7 +25,11 @@ pub struct LoginState {
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub enum LoginField { #[default] Email, Password }
+pub enum LoginField {
+    #[default]
+    Email,
+    Password,
+}
 
 // ── Main (4 tabs) ─────────────────────────────────────────────────────────────
 
@@ -45,13 +49,22 @@ impl MainState {
             diary: DiaryState::default(),
             add_review: AddReviewState::default(),
             bulk_import: BulkImportState::default(),
-            settings: SettingsState { api_url, focused: SettingsField::default() },
+            settings: SettingsState {
+                api_url,
+                focused: SettingsField::default(),
+            },
         }
     }
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub enum Tab { #[default] Diary, AddReview, BulkImport, Settings }
+pub enum Tab {
+    #[default]
+    Diary,
+    AddReview,
+    BulkImport,
+    Settings,
+}
 
 // ── Diary ─────────────────────────────────────────────────────────────────────
 
@@ -94,7 +107,14 @@ impl Default for AddReviewState {
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum AddReviewField {
-    #[default] ExternalId, Title, Year, Rating, WatchedAt, Comment, Submit,
+    #[default]
+    ExternalId,
+    Title,
+    Year,
+    Rating,
+    WatchedAt,
+    Comment,
+    Submit,
 }
 
 // ── Bulk Import ───────────────────────────────────────────────────────────────
@@ -111,9 +131,12 @@ pub struct BulkImportState {
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub enum BulkImportStage {
-    #[default] EnterPath,
+    #[default]
+    EnterPath,
     Preview,
-    Importing { done: usize },
+    Importing {
+        done: usize,
+    },
     Done,
 }
 
@@ -132,7 +155,12 @@ pub struct SettingsState {
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub enum SettingsField { #[default] ApiUrl, Save, Logout }
+pub enum SettingsField {
+    #[default]
+    ApiUrl,
+    Save,
+    Logout,
+}
 
 // ── Status bar ────────────────────────────────────────────────────────────────
 
@@ -155,13 +183,22 @@ pub struct App {
 
 impl App {
     pub fn new(config: Option<Config>, token: Option<String>) -> Self {
-        let api_url = config.as_ref().map(|c| c.api_url.clone()).unwrap_or_default();
+        let api_url = config
+            .as_ref()
+            .map(|c| c.api_url.clone())
+            .unwrap_or_default();
         let screen = match &config {
             None => Screen::Setup(SetupState::default()),
             Some(_) if token.is_none() => Screen::Login(LoginState::default()),
             Some(c) => Screen::Main(MainState::new(c.api_url.clone())),
         };
-        Self { screen, token, loading: false, status: None, api_url }
+        Self {
+            screen,
+            token,
+            loading: false,
+            status: None,
+            api_url,
+        }
     }
 }
 
@@ -169,24 +206,51 @@ impl App {
 
 #[derive(Debug)]
 pub enum Action {
-    Quit, Escape, TabSelect(Tab), TabNext, TabPrev,
+    Quit,
+    Escape,
+    TabSelect(Tab),
+    TabNext,
+    TabPrev,
     SetupSubmit,
-    InputChar(char), Backspace, FocusNext, FocusPrev,
+    InputChar(char),
+    Backspace,
+    FocusNext,
+    FocusPrev,
     LoginSubmit,
-    ScrollDown, ScrollUp, OpenHistory, LoadMore, LoadPrev,
-    DeleteInit, DeleteConfirm, DeleteCancel,
-    RatingUp, RatingDown, ReviewSubmit,
-    BulkParseFile, BulkImportAll, BulkCancel,
-    SettingsSave, SettingsLogout,
+    ScrollDown,
+    ScrollUp,
+    OpenHistory,
+    LoadMore,
+    LoadPrev,
+    DeleteInit,
+    DeleteConfirm,
+    DeleteCancel,
+    RatingUp,
+    RatingDown,
+    ReviewSubmit,
+    BulkParseFile,
+    BulkImportAll,
+    BulkCancel,
+    SettingsSave,
+    SettingsLogout,
     // async results
-    AuthOk(String), AuthFail(String),
-    DiaryLoaded { entries: Vec<DiaryEntryDto>, total: u64 },
+    AuthOk(String),
+    AuthFail(String),
+    DiaryLoaded {
+        entries: Vec<DiaryEntryDto>,
+        total: u64,
+    },
     DiaryLoadFailed(String),
     HistoryLoaded(ReviewHistoryResponse),
     HistoryLoadFailed(String),
-    ReviewCreated, ReviewCreateFailed(String),
-    ReviewDeleted(Uuid), ReviewDeleteFailed(String),
-    BulkItemDone { index: usize, error: Option<String> },
+    ReviewCreated,
+    ReviewCreateFailed(String),
+    ReviewDeleted(Uuid),
+    ReviewDeleteFailed(String),
+    BulkItemDone {
+        index: usize,
+        error: Option<String>,
+    },
 }
 
 #[derive(Debug)]
@@ -211,7 +275,10 @@ pub fn parse_csv(content: &str) -> Vec<ParsedRow> {
         let record = match result {
             Ok(r) => r,
             Err(e) => {
-                rows.push(ParsedRow { row: row_num, result: Err(e.to_string()) });
+                rows.push(ParsedRow {
+                    row: row_num,
+                    result: Err(e.to_string()),
+                });
                 continue;
             }
         };
@@ -224,18 +291,36 @@ pub fn parse_csv(content: &str) -> Vec<ParsedRow> {
         let comment = record.get(5).unwrap_or("").trim().to_string();
 
         if title.is_empty() && external_id.is_empty() {
-            rows.push(ParsedRow { row: row_num, result: Err("title or external_id required".into()) });
+            rows.push(ParsedRow {
+                row: row_num,
+                result: Err("title or external_id required".into()),
+            });
             continue;
         }
 
         let rating: u8 = match rating_str.trim().parse::<u8>() {
             Ok(r) if r <= 5 => r,
-            Ok(_) => { rows.push(ParsedRow { row: row_num, result: Err(format!("rating must be 0-5, got {rating_str}")) }); continue; }
-            Err(_) => { rows.push(ParsedRow { row: row_num, result: Err(format!("invalid rating: {rating_str}")) }); continue; }
+            Ok(_) => {
+                rows.push(ParsedRow {
+                    row: row_num,
+                    result: Err(format!("rating must be 0-5, got {rating_str}")),
+                });
+                continue;
+            }
+            Err(_) => {
+                rows.push(ParsedRow {
+                    row: row_num,
+                    result: Err(format!("invalid rating: {rating_str}")),
+                });
+                continue;
+            }
         };
 
         if watched_at.is_empty() {
-            rows.push(ParsedRow { row: row_num, result: Err("watched_at required".into()) });
+            rows.push(ParsedRow {
+                row: row_num,
+                result: Err("watched_at required".into()),
+            });
             continue;
         }
 
@@ -244,18 +329,32 @@ pub fn parse_csv(content: &str) -> Vec<ParsedRow> {
         } else {
             match year_str.parse() {
                 Ok(y) => Some(y),
-                Err(_) => { rows.push(ParsedRow { row: row_num, result: Err(format!("invalid year: {year_str}")) }); continue; }
+                Err(_) => {
+                    rows.push(ParsedRow {
+                        row: row_num,
+                        result: Err(format!("invalid year: {year_str}")),
+                    });
+                    continue;
+                }
             }
         };
 
         rows.push(ParsedRow {
             row: row_num,
             result: Ok(LogReviewRequest {
-                external_metadata_id: if external_id.is_empty() { None } else { Some(external_id) },
+                external_metadata_id: if external_id.is_empty() {
+                    None
+                } else {
+                    Some(external_id)
+                },
                 manual_title: if title.is_empty() { None } else { Some(title) },
                 manual_release_year,
                 rating,
-                comment: if comment.is_empty() { None } else { Some(comment) },
+                comment: if comment.is_empty() {
+                    None
+                } else {
+                    Some(comment)
+                },
                 watched_at,
             }),
         });
@@ -277,14 +376,24 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
 
         Action::TabNext => {
             if let Screen::Main(m) = &mut app.screen {
-                m.tab = match m.tab { Tab::Diary => Tab::AddReview, Tab::AddReview => Tab::BulkImport, Tab::BulkImport => Tab::Settings, Tab::Settings => Tab::Diary };
+                m.tab = match m.tab {
+                    Tab::Diary => Tab::AddReview,
+                    Tab::AddReview => Tab::BulkImport,
+                    Tab::BulkImport => Tab::Settings,
+                    Tab::Settings => Tab::Diary,
+                };
             }
             vec![]
         }
 
         Action::TabPrev => {
             if let Screen::Main(m) = &mut app.screen {
-                m.tab = match m.tab { Tab::Diary => Tab::Settings, Tab::AddReview => Tab::Diary, Tab::BulkImport => Tab::AddReview, Tab::Settings => Tab::BulkImport };
+                m.tab = match m.tab {
+                    Tab::Diary => Tab::Settings,
+                    Tab::AddReview => Tab::Diary,
+                    Tab::BulkImport => Tab::AddReview,
+                    Tab::Settings => Tab::BulkImport,
+                };
             }
             vec![]
         }
@@ -293,15 +402,23 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
             if let Screen::Main(m) = &mut app.screen {
                 match m.tab {
                     Tab::Diary => {
-                        if m.diary.delete_pending.is_some() { m.diary.delete_pending = None; }
-                        else { m.diary.history = None; }
+                        if m.diary.delete_pending.is_some() {
+                            m.diary.delete_pending = None;
+                        } else {
+                            m.diary.history = None;
+                        }
                     }
                     Tab::BulkImport => {
-                        if matches!(m.bulk_import.stage, BulkImportStage::Preview | BulkImportStage::Done) {
+                        if matches!(
+                            m.bulk_import.stage,
+                            BulkImportStage::Preview | BulkImportStage::Done
+                        ) {
                             m.bulk_import.stage = BulkImportStage::EnterPath;
                         }
                     }
-                    Tab::AddReview | Tab::Settings => { m.tab = Tab::Diary; }
+                    Tab::AddReview | Tab::Settings => {
+                        m.tab = Tab::Diary;
+                    }
                 }
             }
             vec![]
@@ -324,7 +441,9 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
                         AddReviewField::Comment => m.add_review.comment.push(c),
                         _ => {}
                     },
-                    Tab::BulkImport if matches!(m.bulk_import.stage, BulkImportStage::EnterPath) => {
+                    Tab::BulkImport
+                        if matches!(m.bulk_import.stage, BulkImportStage::EnterPath) =>
+                    {
                         m.bulk_import.file_path.push(c);
                     }
                     Tab::Settings if matches!(m.settings.focused, SettingsField::ApiUrl) => {
@@ -338,21 +457,39 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
 
         Action::Backspace => {
             match &mut app.screen {
-                Screen::Setup(s) => { s.api_url.pop(); }
+                Screen::Setup(s) => {
+                    s.api_url.pop();
+                }
                 Screen::Login(s) => match s.focused {
-                    LoginField::Email => { s.email.pop(); }
-                    LoginField::Password => { s.password.pop(); }
+                    LoginField::Email => {
+                        s.email.pop();
+                    }
+                    LoginField::Password => {
+                        s.password.pop();
+                    }
                 },
                 Screen::Main(m) => match m.tab {
                     Tab::AddReview => match m.add_review.focused {
-                        AddReviewField::ExternalId => { m.add_review.external_id.pop(); }
-                        AddReviewField::Title => { m.add_review.title.pop(); }
-                        AddReviewField::Year => { m.add_review.year.pop(); }
-                        AddReviewField::WatchedAt => { m.add_review.watched_at.pop(); }
-                        AddReviewField::Comment => { m.add_review.comment.pop(); }
+                        AddReviewField::ExternalId => {
+                            m.add_review.external_id.pop();
+                        }
+                        AddReviewField::Title => {
+                            m.add_review.title.pop();
+                        }
+                        AddReviewField::Year => {
+                            m.add_review.year.pop();
+                        }
+                        AddReviewField::WatchedAt => {
+                            m.add_review.watched_at.pop();
+                        }
+                        AddReviewField::Comment => {
+                            m.add_review.comment.pop();
+                        }
                         _ => {}
                     },
-                    Tab::BulkImport if matches!(m.bulk_import.stage, BulkImportStage::EnterPath) => {
+                    Tab::BulkImport
+                        if matches!(m.bulk_import.stage, BulkImportStage::EnterPath) =>
+                    {
                         m.bulk_import.file_path.pop();
                     }
                     Tab::Settings if matches!(m.settings.focused, SettingsField::ApiUrl) => {
@@ -367,7 +504,11 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
         Action::FocusNext => {
             match &mut app.screen {
                 Screen::Login(s) => {
-                    s.focused = if s.focused == LoginField::Email { LoginField::Password } else { LoginField::Email };
+                    s.focused = if s.focused == LoginField::Email {
+                        LoginField::Password
+                    } else {
+                        LoginField::Email
+                    };
                 }
                 Screen::Main(m) => match m.tab {
                     Tab::AddReview => {
@@ -398,7 +539,11 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
         Action::FocusPrev => {
             match &mut app.screen {
                 Screen::Login(s) => {
-                    s.focused = if s.focused == LoginField::Password { LoginField::Email } else { LoginField::Password };
+                    s.focused = if s.focused == LoginField::Password {
+                        LoginField::Email
+                    } else {
+                        LoginField::Password
+                    };
                 }
                 Screen::Main(m) => match m.tab {
                     Tab::AddReview => {
@@ -451,7 +596,10 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
         Action::LoginSubmit => {
             if let Screen::Login(s) = &app.screen {
                 if s.email.is_empty() || s.password.is_empty() {
-                    app.status = Some(StatusMsg { text: "Email and password required".into(), is_error: true });
+                    app.status = Some(StatusMsg {
+                        text: "Email and password required".into(),
+                        is_error: true,
+                    });
                     return vec![];
                 }
                 let email = s.email.clone();
@@ -466,14 +614,20 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
             app.loading = false;
             app.status = None;
             app.screen = Screen::Main(MainState::new(app.api_url.clone()));
-            let cmds = vec![Command::SaveToken(token.clone()), Command::LoadDiary { offset: 0 }];
+            let cmds = vec![
+                Command::SaveToken(token.clone()),
+                Command::LoadDiary { offset: 0 },
+            ];
             app.token = Some(token);
             cmds
         }
 
         Action::AuthFail(msg) => {
             app.loading = false;
-            app.status = Some(StatusMsg { text: msg, is_error: true });
+            app.status = Some(StatusMsg {
+                text: msg,
+                is_error: true,
+            });
             vec![]
         }
 
@@ -547,10 +701,16 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
             if msg.contains("unauthorized") || msg.contains("Unauthorized") {
                 app.token = None;
                 app.screen = Screen::Login(LoginState::default());
-                app.status = Some(StatusMsg { text: "Session expired. Please log in again.".into(), is_error: true });
+                app.status = Some(StatusMsg {
+                    text: "Session expired. Please log in again.".into(),
+                    is_error: true,
+                });
                 return vec![Command::ClearToken];
             }
-            app.status = Some(StatusMsg { text: msg, is_error: true });
+            app.status = Some(StatusMsg {
+                text: msg,
+                is_error: true,
+            });
             vec![]
         }
 
@@ -564,7 +724,10 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
 
         Action::HistoryLoadFailed(msg) => {
             app.loading = false;
-            app.status = Some(StatusMsg { text: msg, is_error: true });
+            app.status = Some(StatusMsg {
+                text: msg,
+                is_error: true,
+            });
             vec![]
         }
 
@@ -602,26 +765,36 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
                 }
                 m.diary.history = None;
             }
-            app.status = Some(StatusMsg { text: "Review deleted".into(), is_error: false });
+            app.status = Some(StatusMsg {
+                text: "Review deleted".into(),
+                is_error: false,
+            });
             vec![]
         }
 
         Action::ReviewDeleteFailed(msg) => {
-            app.status = Some(StatusMsg { text: msg, is_error: true });
+            app.status = Some(StatusMsg {
+                text: msg,
+                is_error: true,
+            });
             vec![]
         }
 
         // ── Add Review ────────────────────────────────────────────────────────
         Action::RatingUp => {
             if let Screen::Main(m) = &mut app.screen {
-                if m.add_review.rating < 5 { m.add_review.rating += 1; }
+                if m.add_review.rating < 5 {
+                    m.add_review.rating += 1;
+                }
             }
             vec![]
         }
 
         Action::RatingDown => {
             if let Screen::Main(m) = &mut app.screen {
-                if m.add_review.rating > 0 { m.add_review.rating -= 1; }
+                if m.add_review.rating > 0 {
+                    m.add_review.rating -= 1;
+                }
             }
             vec![]
         }
@@ -633,19 +806,37 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
                     let has_ext = !f.external_id.is_empty();
                     let has_title = !f.title.is_empty();
                     let has_watched = !f.watched_at.is_empty();
-                    let ext_id = if has_ext { Some(f.external_id.clone()) } else { None };
-                    let title = if has_title { Some(f.title.clone()) } else { None };
+                    let ext_id = if has_ext {
+                        Some(f.external_id.clone())
+                    } else {
+                        None
+                    };
+                    let title = if has_title {
+                        Some(f.title.clone())
+                    } else {
+                        None
+                    };
                     let year: Option<u16> = f.year.parse().ok();
                     let rating = f.rating;
-                    let comment = if f.comment.is_empty() { None } else { Some(f.comment.clone()) };
+                    let comment = if f.comment.is_empty() {
+                        None
+                    } else {
+                        Some(f.comment.clone())
+                    };
                     let watched_at = f.watched_at.clone();
 
                     if !has_ext && !has_title {
-                        app.status = Some(StatusMsg { text: "Title or external ID required".into(), is_error: true });
+                        app.status = Some(StatusMsg {
+                            text: "Title or external ID required".into(),
+                            is_error: true,
+                        });
                         return vec![];
                     }
                     if !has_watched {
-                        app.status = Some(StatusMsg { text: "Watched-at date required".into(), is_error: true });
+                        app.status = Some(StatusMsg {
+                            text: "Watched-at date required".into(),
+                            is_error: true,
+                        });
                         return vec![];
                     }
                     let req = LogReviewRequest {
@@ -665,7 +856,10 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
 
         Action::ReviewCreated => {
             app.loading = false;
-            app.status = Some(StatusMsg { text: "Review added!".into(), is_error: false });
+            app.status = Some(StatusMsg {
+                text: "Review added!".into(),
+                is_error: false,
+            });
             if let Screen::Main(m) = &mut app.screen {
                 m.add_review = AddReviewState::default();
             }
@@ -674,7 +868,10 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
 
         Action::ReviewCreateFailed(msg) => {
             app.loading = false;
-            app.status = Some(StatusMsg { text: msg, is_error: true });
+            app.status = Some(StatusMsg {
+                text: msg,
+                is_error: true,
+            });
             vec![]
         }
 
@@ -689,7 +886,10 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
                             m.bulk_import.stage = BulkImportStage::Preview;
                         }
                         Err(e) => {
-                            app.status = Some(StatusMsg { text: format!("Cannot read file: {e}"), is_error: true });
+                            app.status = Some(StatusMsg {
+                                text: format!("Cannot read file: {e}"),
+                                is_error: true,
+                            });
                         }
                     }
                 }
@@ -700,11 +900,17 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
         Action::BulkImportAll => {
             if let Screen::Main(m) = &mut app.screen {
                 if m.tab == Tab::BulkImport && m.bulk_import.stage == BulkImportStage::Preview {
-                    let valid: Vec<LogReviewRequest> = m.bulk_import.parsed.iter()
+                    let valid: Vec<LogReviewRequest> = m
+                        .bulk_import
+                        .parsed
+                        .iter()
                         .filter_map(|r| r.result.as_ref().ok().cloned())
                         .collect();
                     if valid.is_empty() {
-                        app.status = Some(StatusMsg { text: "No valid rows to import".into(), is_error: true });
+                        app.status = Some(StatusMsg {
+                            text: "No valid rows to import".into(),
+                            is_error: true,
+                        });
                         return vec![];
                     }
                     m.bulk_import.results = vec![None; valid.len()];
@@ -730,7 +936,10 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
         Action::BulkItemDone { index, error } => {
             if let Screen::Main(m) = &mut app.screen {
                 if index >= m.bulk_import.results.len() {
-                    app.status = Some(StatusMsg { text: format!("Import error: unexpected index {index}"), is_error: true });
+                    app.status = Some(StatusMsg {
+                        text: format!("Import error: unexpected index {index}"),
+                        is_error: true,
+                    });
                     m.bulk_import.stage = BulkImportStage::Done;
                     return vec![];
                 }
@@ -757,10 +966,16 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
             if let Screen::Main(m) = &app.screen {
                 let url = m.settings.api_url.trim().to_string();
                 if url.is_empty() {
-                    app.status = Some(StatusMsg { text: "URL required".into(), is_error: true });
+                    app.status = Some(StatusMsg {
+                        text: "URL required".into(),
+                        is_error: true,
+                    });
                     return vec![];
                 }
-                app.status = Some(StatusMsg { text: "Settings saved".into(), is_error: false });
+                app.status = Some(StatusMsg {
+                    text: "Settings saved".into(),
+                    is_error: false,
+                });
                 app.api_url = url.clone();
                 return vec![Command::SaveConfig(url)];
             }
@@ -784,7 +999,10 @@ mod tests {
 
     fn setup_app() -> App {
         App {
-            screen: Screen::Setup(SetupState { api_url: String::new(), error: None }),
+            screen: Screen::Setup(SetupState {
+                api_url: String::new(),
+                error: None,
+            }),
             token: None,
             loading: false,
             status: None,
@@ -814,8 +1032,18 @@ mod tests {
 
     fn diary_entry() -> DiaryEntryDto {
         DiaryEntryDto {
-            movie: MovieDto { id: Uuid::new_v4(), title: "The Matrix".into(), release_year: 1999, director: None },
-            review: ReviewDto { id: Uuid::new_v4(), rating: 5, comment: None, watched_at: "1999-03-31T00:00:00".into() },
+            movie: MovieDto {
+                id: Uuid::new_v4(),
+                title: "The Matrix".into(),
+                release_year: 1999,
+                director: None,
+            },
+            review: ReviewDto {
+                id: Uuid::new_v4(),
+                rating: 5,
+                comment: None,
+                watched_at: "1999-03-31T00:00:00".into(),
+            },
         }
     }
 
@@ -828,7 +1056,9 @@ mod tests {
         update(&mut app, Action::InputChar('i'));
         if let Screen::Setup(s) = &app.screen {
             assert_eq!(s.api_url, "hi");
-        } else { panic!("expected Setup"); }
+        } else {
+            panic!("expected Setup");
+        }
     }
 
     #[test]
@@ -838,7 +1068,9 @@ mod tests {
         assert!(cmds.is_empty());
         if let Screen::Setup(s) = &app.screen {
             assert!(s.error.is_some());
-        } else { panic!("expected Setup"); }
+        } else {
+            panic!("expected Setup");
+        }
     }
 
     #[test]
@@ -859,7 +1091,9 @@ mod tests {
         if let Screen::Login(s) = &app.screen {
             assert_eq!(s.email, "a");
             assert_eq!(s.password, "");
-        } else { panic!(); }
+        } else {
+            panic!();
+        }
     }
 
     #[test]
@@ -868,7 +1102,9 @@ mod tests {
         update(&mut app, Action::FocusNext);
         if let Screen::Login(s) = &app.screen {
             assert_eq!(s.focused, LoginField::Password);
-        } else { panic!(); }
+        } else {
+            panic!();
+        }
     }
 
     #[test]
@@ -878,15 +1114,21 @@ mod tests {
         update(&mut app, Action::InputChar('x'));
         if let Screen::Login(s) = &app.screen {
             assert_eq!(s.password, "x");
-        } else { panic!(); }
+        } else {
+            panic!();
+        }
     }
 
     #[test]
     fn login_submit_returns_login_command_and_sets_loading() {
         let mut app = login_app();
-        for c in "user@example.com".chars() { update(&mut app, Action::InputChar(c)); }
+        for c in "user@example.com".chars() {
+            update(&mut app, Action::InputChar(c));
+        }
         update(&mut app, Action::FocusNext);
-        for c in "pass123".chars() { update(&mut app, Action::InputChar(c)); }
+        for c in "pass123".chars() {
+            update(&mut app, Action::InputChar(c));
+        }
         let cmds = update(&mut app, Action::LoginSubmit);
         assert!(cmds.iter().any(|c| matches!(c, Command::Login { .. })));
         assert!(app.loading);
@@ -925,34 +1167,55 @@ mod tests {
     #[test]
     fn diary_scroll_down_increments_selected() {
         let mut app = main_app();
-        update(&mut app, Action::DiaryLoaded {
-            entries: vec![diary_entry(), diary_entry(), diary_entry()],
-            total: 3,
-        });
+        update(
+            &mut app,
+            Action::DiaryLoaded {
+                entries: vec![diary_entry(), diary_entry(), diary_entry()],
+                total: 3,
+            },
+        );
         update(&mut app, Action::ScrollDown);
         if let Screen::Main(m) = &app.screen {
             assert_eq!(m.diary.selected, 1);
-        } else { panic!(); }
+        } else {
+            panic!();
+        }
     }
 
     #[test]
     fn diary_scroll_up_clamps_at_zero() {
         let mut app = main_app();
-        update(&mut app, Action::DiaryLoaded { entries: vec![diary_entry()], total: 1 });
+        update(
+            &mut app,
+            Action::DiaryLoaded {
+                entries: vec![diary_entry()],
+                total: 1,
+            },
+        );
         update(&mut app, Action::ScrollUp);
         if let Screen::Main(m) = &app.screen {
             assert_eq!(m.diary.selected, 0);
-        } else { panic!(); }
+        } else {
+            panic!();
+        }
     }
 
     #[test]
     fn diary_scroll_down_clamps_at_last_entry() {
         let mut app = main_app();
-        update(&mut app, Action::DiaryLoaded { entries: vec![diary_entry()], total: 1 });
+        update(
+            &mut app,
+            Action::DiaryLoaded {
+                entries: vec![diary_entry()],
+                total: 1,
+            },
+        );
         update(&mut app, Action::ScrollDown);
         if let Screen::Main(m) = &app.screen {
             assert_eq!(m.diary.selected, 0);
-        } else { panic!(); }
+        } else {
+            panic!();
+        }
     }
 
     #[test]
@@ -960,11 +1223,19 @@ mod tests {
         let mut app = main_app();
         let entry = diary_entry();
         let review_id = entry.review.id;
-        update(&mut app, Action::DiaryLoaded { entries: vec![entry], total: 1 });
+        update(
+            &mut app,
+            Action::DiaryLoaded {
+                entries: vec![entry],
+                total: 1,
+            },
+        );
         update(&mut app, Action::DeleteInit);
         if let Screen::Main(m) = &app.screen {
             assert_eq!(m.diary.delete_pending, Some(review_id));
-        } else { panic!(); }
+        } else {
+            panic!();
+        }
     }
 
     #[test]
@@ -972,22 +1243,39 @@ mod tests {
         let mut app = main_app();
         let entry = diary_entry();
         let review_id = entry.review.id;
-        update(&mut app, Action::DiaryLoaded { entries: vec![entry], total: 1 });
+        update(
+            &mut app,
+            Action::DiaryLoaded {
+                entries: vec![entry],
+                total: 1,
+            },
+        );
         update(&mut app, Action::DeleteInit);
         let cmds = update(&mut app, Action::DeleteConfirm);
-        assert!(cmds.iter().any(|c| matches!(c, Command::DeleteReview(id) if *id == review_id)));
+        assert!(
+            cmds.iter()
+                .any(|c| matches!(c, Command::DeleteReview(id) if *id == review_id))
+        );
     }
 
     #[test]
     fn delete_cancel_clears_pending() {
         let mut app = main_app();
         let entry = diary_entry();
-        update(&mut app, Action::DiaryLoaded { entries: vec![entry], total: 1 });
+        update(
+            &mut app,
+            Action::DiaryLoaded {
+                entries: vec![entry],
+                total: 1,
+            },
+        );
         update(&mut app, Action::DeleteInit);
         update(&mut app, Action::DeleteCancel);
         if let Screen::Main(m) = &app.screen {
             assert!(m.diary.delete_pending.is_none());
-        } else { panic!(); }
+        } else {
+            panic!();
+        }
     }
 
     #[test]
@@ -995,12 +1283,20 @@ mod tests {
         let mut app = main_app();
         let entry = diary_entry();
         let review_id = entry.review.id;
-        update(&mut app, Action::DiaryLoaded { entries: vec![entry], total: 1 });
+        update(
+            &mut app,
+            Action::DiaryLoaded {
+                entries: vec![entry],
+                total: 1,
+            },
+        );
         update(&mut app, Action::ReviewDeleted(review_id));
         if let Screen::Main(m) = &app.screen {
             assert!(m.diary.entries.is_empty());
             assert_eq!(m.diary.total, 0);
-        } else { panic!(); }
+        } else {
+            panic!();
+        }
     }
 
     // ── Add Review ────────────────────────────────────────────────────────────
@@ -1008,17 +1304,27 @@ mod tests {
     #[test]
     fn rating_up_increments_rating() {
         let mut app = main_app();
-        if let Screen::Main(m) = &mut app.screen { m.tab = Tab::AddReview; m.add_review.rating = 3; }
+        if let Screen::Main(m) = &mut app.screen {
+            m.tab = Tab::AddReview;
+            m.add_review.rating = 3;
+        }
         update(&mut app, Action::RatingUp);
-        if let Screen::Main(m) = &app.screen { assert_eq!(m.add_review.rating, 4); }
+        if let Screen::Main(m) = &app.screen {
+            assert_eq!(m.add_review.rating, 4);
+        }
     }
 
     #[test]
     fn rating_clamps_at_5() {
         let mut app = main_app();
-        if let Screen::Main(m) = &mut app.screen { m.tab = Tab::AddReview; m.add_review.rating = 5; }
+        if let Screen::Main(m) = &mut app.screen {
+            m.tab = Tab::AddReview;
+            m.add_review.rating = 5;
+        }
         update(&mut app, Action::RatingUp);
-        if let Screen::Main(m) = &app.screen { assert_eq!(m.add_review.rating, 5); }
+        if let Screen::Main(m) = &app.screen {
+            assert_eq!(m.add_review.rating, 5);
+        }
     }
 
     #[test]
@@ -1054,19 +1360,17 @@ mod tests {
         if let Screen::Main(m) = &mut app.screen {
             m.tab = Tab::BulkImport;
             m.bulk_import.stage = BulkImportStage::Preview;
-            m.bulk_import.parsed = vec![
-                ParsedRow {
-                    row: 2,
-                    result: Ok(LogReviewRequest {
-                        external_metadata_id: None,
-                        manual_title: Some("The Matrix".into()),
-                        manual_release_year: None,
-                        rating: 5,
-                        comment: None,
-                        watched_at: "1999-03-31T00:00:00".into(),
-                    }),
-                },
-            ];
+            m.bulk_import.parsed = vec![ParsedRow {
+                row: 2,
+                result: Ok(LogReviewRequest {
+                    external_metadata_id: None,
+                    manual_title: Some("The Matrix".into()),
+                    manual_release_year: None,
+                    rating: 5,
+                    comment: None,
+                    watched_at: "1999-03-31T00:00:00".into(),
+                }),
+            }];
         }
         let cmds = update(&mut app, Action::BulkImportAll);
         assert!(cmds.iter().any(|c| matches!(c, Command::ImportNext(0))));
@@ -1079,12 +1383,32 @@ mod tests {
             m.tab = Tab::BulkImport;
             m.bulk_import.stage = BulkImportStage::Importing { done: 0 };
             m.bulk_import.valid_requests = vec![
-                LogReviewRequest { external_metadata_id: None, manual_title: Some("A".into()), manual_release_year: None, rating: 5, comment: None, watched_at: "2024-01-01T00:00:00".into() },
-                LogReviewRequest { external_metadata_id: None, manual_title: Some("B".into()), manual_release_year: None, rating: 4, comment: None, watched_at: "2024-01-02T00:00:00".into() },
+                LogReviewRequest {
+                    external_metadata_id: None,
+                    manual_title: Some("A".into()),
+                    manual_release_year: None,
+                    rating: 5,
+                    comment: None,
+                    watched_at: "2024-01-01T00:00:00".into(),
+                },
+                LogReviewRequest {
+                    external_metadata_id: None,
+                    manual_title: Some("B".into()),
+                    manual_release_year: None,
+                    rating: 4,
+                    comment: None,
+                    watched_at: "2024-01-02T00:00:00".into(),
+                },
             ];
             m.bulk_import.results = vec![None, None];
         }
-        let cmds = update(&mut app, Action::BulkItemDone { index: 0, error: None });
+        let cmds = update(
+            &mut app,
+            Action::BulkItemDone {
+                index: 0,
+                error: None,
+            },
+        );
         assert!(cmds.iter().any(|c| matches!(c, Command::ImportNext(1))));
     }
 
@@ -1094,12 +1418,23 @@ mod tests {
         if let Screen::Main(m) = &mut app.screen {
             m.tab = Tab::BulkImport;
             m.bulk_import.stage = BulkImportStage::Importing { done: 0 };
-            m.bulk_import.valid_requests = vec![
-                LogReviewRequest { external_metadata_id: None, manual_title: Some("A".into()), manual_release_year: None, rating: 5, comment: None, watched_at: "2024-01-01T00:00:00".into() },
-            ];
+            m.bulk_import.valid_requests = vec![LogReviewRequest {
+                external_metadata_id: None,
+                manual_title: Some("A".into()),
+                manual_release_year: None,
+                rating: 5,
+                comment: None,
+                watched_at: "2024-01-01T00:00:00".into(),
+            }];
             m.bulk_import.results = vec![None];
         }
-        let cmds = update(&mut app, Action::BulkItemDone { index: 0, error: None });
+        let cmds = update(
+            &mut app,
+            Action::BulkItemDone {
+                index: 0,
+                error: None,
+            },
+        );
         assert!(cmds.is_empty());
         if let Screen::Main(m) = &app.screen {
             assert!(matches!(m.bulk_import.stage, BulkImportStage::Done));
@@ -1117,7 +1452,10 @@ mod tests {
             m.settings.api_url = "http://new-server:8080".into();
         }
         let cmds = update(&mut app, Action::SettingsSave);
-        assert!(cmds.iter().any(|c| matches!(c, Command::SaveConfig(url) if url.contains("8080"))));
+        assert!(
+            cmds.iter()
+                .any(|c| matches!(c, Command::SaveConfig(url) if url.contains("8080")))
+        );
     }
 
     #[test]
@@ -1136,7 +1474,9 @@ mod tests {
         update(&mut app, Action::AuthOk("tok".into()));
         if let Screen::Main(m) = &app.screen {
             assert_eq!(m.settings.api_url, "http://test-server:9000");
-        } else { panic!("expected Main"); }
+        } else {
+            panic!("expected Main");
+        }
     }
 
     // ── parse_csv ─────────────────────────────────────────────────────────────

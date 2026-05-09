@@ -1,5 +1,5 @@
-use domain::{errors::DomainError, models::UserSummary};
 use crate::{context::AppContext, queries::GetUsersQuery};
+use domain::{errors::DomainError, models::UserSummary};
 
 pub async fn execute(
     ctx: &AppContext,

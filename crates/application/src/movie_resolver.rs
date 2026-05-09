@@ -207,29 +207,80 @@ mod tests {
 
     #[async_trait]
     impl MovieRepository for RepoWithExternalMovie {
-        async fn get_movie_by_external_id(&self, _: &ExternalMetadataId) -> Result<Option<Movie>, DomainError> { Ok(Some(self.0.clone())) }
-        async fn get_movie_by_id(&self, _: &MovieId) -> Result<Option<Movie>, DomainError> { panic!("unexpected") }
-        async fn get_movies_by_title_and_year(&self, _: &MovieTitle, _: &ReleaseYear) -> Result<Vec<Movie>, DomainError> { panic!("unexpected") }
-        async fn upsert_movie(&self, _: &Movie) -> Result<(), DomainError> { panic!("unexpected") }
-        async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> { panic!("unexpected") }
+        async fn get_movie_by_external_id(
+            &self,
+            _: &ExternalMetadataId,
+        ) -> Result<Option<Movie>, DomainError> {
+            Ok(Some(self.0.clone()))
+        }
+        async fn get_movie_by_id(&self, _: &MovieId) -> Result<Option<Movie>, DomainError> {
+            panic!("unexpected")
+        }
+        async fn get_movies_by_title_and_year(
+            &self,
+            _: &MovieTitle,
+            _: &ReleaseYear,
+        ) -> Result<Vec<Movie>, DomainError> {
+            panic!("unexpected")
+        }
+        async fn upsert_movie(&self, _: &Movie) -> Result<(), DomainError> {
+            panic!("unexpected")
+        }
+        async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> {
+            panic!("unexpected")
+        }
     }
 
     #[async_trait]
     impl MovieRepository for RepoEmpty {
-        async fn get_movie_by_external_id(&self, _: &ExternalMetadataId) -> Result<Option<Movie>, DomainError> { Ok(None) }
-        async fn get_movie_by_id(&self, _: &MovieId) -> Result<Option<Movie>, DomainError> { panic!("unexpected") }
-        async fn get_movies_by_title_and_year(&self, _: &MovieTitle, _: &ReleaseYear) -> Result<Vec<Movie>, DomainError> { Ok(vec![]) }
-        async fn upsert_movie(&self, _: &Movie) -> Result<(), DomainError> { panic!("unexpected") }
-        async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> { panic!("unexpected") }
+        async fn get_movie_by_external_id(
+            &self,
+            _: &ExternalMetadataId,
+        ) -> Result<Option<Movie>, DomainError> {
+            Ok(None)
+        }
+        async fn get_movie_by_id(&self, _: &MovieId) -> Result<Option<Movie>, DomainError> {
+            panic!("unexpected")
+        }
+        async fn get_movies_by_title_and_year(
+            &self,
+            _: &MovieTitle,
+            _: &ReleaseYear,
+        ) -> Result<Vec<Movie>, DomainError> {
+            Ok(vec![])
+        }
+        async fn upsert_movie(&self, _: &Movie) -> Result<(), DomainError> {
+            panic!("unexpected")
+        }
+        async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> {
+            panic!("unexpected")
+        }
     }
 
     #[async_trait]
     impl MovieRepository for RepoWithTitleMatch {
-        async fn get_movie_by_external_id(&self, _: &ExternalMetadataId) -> Result<Option<Movie>, DomainError> { panic!("unexpected") }
-        async fn get_movie_by_id(&self, _: &MovieId) -> Result<Option<Movie>, DomainError> { panic!("unexpected") }
-        async fn get_movies_by_title_and_year(&self, _: &MovieTitle, _: &ReleaseYear) -> Result<Vec<Movie>, DomainError> { Ok(vec![self.0.clone()]) }
-        async fn upsert_movie(&self, _: &Movie) -> Result<(), DomainError> { panic!("unexpected") }
-        async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> { panic!("unexpected") }
+        async fn get_movie_by_external_id(
+            &self,
+            _: &ExternalMetadataId,
+        ) -> Result<Option<Movie>, DomainError> {
+            panic!("unexpected")
+        }
+        async fn get_movie_by_id(&self, _: &MovieId) -> Result<Option<Movie>, DomainError> {
+            panic!("unexpected")
+        }
+        async fn get_movies_by_title_and_year(
+            &self,
+            _: &MovieTitle,
+            _: &ReleaseYear,
+        ) -> Result<Vec<Movie>, DomainError> {
+            Ok(vec![self.0.clone()])
+        }
+        async fn upsert_movie(&self, _: &Movie) -> Result<(), DomainError> {
+            panic!("unexpected")
+        }
+        async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> {
+            panic!("unexpected")
+        }
     }
 
     struct MetaReturnsMovie(Movie);
@@ -257,7 +308,9 @@ mod tests {
             &self,
             _: &MetadataSearchCriteria,
         ) -> Result<Movie, DomainError> {
-            Err(DomainError::InfrastructureError("metadata unavailable".into()))
+            Err(DomainError::InfrastructureError(
+                "metadata unavailable".into(),
+            ))
         }
         async fn get_poster_url(
             &self,

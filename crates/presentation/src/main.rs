@@ -10,15 +10,19 @@ use sqlx::sqlite::SqliteConnectOptions;
 use tokio::net::TcpListener;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
+use activitypub::{
+    ActivityPubEventHandler, ActivityPubPort, ActivityPubService, DomainUserRepoAdapter,
+    ReviewObjectHandler,
+};
 use application::{config::AppConfig, context::AppContext};
-use auth::{AuthConfig, Argon2PasswordHasher, JwtAuthService};
+use auth::{Argon2PasswordHasher, AuthConfig, JwtAuthService};
+use export::ExportAdapter;
 use metadata::MetadataClientImpl;
 use poster_fetcher::{PosterFetcherConfig, ReqwestPosterFetcher};
 use poster_storage::{PosterStorageAdapter, StorageConfig};
-use activitypub::{ActivityPubEventHandler, ActivityPubPort, ActivityPubService, DomainUserRepoAdapter, ReviewObjectHandler};
+use rss::RssAdapter;
 use sqlite::{SqliteMovieRepository, SqliteUserRepository};
 use sqlite_federation::SqliteFederationRepository;
-use rss::RssAdapter;
 use template_askama::AskamaHtmlRenderer;
 
 use presentation::{routes, state::AppState};
@@ -68,18 +72,23 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
         .context("Database migration failed")?;
 
     use domain::ports::{
-        AuthService, DiaryRepository, MetadataClient, MovieRepository, PasswordHasher,
-        PosterFetcherClient, PosterStorage, ReviewRepository, StatsRepository, UserRepository,
+        AuthService, DiaryExporter, DiaryRepository, MetadataClient, MovieRepository,
+        PasswordHasher, PosterFetcherClient, PosterStorage, ReviewRepository, StatsRepository,
+        UserRepository,
     };
-    let movie_repository: Arc<dyn MovieRepository>  = Arc::clone(&sqlite_repo) as _;
+    let movie_repository: Arc<dyn MovieRepository> = Arc::clone(&sqlite_repo) as _;
     let review_repository: Arc<dyn ReviewRepository> = Arc::clone(&sqlite_repo) as _;
-    let diary_repository: Arc<dyn DiaryRepository>  = Arc::clone(&sqlite_repo) as _;
-    let stats_repository: Arc<dyn StatsRepository>  = Arc::clone(&sqlite_repo) as _;
+    let diary_repository: Arc<dyn DiaryRepository> = Arc::clone(&sqlite_repo) as _;
+    let stats_repository: Arc<dyn StatsRepository> = Arc::clone(&sqlite_repo) as _;
 
-    let user_repository: Arc<dyn UserRepository> = Arc::new(SqliteUserRepository::new(pool.clone()));
-    let metadata_client: Arc<dyn MetadataClient> = Arc::new(MetadataClientImpl::new_omdb(omdb_api_key));
-    let poster_fetcher: Arc<dyn PosterFetcherClient> = Arc::new(ReqwestPosterFetcher::new(PosterFetcherConfig::from_env())?);
-    let poster_storage: Arc<dyn PosterStorage> = Arc::new(PosterStorageAdapter::from_config(storage_config));
+    let user_repository: Arc<dyn UserRepository> =
+        Arc::new(SqliteUserRepository::new(pool.clone()));
+    let metadata_client: Arc<dyn MetadataClient> =
+        Arc::new(MetadataClientImpl::new_omdb(omdb_api_key));
+    let poster_fetcher: Arc<dyn PosterFetcherClient> =
+        Arc::new(ReqwestPosterFetcher::new(PosterFetcherConfig::from_env())?);
+    let poster_storage: Arc<dyn PosterStorage> =
+        Arc::new(PosterStorageAdapter::from_config(storage_config));
     let auth_service: Arc<dyn AuthService> = Arc::new(JwtAuthService::new(auth_config));
     let password_hasher: Arc<dyn PasswordHasher> = Arc::new(Argon2PasswordHasher);
 
@@ -89,6 +98,7 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
         movie_repository: Arc::clone(&movie_repository),
         review_repository: Arc::clone(&review_repository),
         diary_repository: Arc::clone(&diary_repository),
+        diary_exporter: Arc::new(ExportAdapter) as Arc<dyn DiaryExporter>,
         stats_repository: Arc::clone(&stats_repository),
         metadata_client: Arc::clone(&metadata_client),
         poster_fetcher: Arc::clone(&poster_fetcher),
@@ -139,6 +149,7 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
         movie_repository,
         review_repository,
         diary_repository,
+        diary_exporter: Arc::new(ExportAdapter) as Arc<dyn DiaryExporter>,
         stats_repository,
         metadata_client,
         poster_fetcher,

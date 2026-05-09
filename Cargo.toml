@@ -11,6 +11,7 @@ members = [
     "crates/adapters/template-askama",
     "crates/adapters/activitypub",
     "crates/adapters/activitypub-base",
+    "crates/adapters/export",
     "crates/application",
     "crates/domain",
     "crates/presentation",
@@ -48,6 +49,7 @@ poster-fetcher = { path = "crates/adapters/poster-fetcher" }
 poster-storage = { path = "crates/adapters/poster-storage" }
 event-publisher = { path = "crates/adapters/event-publisher" }
 rss = { path = "crates/adapters/rss" }
+export = { path = "crates/adapters/export" }
 sqlite = { path = "crates/adapters/sqlite" }
 sqlite-federation = { path = "crates/adapters/sqlite-federation" }
 template-askama = { path = "crates/adapters/template-askama" }

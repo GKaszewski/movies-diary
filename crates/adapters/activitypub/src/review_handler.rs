@@ -9,7 +9,7 @@ use domain::{
 };
 use url::Url;
 
-use crate::objects::{review_to_ap_object, ReviewObject};
+use crate::objects::{ReviewObject, review_to_ap_object};
 use crate::remote_review_repository::RemoteReviewRepository;
 use crate::urls::{actor_url, review_url};
 
@@ -27,7 +27,10 @@ impl ApObjectHandler for ReviewObjectHandler {
         user_id: uuid::Uuid,
     ) -> anyhow::Result<Vec<(Url, serde_json::Value)>> {
         let domain_user_id = UserId::from_uuid(user_id);
-        let history = self.diary_repository.get_user_history(&domain_user_id).await?;
+        let history = self
+            .diary_repository
+            .get_user_history(&domain_user_id)
+            .await?;
 
         let mut results = Vec::new();
         for entry in history {
@@ -39,18 +42,33 @@ impl ApObjectHandler for ReviewObjectHandler {
             let ap_id = review_url(&self.base_url, review.id());
             let actor_url = actor_url(&self.base_url, user_id);
 
-            let movie = self.movie_repository.get_movie_by_id(review.movie_id()).await.ok().flatten();
-            let movie_title = movie.as_ref()
+            let movie = self
+                .movie_repository
+                .get_movie_by_id(review.movie_id())
+                .await
+                .ok()
+                .flatten();
+            let movie_title = movie
+                .as_ref()
                 .map(|m| m.title().value().to_string())
                 .unwrap_or_else(|| "Unknown".to_string());
-            let release_year = movie.as_ref()
+            let release_year = movie
+                .as_ref()
                 .map(|m| m.release_year().value())
                 .unwrap_or(0);
-            let poster_url = movie.as_ref()
+            let poster_url = movie
+                .as_ref()
                 .and_then(|m| m.poster_path())
                 .map(|p| format!("{}/posters/{}", self.base_url, p.value()));
 
-            let obj = review_to_ap_object(review, ap_id.clone(), actor_url, movie_title, release_year, poster_url);
+            let obj = review_to_ap_object(
+                review,
+                ap_id.clone(),
+                actor_url,
+                movie_title,
+                release_year,
+                poster_url,
+            );
             let json = serde_json::to_value(obj)?;
             results.push((ap_id, json));
         }
@@ -73,8 +91,14 @@ impl ApObjectHandler for ReviewObjectHandler {
 
         let actor_url_str = obj.attributed_to.to_string();
         let review_id = ReviewId::generate();
-        let movie_id = MovieId::from_uuid(uuid::Uuid::new_v5(&uuid::Uuid::NAMESPACE_URL, obj.movie_title.as_bytes()));
-        let user_id = UserId::from_uuid(uuid::Uuid::new_v5(&uuid::Uuid::NAMESPACE_URL, actor_url_str.as_bytes()));
+        let movie_id = MovieId::from_uuid(uuid::Uuid::new_v5(
+            &uuid::Uuid::NAMESPACE_URL,
+            obj.movie_title.as_bytes(),
+        ));
+        let user_id = UserId::from_uuid(uuid::Uuid::new_v5(
+            &uuid::Uuid::NAMESPACE_URL,
+            actor_url_str.as_bytes(),
+        ));
         let rating = Rating::new(obj.rating.min(5))?;
         let comment = obj.comment.map(Comment::new).transpose()?;
 
@@ -86,11 +110,19 @@ impl ApObjectHandler for ReviewObjectHandler {
             comment,
             obj.watched_at.naive_utc(),
             obj.published.naive_utc(),
-            ReviewSource::Remote { actor_url: actor_url_str },
+            ReviewSource::Remote {
+                actor_url: actor_url_str,
+            },
         );
 
         self.review_store
-            .save_remote_review(&review, obj.id.as_str(), &obj.movie_title, obj.release_year, obj.poster_url.as_deref())
+            .save_remote_review(
+                &review,
+                obj.id.as_str(),
+                &obj.movie_title,
+                obj.release_year,
+                obj.poster_url.as_deref(),
+            )
             .await?;
 
         Ok(())

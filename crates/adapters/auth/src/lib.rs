@@ -1,8 +1,8 @@
-use async_trait::async_trait;
 use argon2::{
     Argon2,
     password_hash::{PasswordHasher as _, PasswordVerifier, SaltString},
 };
+use async_trait::async_trait;
 use chrono::{Duration, Utc};
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use rand_core::OsRng;
@@ -31,7 +31,10 @@ impl AuthConfig {
             .ok()
             .and_then(|v| v.parse().ok())
             .unwrap_or(86400u64);
-        Ok(Self { secret, ttl_seconds })
+        Ok(Self {
+            secret,
+            ttl_seconds,
+        })
     }
 }
 

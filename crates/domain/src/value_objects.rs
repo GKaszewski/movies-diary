@@ -184,10 +184,18 @@ impl Username {
         let s = raw.trim().to_lowercase();
         if s.len() < Self::MIN_LENGTH || s.len() > Self::MAX_LENGTH {
             return Err(DomainError::ValidationError(
-                format!("Username must be {}–{} characters", Self::MIN_LENGTH, Self::MAX_LENGTH).into(),
+                format!(
+                    "Username must be {}–{} characters",
+                    Self::MIN_LENGTH,
+                    Self::MAX_LENGTH
+                )
+                .into(),
             ));
         }
-        if !s.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-') {
+        if !s
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+        {
             return Err(DomainError::ValidationError(
                 "Username may only contain letters, digits, underscores, and hyphens".into(),
             ));

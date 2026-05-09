@@ -99,8 +99,20 @@ fn draw_login(frame: &mut Frame, area: Rect, state: &LoginState) {
     .split(popup);
 
     let pass_masked = "*".repeat(state.password.len());
-    render_input(frame, rows[1], "Email", &state.email, state.focused == LoginField::Email);
-    render_input(frame, rows[3], "Password", &pass_masked, state.focused == LoginField::Password);
+    render_input(
+        frame,
+        rows[1],
+        "Email",
+        &state.email,
+        state.focused == LoginField::Email,
+    );
+    render_input(
+        frame,
+        rows[3],
+        "Password",
+        &pass_masked,
+        state.focused == LoginField::Password,
+    );
     frame.render_widget(
         Paragraph::new("Tab: next field   Enter: login").alignment(Alignment::Center),
         rows[4],
@@ -175,9 +187,16 @@ fn draw_diary(frame: &mut Frame, area: Rect, state: &DiaryState) {
     let can_load_prev = state.offset > 0;
     let page = state.offset / 20 + 1;
     let total_pages = state.total.div_ceil(20).max(1);
-    let mut title = format!(" Diary ({} entries, page {}/{}) ", state.total, page, total_pages);
-    if can_load_prev { title.push_str("[b: prev] "); }
-    if can_load_more { title.push_str("[m: next] "); }
+    let mut title = format!(
+        " Diary ({} entries, page {}/{}) ",
+        state.total, page, total_pages
+    );
+    if can_load_prev {
+        title.push_str("[b: prev] ");
+    }
+    if can_load_more {
+        title.push_str("[m: next] ");
+    }
     let mut list_state = ListState::default();
     list_state.select(Some(state.selected));
     let list = List::new(items).block(Block::default().title(title).borders(Borders::ALL));
@@ -273,23 +292,61 @@ fn draw_add_review(frame: &mut Frame, area: Rect, state: &AddReviewState) {
     ])
     .split(inner);
 
-    render_input(frame, rows[0], "External ID (TMDB/OMDB)", &state.external_id, state.focused == AddReviewField::ExternalId);
-    render_input(frame, rows[1], "Title", &state.title, state.focused == AddReviewField::Title);
-    render_input(frame, rows[2], "Year", &state.year, state.focused == AddReviewField::Year);
+    render_input(
+        frame,
+        rows[0],
+        "External ID (TMDB/OMDB)",
+        &state.external_id,
+        state.focused == AddReviewField::ExternalId,
+    );
+    render_input(
+        frame,
+        rows[1],
+        "Title",
+        &state.title,
+        state.focused == AddReviewField::Title,
+    );
+    render_input(
+        frame,
+        rows[2],
+        "Year",
+        &state.year,
+        state.focused == AddReviewField::Year,
+    );
 
     let rating_active = state.focused == AddReviewField::Rating;
     frame.render_widget(
-        Paragraph::new(format!("{}  \u{2190} \u{2192} to adjust", stars(state.rating))).block(
+        Paragraph::new(format!(
+            "{}  \u{2190} \u{2192} to adjust",
+            stars(state.rating)
+        ))
+        .block(
             Block::default()
                 .title("Rating (0-5)")
                 .borders(Borders::ALL)
-                .border_style(if rating_active { Style::default().fg(Color::Yellow) } else { Style::default() }),
+                .border_style(if rating_active {
+                    Style::default().fg(Color::Yellow)
+                } else {
+                    Style::default()
+                }),
         ),
         rows[3],
     );
 
-    render_input(frame, rows[4], "Watched at (YYYY-MM-DDTHH:MM:SS)", &state.watched_at, state.focused == AddReviewField::WatchedAt);
-    render_input(frame, rows[5], "Comment (optional)", &state.comment, state.focused == AddReviewField::Comment);
+    render_input(
+        frame,
+        rows[4],
+        "Watched at (YYYY-MM-DDTHH:MM:SS)",
+        &state.watched_at,
+        state.focused == AddReviewField::WatchedAt,
+    );
+    render_input(
+        frame,
+        rows[5],
+        "Comment (optional)",
+        &state.comment,
+        state.focused == AddReviewField::Comment,
+    );
 
     let submit_style = if state.focused == AddReviewField::Submit {
         Style::default()
@@ -507,7 +564,13 @@ fn draw_settings(frame: &mut Frame, area: Rect, state: &SettingsState) {
     ])
     .split(inner);
 
-    render_input(frame, rows[0], "API URL", &state.api_url, state.focused == SettingsField::ApiUrl);
+    render_input(
+        frame,
+        rows[0],
+        "API URL",
+        &state.api_url,
+        state.focused == SettingsField::ApiUrl,
+    );
 
     let save_style = if state.focused == SettingsField::Save {
         Style::default()
@@ -555,11 +618,22 @@ fn draw_status_bar(frame: &mut Frame, area: Rect, status: Option<&StatusMsg>, lo
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 fn render_input(frame: &mut Frame, area: Rect, title: &str, value: &str, active: bool) {
-    let text = if active { format!("{value}_") } else { value.to_string() };
-    let border_style = if active { Style::default().fg(Color::Yellow) } else { Style::default() };
+    let text = if active {
+        format!("{value}_")
+    } else {
+        value.to_string()
+    };
+    let border_style = if active {
+        Style::default().fg(Color::Yellow)
+    } else {
+        Style::default()
+    };
     frame.render_widget(
         Paragraph::new(text).block(
-            Block::default().title(title).borders(Borders::ALL).border_style(border_style),
+            Block::default()
+                .title(title)
+                .borders(Borders::ALL)
+                .border_style(border_style),
         ),
         area,
     );

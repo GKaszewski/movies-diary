@@ -120,12 +120,12 @@ pub fn create_event_channel(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::{Arc, Mutex};
     use domain::{
         errors::DomainError,
         events::DomainEvent,
         value_objects::{ExternalMetadataId, MovieId},
     };
+    use std::sync::{Arc, Mutex};
 
     struct RecordingHandler {
         calls: Arc<Mutex<Vec<String>>>,
@@ -147,7 +147,9 @@ mod tests {
     #[tokio::test]
     async fn single_handler_receives_event() {
         let calls = Arc::new(Mutex::new(vec![]));
-        let handler = RecordingHandler { calls: Arc::clone(&calls) };
+        let handler = RecordingHandler {
+            calls: Arc::clone(&calls),
+        };
         let config = EventPublisherConfig { channel_buffer: 8 };
         let (publisher, worker) = create_event_channel(config, vec![Box::new(handler)]);
 
@@ -168,13 +170,15 @@ mod tests {
     async fn multiple_handlers_all_receive_event() {
         let calls1 = Arc::new(Mutex::new(vec![]));
         let calls2 = Arc::new(Mutex::new(vec![]));
-        let handler1 = RecordingHandler { calls: Arc::clone(&calls1) };
-        let handler2 = RecordingHandler { calls: Arc::clone(&calls2) };
+        let handler1 = RecordingHandler {
+            calls: Arc::clone(&calls1),
+        };
+        let handler2 = RecordingHandler {
+            calls: Arc::clone(&calls2),
+        };
         let config = EventPublisherConfig { channel_buffer: 8 };
-        let (publisher, worker) = create_event_channel(
-            config,
-            vec![Box::new(handler1), Box::new(handler2)],
-        );
+        let (publisher, worker) =
+            create_event_channel(config, vec![Box::new(handler1), Box::new(handler2)]);
 
         let handle = tokio::spawn(worker.run());
 
@@ -201,12 +205,12 @@ mod tests {
         }
 
         let calls = Arc::new(Mutex::new(vec![]));
-        let good = RecordingHandler { calls: Arc::clone(&calls) };
+        let good = RecordingHandler {
+            calls: Arc::clone(&calls),
+        };
         let config = EventPublisherConfig { channel_buffer: 8 };
-        let (publisher, worker) = create_event_channel(
-            config,
-            vec![Box::new(FailingHandler), Box::new(good)],
-        );
+        let (publisher, worker) =
+            create_event_channel(config, vec![Box::new(FailingHandler), Box::new(good)]);
 
         let handle = tokio::spawn(worker.run());
 

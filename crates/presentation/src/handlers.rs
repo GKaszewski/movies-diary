@@ -14,13 +14,17 @@ pub mod html {
     use uuid::Uuid;
 
     use application::{
-        commands::{DeleteReviewCommand, LoginCommand, RegisterCommand},
+        commands::{DeleteReviewCommand, ExportCommand, LoginCommand, RegisterCommand},
         ports::{
             FollowersPageData, FollowingPageData, HtmlPageContext, LoginPageData,
             NewReviewPageData, RegisterPageData, RemoteActorView,
         },
-        use_cases::{delete_review, log_review, login as login_uc, register as register_uc},
+        use_cases::{
+            delete_review, export_diary as export_diary_uc, log_review, login as login_uc,
+            register as register_uc,
+        },
     };
+    use domain::models::ExportFormat;
     use domain::{errors::DomainError, value_objects::UserId};
 
     use crate::{
@@ -260,6 +264,45 @@ pub mod html {
             Err(DomainError::Unauthorized(_)) => StatusCode::FORBIDDEN.into_response(),
             Err(e) => {
                 tracing::error!("delete_review html error: {:?}", e);
+                StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            }
+        }
+    }
+
+    pub async fn get_export(
+        State(state): State<AppState>,
+        RequiredCookieUser(user_id): RequiredCookieUser,
+        Query(params): Query<crate::dtos::ExportQueryParams>,
+    ) -> impl IntoResponse {
+        let format = match params.format.as_str() {
+            "csv" => ExportFormat::Csv,
+            "json" => ExportFormat::Json,
+            _ => return StatusCode::BAD_REQUEST.into_response(),
+        };
+        let (content_type, filename) = match &format {
+            ExportFormat::Csv => ("text/csv; charset=utf-8", "diary.csv"),
+            ExportFormat::Json => ("application/json", "diary.json"),
+        };
+        let cmd = ExportCommand {
+            user_id: user_id.value(),
+            format,
+        };
+        match export_diary_uc::execute(&state.app_ctx, cmd).await {
+            Ok(bytes) => (
+                StatusCode::OK,
+                [
+                    (axum::http::header::CONTENT_TYPE, content_type.to_string()),
+                    (
+                        axum::http::header::CONTENT_DISPOSITION,
+                        format!("attachment; filename=\"{}\"", filename),
+                    ),
+                ],
+                bytes,
+            )
+                .into_response(),
+            Err(DomainError::Unauthorized(_)) => StatusCode::FORBIDDEN.into_response(),
+            Err(e) => {
+                tracing::error!("export error: {:?}", e);
                 StatusCode::INTERNAL_SERVER_ERROR.into_response()
             }
         }

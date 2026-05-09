@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use domain::ports::{
-    AuthService, DiaryRepository, EventPublisher, MetadataClient, MovieRepository,
+    AuthService, DiaryExporter, DiaryRepository, EventPublisher, MetadataClient, MovieRepository,
     PasswordHasher, PosterFetcherClient, PosterStorage, ReviewRepository, StatsRepository,
     UserRepository,
 };
@@ -13,6 +13,7 @@ pub struct AppContext {
     pub movie_repository: Arc<dyn MovieRepository>,
     pub review_repository: Arc<dyn ReviewRepository>,
     pub diary_repository: Arc<dyn DiaryRepository>,
+    pub diary_exporter: Arc<dyn DiaryExporter>,
     pub stats_repository: Arc<dyn StatsRepository>,
     pub metadata_client: Arc<dyn MetadataClient>,
     pub poster_fetcher: Arc<dyn PosterFetcherClient>,

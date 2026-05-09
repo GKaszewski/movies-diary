@@ -63,11 +63,7 @@ pub async fn get_local_actor(
         None => {
             let kp = generate_actor_keypair()?;
             data.federation_repo
-                .save_local_actor_keypair(
-                    user_id,
-                    kp.public_key.clone(),
-                    kp.private_key.clone(),
-                )
+                .save_local_actor_keypair(user_id, kp.public_key.clone(), kp.private_key.clone())
                 .await?;
             (kp.public_key, kp.private_key)
         }
@@ -179,10 +175,7 @@ impl Object for DbActor {
         Ok(())
     }
 
-    async fn from_json(
-        json: Self::Kind,
-        data: &Data<Self::DataType>,
-    ) -> Result<Self, Self::Error> {
+    async fn from_json(json: Self::Kind, data: &Data<Self::DataType>) -> Result<Self, Self::Error> {
         let actor = RemoteActor {
             url: json.id.inner().to_string(),
             handle: json.preferred_username.clone(),

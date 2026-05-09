@@ -2,20 +2,22 @@ use async_trait::async_trait;
 use chrono::Utc;
 use sqlx::SqlitePool;
 
+use super::models::UserSummaryRow;
 use domain::{
     errors::DomainError,
     models::User,
     ports::UserRepository,
     value_objects::{Email, PasswordHash, UserId, Username},
 };
-use super::models::UserSummaryRow;
 
 pub struct SqliteUserRepository {
     pool: SqlitePool,
 }
 
 impl SqliteUserRepository {
-    pub fn new(pool: SqlitePool) -> Self { Self { pool } }
+    pub fn new(pool: SqlitePool) -> Self {
+        Self { pool }
+    }
 
     fn map_err(e: sqlx::Error) -> DomainError {
         tracing::error!("Database error: {:?}", e);
@@ -30,13 +32,18 @@ impl SqliteUserRepository {
     ) -> Result<User, DomainError> {
         let id = uuid::Uuid::parse_str(&id_str)
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
-        let email = Email::new(email_str)
-            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        let email =
+            Email::new(email_str).map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
         let username = Username::new(username_str)
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
         let hash = PasswordHash::new(hash_str)
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
-        Ok(User::from_persistence(UserId::from_uuid(id), email, username, hash))
+        Ok(User::from_persistence(
+            UserId::from_uuid(id),
+            email,
+            username,
+            hash,
+        ))
     }
 }
 
@@ -52,8 +59,15 @@ impl UserRepository for SqliteUserRepository {
         .await
         .map_err(Self::map_err)?;
 
-        row.map(|r| Self::row_to_user(r.id.unwrap_or_default(), r.email, r.username, r.password_hash))
-           .transpose()
+        row.map(|r| {
+            Self::row_to_user(
+                r.id.unwrap_or_default(),
+                r.email,
+                r.username,
+                r.password_hash,
+            )
+        })
+        .transpose()
     }
 
     async fn find_by_username(&self, username: &Username) -> Result<Option<User>, DomainError> {
@@ -66,18 +80,29 @@ impl UserRepository for SqliteUserRepository {
         .await
         .map_err(Self::map_err)?;
 
-        row.map(|r| Self::row_to_user(r.id.unwrap_or_default(), r.email, r.username, r.password_hash))
-           .transpose()
+        row.map(|r| {
+            Self::row_to_user(
+                r.id.unwrap_or_default(),
+                r.email,
+                r.username,
+                r.password_hash,
+            )
+        })
+        .transpose()
     }
 
     async fn save(&self, user: &User) -> Result<(), DomainError> {
         // Check email uniqueness first (clearer error than INSERT OR IGNORE)
         if self.find_by_email(user.email()).await?.is_some() {
-            return Err(DomainError::ValidationError("Email already registered".into()));
+            return Err(DomainError::ValidationError(
+                "Email already registered".into(),
+            ));
         }
         // Check username uniqueness
         if self.find_by_username(user.username()).await?.is_some() {
-            return Err(DomainError::ValidationError("Username already taken".into()));
+            return Err(DomainError::ValidationError(
+                "Username already taken".into(),
+            ));
         }
 
         let id = user.id().value().to_string();
@@ -107,8 +132,15 @@ impl UserRepository for SqliteUserRepository {
         .await
         .map_err(Self::map_err)?;
 
-        row.map(|r| Self::row_to_user(r.id.unwrap_or_default(), r.email, r.username, r.password_hash))
-           .transpose()
+        row.map(|r| {
+            Self::row_to_user(
+                r.id.unwrap_or_default(),
+                r.email,
+                r.username,
+                r.password_hash,
+            )
+        })
+        .transpose()
     }
 
     async fn list_with_stats(&self) -> Result<Vec<domain::models::UserSummary>, DomainError> {
@@ -175,10 +207,7 @@ mod tests {
         .await
         .unwrap();
 
-        let result = repo
-            .find_by_id(&UserId::from_uuid(id))
-            .await
-            .unwrap();
+        let result = repo.find_by_id(&UserId::from_uuid(id)).await.unwrap();
         assert!(result.is_some());
         assert_eq!(result.unwrap().email().value(), "test@example.com");
     }

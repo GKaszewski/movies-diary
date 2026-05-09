@@ -1,8 +1,11 @@
+use crate::{context::AppContext, queries::GetActivityFeedQuery};
 use domain::{
     errors::DomainError,
-    models::{FeedEntry, collections::{PageParams, Paginated}},
+    models::{
+        FeedEntry,
+        collections::{PageParams, Paginated},
+    },
 };
-use crate::{context::AppContext, queries::GetActivityFeedQuery};
 
 pub async fn execute(
     ctx: &AppContext,

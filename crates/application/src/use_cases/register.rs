@@ -1,4 +1,8 @@
-use domain::{errors::DomainError, models::User, value_objects::{Email, Username}};
+use domain::{
+    errors::DomainError,
+    models::User,
+    value_objects::{Email, Username},
+};
 
 use crate::{commands::RegisterCommand, context::AppContext};
 
@@ -19,13 +23,24 @@ pub async fn execute(ctx: &AppContext, cmd: RegisterCommand) -> Result<(), Domai
     let username = Username::new(cmd.username)?;
 
     if ctx.user_repository.find_by_email(&email).await?.is_some() {
-        return Err(DomainError::ValidationError("Email already registered".into()));
+        return Err(DomainError::ValidationError(
+            "Email already registered".into(),
+        ));
     }
 
-    if ctx.user_repository.find_by_username(&username).await?.is_some() {
-        return Err(DomainError::ValidationError("Username already taken".into()));
+    if ctx
+        .user_repository
+        .find_by_username(&username)
+        .await?
+        .is_some()
+    {
+        return Err(DomainError::ValidationError(
+            "Username already taken".into(),
+        ));
     }
 
     let hash = ctx.password_hasher.hash(&cmd.password).await?;
-    ctx.user_repository.save(&User::new(email, username, hash)).await
+    ctx.user_repository
+        .save(&User::new(email, username, hash))
+        .await
 }

@@ -1,6 +1,6 @@
 use activitypub_federation::{
     config::Data,
-    fetch::webfinger::{build_webfinger_response, extract_webfinger_name, Webfinger},
+    fetch::webfinger::{Webfinger, build_webfinger_response, extract_webfinger_name},
 };
 use axum::{
     extract::Query,
@@ -33,10 +33,6 @@ pub async fn webfinger_handler(
     let ap_id = crate::urls::actor_url(&data.base_url, user.id);
 
     let wf: Webfinger = build_webfinger_response(query.resource, ap_id);
-    let body = serde_json::to_string(&wf)
-        .map_err(|e| Error::from(anyhow::anyhow!(e)))?;
-    Ok((
-        [(header::CONTENT_TYPE, "application/jrd+json")],
-        body,
-    ).into_response())
+    let body = serde_json::to_string(&wf).map_err(|e| Error::from(anyhow::anyhow!(e)))?;
+    Ok(([(header::CONTENT_TYPE, "application/jrd+json")], body).into_response())
 }

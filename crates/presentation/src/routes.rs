@@ -36,7 +36,11 @@ impl RateLimiter {
         let prev = self.window.load(Ordering::Acquire);
         if now != prev {
             // compare_exchange ensures only one thread wins the window reset
-            if self.window.compare_exchange(prev, now, Ordering::AcqRel, Ordering::Relaxed).is_ok() {
+            if self
+                .window
+                .compare_exchange(prev, now, Ordering::AcqRel, Ordering::Relaxed)
+                .is_ok()
+            {
                 self.count.store(1, Ordering::Release);
                 return true;
             }
@@ -130,6 +134,7 @@ fn html_routes(rate_limit: u64) -> Router<AppState> {
             "/posters/{*path}",
             routing::get(handlers::posters::get_poster),
         )
+        .route("/diary/export", routing::get(handlers::html::get_export))
         .route("/feed.rss", routing::get(handlers::rss::get_feed))
         .route(
             "/users/{id}/feed.rss",

@@ -1,12 +1,12 @@
-use askama::Template;
-use chrono::Datelike;
 use application::ports::{
     ActivityFeedPageData, FollowersPageData, FollowingPageData, HtmlPageContext, HtmlRenderer,
     LoginPageData, NewReviewPageData, ProfilePageData, RegisterPageData, UsersPageData,
 };
+use askama::Template;
+use chrono::Datelike;
 use domain::models::{
-    DiaryEntry, FeedEntry, MonthActivity, MonthlyRating, ReviewSource, UserStats,
-    UserTrends, collections::Paginated,
+    DiaryEntry, FeedEntry, MonthActivity, MonthlyRating, ReviewSource, UserStats, UserTrends,
+    collections::Paginated,
 };
 
 struct PageItem {
@@ -31,9 +31,17 @@ fn build_page_items(total_pages: u32, current_page: u32) -> Vec<PageItem> {
     let mut items = Vec::new();
     for (i, &p) in pages.iter().enumerate() {
         if i > 0 && p > pages[i - 1] + 1 {
-            items.push(PageItem { number: 0, is_current: false, is_ellipsis: true });
+            items.push(PageItem {
+                number: 0,
+                is_current: false,
+                is_ellipsis: true,
+            });
         }
-        items.push(PageItem { number: p, is_current: p == current_page, is_ellipsis: false });
+        items.push(PageItem {
+            number: p,
+            is_current: p == current_page,
+            is_ellipsis: false,
+        });
     }
     items
 }
@@ -162,40 +170,71 @@ struct HeatmapCell {
 fn relative_time(dt: chrono::NaiveDateTime) -> String {
     let now = chrono::Utc::now().naive_utc();
     let diff = now.signed_duration_since(dt);
-    if diff.num_seconds() <= 0 { return "just now".to_string(); }
+    if diff.num_seconds() <= 0 {
+        return "just now".to_string();
+    }
     let minutes = diff.num_minutes();
     let hours = diff.num_hours();
     let days = diff.num_days();
-    if minutes < 1 { return "just now".to_string(); }
-    if minutes < 60 { return format!("{} min ago", minutes); }
-    if hours < 24 { return format!("{} h ago", hours); }
-    if days == 1 { return "yesterday".to_string(); }
-    if days < 30 { return format!("{} days ago", days); }
+    if minutes < 1 {
+        return "just now".to_string();
+    }
+    if minutes < 60 {
+        return format!("{} min ago", minutes);
+    }
+    if hours < 24 {
+        return format!("{} h ago", hours);
+    }
+    if days == 1 {
+        return "yesterday".to_string();
+    }
+    if days < 30 {
+        return format!("{} days ago", days);
+    }
     dt.format("%b %-d, %Y").to_string()
 }
 
 fn build_heatmap(history: &[MonthActivity]) -> Vec<HeatmapCell> {
     let current_year = chrono::Utc::now().year();
     let count_for = |m: &str| -> i64 {
-        history.iter().find(|a| a.year_month == format!("{}-{}", current_year, m))
+        history
+            .iter()
+            .find(|a| a.year_month == format!("{}-{}", current_year, m))
             .map(|a| a.count)
             .unwrap_or(0)
     };
     let months = [
-        ("01", "Jan"), ("02", "Feb"), ("03", "Mar"), ("04", "Apr"),
-        ("05", "May"), ("06", "Jun"), ("07", "Jul"), ("08", "Aug"),
-        ("09", "Sep"), ("10", "Oct"), ("11", "Nov"), ("12", "Dec"),
+        ("01", "Jan"),
+        ("02", "Feb"),
+        ("03", "Mar"),
+        ("04", "Apr"),
+        ("05", "May"),
+        ("06", "Jun"),
+        ("07", "Jul"),
+        ("08", "Aug"),
+        ("09", "Sep"),
+        ("10", "Oct"),
+        ("11", "Nov"),
+        ("12", "Dec"),
     ];
     let counts: Vec<i64> = months.iter().map(|(m, _)| count_for(m)).collect();
     let max = counts.iter().copied().max().unwrap_or(0).max(1);
-    months.iter().zip(counts.iter()).map(|((_, label), &count)| {
-        let alpha = if count == 0 { 0.05 } else { 0.15 + 0.75 * (count as f64 / max as f64) };
-        HeatmapCell {
-            month_label: label.to_string(),
-            count,
-            alpha,
-        }
-    }).collect()
+    months
+        .iter()
+        .zip(counts.iter())
+        .map(|((_, label), &count)| {
+            let alpha = if count == 0 {
+                0.05
+            } else {
+                0.15 + 0.75 * (count as f64 / max as f64)
+            };
+            HeatmapCell {
+                month_label: label.to_string(),
+                count,
+                alpha,
+            }
+        })
+        .collect()
 }
 
 fn bar_height_px(avg_rating: f64) -> i64 {
@@ -211,7 +250,11 @@ impl AskamaHtmlRenderer {
 }
 
 impl HtmlRenderer for AskamaHtmlRenderer {
-    fn render_diary_page(&self, data: &Paginated<DiaryEntry>, ctx: HtmlPageContext) -> Result<String, String> {
+    fn render_diary_page(
+        &self,
+        data: &Paginated<DiaryEntry>,
+        ctx: HtmlPageContext,
+    ) -> Result<String, String> {
         let has_more = (data.offset + data.limit) < data.total_count as u32;
         let (total_pages, current_page) = if data.limit > 0 {
             let tp = ((data.total_count + data.limit as u64 - 1) / data.limit as u64) as u32;
@@ -262,8 +305,14 @@ impl HtmlRenderer for AskamaHtmlRenderer {
         let limit = data.limit;
         let total_pages = if limit > 0 {
             ((data.entries.total_count + limit as u64 - 1) / limit as u64) as u32
-        } else { 0 };
-        let current_page = if limit > 0 { data.current_offset / limit } else { 0 };
+        } else {
+            0
+        };
+        let current_page = if limit > 0 {
+            data.current_offset / limit
+        } else {
+            0
+        };
         ActivityFeedTemplate {
             entries: &data.entries.items,
             current_offset: data.current_offset,
@@ -277,21 +326,30 @@ impl HtmlRenderer for AskamaHtmlRenderer {
     }
 
     fn render_users_page(&self, data: UsersPageData) -> Result<String, String> {
-        let users: Vec<UserSummaryView> = data.users.iter().map(|u| {
-            let email = u.email();
-            let display_name = email.split('@').next().unwrap_or(email).to_string();
-            let initial = display_name.chars().next().unwrap_or('?').to_ascii_uppercase();
-            let avg_rating_display = u.avg_rating
-                .map(|r| format!("{:.1}", r))
-                .unwrap_or_else(|| "—".to_string());
-            UserSummaryView {
-                user_id: u.user_id.value(),
-                display_name,
-                initial,
-                avg_rating_display,
-                total_movies: u.total_movies,
-            }
-        }).collect();
+        let users: Vec<UserSummaryView> = data
+            .users
+            .iter()
+            .map(|u| {
+                let email = u.email();
+                let display_name = email.split('@').next().unwrap_or(email).to_string();
+                let initial = display_name
+                    .chars()
+                    .next()
+                    .unwrap_or('?')
+                    .to_ascii_uppercase();
+                let avg_rating_display = u
+                    .avg_rating
+                    .map(|r| format!("{:.1}", r))
+                    .unwrap_or_else(|| "—".to_string());
+                UserSummaryView {
+                    user_id: u.user_id.value(),
+                    display_name,
+                    initial,
+                    avg_rating_display,
+                    total_movies: u.total_movies,
+                }
+            })
+            .collect();
         UsersTemplate {
             users,
             ctx: &data.ctx,
@@ -301,29 +359,60 @@ impl HtmlRenderer for AskamaHtmlRenderer {
     }
 
     fn render_profile_page(&self, data: ProfilePageData) -> Result<String, String> {
-        let heatmap = data.history.as_deref()
+        let heatmap = data
+            .history
+            .as_deref()
             .map(|h| build_heatmap(h))
             .unwrap_or_default();
-        let profile_display_name = data.profile_user_email
-            .split('@').next().unwrap_or(&data.profile_user_email).to_string();
-        let monthly_rating_rows: Vec<MonthlyRatingRow<'_>> = data.trends.as_ref()
-            .map(|t| t.monthly_ratings.iter().map(|r| MonthlyRatingRow {
-                bar_height_px: bar_height_px(r.avg_rating),
-                rating: r,
-            }).collect())
+        let profile_display_name = data
+            .profile_user_email
+            .split('@')
+            .next()
+            .unwrap_or(&data.profile_user_email)
+            .to_string();
+        let monthly_rating_rows: Vec<MonthlyRatingRow<'_>> = data
+            .trends
+            .as_ref()
+            .map(|t| {
+                t.monthly_ratings
+                    .iter()
+                    .map(|r| MonthlyRatingRow {
+                        bar_height_px: bar_height_px(r.avg_rating),
+                        rating: r,
+                    })
+                    .collect()
+            })
             .unwrap_or_default();
-        let total_pages = data.entries.as_ref()
-            .map(|e| if e.limit > 0 { ((e.total_count + e.limit as u64 - 1) / e.limit as u64) as u32 } else { 0 })
+        let total_pages = data
+            .entries
+            .as_ref()
+            .map(|e| {
+                if e.limit > 0 {
+                    ((e.total_count + e.limit as u64 - 1) / e.limit as u64) as u32
+                } else {
+                    0
+                }
+            })
             .unwrap_or(0);
-        let current_page = if data.limit > 0 { data.current_offset / data.limit } else { 0 };
-        let avg_rating_display = data.stats.avg_rating
+        let current_page = if data.limit > 0 {
+            data.current_offset / data.limit
+        } else {
+            0
+        };
+        let avg_rating_display = data
+            .stats
+            .avg_rating
             .map(|r| format!("{:.1}", r))
             .unwrap_or_else(|| "—".to_string());
-        let favorite_director_display = data.stats.favorite_director
+        let favorite_director_display = data
+            .stats
+            .favorite_director
             .as_deref()
             .unwrap_or("—")
             .to_string();
-        let most_active_month_display = data.stats.most_active_month
+        let most_active_month_display = data
+            .stats
+            .most_active_month
             .as_deref()
             .unwrap_or("—")
             .to_string();
@@ -349,11 +438,15 @@ impl HtmlRenderer for AskamaHtmlRenderer {
             error: data.error,
             following_count: data.following_count,
             followers_count: data.followers_count,
-            pending_followers: data.pending_followers.into_iter().map(|a| RemoteActorData {
-                handle: a.handle,
-                url: a.url,
-                display_name: a.display_name,
-            }).collect(),
+            pending_followers: data
+                .pending_followers
+                .into_iter()
+                .map(|a| RemoteActorData {
+                    handle: a.handle,
+                    url: a.url,
+                    display_name: a.display_name,
+                })
+                .collect(),
         }
         .render()
         .map_err(|e| e.to_string())
@@ -363,11 +456,15 @@ impl HtmlRenderer for AskamaHtmlRenderer {
         FollowingTemplate {
             ctx: data.ctx,
             user_id: data.user_id,
-            actors: data.actors.into_iter().map(|a| RemoteActorData {
-                handle: a.handle,
-                display_name: a.display_name,
-                url: a.url,
-            }).collect(),
+            actors: data
+                .actors
+                .into_iter()
+                .map(|a| RemoteActorData {
+                    handle: a.handle,
+                    display_name: a.display_name,
+                    url: a.url,
+                })
+                .collect(),
             error: data.error,
         }
         .render()
@@ -378,11 +475,15 @@ impl HtmlRenderer for AskamaHtmlRenderer {
         FollowersTemplate {
             ctx: data.ctx,
             user_id: data.user_id,
-            actors: data.actors.into_iter().map(|a| RemoteActorData {
-                handle: a.handle,
-                display_name: a.display_name,
-                url: a.url,
-            }).collect(),
+            actors: data
+                .actors
+                .into_iter()
+                .map(|a| RemoteActorData {
+                    handle: a.handle,
+                    display_name: a.display_name,
+                    url: a.url,
+                })
+                .collect(),
             error: data.error,
         }
         .render()

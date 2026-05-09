@@ -123,7 +123,10 @@ impl ApiClient {
         let resp = self
             .http
             .post(format!("{}/api/auth/login", self.url()))
-            .json(&LoginRequest { email: email.into(), password: password.into() })
+            .json(&LoginRequest {
+                email: email.into(),
+                password: password.into(),
+            })
             .send()
             .await?;
         Ok(check_status(resp).await?.json().await?)
@@ -159,11 +162,7 @@ impl ApiClient {
         Ok(check_status(resp).await?.json().await?)
     }
 
-    pub async fn create_review(
-        &self,
-        token: &str,
-        req: &LogReviewRequest,
-    ) -> Result<(), ApiError> {
+    pub async fn create_review(&self, token: &str, req: &LogReviewRequest) -> Result<(), ApiError> {
         let resp = self
             .http
             .post(format!("{}/api/reviews", self.url()))

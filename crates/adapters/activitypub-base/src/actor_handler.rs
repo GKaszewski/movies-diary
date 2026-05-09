@@ -3,7 +3,7 @@ use activitypub_federation::{
 };
 use axum::extract::Path;
 
-use crate::actors::{get_local_actor, Person};
+use crate::actors::{Person, get_local_actor};
 use crate::data::FederationData;
 use crate::error::Error;
 

@@ -259,6 +259,16 @@ pub struct ProfileQueryParams {
     pub error: Option<String>,
 }
 
+#[derive(serde::Deserialize)]
+pub struct ExportQueryParams {
+    #[serde(default = "default_export_format")]
+    pub format: String,
+}
+
+fn default_export_format() -> String {
+    "csv".to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -345,7 +355,10 @@ mod tests {
             movie_id: None,
         };
         let query = GetDiaryQuery::from(params);
-        assert!(matches!(query.sort_by, Some(domain::models::SortDirection::Ascending)));
+        assert!(matches!(
+            query.sort_by,
+            Some(domain::models::SortDirection::Ascending)
+        ));
     }
 
     #[test]
@@ -357,7 +370,10 @@ mod tests {
             movie_id: None,
         };
         let query = GetDiaryQuery::from(params);
-        assert!(matches!(query.sort_by, Some(domain::models::SortDirection::Descending)));
+        assert!(matches!(
+            query.sort_by,
+            Some(domain::models::SortDirection::Descending)
+        ));
     }
 
     #[test]

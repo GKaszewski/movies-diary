@@ -40,7 +40,13 @@ impl MetadataClient for MetadataClientImpl {
         criteria: &MetadataSearchCriteria,
     ) -> Result<Movie, DomainError> {
         let pm = self.provider.fetch(criteria).await?;
-        Ok(Movie::new(Some(pm.imdb_id), pm.title, pm.release_year, pm.director, None))
+        Ok(Movie::new(
+            Some(pm.imdb_id),
+            pm.title,
+            pm.release_year,
+            pm.director,
+            None,
+        ))
     }
 
     async fn get_poster_url(

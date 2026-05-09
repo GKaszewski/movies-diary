@@ -3,8 +3,8 @@ pub mod objects;
 pub mod port;
 pub mod remote_review_repository;
 pub mod review_handler;
-pub mod user_adapter;
 pub(crate) mod urls;
+pub mod user_adapter;
 
 // Re-export the generic base types that callers need
 pub use activitypub_base::{

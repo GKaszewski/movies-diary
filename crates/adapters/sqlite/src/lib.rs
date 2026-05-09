@@ -3,8 +3,8 @@ use domain::{
     errors::DomainError,
     events::DomainEvent,
     models::{
-        DiaryEntry, DiaryFilter, DirectorStat, FeedEntry, Movie, MonthlyRating,
-        Review, ReviewHistory, ReviewSource, SortDirection, UserStats, UserTrends,
+        DiaryEntry, DiaryFilter, DirectorStat, FeedEntry, MonthlyRating, Movie, Review,
+        ReviewHistory, ReviewSource, SortDirection, UserStats, UserTrends,
         collections::{PageParams, Paginated},
     },
     ports::{DiaryRepository, MovieRepository, ReviewRepository, StatsRepository},
@@ -17,20 +17,31 @@ mod models;
 mod users;
 
 use models::{
-    DiaryRow, DirectorCountRow, FeedRow, MonthlyRatingRow, MovieRow, ReviewRow,
-    UserTotalsRow, datetime_to_str,
+    DiaryRow, DirectorCountRow, FeedRow, MonthlyRatingRow, MovieRow, ReviewRow, UserTotalsRow,
+    datetime_to_str,
 };
 
 pub use users::SqliteUserRepository;
 
 fn format_year_month(ym: &str) -> String {
     let parts: Vec<&str> = ym.splitn(2, '-').collect();
-    if parts.len() != 2 { return ym.to_string(); }
+    if parts.len() != 2 {
+        return ym.to_string();
+    }
     let year = parts[0].get(2..).unwrap_or(parts[0]);
     let month = match parts[1] {
-        "01" => "Jan", "02" => "Feb", "03" => "Mar", "04" => "Apr",
-        "05" => "May", "06" => "Jun", "07" => "Jul", "08" => "Aug",
-        "09" => "Sep", "10" => "Oct", "11" => "Nov", "12" => "Dec",
+        "01" => "Jan",
+        "02" => "Feb",
+        "03" => "Mar",
+        "04" => "Apr",
+        "05" => "May",
+        "06" => "Jun",
+        "07" => "Jul",
+        "08" => "Aug",
+        "09" => "Sep",
+        "10" => "Oct",
+        "11" => "Nov",
+        "12" => "Dec",
         _ => parts[1],
     };
     format!("{} '{}", month, year)
@@ -60,12 +71,10 @@ impl SqliteMovieRepository {
                 .fetch_one(&self.pool)
                 .await
                 .map_err(Self::map_err),
-            Some(id) => {
-                sqlx::query_scalar!("SELECT COUNT(*) FROM reviews WHERE movie_id = ?", id)
-                    .fetch_one(&self.pool)
-                    .await
-                    .map_err(Self::map_err)
-            }
+            Some(id) => sqlx::query_scalar!("SELECT COUNT(*) FROM reviews WHERE movie_id = ?", id)
+                .fetch_one(&self.pool)
+                .await
+                .map_err(Self::map_err),
         }
     }
 
@@ -155,13 +164,10 @@ impl SqliteMovieRepository {
     }
 
     async fn count_user_diary_entries(&self, user_id: &str) -> Result<i64, DomainError> {
-        sqlx::query_scalar!(
-            "SELECT COUNT(*) FROM reviews WHERE user_id = ?",
-            user_id
-        )
-        .fetch_one(&self.pool)
-        .await
-        .map_err(Self::map_err)
+        sqlx::query_scalar!("SELECT COUNT(*) FROM reviews WHERE user_id = ?", user_id)
+            .fetch_one(&self.pool)
+            .await
+            .map_err(Self::map_err)
     }
 
     async fn fetch_user_diary_rows_by_watched(
@@ -215,11 +221,7 @@ impl SqliteMovieRepository {
             .map_err(Self::map_err)
     }
 
-    async fn fetch_feed_rows(
-        &self,
-        limit: i64,
-        offset: i64,
-    ) -> Result<Vec<FeedRow>, DomainError> {
+    async fn fetch_feed_rows(&self, limit: i64, offset: i64) -> Result<Vec<FeedRow>, DomainError> {
         sqlx::query_as!(
             FeedRow,
             r#"SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
@@ -451,11 +453,21 @@ impl ReviewRepository for SqliteMovieRepository {
             .map_err(Self::map_err)?;
         Ok(())
     }
+
+    async fn get_all_reviews_for_user(
+        &self,
+        _user_id: &UserId,
+    ) -> Result<Vec<Review>, DomainError> {
+        todo!()
+    }
 }
 
 #[async_trait]
 impl DiaryRepository for SqliteMovieRepository {
-    async fn query_diary(&self, filter: &DiaryFilter) -> Result<Paginated<DiaryEntry>, DomainError> {
+    async fn query_diary(
+        &self,
+        filter: &DiaryFilter,
+    ) -> Result<Paginated<DiaryEntry>, DomainError> {
         let limit = filter.page.limit as i64;
         let offset = filter.page.offset as i64;
 
@@ -647,9 +659,16 @@ impl StatsRepository for SqliteMovieRepository {
 
         let top_directors = director_rows
             .into_iter()
-            .map(|d| DirectorStat { director: d.director, count: d.count })
+            .map(|d| DirectorStat {
+                director: d.director,
+                count: d.count,
+            })
             .collect();
 
-        Ok(UserTrends { monthly_ratings, top_directors, max_director_count })
+        Ok(UserTrends {
+            monthly_ratings,
+            top_directors,
+            max_director_count,
+        })
     }
 }

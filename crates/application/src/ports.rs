@@ -1,6 +1,9 @@
 use uuid::Uuid;
 
-use domain::models::{DiaryEntry, FeedEntry, MonthActivity, UserStats, UserSummary, UserTrends, collections::Paginated};
+use domain::models::{
+    DiaryEntry, FeedEntry, MonthActivity, UserStats, UserSummary, UserTrends,
+    collections::Paginated,
+};
 
 pub struct RemoteActorView {
     pub handle: String,
@@ -85,7 +88,11 @@ pub struct FollowersPageData {
 }
 
 pub trait HtmlRenderer: Send + Sync {
-    fn render_diary_page(&self, data: &Paginated<DiaryEntry>, ctx: HtmlPageContext) -> Result<String, String>;
+    fn render_diary_page(
+        &self,
+        data: &Paginated<DiaryEntry>,
+        ctx: HtmlPageContext,
+    ) -> Result<String, String>;
     fn render_login_page(&self, data: LoginPageData<'_>) -> Result<String, String>;
     fn render_register_page(&self, data: RegisterPageData<'_>) -> Result<String, String>;
     fn render_new_review_page(&self, data: NewReviewPageData<'_>) -> Result<String, String>;

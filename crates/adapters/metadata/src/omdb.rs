@@ -101,8 +101,8 @@ impl MetadataProvider for OmdbProvider {
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
         let title = MovieTitle::new(resp.title)
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
-        let release_year = ReleaseYear::new(year)
-            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        let release_year =
+            ReleaseYear::new(year).map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
 
         let director = match resp.director.as_str() {
             "N/A" | "" => None,
@@ -114,6 +114,12 @@ impl MetadataProvider for OmdbProvider {
             url => PosterUrl::new(url.to_string()).ok(),
         };
 
-        Ok(ProviderMovie { imdb_id, title, release_year, director, poster_url })
+        Ok(ProviderMovie {
+            imdb_id,
+            title,
+            release_year,
+            director,
+            poster_url,
+        })
     }
 }

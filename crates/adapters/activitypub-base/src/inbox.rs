@@ -1,5 +1,5 @@
 use activitypub_federation::{
-    axum::inbox::{receive_activity, ActivityData},
+    axum::inbox::{ActivityData, receive_activity},
     config::Data,
     protocol::context::WithContext,
 };
@@ -13,8 +13,6 @@ pub async fn inbox_handler(
     data: Data<FederationData>,
     activity_data: ActivityData,
 ) -> Result<(), Error> {
-    receive_activity::<WithContext<InboxActivities>, DbActor, FederationData>(
-        activity_data, &data,
-    )
-    .await
+    receive_activity::<WithContext<InboxActivities>, DbActor, FederationData>(activity_data, &data)
+        .await
 }

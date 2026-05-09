@@ -1,5 +1,5 @@
-use url::Url;
 use domain::value_objects::ReviewId;
+use url::Url;
 
 /// Builds the canonical actor URL: `{base_url}/users/{user_id}`
 pub fn actor_url(base_url: &str, user_id: uuid::Uuid) -> Url {

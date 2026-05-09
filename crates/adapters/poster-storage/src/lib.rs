@@ -7,7 +7,7 @@ use domain::{
     ports::PosterStorage,
     value_objects::{MovieId, PosterPath},
 };
-use object_store::{Attribute, Attributes, PutOptions, path::Path, ObjectStore};
+use object_store::{Attribute, Attributes, ObjectStore, PutOptions, path::Path};
 use std::sync::Arc;
 
 fn detect_mime(bytes: &[u8]) -> &'static str {
@@ -41,7 +41,10 @@ impl PosterStorage for PosterStorageAdapter {
         let mime = detect_mime(image_bytes);
         let mut attributes = Attributes::new();
         attributes.insert(Attribute::ContentType, mime.into());
-        let opts = PutOptions { attributes, ..Default::default() };
+        let opts = PutOptions {
+            attributes,
+            ..Default::default()
+        };
         self.store
             .put_opts(&path, image_bytes.to_vec().into(), opts)
             .await
@@ -52,7 +55,9 @@ impl PosterStorage for PosterStorageAdapter {
     async fn get_poster(&self, poster_path: &PosterPath) -> Result<Vec<u8>, DomainError> {
         let path = Path::from(poster_path.value().to_string());
         let result = self.store.get(&path).await.map_err(|e| match e {
-            object_store::Error::NotFound { .. } => DomainError::NotFound("Poster not found".into()),
+            object_store::Error::NotFound { .. } => {
+                DomainError::NotFound("Poster not found".into())
+            }
             _ => DomainError::InfrastructureError(e.to_string()),
         })?;
         result

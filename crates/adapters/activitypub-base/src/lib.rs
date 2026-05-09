@@ -10,14 +10,16 @@ pub mod inbox;
 pub mod outbox;
 pub mod repository;
 pub mod service;
+pub(crate) mod urls;
 pub mod user;
 pub mod webfinger;
-pub(crate) mod urls;
 
 pub use content::ApObjectHandler;
 pub use data::FederationData;
 pub use error::Error;
 pub use federation::ApFederationConfig;
-pub use repository::{FederationRepository, Follower, FollowerStatus, FollowingStatus, RemoteActor};
+pub use repository::{
+    FederationRepository, Follower, FollowerStatus, FollowingStatus, RemoteActor,
+};
 pub use service::ActivityPubService;
 pub use user::{ApUser, ApUserRepository};

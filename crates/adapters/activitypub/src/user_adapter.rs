@@ -18,8 +18,8 @@ impl ApUserRepository for DomainUserRepoAdapter {
 
     async fn find_by_username(&self, username: &str) -> anyhow::Result<Option<ApUser>> {
         use domain::value_objects::Username;
-        let uname = Username::new(username.to_string())
-            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+        let uname =
+            Username::new(username.to_string()).map_err(|e| anyhow::anyhow!(e.to_string()))?;
         Ok(self.0.find_by_username(&uname).await?.map(|u| ApUser {
             id: u.id().value(),
             username: u.username().value().to_string(),

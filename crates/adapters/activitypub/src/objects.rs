@@ -36,10 +36,17 @@ pub fn review_to_ap_object(
 ) -> ReviewObject {
     let stars: String = "\u{2B50}".repeat(review.rating().value() as usize);
     let comment_text = review.comment().map(|c| c.value().to_string());
-    let year_str = if release_year > 0 { format!(" ({})", release_year) } else { String::new() };
+    let year_str = if release_year > 0 {
+        format!(" ({})", release_year)
+    } else {
+        String::new()
+    };
     let watched_str = format!("Watched: {}", review.watched_at().format("%b %-d, %Y"));
     let content = match &comment_text {
-        Some(c) => format!("{} {}{}\n{}\n{}", stars, movie_title, year_str, c, watched_str),
+        Some(c) => format!(
+            "{} {}{}\n{}\n{}",
+            stars, movie_title, year_str, c, watched_str
+        ),
         None => format!("{} {}{}\n{}", stars, movie_title, year_str, watched_str),
     };
 
