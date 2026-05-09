@@ -127,3 +127,8 @@ pub trait PasswordHasher: Send + Sync {
 pub trait DiaryExporter: Send + Sync {
     async fn serialize_reviews(&self, reviews: &[Review]) -> Result<Vec<u8>, DomainError>;
 }
+
+#[async_trait]
+pub trait EventHandler: Send + Sync {
+    async fn handle(&self, event: &DomainEvent) -> Result<(), DomainError>;
+}

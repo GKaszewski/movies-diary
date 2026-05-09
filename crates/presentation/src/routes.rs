@@ -9,21 +9,6 @@ use tower_http::{services::ServeDir, trace::TraceLayer};
 
 use crate::{handlers, state::AppState};
 
-/// Build an ActivityPub router from the service, excluding routes that
-/// conflict with HTML routes (/users/{id} and /users/{id}/following).
-/// Those AP endpoints are still served via the federation middleware layer
-/// applied to the whole AP router scope; the conflicting paths will need
-/// content-negotiation wrappers added in Phase 5.
-fn ap_routes(state: &AppState) -> Router {
-    let config = state.ap_service.federation_config();
-    Router::new()
-        .route("/.well-known/webfinger", routing::get(activitypub::webfinger::webfinger_handler))
-        .route("/users/{user_id}/inbox", routing::post(activitypub::inbox::inbox_handler))
-        .route("/users/{user_id}/outbox", routing::get(activitypub::outbox::outbox_handler))
-        .route("/users/{user_id}/followers", routing::get(activitypub::followers_handler::followers_handler))
-        .layer(config.middleware())
-}
-
 /// Simple global rate limiter: tracks request count per 60-second window.
 /// Not per-IP — suitable for a low-traffic personal app.
 #[derive(Clone)]
@@ -60,9 +45,8 @@ impl RateLimiter {
     }
 }
 
-pub fn build_router(state: AppState) -> Router {
+pub fn build_router(state: AppState, ap_router: Router) -> Router {
     let rate_limit = state.app_ctx.config.rate_limit;
-    let ap_router = ap_routes(&state);
     Router::new()
         .merge(html_routes(rate_limit))
         .merge(api_routes(rate_limit))

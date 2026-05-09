@@ -5,23 +5,29 @@ pub mod html {
     use std::str::FromStr;
 
     use axum::{
+        Form,
         extract::{Path, Query, State},
         http::{HeaderValue, StatusCode, header::SET_COOKIE},
         response::{Html, IntoResponse, Redirect},
-        Form,
     };
     use chrono::Utc;
     use uuid::Uuid;
 
     use application::{
         commands::{DeleteReviewCommand, LoginCommand, RegisterCommand},
-        ports::{FollowersPageData, FollowingPageData, HtmlPageContext, LoginPageData, NewReviewPageData, RegisterPageData, RemoteActorView},
+        ports::{
+            FollowersPageData, FollowingPageData, HtmlPageContext, LoginPageData,
+            NewReviewPageData, RegisterPageData, RemoteActorView,
+        },
         use_cases::{delete_review, log_review, login as login_uc, register as register_uc},
     };
     use domain::{errors::DomainError, value_objects::UserId};
 
     use crate::{
-        dtos::{DiaryQueryParams, ErrorQuery, FollowForm, FollowerActionForm, LoginForm, LogReviewData, LogReviewForm, RegisterForm, UnfollowForm},
+        dtos::{
+            DiaryQueryParams, ErrorQuery, FollowForm, FollowerActionForm, LogReviewData,
+            LogReviewForm, LoginForm, RegisterForm, UnfollowForm,
+        },
         extractors::{OptionalCookieUser, RequiredCookieUser},
         state::AppState,
     };
@@ -56,15 +62,24 @@ pub mod html {
     }
 
     fn secure_flag() -> &'static str {
-        if std::env::var("SECURE_COOKIES").as_deref() == Ok("true") { "; Secure" } else { "" }
+        if std::env::var("SECURE_COOKIES").as_deref() == Ok("true") {
+            "; Secure"
+        } else {
+            ""
+        }
     }
 
     fn set_cookie_header(token: &str, max_age: i64) -> (axum::http::HeaderName, HeaderValue) {
         let val = format!(
             "token={}; HttpOnly; Path=/; SameSite=Strict; Max-Age={}{}",
-            token, max_age, secure_flag()
+            token,
+            max_age,
+            secure_flag()
         );
-        (SET_COOKIE, HeaderValue::from_str(&val).expect("valid cookie"))
+        (
+            SET_COOKIE,
+            HeaderValue::from_str(&val).expect("valid cookie"),
+        )
     }
 
     pub async fn get_login_page(
@@ -112,8 +127,14 @@ pub mod html {
     }
 
     pub async fn get_logout() -> impl IntoResponse {
-        let val = format!("token=; HttpOnly; Path=/; SameSite=Strict; Max-Age=0{}", secure_flag());
-        let cookie = (SET_COOKIE, HeaderValue::from_str(&val).expect("valid cookie"));
+        let val = format!(
+            "token=; HttpOnly; Path=/; SameSite=Strict; Max-Age=0{}",
+            secure_flag()
+        );
+        let cookie = (
+            SET_COOKIE,
+            HeaderValue::from_str(&val).expect("valid cookie"),
+        );
         ([cookie], Redirect::to("/")).into_response()
     }
 
@@ -171,9 +192,8 @@ pub mod html {
                     Err(_) => Redirect::to("/login").into_response(),
                 }
             }
-            Err(_) => {
-                Redirect::to("/register?error=Registration+failed.+Please+try+again.").into_response()
-            }
+            Err(_) => Redirect::to("/register?error=Registration+failed.+Please+try+again.")
+                .into_response(),
         }
     }
 
@@ -203,7 +223,7 @@ pub mod html {
         let data = match LogReviewData::try_from(form) {
             Ok(d) => d,
             Err(_) => {
-                return Redirect::to("/reviews/new?error=Invalid+date+format").into_response()
+                return Redirect::to("/reviews/new?error=Invalid+date+format").into_response();
             }
         };
 
@@ -230,7 +250,9 @@ pub mod html {
             Ok(()) => {
                 let redirect_url = form
                     .redirect_after
-                    .filter(|url| (url.starts_with('/') && !url.starts_with("//")) || url.starts_with('?'))
+                    .filter(|url| {
+                        (url.starts_with('/') && !url.starts_with("//")) || url.starts_with('?')
+                    })
                     .unwrap_or_else(|| "/".to_string());
                 Redirect::to(&redirect_url).into_response()
             }
@@ -281,7 +303,12 @@ pub mod html {
         let mut ctx = build_page_context(&state, user_id).await;
         ctx.page_title = "Members — Movies Diary".to_string();
         ctx.canonical_url = format!("{}/users", state.app_ctx.config.base_url);
-        match application::use_cases::get_users::execute(&state.app_ctx, application::queries::GetUsersQuery).await {
+        match application::use_cases::get_users::execute(
+            &state.app_ctx,
+            application::queries::GetUsersQuery,
+        )
+        .await
+        {
             Ok(users) => {
                 let data = application::ports::UsersPageData { ctx, users };
                 match state.html_renderer.render_users_page(data) {
@@ -301,15 +328,24 @@ pub mod html {
         Query(params): Query<crate::dtos::ProfileQueryParams>,
     ) -> impl IntoResponse {
         // Content negotiation: AP clients request application/activity+json
-        let accept = headers.get(axum::http::header::ACCEPT)
+        let accept = headers
+            .get(axum::http::header::ACCEPT)
             .and_then(|v| v.to_str().ok())
             .unwrap_or("");
         if accept.contains("application/activity+json") || accept.contains("application/ld+json") {
-            return match state.ap_service.actor_json(&profile_user_uuid.to_string()).await {
+            return match state
+                .ap_service
+                .actor_json(&profile_user_uuid.to_string())
+                .await
+            {
                 Ok(json) => (
-                    [(axum::http::header::CONTENT_TYPE, "application/activity+json")],
+                    [(
+                        axum::http::header::CONTENT_TYPE,
+                        "application/activity+json",
+                    )],
                     json,
-                ).into_response(),
+                )
+                    .into_response(),
                 Err(_) => StatusCode::NOT_FOUND.into_response(),
             };
         }
@@ -318,10 +354,18 @@ pub mod html {
         let view_str = params.view.as_deref().unwrap_or("recent");
         let profile_view = match application::queries::ProfileView::from_str(view_str) {
             Ok(v) => v,
-            Err(_) => return (axum::http::StatusCode::BAD_REQUEST, "invalid view parameter").into_response(),
+            Err(_) => {
+                return (
+                    axum::http::StatusCode::BAD_REQUEST,
+                    "invalid view parameter",
+                )
+                    .into_response();
+            }
         };
 
-        let profile_user = match state.app_ctx.user_repository
+        let profile_user = match state
+            .app_ctx
+            .user_repository
             .find_by_id(&domain::value_objects::UserId::from_uuid(profile_user_uuid))
             .await
         {
@@ -332,15 +376,23 @@ pub mod html {
 
         let display_name = profile_user.username().value();
         ctx.page_title = format!("{}'s Diary — Movies Diary", display_name);
-        ctx.canonical_url = format!("{}/users/{}", state.app_ctx.config.base_url, profile_user_uuid);
+        ctx.canonical_url = format!(
+            "{}/users/{}",
+            state.app_ctx.config.base_url, profile_user_uuid
+        );
 
-        let is_own_profile = user_id.as_ref()
+        let is_own_profile = user_id
+            .as_ref()
             .map(|u| u.value() == profile_user_uuid)
             .unwrap_or(false);
 
         let following_count = if is_own_profile {
             if let Some(ref uid) = user_id {
-                state.ap_service.count_following(uid.value()).await.unwrap_or(0)
+                state
+                    .ap_service
+                    .count_following(uid.value())
+                    .await
+                    .unwrap_or(0)
             } else {
                 0
             }
@@ -349,7 +401,8 @@ pub mod html {
         };
 
         let followers_count = if is_own_profile {
-            state.ap_service
+            state
+                .ap_service
                 .count_accepted_followers(profile_user_uuid)
                 .await
                 .unwrap_or(0)
@@ -358,7 +411,8 @@ pub mod html {
         };
 
         let pending_followers = if is_own_profile {
-            state.ap_service
+            state
+                .ap_service
                 .get_pending_followers(profile_user_uuid)
                 .await
                 .unwrap_or_default()
@@ -382,9 +436,12 @@ pub mod html {
 
         match application::use_cases::get_user_profile::execute(&state.app_ctx, query).await {
             Ok(profile) => {
-                let (offset, has_more, limit) = profile.entries.as_ref()
+                let (offset, has_more, limit) = profile
+                    .entries
+                    .as_ref()
                     .map(|e| {
-                        let has_more = (e.offset as u64).saturating_add(e.limit as u64) < e.total_count;
+                        let has_more =
+                            (e.offset as u64).saturating_add(e.limit as u64) < e.total_count;
                         (e.offset, has_more, e.limit)
                     })
                     .unwrap_or((0, false, super::DEFAULT_PAGE_LIMIT));
@@ -444,11 +501,20 @@ pub mod html {
         if user_id.value() != profile_user_uuid {
             return StatusCode::FORBIDDEN.into_response();
         }
-        match state.ap_service.unfollow(user_id.value(), &form.actor_url).await {
-            Ok(()) => Redirect::to(&format!("/users/{}/following-list", profile_user_uuid)).into_response(),
+        match state
+            .ap_service
+            .unfollow(user_id.value(), &form.actor_url)
+            .await
+        {
+            Ok(()) => Redirect::to(&format!("/users/{}/following-list", profile_user_uuid))
+                .into_response(),
             Err(e) => {
                 let msg = encode_error(&e.to_string());
-                Redirect::to(&format!("/users/{}/following-list?error={}", profile_user_uuid, msg)).into_response()
+                Redirect::to(&format!(
+                    "/users/{}/following-list?error={}",
+                    profile_user_uuid, msg
+                ))
+                .into_response()
             }
         }
     }
@@ -462,7 +528,11 @@ pub mod html {
         if user_id.value() != profile_user_uuid {
             return StatusCode::FORBIDDEN.into_response();
         }
-        match state.ap_service.accept_follower(user_id.value(), &form.actor_url).await {
+        match state
+            .ap_service
+            .accept_follower(user_id.value(), &form.actor_url)
+            .await
+        {
             Ok(_) => Redirect::to(&format!("/users/{}", profile_user_uuid)).into_response(),
             Err(e) => {
                 let msg = encode_error(&e.to_string());
@@ -480,7 +550,11 @@ pub mod html {
         if user_id.value() != profile_user_uuid {
             return StatusCode::FORBIDDEN.into_response();
         }
-        match state.ap_service.reject_follower(user_id.value(), &form.actor_url).await {
+        match state
+            .ap_service
+            .reject_follower(user_id.value(), &form.actor_url)
+            .await
+        {
             Ok(_) => Redirect::to(&format!("/users/{}", profile_user_uuid)).into_response(),
             Err(e) => {
                 let msg = encode_error(&e.to_string());
@@ -500,14 +574,20 @@ pub mod html {
         }
         let mut ctx = build_page_context(&state, Some(user_id.clone())).await;
         ctx.page_title = "Following — Movies Diary".to_string();
-        ctx.canonical_url = format!("{}/users/{}/following-list", state.app_ctx.config.base_url, profile_user_uuid);
+        ctx.canonical_url = format!(
+            "{}/users/{}/following-list",
+            state.app_ctx.config.base_url, profile_user_uuid
+        );
         match state.ap_service.get_following(user_id.value()).await {
             Ok(following) => {
-                let actors = following.into_iter().map(|a| RemoteActorView {
-                    handle: a.handle,
-                    display_name: a.display_name,
-                    url: a.url,
-                }).collect();
+                let actors = following
+                    .into_iter()
+                    .map(|a| RemoteActorView {
+                        handle: a.handle,
+                        display_name: a.display_name,
+                        url: a.url,
+                    })
+                    .collect();
                 let data = FollowingPageData {
                     ctx,
                     user_id: profile_user_uuid,
@@ -521,7 +601,11 @@ pub mod html {
             }
             Err(e) => {
                 tracing::error!("get_following error: {:?}", e);
-                (StatusCode::INTERNAL_SERVER_ERROR, "Failed to load following list").into_response()
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Failed to load following list",
+                )
+                    .into_response()
             }
         }
     }
@@ -537,14 +621,24 @@ pub mod html {
         }
         let mut ctx = build_page_context(&state, Some(user_id.clone())).await;
         ctx.page_title = "Followers — Movies Diary".to_string();
-        ctx.canonical_url = format!("{}/users/{}/followers-list", state.app_ctx.config.base_url, profile_user_uuid);
-        match state.ap_service.get_accepted_followers(user_id.value()).await {
+        ctx.canonical_url = format!(
+            "{}/users/{}/followers-list",
+            state.app_ctx.config.base_url, profile_user_uuid
+        );
+        match state
+            .ap_service
+            .get_accepted_followers(user_id.value())
+            .await
+        {
             Ok(followers) => {
-                let actors = followers.into_iter().map(|a| RemoteActorView {
-                    handle: a.handle,
-                    display_name: a.display_name,
-                    url: a.url,
-                }).collect();
+                let actors = followers
+                    .into_iter()
+                    .map(|a| RemoteActorView {
+                        handle: a.handle,
+                        display_name: a.display_name,
+                        url: a.url,
+                    })
+                    .collect();
                 let data = FollowersPageData {
                     ctx,
                     user_id: profile_user_uuid,
@@ -558,7 +652,11 @@ pub mod html {
             }
             Err(e) => {
                 tracing::error!("get_followers error: {:?}", e);
-                (StatusCode::INTERNAL_SERVER_ERROR, "Failed to load followers list").into_response()
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Failed to load followers list",
+                )
+                    .into_response()
             }
         }
     }
@@ -572,11 +670,20 @@ pub mod html {
         if user_id.value() != profile_user_uuid {
             return StatusCode::FORBIDDEN.into_response();
         }
-        match state.ap_service.remove_follower(user_id.value(), &form.actor_url).await {
-            Ok(_) => Redirect::to(&format!("/users/{}/followers-list", profile_user_uuid)).into_response(),
+        match state
+            .ap_service
+            .remove_follower(user_id.value(), &form.actor_url)
+            .await
+        {
+            Ok(_) => Redirect::to(&format!("/users/{}/followers-list", profile_user_uuid))
+                .into_response(),
             Err(e) => {
                 let msg = encode_error(&e.to_string());
-                Redirect::to(&format!("/users/{}/followers-list?error={}", profile_user_uuid, msg)).into_response()
+                Redirect::to(&format!(
+                    "/users/{}/followers-list?error={}",
+                    profile_user_uuid, msg
+                ))
+                .into_response()
             }
         }
     }
@@ -644,7 +751,10 @@ pub mod rss {
             .rss_renderer
             .render_feed(&page.items, "Movie Diary")
             .map_err(|e| ApiError(DomainError::InfrastructureError(e)))?;
-        Ok(([(header::CONTENT_TYPE, "application/rss+xml; charset=utf-8")], xml))
+        Ok((
+            [(header::CONTENT_TYPE, "application/rss+xml; charset=utf-8")],
+            xml,
+        ))
     }
 
     pub async fn get_user_feed(
@@ -676,7 +786,10 @@ pub mod rss {
             .render_feed(&page.items, &title)
             .map_err(|e| ApiError(DomainError::InfrastructureError(e)))?;
 
-        Ok(([(header::CONTENT_TYPE, "application/rss+xml; charset=utf-8")], xml))
+        Ok((
+            [(header::CONTENT_TYPE, "application/rss+xml; charset=utf-8")],
+            xml,
+        ))
     }
 }
 
@@ -692,7 +805,10 @@ pub mod api {
     use application::{
         commands::{DeleteReviewCommand, LoginCommand, RegisterCommand, SyncPosterCommand},
         queries::GetReviewHistoryQuery,
-        use_cases::{delete_review, get_diary, get_review_history, log_review, login as login_uc, register as register_uc, sync_poster},
+        use_cases::{
+            delete_review, get_diary, get_review_history, log_review, login as login_uc,
+            register as register_uc, sync_poster,
+        },
     };
     use domain::{
         errors::DomainError,
@@ -703,8 +819,8 @@ pub mod api {
 
     use crate::{
         dtos::{
-            DiaryEntryDto, DiaryQueryParams, DiaryResponse, LoginRequest, LoginResponse,
-            LogReviewData, LogReviewRequest, MovieDto, RegisterRequest, ReviewDto,
+            DiaryEntryDto, DiaryQueryParams, DiaryResponse, LogReviewData, LogReviewRequest,
+            LoginRequest, LoginResponse, MovieDto, RegisterRequest, ReviewDto,
             ReviewHistoryResponse,
         },
         errors::ApiError,
@@ -730,11 +846,8 @@ pub mod api {
         State(state): State<AppState>,
         Path(movie_id): Path<Uuid>,
     ) -> Result<Json<ReviewHistoryResponse>, ApiError> {
-        let (history, trend) = get_review_history::execute(
-            &state.app_ctx,
-            GetReviewHistoryQuery { movie_id },
-        )
-        .await?;
+        let (history, trend) =
+            get_review_history::execute(&state.app_ctx, GetReviewHistoryQuery { movie_id }).await?;
 
         Ok(Json(ReviewHistoryResponse {
             movie: movie_to_dto(history.movie()),
@@ -796,10 +909,13 @@ pub mod api {
         State(state): State<AppState>,
         Json(req): Json<LoginRequest>,
     ) -> Result<Json<LoginResponse>, ApiError> {
-        let result = login_uc::execute(&state.app_ctx, LoginCommand {
-            email: req.email,
-            password: req.password,
-        })
+        let result = login_uc::execute(
+            &state.app_ctx,
+            LoginCommand {
+                email: req.email,
+                password: req.password,
+            },
+        )
         .await?;
         Ok(Json(LoginResponse {
             token: result.token,
@@ -813,11 +929,14 @@ pub mod api {
         State(state): State<AppState>,
         Json(req): Json<RegisterRequest>,
     ) -> Result<StatusCode, ApiError> {
-        register_uc::execute(&state.app_ctx, RegisterCommand {
-            email: req.email,
-            username: req.username,
-            password: req.password,
-        })
+        register_uc::execute(
+            &state.app_ctx,
+            RegisterCommand {
+                email: req.email,
+                username: req.username,
+                password: req.password,
+            },
+        )
         .await?;
         Ok(StatusCode::CREATED)
     }

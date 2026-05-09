@@ -12,7 +12,6 @@ dependencies = [
  "async-trait",
  "chrono",
  "domain",
- "event-publisher",
  "serde",
  "serde_json",
  "tokio",
@@ -3066,6 +3065,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sqlite",
+ "sqlite-federation",
  "sqlx",
  "template-askama",
  "thiserror 2.0.18",
@@ -4020,6 +4020,20 @@ dependencies = [
 name = "sqlite"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "domain",
+ "sqlx",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "sqlite-federation"
+version = "0.1.0"
+dependencies = [
  "activitypub",
  "activitypub-base",
  "anyhow",
@@ -4027,7 +4041,6 @@ dependencies = [
  "chrono",
  "domain",
  "sqlx",
- "tokio",
  "tracing",
  "uuid",
 ]

@@ -26,6 +26,7 @@ metadata = { workspace = true }
 poster-fetcher = { workspace = true }
 poster-storage = { workspace = true }
 sqlite = { workspace = true }
+sqlite-federation = { workspace = true }
 activitypub = { workspace = true }
 sqlx = { workspace = true }
 template-askama = { workspace = true }

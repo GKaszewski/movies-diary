@@ -2,6 +2,8 @@ use async_trait::async_trait;
 use domain::{errors::DomainError, events::DomainEvent, ports::EventPublisher};
 use tokio::sync::mpsc;
 
+pub use domain::ports::EventHandler;
+
 pub struct EventPublisherConfig {
     pub channel_buffer: usize,
 }
@@ -14,11 +16,6 @@ impl EventPublisherConfig {
             .unwrap_or(128);
         Self { channel_buffer }
     }
-}
-
-#[async_trait]
-pub trait EventHandler: Send + Sync {
-    async fn handle(&self, event: &DomainEvent) -> Result<(), DomainError>;
 }
 
 pub struct ChannelEventPublisher {

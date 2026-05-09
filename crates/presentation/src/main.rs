@@ -15,8 +15,9 @@ use auth::{AuthConfig, Argon2PasswordHasher, JwtAuthService};
 use metadata::MetadataClientImpl;
 use poster_fetcher::{PosterFetcherConfig, ReqwestPosterFetcher};
 use poster_storage::{PosterStorageAdapter, StorageConfig};
-use activitypub::{ActivityPubEventHandler, ActivityPubService, DomainUserRepoAdapter, ReviewObjectHandler};
-use sqlite::{SqliteFederationRepository, SqliteMovieRepository, SqliteUserRepository};
+use activitypub::{ActivityPubEventHandler, ActivityPubPort, ActivityPubService, DomainUserRepoAdapter, ReviewObjectHandler};
+use sqlite::{SqliteMovieRepository, SqliteUserRepository};
+use sqlite_federation::SqliteFederationRepository;
 use rss::RssAdapter;
 use template_askama::AskamaHtmlRenderer;
 
@@ -27,11 +28,11 @@ async fn main() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
     init_tracing();
 
-    let state = wire_dependencies()
+    let (state, ap_router) = wire_dependencies()
         .await
         .context("Failed to wire dependencies")?;
 
-    let app = routes::build_router(state);
+    let app = routes::build_router(state, ap_router);
 
     let host = std::env::var("HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
     let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
@@ -43,7 +44,7 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn wire_dependencies() -> anyhow::Result<AppState> {
+async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
     let auth_config = AuthConfig::from_env()?;
     let storage_config = StorageConfig::from_env()?;
     let app_config = AppConfig::from_env();
@@ -100,7 +101,7 @@ async fn wire_dependencies() -> anyhow::Result<AppState> {
         review_store: Arc::clone(&federation_repo) as Arc<dyn activitypub::RemoteReviewRepository>,
         base_url: app_config.base_url.clone(),
     });
-    let ap_service = Arc::new(
+    let concrete_ap_service = Arc::new(
         ActivityPubService::new(
             federation_repo,
             user_repo_adapter,
@@ -110,11 +111,13 @@ async fn wire_dependencies() -> anyhow::Result<AppState> {
         )
         .await?,
     );
+    let ap_router = concrete_ap_service.router();
     let ap_event_handler = ActivityPubEventHandler::new(
-        Arc::clone(&ap_service),
+        Arc::clone(&concrete_ap_service),
         Arc::clone(&repository),
         app_config.base_url.clone(),
     );
+    let ap_service: Arc<dyn ActivityPubPort> = concrete_ap_service;
 
     let poster_handler = PosterSyncHandler::new(handler_ctx, 3);
     let (event_publisher, event_worker) = create_event_channel(
@@ -135,14 +138,15 @@ async fn wire_dependencies() -> anyhow::Result<AppState> {
         config: app_config,
     };
 
-    Ok(AppState {
+    let state = AppState {
         app_ctx,
         html_renderer: Arc::new(AskamaHtmlRenderer::new()),
         rss_renderer: Arc::new(RssAdapter::new(
             std::env::var("BASE_URL").unwrap_or_else(|_| "http://localhost:3000".into()),
         )),
         ap_service,
-    })
+    };
+    Ok((state, ap_router))
 }
 
 fn init_tracing() {

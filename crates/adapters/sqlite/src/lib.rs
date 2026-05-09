@@ -12,7 +12,6 @@ use domain::{
 };
 use sqlx::SqlitePool;
 
-mod federation;
 mod migrations;
 mod models;
 mod users;
@@ -22,7 +21,6 @@ use models::{
     UserTotalsRow, datetime_to_str,
 };
 
-pub use federation::SqliteFederationRepository;
 pub use users::SqliteUserRepository;
 
 fn format_year_month(ym: &str) -> String {

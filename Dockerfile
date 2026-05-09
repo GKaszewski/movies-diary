@@ -16,6 +16,7 @@ COPY crates/adapters/poster-fetcher/Cargo.toml    crates/adapters/poster-fetcher
 COPY crates/adapters/poster-storage/Cargo.toml    crates/adapters/poster-storage/Cargo.toml
 COPY crates/adapters/rss/Cargo.toml               crates/adapters/rss/Cargo.toml
 COPY crates/adapters/sqlite/Cargo.toml            crates/adapters/sqlite/Cargo.toml
+COPY crates/adapters/sqlite-federation/Cargo.toml crates/adapters/sqlite-federation/Cargo.toml
 COPY crates/adapters/template-askama/Cargo.toml   crates/adapters/template-askama/Cargo.toml
 COPY crates/application/Cargo.toml                crates/application/Cargo.toml
 COPY crates/domain/Cargo.toml                     crates/domain/Cargo.toml

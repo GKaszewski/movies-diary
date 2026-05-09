@@ -3,7 +3,7 @@ use std::time::Duration;
 use application::{commands::SyncPosterCommand, context::AppContext, use_cases::sync_poster};
 use async_trait::async_trait;
 use domain::{errors::DomainError, events::DomainEvent};
-use event_publisher::EventHandler;
+use domain::ports::EventHandler;
 
 pub struct PosterSyncHandler {
     ctx: AppContext,

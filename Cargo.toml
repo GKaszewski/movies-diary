@@ -7,6 +7,7 @@ members = [
     "crates/adapters/poster-storage",
     "crates/adapters/rss",
     "crates/adapters/sqlite",
+    "crates/adapters/sqlite-federation",
     "crates/adapters/template-askama",
     "crates/adapters/activitypub",
     "crates/adapters/activitypub-base",
@@ -48,6 +49,7 @@ poster-storage = { path = "crates/adapters/poster-storage" }
 event-publisher = { path = "crates/adapters/event-publisher" }
 rss = { path = "crates/adapters/rss" }
 sqlite = { path = "crates/adapters/sqlite" }
+sqlite-federation = { path = "crates/adapters/sqlite-federation" }
 template-askama = { path = "crates/adapters/template-askama" }
 activitypub = { path = "crates/adapters/activitypub" }
 activitypub-base = { path = "crates/adapters/activitypub-base" }

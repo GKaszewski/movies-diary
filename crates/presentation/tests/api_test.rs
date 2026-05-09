@@ -89,35 +89,6 @@ impl UserRepository for NobodyUserRepo {
     async fn list_with_stats(&self) -> Result<Vec<domain::models::UserSummary>, DomainError> { panic!() }
 }
 
-async fn test_ap_service() -> Arc<activitypub::ActivityPubService> {
-    let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
-    sqlx::query("CREATE TABLE IF NOT EXISTS ap_keypairs (user_id TEXT PRIMARY KEY, public_key TEXT NOT NULL, private_key TEXT NOT NULL)")
-        .execute(&pool).await.unwrap();
-    sqlx::query("CREATE TABLE IF NOT EXISTS ap_remote_actors (url TEXT PRIMARY KEY, handle TEXT NOT NULL, inbox_url TEXT NOT NULL, shared_inbox_url TEXT, display_name TEXT)")
-        .execute(&pool).await.unwrap();
-    sqlx::query("CREATE TABLE IF NOT EXISTS ap_followers (local_user_id TEXT NOT NULL, remote_actor_url TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending', PRIMARY KEY (local_user_id, remote_actor_url))")
-        .execute(&pool).await.unwrap();
-    sqlx::query("CREATE TABLE IF NOT EXISTS ap_following (local_user_id TEXT NOT NULL, remote_actor_url TEXT NOT NULL, PRIMARY KEY (local_user_id, remote_actor_url))")
-        .execute(&pool).await.unwrap();
-    let fed_repo = Arc::new(sqlite::SqliteFederationRepository::new(pool));
-    struct DummyUserRepo;
-    #[async_trait]
-    impl UserRepository for DummyUserRepo {
-        async fn find_by_email(&self, _: &Email) -> Result<Option<User>, DomainError> { Ok(None) }
-        async fn find_by_username(&self, _: &domain::value_objects::Username) -> Result<Option<User>, DomainError> { Ok(None) }
-        async fn save(&self, _: &User) -> Result<(), DomainError> { Ok(()) }
-        async fn find_by_id(&self, _: &UserId) -> Result<Option<User>, DomainError> { Ok(None) }
-        async fn list_with_stats(&self) -> Result<Vec<domain::models::UserSummary>, DomainError> { Ok(vec![]) }
-    }
-    let movie_pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
-    let movie_repo = Arc::new(sqlite::SqliteMovieRepository::new(movie_pool));
-    Arc::new(
-        activitypub::ActivityPubService::new(fed_repo, Arc::new(DummyUserRepo), movie_repo, "http://localhost:3000".to_string(), true)
-            .await
-            .unwrap(),
-    )
-}
-
 async fn test_app() -> Router {
     let pool = SqlitePool::connect("sqlite::memory:")
         .await
@@ -139,10 +110,10 @@ async fn test_app() -> Router {
         },
         html_renderer: Arc::new(AskamaHtmlRenderer::new()),
         rss_renderer: Arc::new(RssAdapter::new("http://localhost:3000".into())),
-        ap_service: test_ap_service().await,
+        ap_service: Arc::new(activitypub::NoopActivityPubService),
     };
 
-    routes::build_router(state)
+    routes::build_router(state, axum::Router::new())
 }
 
 #[tokio::test]

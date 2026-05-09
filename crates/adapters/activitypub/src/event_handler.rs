@@ -5,7 +5,7 @@ use domain::{
     ports::MovieRepository,
     value_objects::{ReviewId, UserId},
 };
-use event_publisher::EventHandler;
+use domain::ports::EventHandler;
 use std::sync::Arc;
 
 use activitypub_base::ActivityPubService;

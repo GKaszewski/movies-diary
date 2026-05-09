@@ -181,7 +181,7 @@ mod tests {
             },
             html_renderer: Arc::new(PanicRenderer),
             rss_renderer: Arc::new(PanicRssRenderer),
-            ap_service: test_ap_service().await,
+            ap_service: std::sync::Arc::new(activitypub::NoopActivityPubService),
         };
 
         let app = test_router(state);
@@ -229,49 +229,6 @@ mod tests {
         async fn validate_token(&self, _: &str) -> Result<domain::value_objects::UserId, domain::errors::DomainError> {
             Err(domain::errors::DomainError::Unauthorized("bad token".into()))
         }
-    }
-
-    async fn test_ap_service() -> std::sync::Arc<activitypub::ActivityPubService> {
-        use std::sync::Arc;
-        let pool = sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap();
-        sqlx::query("CREATE TABLE IF NOT EXISTS ap_keypairs (user_id TEXT PRIMARY KEY, public_key TEXT NOT NULL, private_key TEXT NOT NULL)")
-            .execute(&pool).await.unwrap();
-        sqlx::query("CREATE TABLE IF NOT EXISTS ap_remote_actors (url TEXT PRIMARY KEY, handle TEXT NOT NULL, inbox_url TEXT NOT NULL, shared_inbox_url TEXT, display_name TEXT)")
-            .execute(&pool).await.unwrap();
-        sqlx::query("CREATE TABLE IF NOT EXISTS ap_followers (local_user_id TEXT NOT NULL, remote_actor_url TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending', PRIMARY KEY (local_user_id, remote_actor_url))")
-            .execute(&pool).await.unwrap();
-        sqlx::query("CREATE TABLE IF NOT EXISTS ap_following (local_user_id TEXT NOT NULL, remote_actor_url TEXT NOT NULL, PRIMARY KEY (local_user_id, remote_actor_url))")
-            .execute(&pool).await.unwrap();
-        let fed_repo = Arc::new(sqlite::SqliteFederationRepository::new(pool));
-
-        struct DummyApUserRepo;
-        #[async_trait::async_trait]
-        impl activitypub::ApUserRepository for DummyApUserRepo {
-            async fn find_by_id(&self, _: uuid::Uuid) -> anyhow::Result<Option<activitypub::ApUser>> { Ok(None) }
-            async fn find_by_username(&self, _: &str) -> anyhow::Result<Option<activitypub::ApUser>> { Ok(None) }
-        }
-
-        struct DummyObjectHandler;
-        #[async_trait::async_trait]
-        impl activitypub::ApObjectHandler for DummyObjectHandler {
-            async fn get_local_objects_for_user(&self, _: uuid::Uuid) -> anyhow::Result<Vec<(url::Url, serde_json::Value)>> { Ok(vec![]) }
-            async fn on_create(&self, _: &url::Url, _: &url::Url, _: serde_json::Value) -> anyhow::Result<()> { Ok(()) }
-            async fn on_update(&self, _: &url::Url, _: &url::Url, _: serde_json::Value) -> anyhow::Result<()> { Ok(()) }
-            async fn on_delete(&self, _: &url::Url, _: &url::Url) -> anyhow::Result<()> { Ok(()) }
-            async fn on_actor_removed(&self, _: &url::Url) -> anyhow::Result<()> { Ok(()) }
-        }
-
-        Arc::new(
-            activitypub::ActivityPubService::new(
-                fed_repo,
-                Arc::new(DummyApUserRepo),
-                Arc::new(DummyObjectHandler),
-                "http://localhost:3000".to_string(),
-                true,
-            )
-            .await
-            .unwrap(),
-        )
     }
 
     async fn panic_state() -> crate::state::AppState {
@@ -334,7 +291,7 @@ mod tests {
             },
             html_renderer: Arc::new(PanicRenderer2),
             rss_renderer: Arc::new(PanicRssRenderer2),
-            ap_service: test_ap_service().await,
+            ap_service: std::sync::Arc::new(activitypub::NoopActivityPubService),
         }
     }
 
@@ -396,7 +353,7 @@ mod tests {
             },
             html_renderer: Arc::new(PanicRenderer3),
             rss_renderer: Arc::new(PanicRssRenderer3),
-            ap_service: test_ap_service().await,
+            ap_service: std::sync::Arc::new(activitypub::NoopActivityPubService),
         }
     }
 
