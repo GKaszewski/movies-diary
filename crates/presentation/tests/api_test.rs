@@ -161,16 +161,25 @@ async fn test_app() -> Router {
     routes::build_router(state, axum::Router::new())
 }
 
+/// Inject a fake peer IP so the GovernorLayer can extract ConnectInfo.
+fn with_ip(req: Request<Body>) -> Request<Body> {
+    let addr: std::net::SocketAddr = "127.0.0.1:12345".parse().unwrap();
+    let mut req = req;
+    req.extensions_mut()
+        .insert(axum::extract::ConnectInfo::<std::net::SocketAddr>(addr));
+    req
+}
+
 #[tokio::test]
 async fn get_api_diary_returns_empty_list() {
     let app = test_app().await;
     let response = app
-        .oneshot(
+        .oneshot(with_ip(
             Request::builder()
                 .uri("/api/v1/diary")
                 .body(Body::empty())
                 .unwrap(),
-        )
+        ))
         .await
         .unwrap();
 
@@ -189,7 +198,7 @@ async fn get_api_diary_returns_empty_list() {
 async fn post_api_reviews_without_auth_returns_401() {
     let app = test_app().await;
     let response = app
-        .oneshot(
+        .oneshot(with_ip(
             Request::builder()
                 .method("POST")
                 .uri("/api/v1/reviews")
@@ -198,7 +207,7 @@ async fn post_api_reviews_without_auth_returns_401() {
                     r#"{"rating":4,"watched_at":"2026-01-01T20:00:00","manual_title":"Dune","manual_release_year":2021}"#,
                 ))
                 .unwrap(),
-        )
+        ))
         .await
         .unwrap();
 
@@ -209,14 +218,14 @@ async fn post_api_reviews_without_auth_returns_401() {
 async fn post_api_auth_login_unknown_user_returns_401() {
     let app = test_app().await;
     let response = app
-        .oneshot(
+        .oneshot(with_ip(
             Request::builder()
                 .method("POST")
                 .uri("/api/v1/auth/login")
                 .header("content-type", "application/json")
                 .body(Body::from(r#"{"email":"a@b.com","password":"x"}"#))
                 .unwrap(),
-        )
+        ))
         .await
         .unwrap();
 

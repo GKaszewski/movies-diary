@@ -5,6 +5,9 @@ edition = "2024"
 
 [dependencies]
 tower-http = { version = "0.6.8", features = ["fs", "trace", "tracing"] }
+infer = "0.19.0"
+percent-encoding = "2"
+axum-governor = "2"
 
 axum = { workspace = true }
 serde = { workspace = true }
@@ -35,8 +38,6 @@ rss = { workspace = true }
 export = { workspace = true }
 doc = { workspace = true }
 utoipa = { version = "5.5.0", features = ["axum_extras", "uuid"] }
-infer = "0.19.0"
-percent-encoding = "2"
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }
