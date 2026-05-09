@@ -1,0 +1,13 @@
+[package]
+name = "doc"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+axum = { workspace = true }
+tracing = { workspace = true }
+utoipa = { version = "5.5.0", features = ["axum_extras"] }
+utoipa-scalar = { version = "0.3.0", features = [
+    "axum",
+], default-features = false }
+utoipa-swagger-ui = { version = "9.0.2", features = ["axum", "vendored"] }

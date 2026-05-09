@@ -266,6 +266,8 @@ pub enum Command {
     ClearToken,
 }
 
+// Matches the export CSV column order:
+// title,year,director,rating,comment,watched_at,external_metadata_id
 pub fn parse_csv(content: &str) -> Vec<ParsedRow> {
     let mut rdr = csv::Reader::from_reader(content.as_bytes());
     let mut rows = Vec::new();
@@ -285,10 +287,11 @@ pub fn parse_csv(content: &str) -> Vec<ParsedRow> {
 
         let title = record.get(0).unwrap_or("").trim().to_string();
         let year_str = record.get(1).unwrap_or("").trim().to_string();
-        let external_id = record.get(2).unwrap_or("").trim().to_string();
+        let director = record.get(2).unwrap_or("").trim().to_string();
         let rating_str = record.get(3).unwrap_or("").trim().to_string();
-        let watched_at = record.get(4).unwrap_or("").trim().to_string();
-        let comment = record.get(5).unwrap_or("").trim().to_string();
+        let comment = record.get(4).unwrap_or("").trim().to_string();
+        let watched_at = record.get(5).unwrap_or("").trim().to_string();
+        let external_id = record.get(6).unwrap_or("").trim().to_string();
 
         if title.is_empty() && external_id.is_empty() {
             rows.push(ParsedRow {
@@ -349,12 +352,9 @@ pub fn parse_csv(content: &str) -> Vec<ParsedRow> {
                 },
                 manual_title: if title.is_empty() { None } else { Some(title) },
                 manual_release_year,
+                manual_director: if director.is_empty() { None } else { Some(director) },
                 rating,
-                comment: if comment.is_empty() {
-                    None
-                } else {
-                    Some(comment)
-                },
+                comment: if comment.is_empty() { None } else { Some(comment) },
                 watched_at,
             }),
         });
@@ -843,6 +843,7 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
                         external_metadata_id: ext_id,
                         manual_title: title,
                         manual_release_year: year,
+                        manual_director: None,
                         rating,
                         comment,
                         watched_at,
@@ -1366,6 +1367,7 @@ mod tests {
                     external_metadata_id: None,
                     manual_title: Some("The Matrix".into()),
                     manual_release_year: None,
+                    manual_director: None,
                     rating: 5,
                     comment: None,
                     watched_at: "1999-03-31T00:00:00".into(),
@@ -1387,6 +1389,7 @@ mod tests {
                     external_metadata_id: None,
                     manual_title: Some("A".into()),
                     manual_release_year: None,
+                    manual_director: None,
                     rating: 5,
                     comment: None,
                     watched_at: "2024-01-01T00:00:00".into(),
@@ -1395,6 +1398,7 @@ mod tests {
                     external_metadata_id: None,
                     manual_title: Some("B".into()),
                     manual_release_year: None,
+                    manual_director: None,
                     rating: 4,
                     comment: None,
                     watched_at: "2024-01-02T00:00:00".into(),
@@ -1422,6 +1426,7 @@ mod tests {
                 external_metadata_id: None,
                 manual_title: Some("A".into()),
                 manual_release_year: None,
+                manual_director: None,
                 rating: 5,
                 comment: None,
                 watched_at: "2024-01-01T00:00:00".into(),
@@ -1481,20 +1486,24 @@ mod tests {
 
     // ── parse_csv ─────────────────────────────────────────────────────────────
 
+    // CSV column order matches the export format:
+    // title,year,director,rating,comment,watched_at,external_metadata_id
+
     #[test]
     fn parse_csv_valid_row_with_title() {
-        let csv = "title,year,external_id,rating,watched_at,comment\nThe Matrix,1999,,5,1999-03-31T00:00:00,\n";
+        let csv = "title,year,director,rating,comment,watched_at,external_metadata_id\nThe Matrix,1999,Wachowski,5,,1999-03-31T00:00:00,\n";
         let rows = parse_csv(csv);
         assert_eq!(rows.len(), 1);
         assert!(rows[0].result.is_ok());
         let req = rows[0].result.as_ref().unwrap();
         assert_eq!(req.manual_title.as_deref(), Some("The Matrix"));
+        assert_eq!(req.manual_director.as_deref(), Some("Wachowski"));
         assert_eq!(req.rating, 5);
     }
 
     #[test]
     fn parse_csv_row_missing_title_and_id_is_error() {
-        let csv = "title,year,external_id,rating,watched_at,comment\n,,,5,2024-01-01T00:00:00,\n";
+        let csv = "title,year,director,rating,comment,watched_at,external_metadata_id\n,,,5,,2024-01-01T00:00:00,\n";
         let rows = parse_csv(csv);
         assert_eq!(rows.len(), 1);
         assert!(rows[0].result.is_err());
@@ -1502,14 +1511,14 @@ mod tests {
 
     #[test]
     fn parse_csv_invalid_rating_is_error() {
-        let csv = "title,year,external_id,rating,watched_at,comment\nThe Matrix,,,9,2024-01-01T00:00:00,\n";
+        let csv = "title,year,director,rating,comment,watched_at,external_metadata_id\nThe Matrix,,,9,,2024-01-01T00:00:00,\n";
         let rows = parse_csv(csv);
         assert!(rows[0].result.is_err());
     }
 
     #[test]
     fn parse_csv_with_external_id_only() {
-        let csv = "title,year,external_id,rating,watched_at,comment\n,,tt0133093,5,1999-03-31T00:00:00,\n";
+        let csv = "title,year,director,rating,comment,watched_at,external_metadata_id\n,,,5,,1999-03-31T00:00:00,tt0133093\n";
         let rows = parse_csv(csv);
         assert!(rows[0].result.is_ok());
         let req = rows[0].result.as_ref().unwrap();
@@ -1519,7 +1528,7 @@ mod tests {
 
     #[test]
     fn parse_csv_rating_zero_is_valid() {
-        let csv = "title,year,external_id,rating,watched_at,comment\nThe Matrix,,,0,2024-01-01T00:00:00,\n";
+        let csv = "title,year,director,rating,comment,watched_at,external_metadata_id\nThe Matrix,,,0,,2024-01-01T00:00:00,\n";
         let rows = parse_csv(csv);
         assert_eq!(rows.len(), 1);
         assert!(rows[0].result.is_ok());

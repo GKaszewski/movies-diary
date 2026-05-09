@@ -16,6 +16,7 @@ members = [
     "crates/domain",
     "crates/presentation",
     "crates/tui",
+    "crates/doc",
 ]
 resolver = "2"
 
@@ -39,6 +40,7 @@ sqlx = { version = "0.8.6", features = [
 ] }
 reqwest = { version = "0.13", features = ["json", "query"] }
 object_store = { version = "0.11", features = ["aws"] }
+axum = { version = "0.8.8", features = ["macros"] }
 
 domain = { path = "crates/domain" }
 application = { path = "crates/application" }
@@ -55,3 +57,4 @@ sqlite-federation = { path = "crates/adapters/sqlite-federation" }
 template-askama = { path = "crates/adapters/template-askama" }
 activitypub = { path = "crates/adapters/activitypub" }
 activitypub-base = { path = "crates/adapters/activitypub-base" }
+doc = { path = "crates/doc" }

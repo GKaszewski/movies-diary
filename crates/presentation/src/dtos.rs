@@ -18,7 +18,8 @@ where
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct DiaryQueryParams {
     pub limit: Option<u32>,
     pub offset: Option<u32>,
@@ -66,7 +67,7 @@ pub struct DeleteRedirectForm {
     pub redirect_after: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 pub struct LogReviewRequest {
     pub external_metadata_id: Option<String>,
     pub manual_title: Option<String>,
@@ -77,7 +78,7 @@ pub struct LogReviewRequest {
     pub watched_at: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, utoipa::ToSchema)]
 pub struct MovieDto {
     pub id: Uuid,
     pub title: String,
@@ -86,7 +87,7 @@ pub struct MovieDto {
     pub poster_path: Option<String>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, utoipa::ToSchema)]
 pub struct ReviewDto {
     pub id: Uuid,
     pub rating: u8,
@@ -94,13 +95,13 @@ pub struct ReviewDto {
     pub watched_at: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, utoipa::ToSchema)]
 pub struct DiaryEntryDto {
     pub movie: MovieDto,
     pub review: ReviewDto,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, utoipa::ToSchema)]
 pub struct DiaryResponse {
     pub items: Vec<DiaryEntryDto>,
     pub total_count: u64,
@@ -108,20 +109,20 @@ pub struct DiaryResponse {
     pub offset: u32,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, utoipa::ToSchema)]
 pub struct ReviewHistoryResponse {
     pub movie: MovieDto,
     pub viewings: Vec<ReviewDto>,
     pub trend: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 pub struct LoginRequest {
     pub email: String,
     pub password: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, utoipa::ToSchema)]
 pub struct LoginResponse {
     pub token: String,
     pub user_id: Uuid,
@@ -129,7 +130,7 @@ pub struct LoginResponse {
     pub expires_at: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 pub struct RegisterRequest {
     pub email: String,
     pub username: String,
@@ -259,8 +260,32 @@ pub struct ProfileQueryParams {
     pub error: Option<String>,
 }
 
-#[derive(serde::Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
+pub struct FollowRequest {
+    pub handle: String,
+}
+
+#[derive(Deserialize, utoipa::ToSchema)]
+pub struct ActorUrlRequest {
+    pub actor_url: String,
+}
+
+#[derive(Serialize, utoipa::ToSchema)]
+pub struct RemoteActorDto {
+    pub handle: String,
+    pub display_name: Option<String>,
+    pub url: String,
+}
+
+#[derive(Serialize, utoipa::ToSchema)]
+pub struct ActorListResponse {
+    pub actors: Vec<RemoteActorDto>,
+}
+
+#[derive(serde::Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct ExportQueryParams {
+    /// Output format: `csv` (default) or `json`
     #[serde(default = "default_export_format")]
     pub format: String,
 }

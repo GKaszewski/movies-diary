@@ -862,8 +862,9 @@ pub mod api {
 
     use crate::{
         dtos::{
-            DiaryEntryDto, DiaryQueryParams, DiaryResponse, ExportQueryParams, LogReviewData,
-            LogReviewRequest, LoginRequest, LoginResponse, MovieDto, RegisterRequest, ReviewDto,
+            ActorListResponse, ActorUrlRequest, DiaryEntryDto, DiaryQueryParams, DiaryResponse,
+            ExportQueryParams, FollowRequest, LogReviewData, LogReviewRequest, LoginRequest,
+            LoginResponse, MovieDto, RegisterRequest, RemoteActorDto, ReviewDto,
             ReviewHistoryResponse,
         },
         errors::ApiError,
@@ -871,6 +872,15 @@ pub mod api {
         state::AppState,
     };
 
+    #[utoipa::path(
+        get, path = "/api/v1/diary",
+        params(DiaryQueryParams),
+        responses(
+            (status = 200, body = DiaryResponse),
+            (status = 401, description = "Unauthorized"),
+        ),
+        security(("bearer_auth" = []))
+    )]
     pub async fn get_diary(
         State(state): State<AppState>,
         Query(params): Query<DiaryQueryParams>,
@@ -885,6 +895,14 @@ pub mod api {
         }))
     }
 
+    #[utoipa::path(
+        get, path = "/api/v1/movies/{id}/history",
+        params(("id" = Uuid, Path, description = "Movie ID")),
+        responses(
+            (status = 200, body = ReviewHistoryResponse),
+            (status = 404, description = "Movie not found"),
+        )
+    )]
     pub async fn get_review_history(
         State(state): State<AppState>,
         Path(movie_id): Path<Uuid>,
@@ -904,6 +922,16 @@ pub mod api {
         }))
     }
 
+    #[utoipa::path(
+        post, path = "/api/v1/reviews",
+        request_body = LogReviewRequest,
+        responses(
+            (status = 201, description = "Review created"),
+            (status = 400, description = "Invalid input"),
+            (status = 401, description = "Unauthorized"),
+        ),
+        security(("bearer_auth" = []))
+    )]
     pub async fn post_review(
         State(state): State<AppState>,
         user: AuthenticatedUser,
@@ -914,6 +942,16 @@ pub mod api {
         Ok(StatusCode::CREATED)
     }
 
+    #[utoipa::path(
+        post, path = "/api/v1/movies/{id}/sync-poster",
+        params(("id" = Uuid, Path, description = "Movie ID")),
+        responses(
+            (status = 204, description = "Poster synced"),
+            (status = 401, description = "Unauthorized"),
+            (status = 404, description = "Movie not found"),
+        ),
+        security(("bearer_auth" = []))
+    )]
     pub async fn sync_poster(
         State(state): State<AppState>,
         _user: AuthenticatedUser,
@@ -948,6 +986,14 @@ pub mod api {
         Ok(StatusCode::NO_CONTENT)
     }
 
+    #[utoipa::path(
+        post, path = "/api/v1/auth/login",
+        request_body = LoginRequest,
+        responses(
+            (status = 200, body = LoginResponse),
+            (status = 401, description = "Invalid credentials"),
+        )
+    )]
     pub async fn login(
         State(state): State<AppState>,
         Json(req): Json<LoginRequest>,
@@ -968,6 +1014,14 @@ pub mod api {
         }))
     }
 
+    #[utoipa::path(
+        post, path = "/api/v1/auth/register",
+        request_body = RegisterRequest,
+        responses(
+            (status = 201, description = "User registered"),
+            (status = 400, description = "Invalid input"),
+        )
+    )]
     pub async fn register(
         State(state): State<AppState>,
         Json(req): Json<RegisterRequest>,
@@ -984,6 +1038,17 @@ pub mod api {
         Ok(StatusCode::CREATED)
     }
 
+    #[utoipa::path(
+        delete, path = "/api/v1/reviews/{id}",
+        params(("id" = Uuid, Path, description = "Review ID")),
+        responses(
+            (status = 204, description = "Review deleted"),
+            (status = 401, description = "Unauthorized"),
+            (status = 403, description = "Forbidden"),
+            (status = 404, description = "Review not found"),
+        ),
+        security(("bearer_auth" = []))
+    )]
     pub async fn delete_review(
         State(state): State<AppState>,
         AuthenticatedUser(user_id): AuthenticatedUser,
@@ -1030,6 +1095,177 @@ pub mod api {
         }
     }
 
+    fn ap_err(e: anyhow::Error) -> impl IntoResponse {
+        tracing::error!("ActivityPub error: {:?}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    }
+
+    #[utoipa::path(
+        get, path = "/api/v1/social/following",
+        responses(
+            (status = 200, body = ActorListResponse),
+            (status = 401, description = "Unauthorized"),
+        ),
+        security(("bearer_auth" = []))
+    )]
+    pub async fn get_following(
+        State(state): State<AppState>,
+        user: AuthenticatedUser,
+    ) -> impl IntoResponse {
+        match state.ap_service.get_following(user.0.value()).await {
+            Ok(actors) => Json(ActorListResponse {
+                actors: actors
+                    .into_iter()
+                    .map(|a| RemoteActorDto {
+                        handle: a.handle,
+                        display_name: a.display_name,
+                        url: a.url,
+                    })
+                    .collect(),
+            })
+            .into_response(),
+            Err(e) => ap_err(e).into_response(),
+        }
+    }
+
+    #[utoipa::path(
+        get, path = "/api/v1/social/followers",
+        responses(
+            (status = 200, body = ActorListResponse),
+            (status = 401, description = "Unauthorized"),
+        ),
+        security(("bearer_auth" = []))
+    )]
+    pub async fn get_followers(
+        State(state): State<AppState>,
+        user: AuthenticatedUser,
+    ) -> impl IntoResponse {
+        match state.ap_service.get_accepted_followers(user.0.value()).await {
+            Ok(actors) => Json(ActorListResponse {
+                actors: actors
+                    .into_iter()
+                    .map(|a| RemoteActorDto {
+                        handle: a.handle,
+                        display_name: a.display_name,
+                        url: a.url,
+                    })
+                    .collect(),
+            })
+            .into_response(),
+            Err(e) => ap_err(e).into_response(),
+        }
+    }
+
+    #[utoipa::path(
+        post, path = "/api/v1/social/follow",
+        request_body = FollowRequest,
+        responses(
+            (status = 200, description = "Follow request sent"),
+            (status = 401, description = "Unauthorized"),
+        ),
+        security(("bearer_auth" = []))
+    )]
+    pub async fn follow(
+        State(state): State<AppState>,
+        user: AuthenticatedUser,
+        Json(body): Json<FollowRequest>,
+    ) -> impl IntoResponse {
+        match state.ap_service.follow(user.0.value(), &body.handle).await {
+            Ok(()) => StatusCode::OK.into_response(),
+            Err(e) => ap_err(e).into_response(),
+        }
+    }
+
+    #[utoipa::path(
+        post, path = "/api/v1/social/unfollow",
+        request_body = ActorUrlRequest,
+        responses(
+            (status = 200, description = "Unfollowed"),
+            (status = 401, description = "Unauthorized"),
+        ),
+        security(("bearer_auth" = []))
+    )]
+    pub async fn unfollow(
+        State(state): State<AppState>,
+        user: AuthenticatedUser,
+        Json(body): Json<ActorUrlRequest>,
+    ) -> impl IntoResponse {
+        match state.ap_service.unfollow(user.0.value(), &body.actor_url).await {
+            Ok(()) => StatusCode::OK.into_response(),
+            Err(e) => ap_err(e).into_response(),
+        }
+    }
+
+    #[utoipa::path(
+        post, path = "/api/v1/social/followers/accept",
+        request_body = ActorUrlRequest,
+        responses(
+            (status = 200, description = "Follower accepted"),
+            (status = 401, description = "Unauthorized"),
+        ),
+        security(("bearer_auth" = []))
+    )]
+    pub async fn accept_follower(
+        State(state): State<AppState>,
+        user: AuthenticatedUser,
+        Json(body): Json<ActorUrlRequest>,
+    ) -> impl IntoResponse {
+        match state.ap_service.accept_follower(user.0.value(), &body.actor_url).await {
+            Ok(()) => StatusCode::OK.into_response(),
+            Err(e) => ap_err(e).into_response(),
+        }
+    }
+
+    #[utoipa::path(
+        post, path = "/api/v1/social/followers/reject",
+        request_body = ActorUrlRequest,
+        responses(
+            (status = 200, description = "Follower rejected"),
+            (status = 401, description = "Unauthorized"),
+        ),
+        security(("bearer_auth" = []))
+    )]
+    pub async fn reject_follower(
+        State(state): State<AppState>,
+        user: AuthenticatedUser,
+        Json(body): Json<ActorUrlRequest>,
+    ) -> impl IntoResponse {
+        match state.ap_service.reject_follower(user.0.value(), &body.actor_url).await {
+            Ok(()) => StatusCode::OK.into_response(),
+            Err(e) => ap_err(e).into_response(),
+        }
+    }
+
+    #[utoipa::path(
+        post, path = "/api/v1/social/followers/remove",
+        request_body = ActorUrlRequest,
+        responses(
+            (status = 200, description = "Follower removed"),
+            (status = 401, description = "Unauthorized"),
+        ),
+        security(("bearer_auth" = []))
+    )]
+    pub async fn remove_follower(
+        State(state): State<AppState>,
+        user: AuthenticatedUser,
+        Json(body): Json<ActorUrlRequest>,
+    ) -> impl IntoResponse {
+        match state.ap_service.remove_follower(user.0.value(), &body.actor_url).await {
+            Ok(()) => StatusCode::OK.into_response(),
+            Err(e) => ap_err(e).into_response(),
+        }
+    }
+
+    #[utoipa::path(
+        get, path = "/api/v1/diary/export",
+        params(ExportQueryParams),
+        responses(
+            (status = 200, description = "Diary file download", content_type = "text/csv"),
+            (status = 400, description = "Invalid format parameter"),
+            (status = 401, description = "Unauthorized"),
+        ),
+        security(("bearer_auth" = []))
+    )]
     pub async fn export_diary(
         State(state): State<AppState>,
         user: AuthenticatedUser,

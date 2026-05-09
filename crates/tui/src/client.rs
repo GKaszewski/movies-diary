@@ -22,6 +22,8 @@ pub struct LogReviewRequest {
     pub manual_title: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub manual_release_year: Option<u16>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub manual_director: Option<String>,
     pub rating: u8,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub comment: Option<String>,
@@ -61,6 +63,28 @@ pub struct ReviewHistoryResponse {
     pub movie: MovieDto,
     pub viewings: Vec<ReviewDto>,
     pub trend: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct FollowRequest {
+    pub handle: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ActorUrlRequest {
+    pub actor_url: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct RemoteActorDto {
+    pub handle: String,
+    pub display_name: Option<String>,
+    pub url: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ActorListResponse {
+    pub actors: Vec<RemoteActorDto>,
 }
 
 // ── Error ─────────────────────────────────────────────────────────────────────
@@ -119,10 +143,16 @@ impl ApiClient {
         self.base_url.read().unwrap().clone()
     }
 
+    fn api(&self, path: &str) -> String {
+        format!("{}/api/v1{}", self.url(), path)
+    }
+
+    // ── Auth ──────────────────────────────────────────────────────────────────
+
     pub async fn login(&self, email: &str, password: &str) -> Result<LoginResponse, ApiError> {
         let resp = self
             .http
-            .post(format!("{}/api/auth/login", self.url()))
+            .post(self.api("/auth/login"))
             .json(&LoginRequest {
                 email: email.into(),
                 password: password.into(),
@@ -132,6 +162,8 @@ impl ApiClient {
         Ok(check_status(resp).await?.json().await?)
     }
 
+    // ── Diary ─────────────────────────────────────────────────────────────────
+
     pub async fn get_diary(
         &self,
         token: &str,
@@ -140,13 +172,30 @@ impl ApiClient {
     ) -> Result<DiaryResponse, ApiError> {
         let resp = self
             .http
-            .get(format!("{}/api/diary", self.url()))
+            .get(self.api("/diary"))
             .query(&[("offset", offset), ("limit", limit)])
             .bearer_auth(token)
             .send()
             .await?;
         Ok(check_status(resp).await?.json().await?)
     }
+
+    pub async fn export_diary(
+        &self,
+        token: &str,
+        format: &str,
+    ) -> Result<Vec<u8>, ApiError> {
+        let resp = self
+            .http
+            .get(self.api("/diary/export"))
+            .query(&[("format", format)])
+            .bearer_auth(token)
+            .send()
+            .await?;
+        Ok(check_status(resp).await?.bytes().await?.to_vec())
+    }
+
+    // ── Reviews ───────────────────────────────────────────────────────────────
 
     pub async fn get_movie_history(
         &self,
@@ -155,7 +204,7 @@ impl ApiClient {
     ) -> Result<ReviewHistoryResponse, ApiError> {
         let resp = self
             .http
-            .get(format!("{}/api/movies/{}/history", self.url(), movie_id))
+            .get(self.api(&format!("/movies/{movie_id}/history")))
             .bearer_auth(token)
             .send()
             .await?;
@@ -165,7 +214,7 @@ impl ApiClient {
     pub async fn create_review(&self, token: &str, req: &LogReviewRequest) -> Result<(), ApiError> {
         let resp = self
             .http
-            .post(format!("{}/api/reviews", self.url()))
+            .post(self.api("/reviews"))
             .bearer_auth(token)
             .json(req)
             .send()
@@ -177,8 +226,90 @@ impl ApiClient {
     pub async fn delete_review(&self, token: &str, review_id: Uuid) -> Result<(), ApiError> {
         let resp = self
             .http
-            .delete(format!("{}/api/reviews/{}", self.url(), review_id))
+            .delete(self.api(&format!("/reviews/{review_id}")))
             .bearer_auth(token)
+            .send()
+            .await?;
+        check_status(resp).await?;
+        Ok(())
+    }
+
+    // ── Social (ActivityPub) ──────────────────────────────────────────────────
+
+    pub async fn get_following(&self, token: &str) -> Result<ActorListResponse, ApiError> {
+        let resp = self
+            .http
+            .get(self.api("/social/following"))
+            .bearer_auth(token)
+            .send()
+            .await?;
+        Ok(check_status(resp).await?.json().await?)
+    }
+
+    pub async fn get_followers(&self, token: &str) -> Result<ActorListResponse, ApiError> {
+        let resp = self
+            .http
+            .get(self.api("/social/followers"))
+            .bearer_auth(token)
+            .send()
+            .await?;
+        Ok(check_status(resp).await?.json().await?)
+    }
+
+    pub async fn follow(&self, token: &str, handle: &str) -> Result<(), ApiError> {
+        let resp = self
+            .http
+            .post(self.api("/social/follow"))
+            .bearer_auth(token)
+            .json(&FollowRequest { handle: handle.into() })
+            .send()
+            .await?;
+        check_status(resp).await?;
+        Ok(())
+    }
+
+    pub async fn unfollow(&self, token: &str, actor_url: &str) -> Result<(), ApiError> {
+        let resp = self
+            .http
+            .post(self.api("/social/unfollow"))
+            .bearer_auth(token)
+            .json(&ActorUrlRequest { actor_url: actor_url.into() })
+            .send()
+            .await?;
+        check_status(resp).await?;
+        Ok(())
+    }
+
+    pub async fn accept_follower(&self, token: &str, actor_url: &str) -> Result<(), ApiError> {
+        let resp = self
+            .http
+            .post(self.api("/social/followers/accept"))
+            .bearer_auth(token)
+            .json(&ActorUrlRequest { actor_url: actor_url.into() })
+            .send()
+            .await?;
+        check_status(resp).await?;
+        Ok(())
+    }
+
+    pub async fn reject_follower(&self, token: &str, actor_url: &str) -> Result<(), ApiError> {
+        let resp = self
+            .http
+            .post(self.api("/social/followers/reject"))
+            .bearer_auth(token)
+            .json(&ActorUrlRequest { actor_url: actor_url.into() })
+            .send()
+            .await?;
+        check_status(resp).await?;
+        Ok(())
+    }
+
+    pub async fn remove_follower(&self, token: &str, actor_url: &str) -> Result<(), ApiError> {
+        let resp = self
+            .http
+            .post(self.api("/social/followers/remove"))
+            .bearer_auth(token)
+            .json(&ActorUrlRequest { actor_url: actor_url.into() })
             .send()
             .await?;
         check_status(resp).await?;
@@ -209,6 +340,7 @@ mod tests {
             external_metadata_id: None,
             manual_title: Some("The Matrix".into()),
             manual_release_year: None,
+            manual_director: None,
             rating: 5,
             comment: None,
             watched_at: "2024-01-15T20:00:00".into(),
@@ -216,8 +348,32 @@ mod tests {
         let json = serde_json::to_string(&req).unwrap();
         assert!(!json.contains("external_metadata_id"));
         assert!(!json.contains("manual_release_year"));
+        assert!(!json.contains("manual_director"));
         assert!(json.contains("\"manual_title\":\"The Matrix\""));
         assert!(json.contains("\"rating\":5"));
+    }
+
+    #[test]
+    fn log_review_request_includes_director_when_set() {
+        let req = LogReviewRequest {
+            external_metadata_id: None,
+            manual_title: Some("Dune".into()),
+            manual_release_year: Some(2021),
+            manual_director: Some("Denis Villeneuve".into()),
+            rating: 5,
+            comment: None,
+            watched_at: "2024-01-15T20:00:00".into(),
+        };
+        let json = serde_json::to_string(&req).unwrap();
+        assert!(json.contains("\"manual_director\":\"Denis Villeneuve\""));
+    }
+
+    #[test]
+    fn api_client_builds_versioned_urls() {
+        let client = ApiClient::new("http://localhost:3000");
+        assert_eq!(client.api("/diary"), "http://localhost:3000/api/v1/diary");
+        assert_eq!(client.api("/auth/login"), "http://localhost:3000/api/v1/auth/login");
+        assert_eq!(client.api("/social/follow"), "http://localhost:3000/api/v1/social/follow");
     }
 
     #[test]
@@ -226,5 +382,6 @@ mod tests {
         assert!(client.url().contains("3000"));
         client.update_url("http://localhost:8080");
         assert!(client.url().contains("8080"));
+        assert_eq!(client.api("/diary"), "http://localhost:8080/api/v1/diary");
     }
 }

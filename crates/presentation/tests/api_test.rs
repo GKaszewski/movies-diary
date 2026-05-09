@@ -167,7 +167,7 @@ async fn get_api_diary_returns_empty_list() {
     let response = app
         .oneshot(
             Request::builder()
-                .uri("/api/diary")
+                .uri("/api/v1/diary")
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -192,7 +192,7 @@ async fn post_api_reviews_without_auth_returns_401() {
         .oneshot(
             Request::builder()
                 .method("POST")
-                .uri("/api/reviews")
+                .uri("/api/v1/reviews")
                 .header("content-type", "application/json")
                 .body(Body::from(
                     r#"{"rating":4,"watched_at":"2026-01-01T20:00:00","manual_title":"Dune","manual_release_year":2021}"#,
@@ -212,7 +212,7 @@ async fn post_api_auth_login_unknown_user_returns_401() {
         .oneshot(
             Request::builder()
                 .method("POST")
-                .uri("/api/auth/login")
+                .uri("/api/v1/auth/login")
                 .header("content-type", "application/json")
                 .body(Body::from(r#"{"email":"a@b.com","password":"x"}"#))
                 .unwrap(),
