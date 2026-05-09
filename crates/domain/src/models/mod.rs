@@ -262,7 +262,12 @@ pub struct User {
 
 impl User {
     pub fn new(email: Email, username: Username, password_hash: PasswordHash) -> Self {
-        Self { id: UserId::generate(), email, username, password_hash }
+        Self {
+            id: UserId::generate(),
+            email,
+            username,
+            password_hash,
+        }
     }
 
     pub fn from_persistence(
@@ -271,17 +276,30 @@ impl User {
         username: Username,
         password_hash: PasswordHash,
     ) -> Self {
-        Self { id, email, username, password_hash }
+        Self {
+            id,
+            email,
+            username,
+            password_hash,
+        }
     }
 
     pub fn update_password(&mut self, new_hash: PasswordHash) {
         self.password_hash = new_hash;
     }
 
-    pub fn email(&self) -> &Email { &self.email }
-    pub fn username(&self) -> &Username { &self.username }
-    pub fn id(&self) -> &UserId { &self.id }
-    pub fn password_hash(&self) -> &PasswordHash { &self.password_hash }
+    pub fn email(&self) -> &Email {
+        &self.email
+    }
+    pub fn username(&self) -> &Username {
+        &self.username
+    }
+    pub fn id(&self) -> &UserId {
+        &self.id
+    }
+    pub fn password_hash(&self) -> &PasswordHash {
+        &self.password_hash
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -294,11 +312,20 @@ impl FeedEntry {
     pub fn new(entry: DiaryEntry, user_email: String) -> Self {
         Self { entry, user_email }
     }
-    pub fn movie(&self) -> &Movie { self.entry.movie() }
-    pub fn review(&self) -> &Review { self.entry.review() }
-    pub fn user_email(&self) -> &str { &self.user_email }
+    pub fn movie(&self) -> &Movie {
+        self.entry.movie()
+    }
+    pub fn review(&self) -> &Review {
+        self.entry.review()
+    }
+    pub fn user_email(&self) -> &str {
+        &self.user_email
+    }
     pub fn user_display_name(&self) -> &str {
-        self.user_email.split('@').next().unwrap_or(&self.user_email)
+        self.user_email
+            .split('@')
+            .next()
+            .unwrap_or(&self.user_email)
     }
 }
 
@@ -312,9 +339,16 @@ pub struct UserSummary {
 
 impl UserSummary {
     pub fn new(user_id: UserId, email: Email, total_movies: i64, avg_rating: Option<f64>) -> Self {
-        Self { user_id, email, total_movies, avg_rating }
+        Self {
+            user_id,
+            email,
+            total_movies,
+            avg_rating,
+        }
     }
-    pub fn email(&self) -> &str { self.email.value() }
+    pub fn email(&self) -> &str {
+        self.email.value()
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -324,7 +358,6 @@ pub struct UserStats {
     pub favorite_director: Option<String>,
     pub most_active_month: Option<String>,
 }
-
 
 #[derive(Clone, Debug)]
 pub struct MonthActivity {
@@ -353,4 +386,9 @@ pub struct UserTrends {
     pub monthly_ratings: Vec<MonthlyRating>,
     pub top_directors: Vec<DirectorStat>,
     pub max_director_count: i64,
+}
+
+pub enum ExportFormat {
+    Csv,
+    Json,
 }

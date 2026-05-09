@@ -36,7 +36,11 @@ RUN sqlite3 /build/dev.db \
     sqlite3 /build/dev.db \
       < crates/adapters/sqlite/migrations/0002_users.sql && \
     sqlite3 /build/dev.db \
-      < crates/adapters/sqlite/migrations/0003_activitypub.sql
+      < crates/adapters/sqlite/migrations/0003_activitypub.sql && \
+    sqlite3 /build/dev.db \
+      < crates/adapters/sqlite/migrations/0004_username.sql && \
+    sqlite3 /build/dev.db \
+      < crates/adapters/sqlite/migrations/0005_activitypub_v2.sql
 
 ENV DATABASE_URL=sqlite:///build/dev.db
 

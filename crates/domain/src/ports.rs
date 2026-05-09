@@ -6,7 +6,7 @@ use crate::{
     events::DomainEvent,
     models::{
         DiaryEntry, DiaryFilter, FeedEntry, Movie, Review, ReviewHistory, User, UserStats,
-        UserTrends, UserSummary,
+        UserSummary, UserTrends,
         collections::{PageParams, Paginated},
     },
     value_objects::{
@@ -57,7 +57,10 @@ pub trait MovieRepository: Send + Sync {
 
 pub enum MetadataSearchCriteria {
     ImdbId(ExternalMetadataId),
-    Title { title: MovieTitle, year: Option<ReleaseYear> },
+    Title {
+        title: MovieTitle,
+        year: Option<ReleaseYear>,
+    },
 }
 
 #[async_trait]
@@ -118,4 +121,9 @@ pub trait PasswordHasher: Send + Sync {
     async fn hash(&self, plain_password: &str) -> Result<PasswordHash, DomainError>;
 
     async fn verify(&self, plain_password: &str, hash: &PasswordHash) -> Result<bool, DomainError>;
+}
+
+#[async_trait]
+pub trait DiaryExporter: Send + Sync {
+    async fn serialize_reviews(&self, reviews: &[Review]) -> Result<Vec<u8>, DomainError>;
 }

@@ -1,4 +1,5 @@
 pub mod delete_review;
+pub mod export_diary;
 pub mod get_activity_feed;
 pub mod get_diary;
 pub mod get_review_history;
