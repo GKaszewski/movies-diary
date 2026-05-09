@@ -34,7 +34,8 @@ pub struct Follower {
 
 #[async_trait]
 pub trait FederationRepository: Send + Sync {
-    async fn add_follower(&self, local_user_id: UserId, remote_actor_url: &str, status: FollowerStatus) -> Result<()>;
+    async fn add_follower(&self, local_user_id: UserId, remote_actor_url: &str, status: FollowerStatus, follow_activity_id: &str) -> Result<()>;
+    async fn get_follower_follow_activity_id(&self, local_user_id: UserId, remote_actor_url: &str) -> Result<Option<String>>;
     async fn remove_follower(&self, local_user_id: UserId, remote_actor_url: &str) -> Result<()>;
     async fn get_followers(&self, local_user_id: UserId) -> Result<Vec<Follower>>;
     async fn update_follower_status(&self, local_user_id: UserId, remote_actor_url: &str, status: FollowerStatus) -> Result<()>;

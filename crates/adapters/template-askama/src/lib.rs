@@ -1,8 +1,8 @@
 use askama::Template;
 use chrono::Datelike;
 use application::ports::{
-    ActivityFeedPageData, FollowingPageData, HtmlPageContext, HtmlRenderer, LoginPageData,
-    NewReviewPageData, ProfilePageData, RegisterPageData, UsersPageData,
+    ActivityFeedPageData, FollowersPageData, FollowingPageData, HtmlPageContext, HtmlRenderer,
+    LoginPageData, NewReviewPageData, ProfilePageData, RegisterPageData, UsersPageData,
 };
 use domain::models::{
     DiaryEntry, FeedEntry, MonthActivity, MonthlyRating, ReviewSource, UserStats,
@@ -124,6 +124,7 @@ struct ProfileTemplate<'a> {
     is_own_profile: bool,
     error: Option<String>,
     following_count: usize,
+    followers_count: usize,
     pending_followers: Vec<RemoteActorData>,
 }
 
@@ -136,6 +137,15 @@ struct RemoteActorData {
 #[derive(Template)]
 #[template(path = "following.html")]
 struct FollowingTemplate {
+    ctx: HtmlPageContext,
+    user_id: uuid::Uuid,
+    actors: Vec<RemoteActorData>,
+    error: Option<String>,
+}
+
+#[derive(Template)]
+#[template(path = "followers.html")]
+struct FollowersTemplate {
     ctx: HtmlPageContext,
     user_id: uuid::Uuid,
     actors: Vec<RemoteActorData>,
@@ -338,6 +348,7 @@ impl HtmlRenderer for AskamaHtmlRenderer {
             is_own_profile: data.is_own_profile,
             error: data.error,
             following_count: data.following_count,
+            followers_count: data.followers_count,
             pending_followers: data.pending_followers.into_iter().map(|a| RemoteActorData {
                 handle: a.handle,
                 url: a.url,
@@ -350,6 +361,21 @@ impl HtmlRenderer for AskamaHtmlRenderer {
 
     fn render_following_page(&self, data: FollowingPageData) -> Result<String, String> {
         FollowingTemplate {
+            ctx: data.ctx,
+            user_id: data.user_id,
+            actors: data.actors.into_iter().map(|a| RemoteActorData {
+                handle: a.handle,
+                display_name: a.display_name,
+                url: a.url,
+            }).collect(),
+            error: data.error,
+        }
+        .render()
+        .map_err(|e| e.to_string())
+    }
+
+    fn render_followers_page(&self, data: FollowersPageData) -> Result<String, String> {
+        FollowersTemplate {
             ctx: data.ctx,
             user_id: data.user_id,
             actors: data.actors.into_iter().map(|a| RemoteActorData {

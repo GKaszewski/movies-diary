@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Followers</h2>
+{% if let Some(err) = error %}
+<p class="error">{{ err }}</p>
+{% endif %}
+{% if actors.is_empty() %}
+<p>No followers yet.</p>
+{% else %}
+<ul class="following-list">
+{% for actor in actors %}
+<li class="following-item">
+  <strong>{{ actor.handle }}</strong>
+  {% if let Some(name) = actor.display_name %}
+  ({{ name }})
+  {% endif %}
+  <a href="{{ actor.url }}" target="_blank" rel="noopener noreferrer">{{ actor.url }}</a>
+  <form method="POST" action="/users/{{ user_id }}/followers/remove" style="display:inline">
+    <input type="hidden" name="actor_url" value="{{ actor.url }}">
+    <button type="submit">Remove</button>
+  </form>
+</li>
+{% endfor %}
+</ul>
+{% endif %}
+{% endblock %}

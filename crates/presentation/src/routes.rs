@@ -124,6 +124,14 @@ fn html_routes(rate_limit: u64) -> Router<AppState> {
             "/users/{id}/following-list",
             routing::get(handlers::html::get_following_page),
         )
+        .route(
+            "/users/{id}/followers-list",
+            routing::get(handlers::html::get_followers_page),
+        )
+        .route(
+            "/users/{id}/followers/remove",
+            routing::post(handlers::html::remove_follower),
+        )
         .merge(auth)
         .route(
             "/reviews/new",

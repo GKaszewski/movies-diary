@@ -15,7 +15,7 @@ pub mod html {
 
     use application::{
         commands::{DeleteReviewCommand, LoginCommand, RegisterCommand},
-        ports::{FollowingPageData, HtmlPageContext, LoginPageData, NewReviewPageData, RegisterPageData, RemoteActorView},
+        ports::{FollowersPageData, FollowingPageData, HtmlPageContext, LoginPageData, NewReviewPageData, RegisterPageData, RemoteActorView},
         use_cases::{delete_review, log_review, login as login_uc, register as register_uc},
     };
     use domain::{errors::DomainError, value_objects::UserId};
@@ -340,11 +340,19 @@ pub mod html {
 
         let following_count = if is_own_profile {
             if let Some(ref uid) = user_id {
-                state.ap_service.count_following(uid.clone()).await
-                    .unwrap_or(0)
+                state.ap_service.count_following(uid.clone()).await.unwrap_or(0)
             } else {
                 0
             }
+        } else {
+            0
+        };
+
+        let followers_count = if is_own_profile {
+            state.ap_service
+                .count_accepted_followers(domain::value_objects::UserId::from_uuid(profile_user_uuid))
+                .await
+                .unwrap_or(0)
         } else {
             0
         };
@@ -396,6 +404,7 @@ pub mod html {
                     is_own_profile,
                     error: params.error,
                     following_count,
+                    followers_count,
                     pending_followers,
                 };
                 match state.html_renderer.render_profile_page(data) {
@@ -513,6 +522,61 @@ pub mod html {
             Err(e) => {
                 tracing::error!("get_following error: {:?}", e);
                 (StatusCode::INTERNAL_SERVER_ERROR, "Failed to load following list").into_response()
+            }
+        }
+    }
+
+    pub async fn get_followers_page(
+        RequiredCookieUser(user_id): RequiredCookieUser,
+        State(state): State<AppState>,
+        Path(profile_user_uuid): Path<Uuid>,
+        Query(params): Query<crate::dtos::ErrorQuery>,
+    ) -> impl IntoResponse {
+        if user_id.value() != profile_user_uuid {
+            return StatusCode::FORBIDDEN.into_response();
+        }
+        let mut ctx = build_page_context(&state, Some(user_id.clone())).await;
+        ctx.page_title = "Followers — Movies Diary".to_string();
+        ctx.canonical_url = format!("{}/users/{}/followers-list", state.app_ctx.config.base_url, profile_user_uuid);
+        match state.ap_service.get_accepted_followers(user_id).await {
+            Ok(followers) => {
+                let actors = followers.into_iter().map(|a| RemoteActorView {
+                    handle: a.handle,
+                    display_name: a.display_name,
+                    url: a.url,
+                }).collect();
+                let data = FollowersPageData {
+                    ctx,
+                    user_id: profile_user_uuid,
+                    actors,
+                    error: params.error,
+                };
+                match state.html_renderer.render_followers_page(data) {
+                    Ok(html) => Html(html).into_response(),
+                    Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
+                }
+            }
+            Err(e) => {
+                tracing::error!("get_followers error: {:?}", e);
+                (StatusCode::INTERNAL_SERVER_ERROR, "Failed to load followers list").into_response()
+            }
+        }
+    }
+
+    pub async fn remove_follower(
+        RequiredCookieUser(user_id): RequiredCookieUser,
+        State(state): State<AppState>,
+        Path(profile_user_uuid): Path<Uuid>,
+        Form(form): Form<FollowerActionForm>,
+    ) -> impl IntoResponse {
+        if user_id.value() != profile_user_uuid {
+            return StatusCode::FORBIDDEN.into_response();
+        }
+        match state.ap_service.remove_follower(user_id, &form.actor_url).await {
+            Ok(_) => Redirect::to(&format!("/users/{}/followers-list", profile_user_uuid)).into_response(),
+            Err(e) => {
+                let msg = encode_error(&e.to_string());
+                Redirect::to(&format!("/users/{}/followers-list?error={}", profile_user_uuid, msg)).into_response()
             }
         }
     }

@@ -244,7 +244,12 @@ impl ActivityPubService {
             .await?
             .ok_or_else(|| anyhow::anyhow!("remote actor not found"))?;
 
-        let follow_id = crate::urls::activity_url(&self.base_url).map_err(|e| anyhow::anyhow!("{e}"))?;
+        let follow_id_str = data
+            .federation_repo
+            .get_follower_follow_activity_id(local_user_id.clone(), remote_actor_url)
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("follow activity id not found for {}", remote_actor_url))?;
+        let follow_id = Url::parse(&follow_id_str)?;
         let follow = FollowActivity {
             id: follow_id,
             kind: Default::default(),
@@ -341,6 +346,37 @@ impl ActivityPubService {
             .await
     }
 
+    pub async fn get_accepted_followers(
+        &self,
+        local_user_id: UserId,
+    ) -> anyhow::Result<Vec<RemoteActor>> {
+        let data = self.federation_config.to_request_data();
+        let followers = data.federation_repo.get_followers(local_user_id).await?;
+        Ok(followers
+            .into_iter()
+            .filter(|f| f.status == FollowerStatus::Accepted)
+            .map(|f| f.actor)
+            .collect())
+    }
+
+    pub async fn count_accepted_followers(&self, local_user_id: UserId) -> anyhow::Result<usize> {
+        let data = self.federation_config.to_request_data();
+        let followers = data.federation_repo.get_followers(local_user_id).await?;
+        Ok(followers
+            .into_iter()
+            .filter(|f| f.status == FollowerStatus::Accepted)
+            .count())
+    }
+
+    pub async fn remove_follower(
+        &self,
+        local_user_id: UserId,
+        actor_url: &str,
+    ) -> anyhow::Result<()> {
+        let data = self.federation_config.to_request_data();
+        data.federation_repo.remove_follower(local_user_id, actor_url).await
+    }
+
     fn spawn_backfill(&self, owner_user_id: UserId, follower_inbox_url: String) {
         let config = self.federation_config.clone();
         let base_url = self.base_url.clone();
@@ -369,10 +405,11 @@ impl ActivityPubService {
         let inbox = Url::parse(&follower_inbox_url)?;
 
         let history = data.movie_repo.get_user_history(&owner_user_id).await?;
-        let local_reviews: Vec<_> = history
+        let mut local_reviews: Vec<_> = history
             .into_iter()
             .filter(|e| matches!(e.review().source(), domain::models::ReviewSource::Local))
             .collect();
+        local_reviews.reverse(); // oldest first so Mastodon feed is chronological
 
         let total = local_reviews.len();
 
@@ -418,12 +455,14 @@ impl ActivityPubService {
         use activitypub_federation::traits::Object;
         use crate::objects::DbReview;
 
-        let ap_id = crate::urls::review_url(base_url, review.id());
+        let review_id = review.id().clone();
+        let ap_id = crate::urls::review_url(base_url, &review_id);
         let db_review = DbReview { review, ap_id };
         let object = db_review.into_json(data).await
             .map_err(|e| anyhow::anyhow!("{e}"))?;
 
-        let activity_id = crate::urls::activity_url(base_url).map_err(|e| anyhow::anyhow!("{e}"))?;
+        let activity_id = crate::urls::create_activity_url(base_url, &review_id)
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
         let create = CreateActivity {
             id: activity_id,
             kind: Default::default(),

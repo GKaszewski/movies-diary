@@ -36,6 +36,7 @@
     {% endif %}
   </section>
   <a href="/users/{{ profile_user_id }}/following-list">View following ({{ following_count }})</a>
+  <a href="/users/{{ profile_user_id }}/followers-list">View followers ({{ followers_count }})</a>
   {% if !pending_followers.is_empty() %}
   <section class="pending-followers">
     <h3>Pending follow requests ({{ pending_followers.len() }})</h3>

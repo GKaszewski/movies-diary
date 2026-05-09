@@ -26,6 +26,7 @@ impl ApFederationConfig {
                 .domain(&data.domain)
                 .app_data(data)
                 .debug(true)
+                .http_signature_compat(true)
                 .url_verifier(Box::new(PermissiveVerifier))
                 .build()
                 .await?
@@ -34,6 +35,7 @@ impl ApFederationConfig {
                 .domain(&data.domain)
                 .app_data(data)
                 .debug(false)
+                .http_signature_compat(true)
                 .build()
                 .await?
         };

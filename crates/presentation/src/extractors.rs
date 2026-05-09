@@ -150,6 +150,7 @@ mod tests {
             fn render_users_page(&self, _: application::ports::UsersPageData) -> Result<String, String> { panic!() }
             fn render_profile_page(&self, _: application::ports::ProfilePageData) -> Result<String, String> { panic!() }
             fn render_following_page(&self, _: application::ports::FollowingPageData) -> Result<String, String> { panic!() }
+            fn render_followers_page(&self, _: application::ports::FollowersPageData) -> Result<String, String> { panic!() }
         }
 
         struct PanicRssRenderer;
@@ -313,6 +314,7 @@ mod tests {
             fn render_users_page(&self, _: application::ports::UsersPageData) -> Result<String, String> { panic!() }
             fn render_profile_page(&self, _: application::ports::ProfilePageData) -> Result<String, String> { panic!() }
             fn render_following_page(&self, _: application::ports::FollowingPageData) -> Result<String, String> { panic!() }
+            fn render_followers_page(&self, _: application::ports::FollowersPageData) -> Result<String, String> { panic!() }
         }
         struct PanicRssRenderer2;
         impl crate::ports::RssFeedRenderer for PanicRssRenderer2 {
@@ -375,6 +377,7 @@ mod tests {
             fn render_users_page(&self, _: application::ports::UsersPageData) -> Result<String, String> { panic!() }
             fn render_profile_page(&self, _: application::ports::ProfilePageData) -> Result<String, String> { panic!() }
             fn render_following_page(&self, _: application::ports::FollowingPageData) -> Result<String, String> { panic!() }
+            fn render_followers_page(&self, _: application::ports::FollowersPageData) -> Result<String, String> { panic!() }
         }
         struct PanicRssRenderer3;
         impl crate::ports::RssFeedRenderer for PanicRssRenderer3 {

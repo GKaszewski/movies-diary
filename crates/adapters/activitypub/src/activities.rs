@@ -61,6 +61,7 @@ impl Activity for FollowActivity {
                 local_actor.user_id.clone(),
                 self.actor.inner().as_str(),
                 FollowerStatus::Pending,
+                self.id.as_str(),
             )
             .await?;
 
@@ -292,7 +293,7 @@ pub struct UpdateActivity {
     #[serde(rename = "type", default)]
     pub(crate) kind: UpdateType,
     pub(crate) actor: ObjectId<DbActor>,
-    pub(crate) object: ReviewObject,
+    pub(crate) object: serde_json::Value,
 }
 
 #[async_trait::async_trait]
@@ -309,19 +310,26 @@ impl Activity for UpdateActivity {
     }
 
     async fn verify(&self, _data: &Data<Self::DataType>) -> Result<(), Self::Error> {
-        if self.object.attributed_to.inner() != self.actor.inner() {
-            return Err(Error::bad_request(anyhow::anyhow!(
-                "update actor does not match object attributed_to"
-            )));
-        }
         Ok(())
     }
 
     async fn receive(self, data: &Data<Self::DataType>) -> Result<(), Self::Error> {
-        let ap_id = self.object.id.inner().as_str();
-        let rating = self.object.rating.min(5);
-        let comment = self.object.comment.as_deref();
-        let watched_at = self.object.watched_at.naive_utc();
+        let object: ReviewObject = match serde_json::from_value(self.object) {
+            Ok(o) => o,
+            Err(_) => {
+                tracing::debug!(actor = %self.actor.inner(), "ignoring non-review Update activity");
+                return Ok(());
+            }
+        };
+        if object.attributed_to.inner() != self.actor.inner() {
+            return Err(Error::bad_request(anyhow::anyhow!(
+                "update actor does not match object attributed_to"
+            )));
+        }
+        let ap_id = object.id.inner().as_str();
+        let rating = object.rating.min(5);
+        let comment = object.comment.as_deref();
+        let watched_at = object.watched_at.naive_utc();
         data.federation_repo
             .update_remote_review(ap_id, self.actor.inner().as_str(), rating, comment, watched_at)
             .await?;

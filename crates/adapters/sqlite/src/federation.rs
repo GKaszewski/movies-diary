@@ -42,6 +42,7 @@ impl FederationRepository for SqliteFederationRepository {
         local_user_id: UserId,
         remote_actor_url: &str,
         status: FollowerStatus,
+        follow_activity_id: &str,
     ) -> Result<()> {
         let uid = local_user_id.value().to_string();
         let status_str = status_to_str(&status);
@@ -49,18 +50,37 @@ impl FederationRepository for SqliteFederationRepository {
         let created_at = datetime_to_str(&now);
 
         sqlx::query(
-            "INSERT INTO ap_followers (local_user_id, remote_actor_url, status, created_at)
-             VALUES (?1, ?2, ?3, ?4)
-             ON CONFLICT(local_user_id, remote_actor_url) DO UPDATE SET status = excluded.status",
+            "INSERT INTO ap_followers (local_user_id, remote_actor_url, status, created_at, follow_activity_id)
+             VALUES (?1, ?2, ?3, ?4, ?5)
+             ON CONFLICT(local_user_id, remote_actor_url) DO UPDATE SET
+                 status = excluded.status,
+                 follow_activity_id = excluded.follow_activity_id",
         )
         .bind(&uid)
         .bind(remote_actor_url)
         .bind(status_str)
         .bind(&created_at)
+        .bind(follow_activity_id)
         .execute(&self.pool)
         .await?;
 
         Ok(())
+    }
+
+    async fn get_follower_follow_activity_id(
+        &self,
+        local_user_id: UserId,
+        remote_actor_url: &str,
+    ) -> Result<Option<String>> {
+        let uid = local_user_id.value().to_string();
+        let row: Option<Option<String>> = sqlx::query_scalar(
+            "SELECT follow_activity_id FROM ap_followers WHERE local_user_id = ? AND remote_actor_url = ?",
+        )
+        .bind(&uid)
+        .bind(remote_actor_url)
+        .fetch_optional(&self.pool)
+        .await?;
+        Ok(row.flatten())
     }
 
     async fn remove_follower(&self, local_user_id: UserId, remote_actor_url: &str) -> Result<()> {

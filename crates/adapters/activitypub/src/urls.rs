@@ -29,3 +29,10 @@ pub fn review_url(base_url: &str, review_id: &ReviewId) -> Url {
     Url::parse(&format!("{}/reviews/{}", base_url, review_id.value()))
         .expect("base_url is always a valid URL prefix")
 }
+
+/// Stable Create-activity URL derived from review ID.
+/// Deterministic so repeated backfills to different followers don't create duplicate posts.
+pub fn create_activity_url(base_url: &str, review_id: &ReviewId) -> Result<Url, Error> {
+    Url::parse(&format!("{}/activities/create/{}", base_url, review_id.value()))
+        .map_err(|e| Error::bad_request(anyhow::anyhow!(e)))
+}
