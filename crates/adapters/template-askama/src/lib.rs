@@ -163,6 +163,26 @@ struct ProfileTemplate<'a> {
     following_count: usize,
     followers_count: usize,
     pending_followers: Vec<RemoteActorData>,
+    pub sort_by: String,
+    pub search: String,
+}
+
+impl<'a> ProfileTemplate<'a> {
+    pub fn filter_qs(&self) -> String {
+        let mut parts = vec![
+            format!("view={}", self.view),
+            format!("sort_by={}", self.sort_by),
+        ];
+        if !self.search.is_empty() {
+            let encoded = self.search
+                .replace(' ', "+")
+                .replace('#', "%23")
+                .replace('&', "%26")
+                .replace('=', "%3D");
+            parts.push(format!("search={}", encoded));
+        }
+        format!("&{}", parts.join("&"))
+    }
 }
 
 struct RemoteActorData {
@@ -493,6 +513,8 @@ impl HtmlRenderer for AskamaHtmlRenderer {
                     display_name: a.display_name,
                 })
                 .collect(),
+            sort_by: data.sort_by.clone(),
+            search: data.search.clone(),
         }
         .render()
         .map_err(|e| e.to_string())

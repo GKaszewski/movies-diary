@@ -61,4 +61,6 @@ pub struct GetUserProfileQuery {
     pub view: ProfileView,
     pub limit: Option<u32>,
     pub offset: Option<u32>,
+    pub sort_by: domain::ports::FeedSortBy,
+    pub search: Option<String>,
 }

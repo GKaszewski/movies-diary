@@ -22,6 +22,7 @@ pub async fn execute(
         page,
         movie_id,
         user_id,
+        search: None,
     };
 
     ctx.diary_repository.query_diary(&filter).await

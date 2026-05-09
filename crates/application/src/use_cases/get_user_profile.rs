@@ -9,6 +9,7 @@ use domain::{
         DiaryEntry, DiaryFilter, MonthActivity, SortDirection, UserStats, UserTrends,
         collections::{PageParams, Paginated},
     },
+    ports::FeedSortBy,
     value_objects::UserId,
 };
 
@@ -47,11 +48,13 @@ pub async fn execute(
             })
         }
         ProfileView::Ratings => {
+            let sort_direction = feed_sort_to_direction(query.sort_by);
             let filter = paged_user_filter(
                 user_id,
-                SortDirection::ByRatingDesc,
+                sort_direction,
                 query.limit,
                 query.offset,
+                query.search.clone(),
             )?;
             let entries = ctx.diary_repository.query_diary(&filter).await?;
             Ok(UserProfileData {
@@ -62,11 +65,13 @@ pub async fn execute(
             })
         }
         ProfileView::Recent => {
+            let sort_direction = feed_sort_to_direction(query.sort_by);
             let filter = paged_user_filter(
                 user_id,
-                SortDirection::Descending,
+                sort_direction,
                 query.limit,
                 query.offset,
+                query.search.clone(),
             )?;
             let entries = ctx.diary_repository.query_diary(&filter).await?;
             Ok(UserProfileData {
@@ -79,11 +84,21 @@ pub async fn execute(
     }
 }
 
+fn feed_sort_to_direction(sort_by: FeedSortBy) -> SortDirection {
+    match sort_by {
+        FeedSortBy::Date => SortDirection::Descending,
+        FeedSortBy::DateAsc => SortDirection::Ascending,
+        FeedSortBy::Rating => SortDirection::ByRatingDesc,
+        FeedSortBy::RatingAsc => SortDirection::ByRatingAsc,
+    }
+}
+
 fn paged_user_filter(
     user_id: UserId,
     sort_by: SortDirection,
     limit: Option<u32>,
     offset: Option<u32>,
+    search: Option<String>,
 ) -> Result<DiaryFilter, DomainError> {
     let page = PageParams::new(limit, offset)?;
     Ok(DiaryFilter {
@@ -91,6 +106,7 @@ fn paged_user_filter(
         page,
         movie_id: None,
         user_id: Some(user_id),
+        search,
     })
 }
 

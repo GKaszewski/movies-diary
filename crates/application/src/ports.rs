@@ -76,6 +76,8 @@ pub struct ProfilePageData {
     pub following_count: usize,
     pub followers_count: usize,
     pub pending_followers: Vec<RemoteActorView>,
+    pub sort_by: String,
+    pub search: String,
 }
 
 pub struct FollowingPageData {

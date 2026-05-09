@@ -75,6 +75,17 @@
     <a href="?view=trends" class="view-tab {% if view == "trends" %}active{% endif %}">Trends</a>
   </div>
 
+  {% if view == "recent" || view == "ratings" %}
+  <form method="get" class="feed-filters" action="/users/{{ profile_user_id }}">
+    <input type="hidden" name="view" value="{{ view }}">
+    <input type="hidden" name="limit" value="{{ limit }}">
+    {% include "_filter_controls.html" %}
+    {% if sort_by != "date" || !search.is_empty() %}
+    <a href="/users/{{ profile_user_id }}?view={{ view }}" class="clear-filters">Clear</a>
+    {% endif %}
+  </form>
+  {% endif %}
+
   {% if view == "history" %}
   {% if let Some(hist) = history %}
   <div class="heatmap-section">
@@ -185,7 +196,7 @@
         <div class="watched-at">{{ entry.review().watched_at().format("%Y-%m-%d") }}</div>
         {% if ctx.is_current_user(entry.review().user_id().value()) %}
         <form method="post" action="/reviews/{{ entry.review().id().value() }}/delete" class="delete-form">
-          <input type="hidden" name="redirect_after" value="/users/{{ profile_user_id }}?view={{ view }}&offset={{ current_offset }}">
+          <input type="hidden" name="redirect_after" value="/users/{{ profile_user_id }}?offset={{ current_offset }}{{ self.filter_qs() }}">
           <input type="hidden" name="_csrf" value="{{ ctx.csrf_token }}">
           <button type="submit">Delete</button>
         </form>
@@ -198,7 +209,7 @@
   </div>
   <nav class="pagination">
     {% if current_offset >= limit %}
-    <a href="?view={{ view }}&offset={{ current_offset - limit }}" class="page-nav">&larr; Prev</a>
+    <a href="/users/{{ profile_user_id }}?offset={{ current_offset - limit }}{{ self.filter_qs() }}" class="page-nav">&larr; Prev</a>
     {% endif %}
     {% for item in page_items %}
     {% if item.is_ellipsis %}
@@ -206,11 +217,11 @@
     {% elif item.is_current %}
     <span class="page-num current">{{ item.number + 1 }}</span>
     {% else %}
-    <a href="?view={{ view }}&offset={{ item.number * limit }}" class="page-num">{{ item.number + 1 }}</a>
+    <a href="/users/{{ profile_user_id }}?offset={{ item.number * limit }}{{ self.filter_qs() }}" class="page-num">{{ item.number + 1 }}</a>
     {% endif %}
     {% endfor %}
     {% if has_more %}
-    <a href="?view={{ view }}&offset={{ current_offset + limit }}" class="page-nav">Next &rarr;</a>
+    <a href="/users/{{ profile_user_id }}?offset={{ current_offset + limit }}{{ self.filter_qs() }}" class="page-nav">Next &rarr;</a>
     {% endif %}
   </nav>
   {% endif %}

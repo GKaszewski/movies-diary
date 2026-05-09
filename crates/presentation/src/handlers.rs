@@ -529,6 +529,13 @@ pub mod html {
             state.app_ctx.config.base_url, profile_user_uuid
         );
 
+        let sort_by_str = match params.sort_by.as_str() {
+            "date_asc"   => "date_asc",
+            "rating"     => "rating",
+            "rating_asc" => "rating_asc",
+            _            => "date",
+        };
+
         let is_own_profile = user_id
             .as_ref()
             .map(|u| u.value() == profile_user_uuid)
@@ -580,6 +587,8 @@ pub mod html {
             view: profile_view,
             limit: params.limit,
             offset: params.offset,
+            sort_by: domain::ports::FeedSortBy::from_str(sort_by_str),
+            search: if params.search.is_empty() { None } else { Some(params.search.clone()) },
         };
 
         match application::use_cases::get_user_profile::execute(&state.app_ctx, query).await {
@@ -611,6 +620,8 @@ pub mod html {
                     following_count,
                     followers_count,
                     pending_followers,
+                    sort_by: sort_by_str.to_string(),
+                    search: params.search.clone(),
                 };
                 match state.html_renderer.render_profile_page(data) {
                     Ok(html) => Html(html).into_response(),
@@ -1517,6 +1528,8 @@ pub mod api {
                 view: profile_view,
                 limit: params.limit,
                 offset: params.offset,
+                sort_by: domain::ports::FeedSortBy::Date,
+                search: None,
             },
         )
         .await

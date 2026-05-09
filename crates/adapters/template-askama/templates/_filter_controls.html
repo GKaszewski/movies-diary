@@ -1,0 +1,10 @@
+<div class="feed-controls">
+  <select name="sort_by" onchange="this.form.submit()">
+    <option value="date"{% if sort_by == "date" %} selected{% endif %}>Date: newest first</option>
+    <option value="date_asc"{% if sort_by == "date_asc" %} selected{% endif %}>Date: oldest first</option>
+    <option value="rating"{% if sort_by == "rating" %} selected{% endif %}>Rating: highest first</option>
+    <option value="rating_asc"{% if sort_by == "rating_asc" %} selected{% endif %}>Rating: lowest first</option>
+  </select>
+  <input type="text" name="search" value="{{ search }}" placeholder="Search movies...">
+  <button type="submit" class="btn-search">Search</button>
+</div>

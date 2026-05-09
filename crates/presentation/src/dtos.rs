@@ -284,6 +284,10 @@ pub struct ProfileQueryParams {
     pub limit: Option<u32>,
     pub offset: Option<u32>,
     pub error: Option<String>,
+    #[serde(default)]
+    pub sort_by: String,
+    #[serde(default)]
+    pub search: String,
 }
 
 // ── Activity feed ─────────────────────────────────────────────────────────────

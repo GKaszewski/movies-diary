@@ -85,8 +85,8 @@ impl SqliteMovieRepository {
         offset: i64,
     ) -> Result<Vec<DiaryRow>, DomainError> {
         match sort {
-            // ByRatingDesc only applies to user-scoped queries; falls back to date sort here
-            SortDirection::Descending | SortDirection::ByRatingDesc => sqlx::query_as!(
+            // ByRatingDesc/ByRatingAsc only apply to user-scoped queries; fall back to date sort here
+            SortDirection::Descending | SortDirection::ByRatingDesc | SortDirection::ByRatingAsc => sqlx::query_as!(
                 DiaryRow,
                 "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
                         r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url
@@ -126,8 +126,8 @@ impl SqliteMovieRepository {
         offset: i64,
     ) -> Result<Vec<DiaryRow>, DomainError> {
         match sort {
-            // ByRatingDesc only applies to user-scoped queries; falls back to date sort here
-            SortDirection::Descending | SortDirection::ByRatingDesc => sqlx::query_as!(
+            // ByRatingDesc/ByRatingAsc only apply to user-scoped queries; fall back to date sort here
+            SortDirection::Descending | SortDirection::ByRatingDesc | SortDirection::ByRatingAsc => sqlx::query_as!(
                 DiaryRow,
                 "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
                         r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url
@@ -163,55 +163,69 @@ impl SqliteMovieRepository {
         }
     }
 
-    async fn count_user_diary_entries(&self, user_id: &str) -> Result<i64, DomainError> {
-        sqlx::query_scalar!("SELECT COUNT(*) FROM reviews WHERE user_id = ?", user_id)
-            .fetch_one(&self.pool)
+    async fn count_user_diary_entries(
+        &self,
+        user_id: &str,
+        search: Option<&str>,
+    ) -> Result<i64, DomainError> {
+        let has_search = search.map(|s| !s.is_empty()).unwrap_or(false);
+        let sql = if has_search {
+            "SELECT COUNT(*) FROM reviews r
+             INNER JOIN movies m ON m.id = r.movie_id
+             WHERE r.user_id = ? AND m.title LIKE '%' || ? || '%'"
+                .to_string()
+        } else {
+            "SELECT COUNT(*) FROM reviews r
+             INNER JOIN movies m ON m.id = r.movie_id
+             WHERE r.user_id = ?"
+                .to_string()
+        };
+        let mut q = sqlx::query_scalar::<_, i64>(&sql).bind(user_id);
+        if has_search {
+            q = q.bind(search.unwrap());
+        }
+        q.fetch_one(&self.pool).await.map_err(Self::map_err)
+    }
+
+    async fn fetch_user_diary_rows(
+        &self,
+        user_id: &str,
+        sort: &SortDirection,
+        search: Option<&str>,
+        limit: i64,
+        offset: i64,
+    ) -> Result<Vec<DiaryRow>, DomainError> {
+        let has_search = search.map(|s| !s.is_empty()).unwrap_or(false);
+        let search_clause = if has_search {
+            " AND m.title LIKE '%' || ? || '%'"
+        } else {
+            ""
+        };
+        let order_clause = match sort {
+            SortDirection::ByRatingDesc => "r.rating DESC, r.watched_at DESC",
+            SortDirection::ByRatingAsc => "r.rating ASC, r.watched_at ASC",
+            SortDirection::Ascending => "r.watched_at ASC",
+            SortDirection::Descending => "r.watched_at DESC",
+        };
+        let sql = format!(
+            "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
+                    r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url
+             FROM reviews r
+             INNER JOIN movies m ON m.id = r.movie_id
+             WHERE r.user_id = ?{}
+             ORDER BY {}
+             LIMIT ? OFFSET ?",
+            search_clause, order_clause
+        );
+        let mut q = sqlx::query_as::<_, DiaryRow>(&sql).bind(user_id);
+        if has_search {
+            q = q.bind(search.unwrap());
+        }
+        q.bind(limit)
+            .bind(offset)
+            .fetch_all(&self.pool)
             .await
             .map_err(Self::map_err)
-    }
-
-    async fn fetch_user_diary_rows_by_watched(
-        &self,
-        user_id: &str,
-        limit: i64,
-        offset: i64,
-    ) -> Result<Vec<DiaryRow>, DomainError> {
-        sqlx::query_as!(
-            DiaryRow,
-            "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
-                    r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url
-             FROM reviews r
-             INNER JOIN movies m ON m.id = r.movie_id
-             WHERE r.user_id = ?
-             ORDER BY r.watched_at DESC
-             LIMIT ? OFFSET ?",
-            user_id, limit, offset
-        )
-        .fetch_all(&self.pool)
-        .await
-        .map_err(Self::map_err)
-    }
-
-    async fn fetch_user_diary_rows_by_rating(
-        &self,
-        user_id: &str,
-        limit: i64,
-        offset: i64,
-    ) -> Result<Vec<DiaryRow>, DomainError> {
-        sqlx::query_as!(
-            DiaryRow,
-            "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
-                    r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url
-             FROM reviews r
-             INNER JOIN movies m ON m.id = r.movie_id
-             WHERE r.user_id = ?
-             ORDER BY r.rating DESC, r.watched_at DESC
-             LIMIT ? OFFSET ?",
-            user_id, limit, offset
-        )
-        .fetch_all(&self.pool)
-        .await
-        .map_err(Self::map_err)
     }
 
     async fn fetch_user_totals(&self, user_id: &str) -> Result<UserTotalsRow, DomainError> {
@@ -460,16 +474,11 @@ impl DiaryRepository for SqliteMovieRepository {
             }
             (None, Some(uid)) => {
                 let uid_str = uid.value().to_string();
-                match &filter.sort_by {
-                    SortDirection::ByRatingDesc => tokio::try_join!(
-                        self.count_user_diary_entries(&uid_str),
-                        self.fetch_user_diary_rows_by_rating(&uid_str, limit, offset)
-                    )?,
-                    _ => tokio::try_join!(
-                        self.count_user_diary_entries(&uid_str),
-                        self.fetch_user_diary_rows_by_watched(&uid_str, limit, offset)
-                    )?,
-                }
+                let search = filter.search.as_deref();
+                tokio::try_join!(
+                    self.count_user_diary_entries(&uid_str, search),
+                    self.fetch_user_diary_rows(&uid_str, &filter.sort_by, search, limit, offset)
+                )?
             }
             (Some(_), Some(_)) => {
                 return Err(DomainError::ValidationError(

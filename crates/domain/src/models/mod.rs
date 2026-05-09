@@ -16,6 +16,7 @@ pub enum SortDirection {
     Descending,
     Ascending,
     ByRatingDesc,
+    ByRatingAsc,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -24,6 +25,7 @@ pub struct DiaryFilter {
     pub page: PageParams,
     pub movie_id: Option<MovieId>,
     pub user_id: Option<UserId>,
+    pub search: Option<String>,
 }
 
 #[derive(Clone, Debug)]

@@ -15,19 +15,10 @@
     Following
   </label>
   {% endif %}
-  <div class="feed-controls">
-    <select name="sort_by" onchange="this.form.submit()">
-      <option value="date"{% if sort_by == "date" %} selected{% endif %}>Date: newest first</option>
-      <option value="date_asc"{% if sort_by == "date_asc" %} selected{% endif %}>Date: oldest first</option>
-      <option value="rating"{% if sort_by == "rating" %} selected{% endif %}>Rating: highest first</option>
-      <option value="rating_asc"{% if sort_by == "rating_asc" %} selected{% endif %}>Rating: lowest first</option>
-    </select>
-    <input type="text" name="search" value="{{ search }}" placeholder="Search movies...">
-    <button type="submit" class="btn-search">Search</button>
-    {% if filter != "all" || sort_by != "date" || !search.is_empty() %}
-    <a href="/" class="clear-filters">Clear</a>
-    {% endif %}
-  </div>
+  {% include "_filter_controls.html" %}
+  {% if filter != "all" || sort_by != "date" || !search.is_empty() %}
+  <a href="/" class="clear-filters">Clear</a>
+  {% endif %}
   <input type="hidden" name="limit" value="{{ limit }}">
 </form>
 <div class="diary">
