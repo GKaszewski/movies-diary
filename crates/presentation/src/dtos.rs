@@ -260,6 +260,109 @@ pub struct ProfileQueryParams {
     pub error: Option<String>,
 }
 
+// ── Activity feed ─────────────────────────────────────────────────────────────
+
+#[derive(Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct ActivityFeedQueryParams {
+    pub limit: Option<u32>,
+    pub offset: Option<u32>,
+}
+
+#[derive(Serialize, utoipa::ToSchema)]
+pub struct FeedEntryDto {
+    pub movie: MovieDto,
+    pub review: ReviewDto,
+    pub user_email: String,
+    pub user_display_name: String,
+}
+
+#[derive(Serialize, utoipa::ToSchema)]
+pub struct ActivityFeedResponse {
+    pub items: Vec<FeedEntryDto>,
+    pub total_count: u64,
+    pub limit: u32,
+    pub offset: u32,
+}
+
+// ── Users ──────────────────────────────────────────────────────────────────────
+
+#[derive(Serialize, utoipa::ToSchema)]
+pub struct UserSummaryDto {
+    pub id: Uuid,
+    pub email: String,
+    pub total_movies: i64,
+    pub avg_rating: Option<f64>,
+}
+
+#[derive(Serialize, utoipa::ToSchema)]
+pub struct UsersResponse {
+    pub users: Vec<UserSummaryDto>,
+}
+
+// ── User profile ───────────────────────────────────────────────────────────────
+
+#[derive(Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct UserProfileQueryParams {
+    /// One of: `recent` (default), `ratings`, `history`, `trends`
+    pub view: Option<String>,
+    pub limit: Option<u32>,
+    pub offset: Option<u32>,
+}
+
+#[derive(Serialize, utoipa::ToSchema)]
+pub struct UserStatsDto {
+    pub total_movies: i64,
+    pub avg_rating: Option<f64>,
+    pub favorite_director: Option<String>,
+    pub most_active_month: Option<String>,
+}
+
+#[derive(Serialize, utoipa::ToSchema)]
+pub struct MonthActivityDto {
+    pub year_month: String,
+    pub month_label: String,
+    pub count: i64,
+    pub entries: Vec<DiaryEntryDto>,
+}
+
+#[derive(Serialize, utoipa::ToSchema)]
+pub struct MonthlyRatingDto {
+    pub year_month: String,
+    pub month_label: String,
+    pub avg_rating: f64,
+    pub count: i64,
+}
+
+#[derive(Serialize, utoipa::ToSchema)]
+pub struct DirectorStatDto {
+    pub director: String,
+    pub count: i64,
+}
+
+#[derive(Serialize, utoipa::ToSchema)]
+pub struct UserTrendsDto {
+    pub monthly_ratings: Vec<MonthlyRatingDto>,
+    pub top_directors: Vec<DirectorStatDto>,
+    pub max_director_count: i64,
+}
+
+#[derive(Serialize, utoipa::ToSchema)]
+pub struct UserProfileResponse {
+    pub user_id: Uuid,
+    pub username: String,
+    pub stats: UserStatsDto,
+    pub following_count: usize,
+    pub followers_count: usize,
+    /// Populated for view=recent and view=ratings
+    pub entries: Option<DiaryResponse>,
+    /// Populated for view=history
+    pub history: Option<Vec<MonthActivityDto>>,
+    /// Populated for view=trends
+    pub trends: Option<UserTrendsDto>,
+}
+
 #[derive(Deserialize, utoipa::ToSchema)]
 pub struct FollowRequest {
     pub handle: String,

@@ -845,11 +845,14 @@ pub mod api {
     };
     use uuid::Uuid;
 
+    use std::str::FromStr;
+
     use application::{
         commands::{DeleteReviewCommand, ExportCommand, LoginCommand, RegisterCommand, SyncPosterCommand},
-        queries::GetReviewHistoryQuery,
+        queries::{GetActivityFeedQuery, GetReviewHistoryQuery, GetUserProfileQuery, GetUsersQuery},
         use_cases::{
-            delete_review, export_diary as export_diary_uc, get_diary, get_review_history,
+            delete_review, export_diary as export_diary_uc, get_activity_feed as get_feed_uc,
+            get_diary, get_review_history, get_user_profile as get_user_profile_uc, get_users,
             log_review, login as login_uc, register as register_uc, sync_poster,
         },
     };
@@ -857,15 +860,17 @@ pub mod api {
         errors::DomainError,
         models::{DiaryEntry, ExportFormat, Movie, Review},
         services::review_history::Trend,
-        value_objects::MovieId,
+        value_objects::{MovieId, UserId},
     };
 
     use crate::{
         dtos::{
-            ActorListResponse, ActorUrlRequest, DiaryEntryDto, DiaryQueryParams, DiaryResponse,
-            ExportQueryParams, FollowRequest, LogReviewData, LogReviewRequest, LoginRequest,
-            LoginResponse, MovieDto, RegisterRequest, RemoteActorDto, ReviewDto,
-            ReviewHistoryResponse,
+            ActivityFeedQueryParams, ActivityFeedResponse, ActorListResponse, ActorUrlRequest,
+            DiaryEntryDto, DiaryQueryParams, DiaryResponse, DirectorStatDto, ExportQueryParams,
+            FeedEntryDto, FollowRequest, LogReviewData, LogReviewRequest, LoginRequest,
+            LoginResponse, MonthActivityDto, MonthlyRatingDto, MovieDto, RegisterRequest,
+            RemoteActorDto, ReviewDto, ReviewHistoryResponse, UserProfileQueryParams,
+            UserProfileResponse, UserStatsDto, UserSummaryDto, UserTrendsDto, UsersResponse,
         },
         errors::ApiError,
         extractors::AuthenticatedUser,
@@ -1254,6 +1259,203 @@ pub mod api {
             Ok(()) => StatusCode::OK.into_response(),
             Err(e) => ap_err(e).into_response(),
         }
+    }
+
+    #[utoipa::path(
+        get, path = "/api/v1/social/followers/pending",
+        responses(
+            (status = 200, body = ActorListResponse),
+            (status = 401, description = "Unauthorized"),
+        ),
+        security(("bearer_auth" = []))
+    )]
+    pub async fn get_pending_followers(
+        State(state): State<AppState>,
+        user: AuthenticatedUser,
+    ) -> impl IntoResponse {
+        match state.ap_service.get_pending_followers(user.0.value()).await {
+            Ok(actors) => Json(ActorListResponse {
+                actors: actors
+                    .into_iter()
+                    .map(|a| RemoteActorDto {
+                        handle: a.handle,
+                        display_name: a.display_name,
+                        url: a.url,
+                    })
+                    .collect(),
+            })
+            .into_response(),
+            Err(e) => ap_err(e).into_response(),
+        }
+    }
+
+    #[utoipa::path(
+        get, path = "/api/v1/activity-feed",
+        params(ActivityFeedQueryParams),
+        responses((status = 200, body = ActivityFeedResponse)),
+    )]
+    pub async fn get_activity_feed(
+        State(state): State<AppState>,
+        Query(params): Query<ActivityFeedQueryParams>,
+    ) -> Result<Json<ActivityFeedResponse>, ApiError> {
+        let page = get_feed_uc::execute(
+            &state.app_ctx,
+            GetActivityFeedQuery { limit: params.limit, offset: params.offset },
+        )
+        .await?;
+        Ok(Json(ActivityFeedResponse {
+            items: page
+                .items
+                .iter()
+                .map(|e| FeedEntryDto {
+                    movie: movie_to_dto(e.movie()),
+                    review: review_to_dto(e.review()),
+                    user_email: e.user_email().to_string(),
+                    user_display_name: e.user_display_name().to_string(),
+                })
+                .collect(),
+            total_count: page.total_count,
+            limit: page.limit,
+            offset: page.offset,
+        }))
+    }
+
+    #[utoipa::path(
+        get, path = "/api/v1/users",
+        responses((status = 200, body = UsersResponse)),
+    )]
+    pub async fn list_users(
+        State(state): State<AppState>,
+    ) -> Result<Json<UsersResponse>, ApiError> {
+        let users = get_users::execute(&state.app_ctx, GetUsersQuery).await?;
+        Ok(Json(UsersResponse {
+            users: users
+                .iter()
+                .map(|u| UserSummaryDto {
+                    id: u.user_id.value(),
+                    email: u.email().to_string(),
+                    total_movies: u.total_movies,
+                    avg_rating: u.avg_rating,
+                })
+                .collect(),
+        }))
+    }
+
+    #[utoipa::path(
+        get, path = "/api/v1/users/{id}",
+        params(
+            ("id" = Uuid, Path, description = "User ID"),
+            UserProfileQueryParams,
+        ),
+        responses(
+            (status = 200, body = UserProfileResponse),
+            (status = 404, description = "User not found"),
+        )
+    )]
+    pub async fn get_user_profile(
+        State(state): State<AppState>,
+        Path(user_id): Path<Uuid>,
+        Query(params): Query<UserProfileQueryParams>,
+    ) -> impl IntoResponse {
+        let view_str = params.view.as_deref().unwrap_or("recent");
+        let profile_view = match application::queries::ProfileView::from_str(view_str) {
+            Ok(v) => v,
+            Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+        };
+
+        let user = match state
+            .app_ctx
+            .user_repository
+            .find_by_id(&UserId::from_uuid(user_id))
+            .await
+        {
+            Ok(Some(u)) => u,
+            Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+            Err(e) => {
+                tracing::error!("user lookup: {:?}", e);
+                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            }
+        };
+
+        let profile = match get_user_profile_uc::execute(
+            &state.app_ctx,
+            GetUserProfileQuery {
+                user_id,
+                view: profile_view,
+                limit: params.limit,
+                offset: params.offset,
+            },
+        )
+        .await
+        {
+            Ok(p) => p,
+            Err(e) => {
+                tracing::error!("profile: {:?}", e);
+                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            }
+        };
+
+        let following_count = state.ap_service.count_following(user_id).await.unwrap_or(0);
+        let followers_count = state
+            .ap_service
+            .count_accepted_followers(user_id)
+            .await
+            .unwrap_or(0);
+
+        let entries = profile.entries.map(|p| DiaryResponse {
+            items: p.items.iter().map(entry_to_dto).collect(),
+            total_count: p.total_count,
+            limit: p.limit,
+            offset: p.offset,
+        });
+
+        let history = profile.history.map(|months| {
+            months
+                .into_iter()
+                .map(|m| MonthActivityDto {
+                    year_month: m.year_month,
+                    month_label: m.month_label,
+                    count: m.count,
+                    entries: m.entries.iter().map(entry_to_dto).collect(),
+                })
+                .collect()
+        });
+
+        let trends = profile.trends.map(|t| UserTrendsDto {
+            monthly_ratings: t
+                .monthly_ratings
+                .into_iter()
+                .map(|r| MonthlyRatingDto {
+                    year_month: r.year_month,
+                    month_label: r.month_label,
+                    avg_rating: r.avg_rating,
+                    count: r.count,
+                })
+                .collect(),
+            top_directors: t
+                .top_directors
+                .into_iter()
+                .map(|d| DirectorStatDto { director: d.director, count: d.count })
+                .collect(),
+            max_director_count: t.max_director_count,
+        });
+
+        Json(UserProfileResponse {
+            user_id,
+            username: user.username().value().to_string(),
+            stats: UserStatsDto {
+                total_movies: profile.stats.total_movies,
+                avg_rating: profile.stats.avg_rating,
+                favorite_director: profile.stats.favorite_director,
+                most_active_month: profile.stats.most_active_month,
+            },
+            following_count,
+            followers_count,
+            entries,
+            history,
+            trends,
+        })
+        .into_response()
     }
 
     #[utoipa::path(

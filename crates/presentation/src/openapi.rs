@@ -4,9 +4,11 @@ use utoipa::{
 };
 
 use crate::dtos::{
-    ActorListResponse, ActorUrlRequest, DiaryEntryDto, DiaryResponse, FollowRequest, LoginRequest,
-    LoginResponse, LogReviewRequest, MovieDto, RegisterRequest, RemoteActorDto, ReviewDto,
-    ReviewHistoryResponse,
+    ActivityFeedResponse, ActorListResponse, ActorUrlRequest, DiaryEntryDto, DiaryResponse,
+    DirectorStatDto, FeedEntryDto, FollowRequest, LoginRequest, LoginResponse, LogReviewRequest,
+    MonthActivityDto, MonthlyRatingDto, MovieDto, RegisterRequest, RemoteActorDto, ReviewDto,
+    ReviewHistoryResponse, UserProfileResponse, UserStatsDto, UserSummaryDto, UserTrendsDto,
+    UsersResponse,
 };
 
 struct SecurityAddon;
@@ -37,8 +39,12 @@ impl Modify for SecurityAddon {
         crate::handlers::api::login,
         crate::handlers::api::register,
         crate::handlers::api::export_diary,
+        crate::handlers::api::get_activity_feed,
+        crate::handlers::api::list_users,
+        crate::handlers::api::get_user_profile,
         crate::handlers::api::get_following,
         crate::handlers::api::get_followers,
+        crate::handlers::api::get_pending_followers,
         crate::handlers::api::follow,
         crate::handlers::api::unfollow,
         crate::handlers::api::accept_follower,
@@ -59,6 +65,16 @@ impl Modify for SecurityAddon {
         RemoteActorDto,
         FollowRequest,
         ActorUrlRequest,
+        ActivityFeedResponse,
+        FeedEntryDto,
+        UsersResponse,
+        UserSummaryDto,
+        UserProfileResponse,
+        UserStatsDto,
+        MonthActivityDto,
+        MonthlyRatingDto,
+        DirectorStatDto,
+        UserTrendsDto,
     )),
     modifiers(&SecurityAddon),
 )]
