@@ -1,3 +1,4 @@
+pub mod csrf;
 pub mod dtos;
 pub mod errors;
 pub mod event_handlers;

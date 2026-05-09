@@ -38,6 +38,7 @@
       {% if ctx.is_current_user(entry.review().user_id().value()) %}
       <form method="post" action="/reviews/{{ entry.review().id().value() }}/delete" class="delete-form">
         <input type="hidden" name="redirect_after" value="/?offset={{ current_offset }}">
+        <input type="hidden" name="_csrf" value="{{ ctx.csrf_token }}">
         <button type="submit">Delete</button>
       </form>
       {% endif %}

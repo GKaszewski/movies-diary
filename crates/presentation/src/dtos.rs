@@ -41,12 +41,16 @@ pub struct LogReviewForm {
     #[serde(default, deserialize_with = "empty_string_as_none")]
     pub comment: Option<String>,
     pub watched_at: String,
+    #[serde(rename = "_csrf", default)]
+    pub csrf_token: String,
 }
 
 #[derive(Deserialize)]
 pub struct LoginForm {
     pub email: String,
     pub password: String,
+    #[serde(rename = "_csrf", default)]
+    pub csrf_token: String,
 }
 
 #[derive(Deserialize)]
@@ -54,6 +58,8 @@ pub struct RegisterForm {
     pub email: String,
     pub username: String,
     pub password: String,
+    #[serde(rename = "_csrf", default)]
+    pub csrf_token: String,
 }
 
 #[derive(Deserialize)]
@@ -65,6 +71,8 @@ pub struct ErrorQuery {
 pub struct DeleteRedirectForm {
     #[serde(default)]
     pub redirect_after: Option<String>,
+    #[serde(rename = "_csrf", default)]
+    pub csrf_token: String,
 }
 
 #[derive(Deserialize, utoipa::ToSchema)]
@@ -240,16 +248,22 @@ impl From<DiaryQueryParams> for GetDiaryQuery {
 #[derive(Deserialize)]
 pub struct FollowForm {
     pub handle: String,
+    #[serde(rename = "_csrf", default)]
+    pub csrf_token: String,
 }
 
 #[derive(Deserialize)]
 pub struct UnfollowForm {
     pub actor_url: String,
+    #[serde(rename = "_csrf", default)]
+    pub csrf_token: String,
 }
 
 #[derive(Deserialize)]
 pub struct FollowerActionForm {
     pub actor_url: String,
+    #[serde(rename = "_csrf", default)]
+    pub csrf_token: String,
 }
 
 #[derive(serde::Deserialize, Default)]
@@ -410,6 +424,7 @@ mod tests {
             rating: 4,
             comment: None,
             watched_at: watched_at.to_string(),
+            csrf_token: String::new(),
         }
     }
 

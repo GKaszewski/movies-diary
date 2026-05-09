@@ -140,6 +140,7 @@ fn html_routes(rate_limit: u64) -> Router<AppState> {
             "/users/{id}/feed.rss",
             routing::get(handlers::rss::get_user_feed),
         )
+        .layer(middleware::from_fn(crate::csrf::csrf_middleware))
 }
 
 fn api_routes(rate_limit: u64) -> Router<AppState> {

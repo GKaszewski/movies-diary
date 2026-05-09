@@ -13,6 +13,7 @@
     Password<br>
     <input type="password" name="password" required autocomplete="current-password">
   </label>
+  <input type="hidden" name="_csrf" value="{{ ctx.csrf_token }}">
   <button type="submit">Login</button>
 </form>
 {% endblock %}

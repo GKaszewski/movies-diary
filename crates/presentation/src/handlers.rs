@@ -6,7 +6,7 @@ pub mod html {
 
     use axum::{
         Form,
-        extract::{Path, Query, State},
+        extract::{Extension, Path, Query, State},
         http::{HeaderValue, StatusCode, header::SET_COOKIE},
         response::{Html, IntoResponse, Redirect},
     };
@@ -28,6 +28,7 @@ pub mod html {
     use domain::{errors::DomainError, value_objects::UserId};
 
     use crate::{
+        csrf::CsrfToken,
         dtos::{
             DiaryQueryParams, ErrorQuery, FollowForm, FollowerActionForm, LogReviewData,
             LogReviewForm, LoginForm, RegisterForm, UnfollowForm,
@@ -36,7 +37,11 @@ pub mod html {
         state::AppState,
     };
 
-    async fn build_page_context(state: &AppState, user_id: Option<UserId>) -> HtmlPageContext {
+    async fn build_page_context(
+        state: &AppState,
+        user_id: Option<UserId>,
+        csrf_token: String,
+    ) -> HtmlPageContext {
         let uuid = user_id.as_ref().map(|u| u.value());
         let user_email = if let Some(ref id) = user_id {
             state
@@ -57,6 +62,7 @@ pub mod html {
             rss_url: "/feed.rss".to_string(),
             page_title: "Movies Diary".to_string(),
             canonical_url: state.app_ctx.config.base_url.clone(),
+            csrf_token,
         }
     }
 
@@ -89,6 +95,7 @@ pub mod html {
     pub async fn get_login_page(
         State(state): State<AppState>,
         Query(params): Query<ErrorQuery>,
+        Extension(csrf): Extension<CsrfToken>,
     ) -> impl IntoResponse {
         let ctx = HtmlPageContext {
             user_email: None,
@@ -97,6 +104,7 @@ pub mod html {
             rss_url: "/feed.rss".to_string(),
             page_title: "Login — Movies Diary".to_string(),
             canonical_url: format!("{}/login", state.app_ctx.config.base_url),
+            csrf_token: csrf.0,
         };
         let html = state
             .html_renderer
@@ -110,8 +118,12 @@ pub mod html {
 
     pub async fn post_login(
         State(state): State<AppState>,
+        Extension(csrf): Extension<CsrfToken>,
         Form(form): Form<LoginForm>,
     ) -> impl IntoResponse {
+        if crate::csrf::mismatch(&csrf, &form.csrf_token) {
+            return StatusCode::FORBIDDEN.into_response();
+        }
         match login_uc::execute(
             &state.app_ctx,
             LoginCommand {
@@ -145,6 +157,7 @@ pub mod html {
     pub async fn get_register_page(
         State(state): State<AppState>,
         Query(params): Query<ErrorQuery>,
+        Extension(csrf): Extension<CsrfToken>,
     ) -> impl IntoResponse {
         if !state.app_ctx.config.allow_registration {
             return Redirect::to("/").into_response();
@@ -156,6 +169,7 @@ pub mod html {
             rss_url: "/feed.rss".to_string(),
             page_title: "Register — Movies Diary".to_string(),
             canonical_url: format!("{}/register", state.app_ctx.config.base_url),
+            csrf_token: csrf.0,
         };
         let html = state
             .html_renderer
@@ -169,10 +183,14 @@ pub mod html {
 
     pub async fn post_register(
         State(state): State<AppState>,
+        Extension(csrf): Extension<CsrfToken>,
         Form(form): Form<RegisterForm>,
     ) -> impl IntoResponse {
         if !state.app_ctx.config.allow_registration {
             return Redirect::to("/").into_response();
+        }
+        if crate::csrf::mismatch(&csrf, &form.csrf_token) {
+            return StatusCode::FORBIDDEN.into_response();
         }
         let email = form.email.clone();
         let password = form.password.clone();
@@ -205,8 +223,9 @@ pub mod html {
         RequiredCookieUser(user_id): RequiredCookieUser,
         State(state): State<AppState>,
         Query(params): Query<ErrorQuery>,
+        Extension(csrf): Extension<CsrfToken>,
     ) -> impl IntoResponse {
-        let mut ctx = build_page_context(&state, Some(user_id)).await;
+        let mut ctx = build_page_context(&state, Some(user_id), csrf.0).await;
         ctx.page_title = "Log a Review — Movies Diary".to_string();
         ctx.canonical_url = format!("{}/reviews/new", state.app_ctx.config.base_url);
         let html = state
@@ -222,8 +241,12 @@ pub mod html {
     pub async fn post_review(
         State(state): State<AppState>,
         RequiredCookieUser(user_id): RequiredCookieUser,
+        Extension(csrf): Extension<CsrfToken>,
         Form(form): Form<LogReviewForm>,
     ) -> impl IntoResponse {
+        if crate::csrf::mismatch(&csrf, &form.csrf_token) {
+            return StatusCode::FORBIDDEN.into_response();
+        }
         let data = match LogReviewData::try_from(form) {
             Ok(d) => d,
             Err(_) => {
@@ -243,9 +266,13 @@ pub mod html {
     pub async fn post_delete_review(
         State(state): State<AppState>,
         RequiredCookieUser(user_id): RequiredCookieUser,
+        Extension(csrf): Extension<CsrfToken>,
         Path(review_id): Path<Uuid>,
         Form(form): Form<crate::dtos::DeleteRedirectForm>,
     ) -> impl IntoResponse {
+        if crate::csrf::mismatch(&csrf, &form.csrf_token) {
+            return StatusCode::FORBIDDEN.into_response();
+        }
         let cmd = DeleteReviewCommand {
             review_id,
             requesting_user_id: user_id.value(),
@@ -312,8 +339,9 @@ pub mod html {
         OptionalCookieUser(user_id): OptionalCookieUser,
         State(state): State<AppState>,
         Query(params): Query<DiaryQueryParams>,
+        Extension(csrf): Extension<CsrfToken>,
     ) -> impl IntoResponse {
-        let ctx = build_page_context(&state, user_id).await;
+        let ctx = build_page_context(&state, user_id, csrf.0).await;
         let query = application::queries::GetActivityFeedQuery {
             limit: params.limit,
             offset: params.offset,
@@ -342,8 +370,9 @@ pub mod html {
     pub async fn get_users_list(
         OptionalCookieUser(user_id): OptionalCookieUser,
         State(state): State<AppState>,
+        Extension(csrf): Extension<CsrfToken>,
     ) -> impl IntoResponse {
-        let mut ctx = build_page_context(&state, user_id).await;
+        let mut ctx = build_page_context(&state, user_id, csrf.0).await;
         ctx.page_title = "Members — Movies Diary".to_string();
         ctx.canonical_url = format!("{}/users", state.app_ctx.config.base_url);
         match application::use_cases::get_users::execute(
@@ -369,6 +398,7 @@ pub mod html {
         Path(profile_user_uuid): Path<Uuid>,
         headers: axum::http::HeaderMap,
         Query(params): Query<crate::dtos::ProfileQueryParams>,
+        Extension(csrf): Extension<CsrfToken>,
     ) -> impl IntoResponse {
         // Content negotiation: AP clients request application/activity+json
         let accept = headers
@@ -393,7 +423,7 @@ pub mod html {
             };
         }
 
-        let mut ctx = build_page_context(&state, user_id.clone()).await;
+        let mut ctx = build_page_context(&state, user_id.clone(), csrf.0).await;
         let view_str = params.view.as_deref().unwrap_or("recent");
         let profile_view = match application::queries::ProfileView::from_str(view_str) {
             Ok(v) => v,
@@ -520,9 +550,13 @@ pub mod html {
         RequiredCookieUser(user_id): RequiredCookieUser,
         State(state): State<AppState>,
         Path(profile_user_uuid): Path<Uuid>,
+        Extension(csrf): Extension<CsrfToken>,
         Form(form): Form<FollowForm>,
     ) -> impl IntoResponse {
         if user_id.value() != profile_user_uuid {
+            return StatusCode::FORBIDDEN.into_response();
+        }
+        if crate::csrf::mismatch(&csrf, &form.csrf_token) {
             return StatusCode::FORBIDDEN.into_response();
         }
         match state.ap_service.follow(user_id.value(), &form.handle).await {
@@ -539,9 +573,13 @@ pub mod html {
         RequiredCookieUser(user_id): RequiredCookieUser,
         State(state): State<AppState>,
         Path(profile_user_uuid): Path<Uuid>,
+        Extension(csrf): Extension<CsrfToken>,
         Form(form): Form<UnfollowForm>,
     ) -> impl IntoResponse {
         if user_id.value() != profile_user_uuid {
+            return StatusCode::FORBIDDEN.into_response();
+        }
+        if crate::csrf::mismatch(&csrf, &form.csrf_token) {
             return StatusCode::FORBIDDEN.into_response();
         }
         match state
@@ -566,9 +604,13 @@ pub mod html {
         RequiredCookieUser(user_id): RequiredCookieUser,
         State(state): State<AppState>,
         Path(profile_user_uuid): Path<Uuid>,
+        Extension(csrf): Extension<CsrfToken>,
         Form(form): Form<FollowerActionForm>,
     ) -> impl IntoResponse {
         if user_id.value() != profile_user_uuid {
+            return StatusCode::FORBIDDEN.into_response();
+        }
+        if crate::csrf::mismatch(&csrf, &form.csrf_token) {
             return StatusCode::FORBIDDEN.into_response();
         }
         match state
@@ -588,9 +630,13 @@ pub mod html {
         RequiredCookieUser(user_id): RequiredCookieUser,
         State(state): State<AppState>,
         Path(profile_user_uuid): Path<Uuid>,
+        Extension(csrf): Extension<CsrfToken>,
         Form(form): Form<FollowerActionForm>,
     ) -> impl IntoResponse {
         if user_id.value() != profile_user_uuid {
+            return StatusCode::FORBIDDEN.into_response();
+        }
+        if crate::csrf::mismatch(&csrf, &form.csrf_token) {
             return StatusCode::FORBIDDEN.into_response();
         }
         match state
@@ -611,11 +657,12 @@ pub mod html {
         State(state): State<AppState>,
         Path(profile_user_uuid): Path<Uuid>,
         Query(params): Query<crate::dtos::ErrorQuery>,
+        Extension(csrf): Extension<CsrfToken>,
     ) -> impl IntoResponse {
         if user_id.value() != profile_user_uuid {
             return StatusCode::FORBIDDEN.into_response();
         }
-        let mut ctx = build_page_context(&state, Some(user_id.clone())).await;
+        let mut ctx = build_page_context(&state, Some(user_id.clone()), csrf.0).await;
         ctx.page_title = "Following — Movies Diary".to_string();
         ctx.canonical_url = format!(
             "{}/users/{}/following-list",
@@ -658,11 +705,12 @@ pub mod html {
         State(state): State<AppState>,
         Path(profile_user_uuid): Path<Uuid>,
         Query(params): Query<crate::dtos::ErrorQuery>,
+        Extension(csrf): Extension<CsrfToken>,
     ) -> impl IntoResponse {
         if user_id.value() != profile_user_uuid {
             return StatusCode::FORBIDDEN.into_response();
         }
-        let mut ctx = build_page_context(&state, Some(user_id.clone())).await;
+        let mut ctx = build_page_context(&state, Some(user_id.clone()), csrf.0).await;
         ctx.page_title = "Followers — Movies Diary".to_string();
         ctx.canonical_url = format!(
             "{}/users/{}/followers-list",
@@ -708,9 +756,13 @@ pub mod html {
         RequiredCookieUser(user_id): RequiredCookieUser,
         State(state): State<AppState>,
         Path(profile_user_uuid): Path<Uuid>,
+        Extension(csrf): Extension<CsrfToken>,
         Form(form): Form<FollowerActionForm>,
     ) -> impl IntoResponse {
         if user_id.value() != profile_user_uuid {
+            return StatusCode::FORBIDDEN.into_response();
+        }
+        if crate::csrf::mismatch(&csrf, &form.csrf_token) {
             return StatusCode::FORBIDDEN.into_response();
         }
         match state

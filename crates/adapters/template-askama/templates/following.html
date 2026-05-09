@@ -17,6 +17,7 @@
   <a href="{{ actor.url }}" target="_blank" rel="noopener noreferrer">{{ actor.url }}</a>
   <form method="POST" action="/users/{{ user_id }}/unfollow" style="display:inline">
     <input type="hidden" name="actor_url" value="{{ actor.url }}">
+    <input type="hidden" name="_csrf" value="{{ ctx.csrf_token }}">
     <button type="submit">Unfollow</button>
   </form>
 </li>

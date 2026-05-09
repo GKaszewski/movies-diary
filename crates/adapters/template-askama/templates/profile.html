@@ -29,6 +29,7 @@
     <h3>Follow remote user</h3>
     <form method="POST" action="/users/{{ profile_user_id }}/follow">
       <input type="text" name="handle" placeholder="user@instance.example.com" required>
+      <input type="hidden" name="_csrf" value="{{ ctx.csrf_token }}">
       <button type="submit">Follow</button>
     </form>
     {% if let Some(err) = error %}
@@ -47,10 +48,12 @@
       <a href="{{ actor.url }}" class="pending-url" target="_blank" rel="noopener noreferrer">{{ actor.url }}</a>
       <form method="POST" action="/users/{{ profile_user_id }}/followers/accept" class="inline-form">
         <input type="hidden" name="actor_url" value="{{ actor.url }}">
+        <input type="hidden" name="_csrf" value="{{ ctx.csrf_token }}">
         <button type="submit" class="btn-accept">Accept</button>
       </form>
       <form method="POST" action="/users/{{ profile_user_id }}/followers/reject" class="inline-form">
         <input type="hidden" name="actor_url" value="{{ actor.url }}">
+        <input type="hidden" name="_csrf" value="{{ ctx.csrf_token }}">
         <button type="submit" class="btn-reject">Reject</button>
       </form>
     </li>
@@ -183,6 +186,7 @@
         {% if ctx.is_current_user(entry.review().user_id().value()) %}
         <form method="post" action="/reviews/{{ entry.review().id().value() }}/delete" class="delete-form">
           <input type="hidden" name="redirect_after" value="/users/{{ profile_user_id }}?view={{ view }}&offset={{ current_offset }}">
+          <input type="hidden" name="_csrf" value="{{ ctx.csrf_token }}">
           <button type="submit">Delete</button>
         </form>
         {% endif %}
