@@ -30,6 +30,8 @@ poster-fetcher = { workspace = true }
 poster-storage = { workspace = true }
 sqlite = { workspace = true }
 sqlite-federation = { workspace = true }
+postgres = { workspace = true }
+postgres-federation = { workspace = true }
 activitypub = { workspace = true }
 sqlx = { workspace = true }
 template-askama = { workspace = true }

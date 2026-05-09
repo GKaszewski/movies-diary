@@ -1,5 +1,3 @@
-use std::default;
-
 use chrono::{NaiveDateTime, Utc};
 
 use crate::{

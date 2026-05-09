@@ -14,6 +14,7 @@ use activitypub::{
     ActivityPubEventHandler, ActivityPubPort, ActivityPubService, DomainUserRepoAdapter,
     ReviewObjectHandler,
 };
+use activitypub::FederationRepository;
 use application::{config::AppConfig, context::AppContext};
 use auth::{Argon2PasswordHasher, AuthConfig, JwtAuthService};
 use export::ExportAdapter;
@@ -23,11 +24,19 @@ use poster_storage::{PosterStorageAdapter, StorageConfig};
 use rss::RssAdapter;
 use sqlite::{SqliteMovieRepository, SqliteUserRepository};
 use sqlite_federation::SqliteFederationRepository;
+use postgres::{PostgresRepository, PostgresUserRepository};
+use postgres_federation::PostgresFederationRepository;
 use template_askama::AskamaHtmlRenderer;
 
 use doc::ApiDocExt;
 use presentation::{openapi::ApiDoc, routes, state::AppState};
 use utoipa::OpenApi as _;
+
+use domain::ports::{
+    AuthService, DiaryExporter, DiaryRepository, MetadataClient, MovieRepository,
+    PasswordHasher, PosterFetcherClient, PosterStorage, ReviewRepository, StatsRepository,
+    UserRepository,
+};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -57,34 +66,8 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
     let omdb_api_key = std::env::var("OMDB_API_KEY").context("OMDB_API_KEY must be set")?;
 
     let database_url = std::env::var("DATABASE_URL").context("DATABASE_URL must be set")?;
-    let opts = SqliteConnectOptions::from_str(&database_url)
-        .context("Invalid DATABASE_URL")?
-        .create_if_missing(true)
-        .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal)
-        .busy_timeout(std::time::Duration::from_secs(5));
-    let pool = SqlitePool::connect_with(opts)
-        .await
-        .context("Failed to connect to SQLite database")?;
+    let backend = std::env::var("DATABASE_BACKEND").unwrap_or_else(|_| "sqlite".to_string());
 
-    let sqlite_repo = Arc::new(SqliteMovieRepository::new(pool.clone()));
-    sqlite_repo
-        .migrate()
-        .await
-        .map_err(|e| anyhow::anyhow!("{}", e))
-        .context("Database migration failed")?;
-
-    use domain::ports::{
-        AuthService, DiaryExporter, DiaryRepository, MetadataClient, MovieRepository,
-        PasswordHasher, PosterFetcherClient, PosterStorage, ReviewRepository, StatsRepository,
-        UserRepository,
-    };
-    let movie_repository: Arc<dyn MovieRepository> = Arc::clone(&sqlite_repo) as _;
-    let review_repository: Arc<dyn ReviewRepository> = Arc::clone(&sqlite_repo) as _;
-    let diary_repository: Arc<dyn DiaryRepository> = Arc::clone(&sqlite_repo) as _;
-    let stats_repository: Arc<dyn StatsRepository> = Arc::clone(&sqlite_repo) as _;
-
-    let user_repository: Arc<dyn UserRepository> =
-        Arc::new(SqliteUserRepository::new(pool.clone()));
     let metadata_client: Arc<dyn MetadataClient> =
         Arc::new(MetadataClientImpl::new_omdb(omdb_api_key));
     let poster_fetcher: Arc<dyn PosterFetcherClient> =
@@ -94,8 +77,14 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
     let auth_service: Arc<dyn AuthService> = Arc::new(JwtAuthService::new(auth_config));
     let password_hasher: Arc<dyn PasswordHasher> = Arc::new(Argon2PasswordHasher);
 
-    // Build a context for the poster handler. sync_poster doesn't publish events,
-    // so a noop publisher here is safe and avoids a circular dependency.
+    let (movie_repository, review_repository, diary_repository, stats_repository,
+         user_repository, federation_repo_dyn, review_store, social_query) =
+        if backend == "postgres" {
+            wire_postgres(&database_url).await?
+        } else {
+            wire_sqlite(&database_url).await?
+        };
+
     let handler_ctx = AppContext {
         movie_repository: Arc::clone(&movie_repository),
         review_repository: Arc::clone(&review_repository),
@@ -112,19 +101,16 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
         config: app_config.clone(),
     };
 
-    // Federation
-    let federation_repo = Arc::new(SqliteFederationRepository::new(pool));
-    let social_query: Arc<dyn domain::ports::SocialQueryPort> = Arc::clone(&federation_repo) as _;
     let user_repo_adapter = Arc::new(DomainUserRepoAdapter(Arc::clone(&user_repository)));
     let review_handler = Arc::new(ReviewObjectHandler {
         movie_repository: Arc::clone(&movie_repository),
         diary_repository: Arc::clone(&diary_repository),
-        review_store: Arc::clone(&federation_repo) as Arc<dyn activitypub::RemoteReviewRepository>,
+        review_store,
         base_url: app_config.base_url.clone(),
     });
     let concrete_ap_service = Arc::new(
         ActivityPubService::new(
-            federation_repo,
+            federation_repo_dyn,
             user_repo_adapter,
             review_handler,
             app_config.base_url.clone(),
@@ -174,6 +160,78 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
         social_query,
     };
     Ok((state, ap_router))
+}
+
+type WireResult = anyhow::Result<(
+    Arc<dyn MovieRepository>,
+    Arc<dyn ReviewRepository>,
+    Arc<dyn DiaryRepository>,
+    Arc<dyn StatsRepository>,
+    Arc<dyn UserRepository>,
+    Arc<dyn FederationRepository>,
+    Arc<dyn activitypub::RemoteReviewRepository>,
+    Arc<dyn domain::ports::SocialQueryPort>,
+)>;
+
+async fn wire_sqlite(database_url: &str) -> WireResult {
+    let opts = SqliteConnectOptions::from_str(database_url)
+        .context("Invalid DATABASE_URL")?
+        .create_if_missing(true)
+        .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal)
+        .busy_timeout(std::time::Duration::from_secs(5));
+    let pool = SqlitePool::connect_with(opts)
+        .await
+        .context("Failed to connect to SQLite database")?;
+
+    let sqlite_repo = Arc::new(SqliteMovieRepository::new(pool.clone()));
+    sqlite_repo
+        .migrate()
+        .await
+        .map_err(|e| anyhow::anyhow!("{}", e))
+        .context("Database migration failed")?;
+
+    let movie_repository: Arc<dyn MovieRepository> = Arc::clone(&sqlite_repo) as _;
+    let review_repository: Arc<dyn ReviewRepository> = Arc::clone(&sqlite_repo) as _;
+    let diary_repository: Arc<dyn DiaryRepository> = Arc::clone(&sqlite_repo) as _;
+    let stats_repository: Arc<dyn StatsRepository> = Arc::clone(&sqlite_repo) as _;
+    let user_repository: Arc<dyn UserRepository> =
+        Arc::new(SqliteUserRepository::new(pool.clone()));
+
+    let fed = Arc::new(SqliteFederationRepository::new(pool));
+    let federation_repo_dyn: Arc<dyn FederationRepository> = Arc::clone(&fed) as _;
+    let review_store: Arc<dyn activitypub::RemoteReviewRepository> = Arc::clone(&fed) as _;
+    let social_query: Arc<dyn domain::ports::SocialQueryPort> = fed;
+
+    Ok((movie_repository, review_repository, diary_repository, stats_repository,
+        user_repository, federation_repo_dyn, review_store, social_query))
+}
+
+async fn wire_postgres(database_url: &str) -> WireResult {
+    let pool = sqlx::PgPool::connect(database_url)
+        .await
+        .context("Failed to connect to PostgreSQL database")?;
+
+    let pg_repo = Arc::new(PostgresRepository::new(pool.clone()));
+    pg_repo
+        .migrate()
+        .await
+        .map_err(|e| anyhow::anyhow!("{}", e))
+        .context("Database migration failed")?;
+
+    let movie_repository: Arc<dyn MovieRepository> = Arc::clone(&pg_repo) as _;
+    let review_repository: Arc<dyn ReviewRepository> = Arc::clone(&pg_repo) as _;
+    let diary_repository: Arc<dyn DiaryRepository> = Arc::clone(&pg_repo) as _;
+    let stats_repository: Arc<dyn StatsRepository> = Arc::clone(&pg_repo) as _;
+    let user_repository: Arc<dyn UserRepository> =
+        Arc::new(PostgresUserRepository::new(pool.clone()));
+
+    let fed = Arc::new(PostgresFederationRepository::new(pool));
+    let federation_repo_dyn: Arc<dyn FederationRepository> = Arc::clone(&fed) as _;
+    let review_store: Arc<dyn activitypub::RemoteReviewRepository> = Arc::clone(&fed) as _;
+    let social_query: Arc<dyn domain::ports::SocialQueryPort> = fed;
+
+    Ok((movie_repository, review_repository, diary_repository, stats_repository,
+        user_repository, federation_repo_dyn, review_store, social_query))
 }
 
 fn init_tracing() {
