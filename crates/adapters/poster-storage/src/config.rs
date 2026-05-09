@@ -1,38 +1,86 @@
 use anyhow::Context;
-use object_store::{aws::AmazonS3Builder, ObjectStore};
+use object_store::{ObjectStore, aws::AmazonS3Builder, local::LocalFileSystem};
 use std::sync::Arc;
 
-pub struct StorageConfig {
-    endpoint: String,
-    access_key_id: String,
-    secret_access_key: String,
-    bucket: String,
-    region: String,
-}
+pub struct StorageConfig(Arc<dyn ObjectStore>);
 
 impl StorageConfig {
     pub fn from_env() -> anyhow::Result<Self> {
-        Ok(Self {
-            endpoint: std::env::var("MINIO_ENDPOINT").context("MINIO_ENDPOINT required")?,
-            access_key_id: std::env::var("MINIO_ACCESS_KEY_ID")
-                .context("MINIO_ACCESS_KEY_ID required")?,
-            secret_access_key: std::env::var("MINIO_SECRET_ACCESS_KEY")
-                .context("MINIO_SECRET_ACCESS_KEY required")?,
-            bucket: std::env::var("MINIO_BUCKET").context("MINIO_BUCKET required")?,
-            region: std::env::var("MINIO_REGION").unwrap_or_else(|_| "minio".to_string()),
-        })
+        let backend = std::env::var("POSTER_STORAGE_BACKEND")
+            .context("POSTER_STORAGE_BACKEND required (valid values: s3, local)")?;
+
+        let store: Arc<dyn ObjectStore> = match backend.as_str() {
+            "s3" => build_s3_store(
+                &std::env::var("MINIO_ENDPOINT").context("MINIO_ENDPOINT required")?,
+                &std::env::var("MINIO_ACCESS_KEY_ID").context("MINIO_ACCESS_KEY_ID required")?,
+                &std::env::var("MINIO_SECRET_ACCESS_KEY")
+                    .context("MINIO_SECRET_ACCESS_KEY required")?,
+                &std::env::var("MINIO_BUCKET").context("MINIO_BUCKET required")?,
+                &std::env::var("MINIO_REGION").unwrap_or_else(|_| "minio".to_string()),
+            )?,
+            "local" => build_local_store(
+                &std::env::var("POSTER_STORAGE_PATH")
+                    .context("POSTER_STORAGE_PATH required when POSTER_STORAGE_BACKEND=local")?,
+            )?,
+            other => anyhow::bail!(
+                "Unknown POSTER_STORAGE_BACKEND: {other:?}. Valid values: s3, local"
+            ),
+        };
+
+        Ok(Self(store))
     }
 
-    pub fn build_store(self) -> anyhow::Result<Arc<dyn ObjectStore>> {
-        let store = AmazonS3Builder::new()
-            .with_endpoint(self.endpoint)
-            .with_access_key_id(self.access_key_id)
-            .with_secret_access_key(self.secret_access_key)
-            .with_bucket_name(self.bucket)
-            .with_region(self.region)
-            .with_allow_http(true)
-            .build()
-            .context("Failed to build S3/Minio store")?;
-        Ok(Arc::new(store))
+    pub fn build_store(self) -> Arc<dyn ObjectStore> {
+        self.0
+    }
+}
+
+fn build_s3_store(
+    endpoint: &str,
+    access_key_id: &str,
+    secret_access_key: &str,
+    bucket: &str,
+    region: &str,
+) -> anyhow::Result<Arc<dyn ObjectStore>> {
+    let store = AmazonS3Builder::new()
+        .with_endpoint(endpoint)
+        .with_access_key_id(access_key_id)
+        .with_secret_access_key(secret_access_key)
+        .with_bucket_name(bucket)
+        .with_region(region)
+        .with_allow_http(true)
+        .build()
+        .context("Failed to build S3/Minio store")?;
+    Ok(Arc::new(store))
+}
+
+fn build_local_store(path: &str) -> anyhow::Result<Arc<dyn ObjectStore>> {
+    std::fs::create_dir_all(path)
+        .context("Failed to create poster storage directory")?;
+    let store = LocalFileSystem::new_with_prefix(path)
+        .context("Failed to initialise local file system store")?;
+    Ok(Arc::new(store))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn local_store_creates_dir_and_succeeds() {
+        let dir = std::env::temp_dir()
+            .join(format!("poster_test_{}", uuid::Uuid::new_v4()));
+        let result = build_local_store(dir.to_str().unwrap());
+        assert!(result.is_ok(), "expected Ok, got: {:?}", result.err());
+        assert!(dir.exists(), "directory should have been created");
+    }
+
+    #[test]
+    fn local_store_succeeds_if_dir_already_exists() {
+        let dir = std::env::temp_dir()
+            .join(format!("poster_test_{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let result = build_local_store(dir.to_str().unwrap());
+        assert!(result.is_ok());
     }
 }

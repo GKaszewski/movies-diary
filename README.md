@@ -6,7 +6,7 @@ A self-hosted, server-side rendered movie logging system. Built in Rust — no J
 
 - Log movies with a TMDB/OMDb ID and a 0–5 rating
 - Immutable append-only viewing ledger (tracks re-watches)
-- Background poster fetching and storage (S3-compatible)
+- Background poster fetching and storage (local filesystem or S3-compatible)
 - RSS/Atom feed for public subscription
 - JWT authentication via cookie (HTML) or Bearer token (REST API)
 - Zero JavaScript
@@ -24,7 +24,7 @@ adapters/
   sqlite      — SQLite repository via sqlx
   metadata    — OMDb HTTP client
   poster-fetcher — downloads poster images
-  poster-storage — uploads posters to S3-compatible storage
+  poster-storage — uploads posters to local filesystem or S3-compatible storage
   template-askama — Askama HTML rendering
   rss         — RSS/Atom feed generation
   event-publisher — async event channel for background poster sync
@@ -34,12 +34,12 @@ adapters/
 
 - Rust (stable, 2024 edition)
 - SQLite
-- An S3-compatible object store (e.g. MinIO) for poster storage
+- Poster storage: local filesystem (zero deps) or an S3-compatible object store (e.g. MinIO)
 - An [OMDb API key](https://www.omdbapi.com/apikey.aspx)
 
 ## Environment Variables
 
-Copy and fill in the following (e.g. in a `.env` file):
+A `.env.example` file is provided at the repo root — copy it to `.env` and fill in your values. Key variables:
 
 ```env
 # Database
@@ -47,24 +47,26 @@ DATABASE_URL=sqlite://movies.db
 
 # Authentication
 JWT_SECRET=change-me
-JWT_TTL_SECONDS=86400
 
 # OMDb metadata
 OMDB_API_KEY=your-key
 
-# Poster storage (S3-compatible)
-MINIO_ENDPOINT=http://localhost:9000
-MINIO_BUCKET=posters
-MINIO_REGION=us-east-1
-MINIO_ACCESS_KEY_ID=minioadmin
-MINIO_SECRET_ACCESS_KEY=minioadmin
+# Poster storage — pick one backend:
 
-# Optional
-ALLOW_REGISTRATION=false
-POSTER_FETCH_TIMEOUT_SECONDS=10
-EVENT_CHANNEL_BUFFER=32
-RUST_LOG=presentation=debug,tower_http=debug
+# Option A: local filesystem (zero deps)
+POSTER_STORAGE_BACKEND=local
+POSTER_STORAGE_PATH=./posters
+
+# Option B: S3-compatible (MinIO, AWS S3, etc.)
+# POSTER_STORAGE_BACKEND=s3
+# MINIO_ENDPOINT=http://localhost:9000
+# MINIO_BUCKET=posters
+# MINIO_REGION=minio
+# MINIO_ACCESS_KEY_ID=minioadmin
+# MINIO_SECRET_ACCESS_KEY=minioadmin
 ```
+
+See `.env.example` for optional variables (rate limiting, logging, host/port, etc.).
 
 ## Run
 

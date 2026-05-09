@@ -25,8 +25,8 @@ impl PosterStorageAdapter {
         Self { store }
     }
 
-    pub fn from_config(config: StorageConfig) -> anyhow::Result<Self> {
-        Ok(Self::new(config.build_store()?))
+    pub fn from_config(config: StorageConfig) -> Self {
+        Self::new(config.build_store())
     }
 }
 

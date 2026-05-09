@@ -74,7 +74,7 @@ async fn wire_dependencies() -> anyhow::Result<AppState> {
     let user_repository: Arc<dyn UserRepository> = Arc::new(SqliteUserRepository::new(pool.clone()));
     let metadata_client: Arc<dyn MetadataClient> = Arc::new(MetadataClientImpl::new_omdb(omdb_api_key));
     let poster_fetcher: Arc<dyn PosterFetcherClient> = Arc::new(ReqwestPosterFetcher::new(PosterFetcherConfig::from_env())?);
-    let poster_storage: Arc<dyn PosterStorage> = Arc::new(PosterStorageAdapter::from_config(storage_config)?);
+    let poster_storage: Arc<dyn PosterStorage> = Arc::new(PosterStorageAdapter::from_config(storage_config));
     let auth_service: Arc<dyn AuthService> = Arc::new(JwtAuthService::new(auth_config));
     let password_hasher: Arc<dyn PasswordHasher> = Arc::new(Argon2PasswordHasher);
 
