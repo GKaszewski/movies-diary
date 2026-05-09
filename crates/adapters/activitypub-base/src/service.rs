@@ -11,7 +11,6 @@ use url::Url;
 
 use crate::{
     activities::{AcceptActivity, CreateActivity, FollowActivity, RejectActivity, UndoActivity},
-    actor_handler::actor_handler,
     actors::{get_local_actor, DbActor},
     content::ApObjectHandler,
     data::FederationData,
@@ -91,7 +90,6 @@ impl ActivityPubService {
     pub fn router(&self) -> Router {
         Router::new()
             .route("/.well-known/webfinger", get(webfinger_handler))
-            .route("/users/{id}", get(actor_handler))
             .route("/users/{id}/inbox", post(inbox_handler))
             .route("/users/{id}/outbox", get(outbox_handler))
             .route("/users/{id}/followers", get(followers_handler))
