@@ -19,6 +19,7 @@ pub struct HtmlPageContext {
     pub page_title: String,
     pub canonical_url: String,
     pub csrf_token: String,
+    pub page_rss_url: Option<String>,
 }
 
 impl HtmlPageContext {

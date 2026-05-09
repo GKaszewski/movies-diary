@@ -63,6 +63,7 @@ pub mod html {
             page_title: "Movies Diary".to_string(),
             canonical_url: state.app_ctx.config.base_url.clone(),
             csrf_token,
+            page_rss_url: None,
         }
     }
 
@@ -105,6 +106,7 @@ pub mod html {
             page_title: "Login — Movies Diary".to_string(),
             canonical_url: format!("{}/login", state.app_ctx.config.base_url),
             csrf_token: csrf.0,
+            page_rss_url: None,
         };
         let html = state
             .html_renderer
@@ -170,6 +172,7 @@ pub mod html {
             page_title: "Register — Movies Diary".to_string(),
             canonical_url: format!("{}/register", state.app_ctx.config.base_url),
             csrf_token: csrf.0,
+            page_rss_url: None,
         };
         let html = state
             .html_renderer
@@ -602,7 +605,10 @@ pub mod html {
                         (e.offset, has_more, e.limit)
                     })
                     .unwrap_or((0, false, super::DEFAULT_PAGE_LIMIT));
-                ctx.rss_url = format!("/users/{}/feed.rss", profile_user_uuid);
+                if !is_own_profile {
+                    ctx.page_rss_url =
+                        Some(format!("/users/{}/feed.rss", profile_user_uuid));
+                }
                 let data = application::ports::ProfilePageData {
                     ctx,
                     profile_user_id: profile_user_uuid,

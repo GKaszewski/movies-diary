@@ -46,6 +46,10 @@
       <span class="footer-made">Made with passion</span>
       <span class="footer-sep">·</span>
       <a href="/feed.rss" class="footer-link">RSS</a>
+      {% if let Some(rss) = ctx.page_rss_url %}
+      <span class="footer-sep">·</span>
+      <a href="{{ rss }}" class="footer-link">Profile RSS</a>
+      {% endif %}
       {% if let Some(uid) = ctx.user_id %}
       <span class="footer-sep">·</span>
       <a href="/users/{{ uid }}" class="footer-link">My Profile</a>
