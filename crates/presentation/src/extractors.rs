@@ -98,356 +98,194 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Arc;
     use axum::{
         body::Body,
         http::{Request, StatusCode},
         routing::get,
         Router,
     };
+    use application::{config::AppConfig, context::AppContext};
+    use domain::{
+        errors::DomainError,
+        events::DomainEvent,
+        models::{DiaryEntry, DiaryFilter, FeedEntry, Movie, Review, ReviewHistory, UserStats, UserTrends, collections::{PageParams, Paginated}},
+        ports::{
+            AuthService, DiaryRepository, EventPublisher, GeneratedToken, MetadataClient,
+            MovieRepository, PasswordHasher, PosterFetcherClient, PosterStorage,
+            ReviewRepository, StatsRepository, UserRepository,
+        },
+        value_objects::{
+            Email, ExternalMetadataId, MovieId, MovieTitle, PasswordHash, PosterPath, PosterUrl,
+            ReleaseYear, ReviewId, UserId,
+        },
+    };
     use tower::ServiceExt;
 
-    async fn protected_handler(user: AuthenticatedUser) -> String {
-        user.0.value().to_string()
+    // --- Panic stubs (defined once) ---
+
+    struct Panic;
+
+    #[async_trait::async_trait]
+    impl MovieRepository for Panic {
+        async fn get_movie_by_external_id(&self, _: &ExternalMetadataId) -> Result<Option<Movie>, DomainError> { panic!() }
+        async fn get_movie_by_id(&self, _: &MovieId) -> Result<Option<Movie>, DomainError> { panic!() }
+        async fn get_movies_by_title_and_year(&self, _: &MovieTitle, _: &ReleaseYear) -> Result<Vec<Movie>, DomainError> { panic!() }
+        async fn upsert_movie(&self, _: &Movie) -> Result<(), DomainError> { panic!() }
+        async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> { panic!() }
     }
-
-    fn test_router(state: crate::state::AppState) -> Router {
-        Router::new()
-            .route("/protected", get(protected_handler))
-            .with_state(state)
+    #[async_trait::async_trait]
+    impl ReviewRepository for Panic {
+        async fn save_review(&self, _: &Review) -> Result<DomainEvent, DomainError> { panic!() }
+        async fn get_review_by_id(&self, _: &ReviewId) -> Result<Option<Review>, DomainError> { panic!() }
+        async fn delete_review(&self, _: &ReviewId) -> Result<(), DomainError> { panic!() }
     }
-
-    #[tokio::test]
-    async fn missing_auth_header_returns_401() {
-        use std::sync::Arc;
-        use application::context::AppContext;
-
-        struct PanicRepo;
-        #[async_trait::async_trait]
-        impl domain::ports::MovieRepository for PanicRepo {
-            async fn get_movie_by_external_id(&self, _: &domain::value_objects::ExternalMetadataId) -> Result<Option<domain::models::Movie>, domain::errors::DomainError> { panic!() }
-            async fn get_movie_by_id(&self, _: &domain::value_objects::MovieId) -> Result<Option<domain::models::Movie>, domain::errors::DomainError> { panic!() }
-            async fn get_movies_by_title_and_year(&self, _: &domain::value_objects::MovieTitle, _: &domain::value_objects::ReleaseYear) -> Result<Vec<domain::models::Movie>, domain::errors::DomainError> { panic!() }
-            async fn upsert_movie(&self, _: &domain::models::Movie) -> Result<(), domain::errors::DomainError> { panic!() }
-            async fn delete_movie(&self, _: &domain::value_objects::MovieId) -> Result<(), domain::errors::DomainError> { panic!() }
-        }
-        #[async_trait::async_trait]
-        impl domain::ports::ReviewRepository for PanicRepo {
-            async fn save_review(&self, _: &domain::models::Review) -> Result<domain::events::DomainEvent, domain::errors::DomainError> { panic!() }
-            async fn get_review_by_id(&self, _: &domain::value_objects::ReviewId) -> Result<Option<domain::models::Review>, domain::errors::DomainError> { panic!() }
-            async fn delete_review(&self, _: &domain::value_objects::ReviewId) -> Result<(), domain::errors::DomainError> { panic!() }
-        }
-        #[async_trait::async_trait]
-        impl domain::ports::DiaryRepository for PanicRepo {
-            async fn query_diary(&self, _: &domain::models::DiaryFilter) -> Result<domain::models::collections::Paginated<domain::models::DiaryEntry>, domain::errors::DomainError> { panic!() }
-            async fn query_activity_feed(&self, _: &domain::models::collections::PageParams) -> Result<domain::models::collections::Paginated<domain::models::FeedEntry>, domain::errors::DomainError> { panic!() }
-            async fn get_review_history(&self, _: &domain::value_objects::MovieId) -> Result<domain::models::ReviewHistory, domain::errors::DomainError> { panic!() }
-            async fn get_user_history(&self, _: &domain::value_objects::UserId) -> Result<Vec<domain::models::DiaryEntry>, domain::errors::DomainError> { panic!() }
-        }
-        #[async_trait::async_trait]
-        impl domain::ports::StatsRepository for PanicRepo {
-            async fn get_user_stats(&self, _: &domain::value_objects::UserId) -> Result<domain::models::UserStats, domain::errors::DomainError> { panic!() }
-            async fn get_user_trends(&self, _: &domain::value_objects::UserId) -> Result<domain::models::UserTrends, domain::errors::DomainError> { panic!() }
-        }
-
-        struct PanicRenderer;
-        impl crate::ports::HtmlRenderer for PanicRenderer {
-            fn render_diary_page(&self, _: &domain::models::collections::Paginated<domain::models::DiaryEntry>, _: application::ports::HtmlPageContext) -> Result<String, String> { panic!() }
-            fn render_login_page(&self, _: application::ports::LoginPageData<'_>) -> Result<String, String> { panic!() }
-            fn render_register_page(&self, _: application::ports::RegisterPageData<'_>) -> Result<String, String> { panic!() }
-            fn render_new_review_page(&self, _: application::ports::NewReviewPageData<'_>) -> Result<String, String> { panic!() }
-            fn render_activity_feed_page(&self, _: application::ports::ActivityFeedPageData) -> Result<String, String> { panic!() }
-            fn render_users_page(&self, _: application::ports::UsersPageData) -> Result<String, String> { panic!() }
-            fn render_profile_page(&self, _: application::ports::ProfilePageData) -> Result<String, String> { panic!() }
-            fn render_following_page(&self, _: application::ports::FollowingPageData) -> Result<String, String> { panic!() }
-            fn render_followers_page(&self, _: application::ports::FollowersPageData) -> Result<String, String> { panic!() }
-        }
-
-        struct PanicRssRenderer;
-        impl crate::ports::RssFeedRenderer for PanicRssRenderer {
-            fn render_feed(&self, _: &[domain::models::DiaryEntry], _: &str) -> Result<String, String> { panic!() }
-        }
-
-        struct PanicMeta; struct PanicFetcher; struct PanicStorage; struct PanicEvent; struct PanicHasher; struct PanicAuth; struct PanicUserRepo;
-        #[async_trait::async_trait] impl domain::ports::MetadataClient for PanicMeta { async fn fetch_movie_metadata(&self, _: &domain::ports::MetadataSearchCriteria) -> Result<domain::models::Movie, domain::errors::DomainError> { panic!() } async fn get_poster_url(&self, _: &domain::value_objects::ExternalMetadataId) -> Result<Option<domain::value_objects::PosterUrl>, domain::errors::DomainError> { panic!() } }
-        #[async_trait::async_trait] impl domain::ports::PosterFetcherClient for PanicFetcher { async fn fetch_poster_bytes(&self, _: &domain::value_objects::PosterUrl) -> Result<Vec<u8>, domain::errors::DomainError> { panic!() } }
-        #[async_trait::async_trait] impl domain::ports::PosterStorage for PanicStorage { async fn store_poster(&self, _: &domain::value_objects::MovieId, _: &[u8]) -> Result<domain::value_objects::PosterPath, domain::errors::DomainError> { panic!() } async fn get_poster(&self, _: &domain::value_objects::PosterPath) -> Result<Vec<u8>, domain::errors::DomainError> { panic!() } }
-        #[async_trait::async_trait] impl domain::ports::EventPublisher for PanicEvent { async fn publish(&self, _: &domain::events::DomainEvent) -> Result<(), domain::errors::DomainError> { panic!() } }
-        #[async_trait::async_trait] impl domain::ports::PasswordHasher for PanicHasher { async fn hash(&self, _: &str) -> Result<domain::value_objects::PasswordHash, domain::errors::DomainError> { panic!() } async fn verify(&self, _: &str, _: &domain::value_objects::PasswordHash) -> Result<bool, domain::errors::DomainError> { panic!() } }
-        #[async_trait::async_trait] impl domain::ports::AuthService for PanicAuth { async fn generate_token(&self, _: &domain::value_objects::UserId) -> Result<domain::ports::GeneratedToken, domain::errors::DomainError> { panic!() } async fn validate_token(&self, _: &str) -> Result<domain::value_objects::UserId, domain::errors::DomainError> { panic!() } }
-        #[async_trait::async_trait] impl domain::ports::UserRepository for PanicUserRepo { async fn find_by_email(&self, _: &domain::value_objects::Email) -> Result<Option<domain::models::User>, domain::errors::DomainError> { panic!() } async fn save(&self, _: &domain::models::User) -> Result<(), domain::errors::DomainError> { panic!() } async fn find_by_id(&self, _: &domain::value_objects::UserId) -> Result<Option<domain::models::User>, domain::errors::DomainError> { panic!() } async fn find_by_username(&self, _: &domain::value_objects::Username) -> Result<Option<domain::models::User>, domain::errors::DomainError> { panic!() } async fn list_with_stats(&self) -> Result<Vec<domain::models::UserSummary>, domain::errors::DomainError> { panic!() } }
-
-        let state = crate::state::AppState {
-            app_ctx: AppContext {
-                movie_repository: Arc::new(PanicRepo) as _,
-                review_repository: Arc::new(PanicRepo) as _,
-                diary_repository: Arc::new(PanicRepo) as _,
-                stats_repository: Arc::new(PanicRepo) as _,
-                metadata_client: Arc::new(PanicMeta),
-                poster_fetcher: Arc::new(PanicFetcher),
-                poster_storage: Arc::new(PanicStorage),
-                event_publisher: Arc::new(PanicEvent),
-                auth_service: Arc::new(PanicAuth),
-                password_hasher: Arc::new(PanicHasher),
-                user_repository: Arc::new(PanicUserRepo),
-                config: application::config::AppConfig { allow_registration: false, base_url: "http://localhost:3000".to_string(), rate_limit: 20 },
-            },
-            html_renderer: Arc::new(PanicRenderer),
-            rss_renderer: Arc::new(PanicRssRenderer),
-            ap_service: std::sync::Arc::new(activitypub::NoopActivityPubService),
-        };
-
-        let app = test_router(state);
-        let response = app
-            .oneshot(
-                Request::builder()
-                    .uri("/protected")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    #[async_trait::async_trait]
+    impl DiaryRepository for Panic {
+        async fn query_diary(&self, _: &DiaryFilter) -> Result<Paginated<DiaryEntry>, DomainError> { panic!() }
+        async fn query_activity_feed(&self, _: &PageParams) -> Result<Paginated<FeedEntry>, DomainError> { panic!() }
+        async fn get_review_history(&self, _: &MovieId) -> Result<ReviewHistory, DomainError> { panic!() }
+        async fn get_user_history(&self, _: &UserId) -> Result<Vec<DiaryEntry>, DomainError> { panic!() }
     }
-
-    // Reusable helpers for cookie extractor tests
-    async fn optional_cookie_handler(user: OptionalCookieUser) -> String {
-        match user.0 {
-            Some(id) => id.value().to_string(),
-            None => "none".to_string(),
-        }
+    #[async_trait::async_trait]
+    impl StatsRepository for Panic {
+        async fn get_user_stats(&self, _: &UserId) -> Result<UserStats, DomainError> { panic!() }
+        async fn get_user_trends(&self, _: &UserId) -> Result<UserTrends, DomainError> { panic!() }
     }
-
-    async fn required_cookie_handler(user: RequiredCookieUser) -> String {
-        user.0.value().to_string()
+    #[async_trait::async_trait]
+    impl MetadataClient for Panic {
+        async fn fetch_movie_metadata(&self, _: &domain::ports::MetadataSearchCriteria) -> Result<Movie, DomainError> { panic!() }
+        async fn get_poster_url(&self, _: &ExternalMetadataId) -> Result<Option<PosterUrl>, DomainError> { panic!() }
     }
-
-    fn test_router_optional(state: crate::state::AppState) -> Router {
-        Router::new()
-            .route("/optional", get(optional_cookie_handler))
-            .with_state(state)
+    #[async_trait::async_trait]
+    impl PosterFetcherClient for Panic { async fn fetch_poster_bytes(&self, _: &PosterUrl) -> Result<Vec<u8>, DomainError> { panic!() } }
+    #[async_trait::async_trait]
+    impl PosterStorage for Panic {
+        async fn store_poster(&self, _: &MovieId, _: &[u8]) -> Result<PosterPath, DomainError> { panic!() }
+        async fn get_poster(&self, _: &PosterPath) -> Result<Vec<u8>, DomainError> { panic!() }
     }
+    #[async_trait::async_trait]
+    impl AuthService for Panic {
+        async fn generate_token(&self, _: &UserId) -> Result<GeneratedToken, DomainError> { panic!() }
+        async fn validate_token(&self, _: &str) -> Result<UserId, DomainError> { panic!() }
+    }
+    #[async_trait::async_trait]
+    impl PasswordHasher for Panic {
+        async fn hash(&self, _: &str) -> Result<PasswordHash, DomainError> { panic!() }
+        async fn verify(&self, _: &str, _: &PasswordHash) -> Result<bool, DomainError> { panic!() }
+    }
+    #[async_trait::async_trait]
+    impl UserRepository for Panic {
+        async fn find_by_email(&self, _: &Email) -> Result<Option<domain::models::User>, DomainError> { panic!() }
+        async fn save(&self, _: &domain::models::User) -> Result<(), DomainError> { panic!() }
+        async fn find_by_id(&self, _: &UserId) -> Result<Option<domain::models::User>, DomainError> { panic!() }
+        async fn find_by_username(&self, _: &domain::value_objects::Username) -> Result<Option<domain::models::User>, DomainError> { panic!() }
+        async fn list_with_stats(&self) -> Result<Vec<domain::models::UserSummary>, DomainError> { panic!() }
+    }
+    #[async_trait::async_trait]
+    impl EventPublisher for Panic { async fn publish(&self, _: &DomainEvent) -> Result<(), DomainError> { panic!() } }
 
-    fn test_router_required(state: crate::state::AppState) -> Router {
-        Router::new()
-            .route("/required", get(required_cookie_handler))
-            .with_state(state)
+    impl crate::ports::HtmlRenderer for Panic {
+        fn render_diary_page(&self, _: &Paginated<DiaryEntry>, _: application::ports::HtmlPageContext) -> Result<String, String> { panic!() }
+        fn render_login_page(&self, _: application::ports::LoginPageData<'_>) -> Result<String, String> { panic!() }
+        fn render_register_page(&self, _: application::ports::RegisterPageData<'_>) -> Result<String, String> { panic!() }
+        fn render_new_review_page(&self, _: application::ports::NewReviewPageData<'_>) -> Result<String, String> { panic!() }
+        fn render_activity_feed_page(&self, _: application::ports::ActivityFeedPageData) -> Result<String, String> { panic!() }
+        fn render_users_page(&self, _: application::ports::UsersPageData) -> Result<String, String> { panic!() }
+        fn render_profile_page(&self, _: application::ports::ProfilePageData) -> Result<String, String> { panic!() }
+        fn render_following_page(&self, _: application::ports::FollowingPageData) -> Result<String, String> { panic!() }
+        fn render_followers_page(&self, _: application::ports::FollowersPageData) -> Result<String, String> { panic!() }
+    }
+    impl crate::ports::RssFeedRenderer for Panic {
+        fn render_feed(&self, _: &[DiaryEntry], _: &str) -> Result<String, String> { panic!() }
     }
 
     struct RejectingAuth;
     #[async_trait::async_trait]
-    impl domain::ports::AuthService for RejectingAuth {
-        async fn generate_token(&self, _: &domain::value_objects::UserId) -> Result<domain::ports::GeneratedToken, domain::errors::DomainError> { panic!() }
-        async fn validate_token(&self, _: &str) -> Result<domain::value_objects::UserId, domain::errors::DomainError> {
-            Err(domain::errors::DomainError::Unauthorized("bad token".into()))
+    impl AuthService for RejectingAuth {
+        async fn generate_token(&self, _: &UserId) -> Result<GeneratedToken, DomainError> { panic!() }
+        async fn validate_token(&self, _: &str) -> Result<UserId, DomainError> {
+            Err(DomainError::Unauthorized("bad token".into()))
         }
     }
 
-    async fn panic_state() -> crate::state::AppState {
-        use std::sync::Arc;
-        use application::context::AppContext;
-        struct PanicRepo2;
-        #[async_trait::async_trait]
-        impl domain::ports::MovieRepository for PanicRepo2 {
-            async fn get_movie_by_external_id(&self, _: &domain::value_objects::ExternalMetadataId) -> Result<Option<domain::models::Movie>, domain::errors::DomainError> { panic!() }
-            async fn get_movie_by_id(&self, _: &domain::value_objects::MovieId) -> Result<Option<domain::models::Movie>, domain::errors::DomainError> { panic!() }
-            async fn get_movies_by_title_and_year(&self, _: &domain::value_objects::MovieTitle, _: &domain::value_objects::ReleaseYear) -> Result<Vec<domain::models::Movie>, domain::errors::DomainError> { panic!() }
-            async fn upsert_movie(&self, _: &domain::models::Movie) -> Result<(), domain::errors::DomainError> { panic!() }
-            async fn delete_movie(&self, _: &domain::value_objects::MovieId) -> Result<(), domain::errors::DomainError> { panic!() }
-        }
-        #[async_trait::async_trait]
-        impl domain::ports::ReviewRepository for PanicRepo2 {
-            async fn save_review(&self, _: &domain::models::Review) -> Result<domain::events::DomainEvent, domain::errors::DomainError> { panic!() }
-            async fn get_review_by_id(&self, _: &domain::value_objects::ReviewId) -> Result<Option<domain::models::Review>, domain::errors::DomainError> { panic!() }
-            async fn delete_review(&self, _: &domain::value_objects::ReviewId) -> Result<(), domain::errors::DomainError> { panic!() }
-        }
-        #[async_trait::async_trait]
-        impl domain::ports::DiaryRepository for PanicRepo2 {
-            async fn query_diary(&self, _: &domain::models::DiaryFilter) -> Result<domain::models::collections::Paginated<domain::models::DiaryEntry>, domain::errors::DomainError> { panic!() }
-            async fn query_activity_feed(&self, _: &domain::models::collections::PageParams) -> Result<domain::models::collections::Paginated<domain::models::FeedEntry>, domain::errors::DomainError> { panic!() }
-            async fn get_review_history(&self, _: &domain::value_objects::MovieId) -> Result<domain::models::ReviewHistory, domain::errors::DomainError> { panic!() }
-            async fn get_user_history(&self, _: &domain::value_objects::UserId) -> Result<Vec<domain::models::DiaryEntry>, domain::errors::DomainError> { panic!() }
-        }
-        #[async_trait::async_trait]
-        impl domain::ports::StatsRepository for PanicRepo2 {
-            async fn get_user_stats(&self, _: &domain::value_objects::UserId) -> Result<domain::models::UserStats, domain::errors::DomainError> { panic!() }
-            async fn get_user_trends(&self, _: &domain::value_objects::UserId) -> Result<domain::models::UserTrends, domain::errors::DomainError> { panic!() }
-        }
-        struct PanicMeta2; struct PanicFetcher2; struct PanicStorage2; struct PanicEvent2; struct PanicHasher2; struct PanicUserRepo2;
-        #[async_trait::async_trait] impl domain::ports::MetadataClient for PanicMeta2 { async fn fetch_movie_metadata(&self, _: &domain::ports::MetadataSearchCriteria) -> Result<domain::models::Movie, domain::errors::DomainError> { panic!() } async fn get_poster_url(&self, _: &domain::value_objects::ExternalMetadataId) -> Result<Option<domain::value_objects::PosterUrl>, domain::errors::DomainError> { panic!() } }
-        #[async_trait::async_trait] impl domain::ports::PosterFetcherClient for PanicFetcher2 { async fn fetch_poster_bytes(&self, _: &domain::value_objects::PosterUrl) -> Result<Vec<u8>, domain::errors::DomainError> { panic!() } }
-        #[async_trait::async_trait] impl domain::ports::PosterStorage for PanicStorage2 { async fn store_poster(&self, _: &domain::value_objects::MovieId, _: &[u8]) -> Result<domain::value_objects::PosterPath, domain::errors::DomainError> { panic!() } async fn get_poster(&self, _: &domain::value_objects::PosterPath) -> Result<Vec<u8>, domain::errors::DomainError> { panic!() } }
-        #[async_trait::async_trait] impl domain::ports::EventPublisher for PanicEvent2 { async fn publish(&self, _: &domain::events::DomainEvent) -> Result<(), domain::errors::DomainError> { panic!() } }
-        #[async_trait::async_trait] impl domain::ports::PasswordHasher for PanicHasher2 { async fn hash(&self, _: &str) -> Result<domain::value_objects::PasswordHash, domain::errors::DomainError> { panic!() } async fn verify(&self, _: &str, _: &domain::value_objects::PasswordHash) -> Result<bool, domain::errors::DomainError> { panic!() } }
-        #[async_trait::async_trait] impl domain::ports::AuthService for PanicAuth2 { async fn generate_token(&self, _: &domain::value_objects::UserId) -> Result<domain::ports::GeneratedToken, domain::errors::DomainError> { panic!() } async fn validate_token(&self, _: &str) -> Result<domain::value_objects::UserId, domain::errors::DomainError> { panic!() } }
-        #[async_trait::async_trait] impl domain::ports::UserRepository for PanicUserRepo2 { async fn find_by_email(&self, _: &domain::value_objects::Email) -> Result<Option<domain::models::User>, domain::errors::DomainError> { panic!() } async fn save(&self, _: &domain::models::User) -> Result<(), domain::errors::DomainError> { panic!() } async fn find_by_id(&self, _: &domain::value_objects::UserId) -> Result<Option<domain::models::User>, domain::errors::DomainError> { panic!() } async fn find_by_username(&self, _: &domain::value_objects::Username) -> Result<Option<domain::models::User>, domain::errors::DomainError> { panic!() } async fn list_with_stats(&self) -> Result<Vec<domain::models::UserSummary>, domain::errors::DomainError> { panic!() } }
-        struct PanicRenderer2;
-        impl crate::ports::HtmlRenderer for PanicRenderer2 {
-            fn render_diary_page(&self, _: &domain::models::collections::Paginated<domain::models::DiaryEntry>, _: application::ports::HtmlPageContext) -> Result<String, String> { panic!() }
-            fn render_login_page(&self, _: application::ports::LoginPageData<'_>) -> Result<String, String> { panic!() }
-            fn render_register_page(&self, _: application::ports::RegisterPageData<'_>) -> Result<String, String> { panic!() }
-            fn render_new_review_page(&self, _: application::ports::NewReviewPageData<'_>) -> Result<String, String> { panic!() }
-            fn render_activity_feed_page(&self, _: application::ports::ActivityFeedPageData) -> Result<String, String> { panic!() }
-            fn render_users_page(&self, _: application::ports::UsersPageData) -> Result<String, String> { panic!() }
-            fn render_profile_page(&self, _: application::ports::ProfilePageData) -> Result<String, String> { panic!() }
-            fn render_following_page(&self, _: application::ports::FollowingPageData) -> Result<String, String> { panic!() }
-            fn render_followers_page(&self, _: application::ports::FollowersPageData) -> Result<String, String> { panic!() }
-        }
-        struct PanicRssRenderer2;
-        impl crate::ports::RssFeedRenderer for PanicRssRenderer2 {
-            fn render_feed(&self, _: &[domain::models::DiaryEntry], _: &str) -> Result<String, String> { panic!() }
-        }
-        struct PanicAuth2;
+    // --- Single state factory — only auth_service varies ---
+
+    fn make_test_state(auth_service: Arc<dyn AuthService>) -> crate::state::AppState {
+        let repo = Arc::new(Panic);
         crate::state::AppState {
             app_ctx: AppContext {
-                movie_repository: Arc::new(PanicRepo2) as _,
-                review_repository: Arc::new(PanicRepo2) as _,
-                diary_repository: Arc::new(PanicRepo2) as _,
-                stats_repository: Arc::new(PanicRepo2) as _,
-                metadata_client: Arc::new(PanicMeta2),
-                poster_fetcher: Arc::new(PanicFetcher2),
-                poster_storage: Arc::new(PanicStorage2),
-                event_publisher: Arc::new(PanicEvent2),
-                auth_service: Arc::new(PanicAuth2),
-                password_hasher: Arc::new(PanicHasher2),
-                user_repository: Arc::new(PanicUserRepo2),
-                config: application::config::AppConfig { allow_registration: false, base_url: "http://localhost:3000".to_string(), rate_limit: 20 },
+                movie_repository: Arc::clone(&repo) as _,
+                review_repository: Arc::clone(&repo) as _,
+                diary_repository: Arc::clone(&repo) as _,
+                stats_repository: Arc::clone(&repo) as _,
+                metadata_client: Arc::clone(&repo) as _,
+                poster_fetcher: Arc::clone(&repo) as _,
+                poster_storage: Arc::clone(&repo) as _,
+                event_publisher: Arc::clone(&repo) as _,
+                password_hasher: Arc::clone(&repo) as _,
+                user_repository: Arc::clone(&repo) as _,
+                auth_service,
+                config: AppConfig { allow_registration: false, base_url: "http://localhost:3000".to_string(), rate_limit: 20 },
             },
-            html_renderer: Arc::new(PanicRenderer2),
-            rss_renderer: Arc::new(PanicRssRenderer2),
-            ap_service: std::sync::Arc::new(activitypub::NoopActivityPubService),
+            html_renderer: Arc::new(Panic),
+            rss_renderer: Arc::new(Panic),
+            ap_service: Arc::new(activitypub::NoopActivityPubService),
         }
     }
 
-    async fn rejecting_state() -> crate::state::AppState {
-        use std::sync::Arc;
-        use application::context::AppContext;
-        struct PanicRepo3;
-        #[async_trait::async_trait]
-        impl domain::ports::MovieRepository for PanicRepo3 {
-            async fn get_movie_by_external_id(&self, _: &domain::value_objects::ExternalMetadataId) -> Result<Option<domain::models::Movie>, domain::errors::DomainError> { panic!() }
-            async fn get_movie_by_id(&self, _: &domain::value_objects::MovieId) -> Result<Option<domain::models::Movie>, domain::errors::DomainError> { panic!() }
-            async fn get_movies_by_title_and_year(&self, _: &domain::value_objects::MovieTitle, _: &domain::value_objects::ReleaseYear) -> Result<Vec<domain::models::Movie>, domain::errors::DomainError> { panic!() }
-            async fn upsert_movie(&self, _: &domain::models::Movie) -> Result<(), domain::errors::DomainError> { panic!() }
-            async fn delete_movie(&self, _: &domain::value_objects::MovieId) -> Result<(), domain::errors::DomainError> { panic!() }
-        }
-        #[async_trait::async_trait]
-        impl domain::ports::ReviewRepository for PanicRepo3 {
-            async fn save_review(&self, _: &domain::models::Review) -> Result<domain::events::DomainEvent, domain::errors::DomainError> { panic!() }
-            async fn get_review_by_id(&self, _: &domain::value_objects::ReviewId) -> Result<Option<domain::models::Review>, domain::errors::DomainError> { panic!() }
-            async fn delete_review(&self, _: &domain::value_objects::ReviewId) -> Result<(), domain::errors::DomainError> { panic!() }
-        }
-        #[async_trait::async_trait]
-        impl domain::ports::DiaryRepository for PanicRepo3 {
-            async fn query_diary(&self, _: &domain::models::DiaryFilter) -> Result<domain::models::collections::Paginated<domain::models::DiaryEntry>, domain::errors::DomainError> { panic!() }
-            async fn query_activity_feed(&self, _: &domain::models::collections::PageParams) -> Result<domain::models::collections::Paginated<domain::models::FeedEntry>, domain::errors::DomainError> { panic!() }
-            async fn get_review_history(&self, _: &domain::value_objects::MovieId) -> Result<domain::models::ReviewHistory, domain::errors::DomainError> { panic!() }
-            async fn get_user_history(&self, _: &domain::value_objects::UserId) -> Result<Vec<domain::models::DiaryEntry>, domain::errors::DomainError> { panic!() }
-        }
-        #[async_trait::async_trait]
-        impl domain::ports::StatsRepository for PanicRepo3 {
-            async fn get_user_stats(&self, _: &domain::value_objects::UserId) -> Result<domain::models::UserStats, domain::errors::DomainError> { panic!() }
-            async fn get_user_trends(&self, _: &domain::value_objects::UserId) -> Result<domain::models::UserTrends, domain::errors::DomainError> { panic!() }
-        }
-        struct PanicMeta3; struct PanicFetcher3; struct PanicStorage3; struct PanicEvent3; struct PanicHasher3; struct PanicUserRepo3;
-        #[async_trait::async_trait] impl domain::ports::MetadataClient for PanicMeta3 { async fn fetch_movie_metadata(&self, _: &domain::ports::MetadataSearchCriteria) -> Result<domain::models::Movie, domain::errors::DomainError> { panic!() } async fn get_poster_url(&self, _: &domain::value_objects::ExternalMetadataId) -> Result<Option<domain::value_objects::PosterUrl>, domain::errors::DomainError> { panic!() } }
-        #[async_trait::async_trait] impl domain::ports::PosterFetcherClient for PanicFetcher3 { async fn fetch_poster_bytes(&self, _: &domain::value_objects::PosterUrl) -> Result<Vec<u8>, domain::errors::DomainError> { panic!() } }
-        #[async_trait::async_trait] impl domain::ports::PosterStorage for PanicStorage3 { async fn store_poster(&self, _: &domain::value_objects::MovieId, _: &[u8]) -> Result<domain::value_objects::PosterPath, domain::errors::DomainError> { panic!() } async fn get_poster(&self, _: &domain::value_objects::PosterPath) -> Result<Vec<u8>, domain::errors::DomainError> { panic!() } }
-        #[async_trait::async_trait] impl domain::ports::EventPublisher for PanicEvent3 { async fn publish(&self, _: &domain::events::DomainEvent) -> Result<(), domain::errors::DomainError> { panic!() } }
-        #[async_trait::async_trait] impl domain::ports::PasswordHasher for PanicHasher3 { async fn hash(&self, _: &str) -> Result<domain::value_objects::PasswordHash, domain::errors::DomainError> { panic!() } async fn verify(&self, _: &str, _: &domain::value_objects::PasswordHash) -> Result<bool, domain::errors::DomainError> { panic!() } }
-        #[async_trait::async_trait] impl domain::ports::UserRepository for PanicUserRepo3 { async fn find_by_email(&self, _: &domain::value_objects::Email) -> Result<Option<domain::models::User>, domain::errors::DomainError> { panic!() } async fn save(&self, _: &domain::models::User) -> Result<(), domain::errors::DomainError> { panic!() } async fn find_by_id(&self, _: &domain::value_objects::UserId) -> Result<Option<domain::models::User>, domain::errors::DomainError> { panic!() } async fn find_by_username(&self, _: &domain::value_objects::Username) -> Result<Option<domain::models::User>, domain::errors::DomainError> { panic!() } async fn list_with_stats(&self) -> Result<Vec<domain::models::UserSummary>, domain::errors::DomainError> { panic!() } }
-        struct PanicRenderer3;
-        impl crate::ports::HtmlRenderer for PanicRenderer3 {
-            fn render_diary_page(&self, _: &domain::models::collections::Paginated<domain::models::DiaryEntry>, _: application::ports::HtmlPageContext) -> Result<String, String> { panic!() }
-            fn render_login_page(&self, _: application::ports::LoginPageData<'_>) -> Result<String, String> { panic!() }
-            fn render_register_page(&self, _: application::ports::RegisterPageData<'_>) -> Result<String, String> { panic!() }
-            fn render_new_review_page(&self, _: application::ports::NewReviewPageData<'_>) -> Result<String, String> { panic!() }
-            fn render_activity_feed_page(&self, _: application::ports::ActivityFeedPageData) -> Result<String, String> { panic!() }
-            fn render_users_page(&self, _: application::ports::UsersPageData) -> Result<String, String> { panic!() }
-            fn render_profile_page(&self, _: application::ports::ProfilePageData) -> Result<String, String> { panic!() }
-            fn render_following_page(&self, _: application::ports::FollowingPageData) -> Result<String, String> { panic!() }
-            fn render_followers_page(&self, _: application::ports::FollowersPageData) -> Result<String, String> { panic!() }
-        }
-        struct PanicRssRenderer3;
-        impl crate::ports::RssFeedRenderer for PanicRssRenderer3 {
-            fn render_feed(&self, _: &[domain::models::DiaryEntry], _: &str) -> Result<String, String> { panic!() }
-        }
-        crate::state::AppState {
-            app_ctx: AppContext {
-                movie_repository: Arc::new(PanicRepo3) as _,
-                review_repository: Arc::new(PanicRepo3) as _,
-                diary_repository: Arc::new(PanicRepo3) as _,
-                stats_repository: Arc::new(PanicRepo3) as _,
-                metadata_client: Arc::new(PanicMeta3),
-                poster_fetcher: Arc::new(PanicFetcher3),
-                poster_storage: Arc::new(PanicStorage3),
-                event_publisher: Arc::new(PanicEvent3),
-                auth_service: Arc::new(RejectingAuth),
-                password_hasher: Arc::new(PanicHasher3),
-                user_repository: Arc::new(PanicUserRepo3),
-                config: application::config::AppConfig { allow_registration: false, base_url: "http://localhost:3000".to_string(), rate_limit: 20 },
-            },
-            html_renderer: Arc::new(PanicRenderer3),
-            rss_renderer: Arc::new(PanicRssRenderer3),
-            ap_service: std::sync::Arc::new(activitypub::NoopActivityPubService),
-        }
+    // --- Routers ---
+
+    async fn protected_handler(user: AuthenticatedUser) -> String { user.0.value().to_string() }
+    async fn optional_cookie_handler(user: OptionalCookieUser) -> String {
+        match user.0 { Some(id) => id.value().to_string(), None => "none".to_string() }
+    }
+    async fn required_cookie_handler(user: RequiredCookieUser) -> String { user.0.value().to_string() }
+
+    fn router_protected(state: crate::state::AppState) -> Router { Router::new().route("/protected", get(protected_handler)).with_state(state) }
+    fn router_optional(state: crate::state::AppState) -> Router { Router::new().route("/optional", get(optional_cookie_handler)).with_state(state) }
+    fn router_required(state: crate::state::AppState) -> Router { Router::new().route("/required", get(required_cookie_handler)).with_state(state) }
+
+    // --- Tests ---
+
+    #[tokio::test]
+    async fn missing_auth_header_returns_401() {
+        let app = router_protected(make_test_state(Arc::new(Panic)));
+        let resp = app.oneshot(Request::builder().uri("/protected").body(Body::empty()).unwrap()).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
     }
 
     #[tokio::test]
     async fn optional_cookie_user_returns_none_without_cookie() {
-        let app = test_router_optional(panic_state().await);
-        let response = app
-            .oneshot(Request::builder().uri("/optional").body(Body::empty()).unwrap())
-            .await
-            .unwrap();
-        assert_eq!(response.status(), StatusCode::OK);
-        let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let app = router_optional(make_test_state(Arc::new(Panic)));
+        let resp = app.oneshot(Request::builder().uri("/optional").body(Body::empty()).unwrap()).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = axum::body::to_bytes(resp.into_body(), usize::MAX).await.unwrap();
         assert_eq!(&body[..], b"none");
     }
 
     #[tokio::test]
     async fn optional_cookie_user_returns_none_with_invalid_token() {
-        let app = test_router_optional(rejecting_state().await);
-        let response = app
-            .oneshot(
-                Request::builder()
-                    .uri("/optional")
-                    .header("cookie", "token=bad.token.here")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-        assert_eq!(response.status(), StatusCode::OK);
-        let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let app = router_optional(make_test_state(Arc::new(RejectingAuth)));
+        let resp = app.oneshot(Request::builder().uri("/optional").header("cookie", "token=bad.token.here").body(Body::empty()).unwrap()).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = axum::body::to_bytes(resp.into_body(), usize::MAX).await.unwrap();
         assert_eq!(&body[..], b"none");
     }
 
     #[tokio::test]
     async fn required_cookie_user_redirects_without_cookie() {
-        let app = test_router_required(panic_state().await);
-        let response = app
-            .oneshot(Request::builder().uri("/required").body(Body::empty()).unwrap())
-            .await
-            .unwrap();
-        assert_eq!(response.status(), StatusCode::SEE_OTHER);
-        assert_eq!(response.headers().get("location").unwrap(), "/login");
+        let app = router_required(make_test_state(Arc::new(Panic)));
+        let resp = app.oneshot(Request::builder().uri("/required").body(Body::empty()).unwrap()).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::SEE_OTHER);
+        assert_eq!(resp.headers().get("location").unwrap(), "/login");
     }
 
     #[tokio::test]
     async fn required_cookie_user_redirects_with_invalid_token() {
-        let app = test_router_required(rejecting_state().await);
-        let response = app
-            .oneshot(
-                Request::builder()
-                    .uri("/required")
-                    .header("cookie", "token=bad.token.here")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-        assert_eq!(response.status(), StatusCode::SEE_OTHER);
-        assert_eq!(response.headers().get("location").unwrap(), "/login");
+        let app = router_required(make_test_state(Arc::new(RejectingAuth)));
+        let resp = app.oneshot(Request::builder().uri("/required").header("cookie", "token=bad.token.here").body(Body::empty()).unwrap()).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::SEE_OTHER);
+        assert_eq!(resp.headers().get("location").unwrap(), "/login");
     }
 }

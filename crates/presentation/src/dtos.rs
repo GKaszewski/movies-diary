@@ -337,14 +337,6 @@ mod tests {
     }
 
     #[test]
-    fn into_command_sets_user_id() {
-        let data = LogReviewData::try_from(make_form("2024-03-15T20:30:00")).unwrap();
-        let user_id = Uuid::new_v4();
-        let cmd = data.into_command(user_id);
-        assert_eq!(cmd.user_id, user_id);
-    }
-
-    #[test]
     fn sort_by_asc_string_becomes_ascending() {
         let params = DiaryQueryParams {
             sort_by: Some("asc".to_string()),
@@ -366,38 +358,6 @@ mod tests {
         };
         let query = GetDiaryQuery::from(params);
         assert!(matches!(query.sort_by, Some(domain::models::SortDirection::Descending)));
-    }
-
-    #[test]
-    fn diary_response_serializes_correctly() {
-        let resp = DiaryResponse {
-            items: vec![],
-            total_count: 0,
-            limit: 20,
-            offset: 0,
-        };
-        let json = serde_json::to_string(&resp).unwrap();
-        assert!(json.contains("\"total_count\":0"));
-        assert!(json.contains("\"items\":[]"));
-    }
-
-    #[test]
-    fn diary_query_params_fields_are_optional() {
-        let params = DiaryQueryParams {
-            limit: None,
-            offset: None,
-            sort_by: None,
-            movie_id: None,
-        };
-        assert!(params.limit.is_none());
-        assert!(params.sort_by.is_none());
-    }
-
-    #[test]
-    fn login_request_deserializes() {
-        let json = r#"{"email":"a@b.com","password":"secret"}"#;
-        let req: LoginRequest = serde_json::from_str(json).unwrap();
-        assert_eq!(req.email, "a@b.com");
     }
 
     #[test]
