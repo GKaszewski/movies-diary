@@ -340,7 +340,7 @@ pub mod html {
 
         let following_count = if is_own_profile {
             if let Some(ref uid) = user_id {
-                state.ap_service.count_following(uid.clone()).await.unwrap_or(0)
+                state.ap_service.count_following(uid.value()).await.unwrap_or(0)
             } else {
                 0
             }
@@ -350,7 +350,7 @@ pub mod html {
 
         let followers_count = if is_own_profile {
             state.ap_service
-                .count_accepted_followers(domain::value_objects::UserId::from_uuid(profile_user_uuid))
+                .count_accepted_followers(profile_user_uuid)
                 .await
                 .unwrap_or(0)
         } else {
@@ -359,7 +359,7 @@ pub mod html {
 
         let pending_followers = if is_own_profile {
             state.ap_service
-                .get_pending_followers(domain::value_objects::UserId::from_uuid(profile_user_uuid))
+                .get_pending_followers(profile_user_uuid)
                 .await
                 .unwrap_or_default()
                 .into_iter()
@@ -425,7 +425,7 @@ pub mod html {
         if user_id.value() != profile_user_uuid {
             return StatusCode::FORBIDDEN.into_response();
         }
-        match state.ap_service.follow(user_id.clone(), &form.handle).await {
+        match state.ap_service.follow(user_id.value(), &form.handle).await {
             Ok(()) => Redirect::to(&format!("/users/{}", profile_user_uuid)).into_response(),
             Err(e) => {
                 tracing::error!("follow error: {:?}", e);
@@ -444,7 +444,7 @@ pub mod html {
         if user_id.value() != profile_user_uuid {
             return StatusCode::FORBIDDEN.into_response();
         }
-        match state.ap_service.unfollow(user_id.clone(), &form.actor_url).await {
+        match state.ap_service.unfollow(user_id.value(), &form.actor_url).await {
             Ok(()) => Redirect::to(&format!("/users/{}/following-list", profile_user_uuid)).into_response(),
             Err(e) => {
                 let msg = encode_error(&e.to_string());
@@ -462,7 +462,7 @@ pub mod html {
         if user_id.value() != profile_user_uuid {
             return StatusCode::FORBIDDEN.into_response();
         }
-        match state.ap_service.accept_follower(user_id, &form.actor_url).await {
+        match state.ap_service.accept_follower(user_id.value(), &form.actor_url).await {
             Ok(_) => Redirect::to(&format!("/users/{}", profile_user_uuid)).into_response(),
             Err(e) => {
                 let msg = encode_error(&e.to_string());
@@ -480,7 +480,7 @@ pub mod html {
         if user_id.value() != profile_user_uuid {
             return StatusCode::FORBIDDEN.into_response();
         }
-        match state.ap_service.reject_follower(user_id, &form.actor_url).await {
+        match state.ap_service.reject_follower(user_id.value(), &form.actor_url).await {
             Ok(_) => Redirect::to(&format!("/users/{}", profile_user_uuid)).into_response(),
             Err(e) => {
                 let msg = encode_error(&e.to_string());
@@ -501,7 +501,7 @@ pub mod html {
         let mut ctx = build_page_context(&state, Some(user_id.clone())).await;
         ctx.page_title = "Following — Movies Diary".to_string();
         ctx.canonical_url = format!("{}/users/{}/following-list", state.app_ctx.config.base_url, profile_user_uuid);
-        match state.ap_service.get_following(user_id).await {
+        match state.ap_service.get_following(user_id.value()).await {
             Ok(following) => {
                 let actors = following.into_iter().map(|a| RemoteActorView {
                     handle: a.handle,
@@ -538,7 +538,7 @@ pub mod html {
         let mut ctx = build_page_context(&state, Some(user_id.clone())).await;
         ctx.page_title = "Followers — Movies Diary".to_string();
         ctx.canonical_url = format!("{}/users/{}/followers-list", state.app_ctx.config.base_url, profile_user_uuid);
-        match state.ap_service.get_accepted_followers(user_id).await {
+        match state.ap_service.get_accepted_followers(user_id.value()).await {
             Ok(followers) => {
                 let actors = followers.into_iter().map(|a| RemoteActorView {
                     handle: a.handle,
@@ -572,7 +572,7 @@ pub mod html {
         if user_id.value() != profile_user_uuid {
             return StatusCode::FORBIDDEN.into_response();
         }
-        match state.ap_service.remove_follower(user_id, &form.actor_url).await {
+        match state.ap_service.remove_follower(user_id.value(), &form.actor_url).await {
             Ok(_) => Redirect::to(&format!("/users/{}/followers-list", profile_user_uuid)).into_response(),
             Err(e) => {
                 let msg = encode_error(&e.to_string());

@@ -1,20 +1,21 @@
 [package]
-name = "activitypub"
+name = "activitypub-base"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-activitypub-base = { workspace = true }
-domain = { workspace = true }
 tokio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+reqwest = { workspace = true }
 uuid = { workspace = true }
 chrono = { workspace = true }
+thiserror = { workspace = true }
 anyhow = { workspace = true }
 tracing = { workspace = true }
 async-trait = { workspace = true }
-event-publisher = { workspace = true }
 
 activitypub_federation = "0.7.0-beta.11"
 url = { version = "2", features = ["serde"] }
+enum_delegate = "0.2"
+axum = "0.8"

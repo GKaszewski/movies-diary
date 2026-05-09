@@ -15,7 +15,7 @@ use auth::{AuthConfig, Argon2PasswordHasher, JwtAuthService};
 use metadata::MetadataClientImpl;
 use poster_fetcher::{PosterFetcherConfig, ReqwestPosterFetcher};
 use poster_storage::{PosterStorageAdapter, StorageConfig};
-use activitypub::ActivityPubService;
+use activitypub::{ActivityPubEventHandler, ActivityPubService, DomainUserRepoAdapter, ReviewObjectHandler};
 use sqlite::{SqliteFederationRepository, SqliteMovieRepository, SqliteUserRepository};
 use rss::RssAdapter;
 use template_askama::AskamaHtmlRenderer;
@@ -94,17 +94,27 @@ async fn wire_dependencies() -> anyhow::Result<AppState> {
 
     // Federation
     let federation_repo = Arc::new(SqliteFederationRepository::new(pool));
+    let user_repo_adapter = Arc::new(DomainUserRepoAdapter(Arc::clone(&user_repository)));
+    let review_handler = Arc::new(ReviewObjectHandler {
+        movie_repo: Arc::clone(&repository),
+        review_store: Arc::clone(&federation_repo) as Arc<dyn activitypub::RemoteReviewRepository>,
+        base_url: app_config.base_url.clone(),
+    });
     let ap_service = Arc::new(
         ActivityPubService::new(
             federation_repo,
-            Arc::clone(&user_repository),
-            Arc::clone(&repository),
+            user_repo_adapter,
+            review_handler,
             app_config.base_url.clone(),
             cfg!(debug_assertions),
         )
         .await?,
     );
-    let ap_event_handler = ap_service.event_handler();
+    let ap_event_handler = ActivityPubEventHandler::new(
+        Arc::clone(&ap_service),
+        Arc::clone(&repository),
+        app_config.base_url.clone(),
+    );
 
     let poster_handler = PosterSyncHandler::new(handler_ctx, 3);
     let (event_publisher, event_worker) = create_event_channel(

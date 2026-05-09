@@ -243,35 +243,34 @@ mod tests {
         sqlx::query("CREATE TABLE IF NOT EXISTS ap_following (local_user_id TEXT NOT NULL, remote_actor_url TEXT NOT NULL, PRIMARY KEY (local_user_id, remote_actor_url))")
             .execute(&pool).await.unwrap();
         let fed_repo = Arc::new(sqlite::SqliteFederationRepository::new(pool));
-        struct DummyUserRepo;
-        #[async_trait::async_trait] impl domain::ports::UserRepository for DummyUserRepo {
-            async fn find_by_email(&self, _: &domain::value_objects::Email) -> Result<Option<domain::models::User>, domain::errors::DomainError> { Ok(None) }
-            async fn save(&self, _: &domain::models::User) -> Result<(), domain::errors::DomainError> { Ok(()) }
-            async fn find_by_id(&self, _: &domain::value_objects::UserId) -> Result<Option<domain::models::User>, domain::errors::DomainError> { Ok(None) }
-            async fn find_by_username(&self, _: &domain::value_objects::Username) -> Result<Option<domain::models::User>, domain::errors::DomainError> { Ok(None) }
-            async fn list_with_stats(&self) -> Result<Vec<domain::models::UserSummary>, domain::errors::DomainError> { Ok(vec![]) }
+
+        struct DummyApUserRepo;
+        #[async_trait::async_trait]
+        impl activitypub::ApUserRepository for DummyApUserRepo {
+            async fn find_by_id(&self, _: uuid::Uuid) -> anyhow::Result<Option<activitypub::ApUser>> { Ok(None) }
+            async fn find_by_username(&self, _: &str) -> anyhow::Result<Option<activitypub::ApUser>> { Ok(None) }
         }
-        struct DummyMovieRepo;
-        #[async_trait::async_trait] impl domain::ports::MovieRepository for DummyMovieRepo {
-            async fn get_movie_by_external_id(&self, _: &domain::value_objects::ExternalMetadataId) -> Result<Option<domain::models::Movie>, domain::errors::DomainError> { Ok(None) }
-            async fn get_movie_by_id(&self, _: &domain::value_objects::MovieId) -> Result<Option<domain::models::Movie>, domain::errors::DomainError> { Ok(None) }
-            async fn get_movies_by_title_and_year(&self, _: &domain::value_objects::MovieTitle, _: &domain::value_objects::ReleaseYear) -> Result<Vec<domain::models::Movie>, domain::errors::DomainError> { Ok(vec![]) }
-            async fn upsert_movie(&self, _: &domain::models::Movie) -> Result<(), domain::errors::DomainError> { Ok(()) }
-            async fn save_review(&self, _: &domain::models::Review) -> Result<domain::events::DomainEvent, domain::errors::DomainError> { panic!() }
-            async fn query_diary(&self, _: &domain::models::DiaryFilter) -> Result<domain::models::collections::Paginated<domain::models::DiaryEntry>, domain::errors::DomainError> { panic!() }
-            async fn get_review_history(&self, _: &domain::value_objects::MovieId) -> Result<domain::models::ReviewHistory, domain::errors::DomainError> { panic!() }
-            async fn get_review_by_id(&self, _: &domain::value_objects::ReviewId) -> Result<Option<domain::models::Review>, domain::errors::DomainError> { Ok(None) }
-            async fn delete_review(&self, _: &domain::value_objects::ReviewId) -> Result<(), domain::errors::DomainError> { Ok(()) }
-            async fn delete_movie(&self, _: &domain::value_objects::MovieId) -> Result<(), domain::errors::DomainError> { Ok(()) }
-            async fn query_activity_feed(&self, _: &domain::models::collections::PageParams) -> Result<domain::models::collections::Paginated<domain::models::FeedEntry>, domain::errors::DomainError> { panic!() }
-            async fn get_user_stats(&self, _: &domain::value_objects::UserId) -> Result<domain::models::UserStats, domain::errors::DomainError> { panic!() }
-            async fn get_user_history(&self, _: &domain::value_objects::UserId) -> Result<Vec<domain::models::DiaryEntry>, domain::errors::DomainError> { Ok(vec![]) }
-            async fn get_user_trends(&self, _: &domain::value_objects::UserId) -> Result<domain::models::UserTrends, domain::errors::DomainError> { panic!() }
+
+        struct DummyObjectHandler;
+        #[async_trait::async_trait]
+        impl activitypub::ApObjectHandler for DummyObjectHandler {
+            async fn get_local_objects_for_user(&self, _: uuid::Uuid) -> anyhow::Result<Vec<(url::Url, serde_json::Value)>> { Ok(vec![]) }
+            async fn on_create(&self, _: &url::Url, _: &url::Url, _: serde_json::Value) -> anyhow::Result<()> { Ok(()) }
+            async fn on_update(&self, _: &url::Url, _: &url::Url, _: serde_json::Value) -> anyhow::Result<()> { Ok(()) }
+            async fn on_delete(&self, _: &url::Url, _: &url::Url) -> anyhow::Result<()> { Ok(()) }
+            async fn on_actor_removed(&self, _: &url::Url) -> anyhow::Result<()> { Ok(()) }
         }
+
         Arc::new(
-            activitypub::ActivityPubService::new(fed_repo, Arc::new(DummyUserRepo), Arc::new(DummyMovieRepo), "http://localhost:3000".to_string(), true)
-                .await
-                .unwrap(),
+            activitypub::ActivityPubService::new(
+                fed_repo,
+                Arc::new(DummyApUserRepo),
+                Arc::new(DummyObjectHandler),
+                "http://localhost:3000".to_string(),
+                true,
+            )
+            .await
+            .unwrap(),
         )
     }
 

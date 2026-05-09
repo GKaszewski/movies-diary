@@ -1,37 +1,31 @@
-use activitypub_federation::{
-    activity_sending::SendActivityTask,
-    fetch::object_id::ObjectId,
-    protocol::context::WithContext,
-    traits::Object,
-};
 use async_trait::async_trait;
 use domain::{
     errors::DomainError,
     events::DomainEvent,
+    ports::MovieRepository,
     value_objects::{ReviewId, UserId},
 };
 use event_publisher::EventHandler;
-use url::Url;
+use std::sync::Arc;
 
-use crate::{
-    activities::CreateActivity,
-    actors::get_local_actor,
-    federation::ApFederationConfig,
-    objects::DbReview,
-    repository::FollowerStatus,
-};
+use activitypub_base::ActivityPubService;
+
+use crate::objects::review_to_ap_object;
+use crate::urls::{actor_url, review_url};
 
 pub struct ActivityPubEventHandler {
-    federation_config: ApFederationConfig,
+    ap_service: Arc<ActivityPubService>,
+    movie_repo: Arc<dyn MovieRepository>,
     base_url: String,
 }
 
 impl ActivityPubEventHandler {
-    pub fn new(federation_config: ApFederationConfig, base_url: String) -> Self {
-        Self {
-            federation_config,
-            base_url,
-        }
+    pub fn new(
+        ap_service: Arc<ActivityPubService>,
+        movie_repo: Arc<dyn MovieRepository>,
+        base_url: String,
+    ) -> Self {
+        Self { ap_service, movie_repo, base_url }
     }
 }
 
@@ -39,11 +33,7 @@ impl ActivityPubEventHandler {
 impl EventHandler for ActivityPubEventHandler {
     async fn handle(&self, event: &DomainEvent) -> Result<(), DomainError> {
         match event {
-            DomainEvent::ReviewLogged {
-                review_id,
-                user_id,
-                ..
-            } => self
+            DomainEvent::ReviewLogged { review_id, user_id, .. } => self
                 .on_review_logged(user_id, review_id)
                 .await
                 .map_err(|e| DomainError::InfrastructureError(e.to_string())),
@@ -58,70 +48,29 @@ impl ActivityPubEventHandler {
         user_id: &UserId,
         review_id: &ReviewId,
     ) -> anyhow::Result<()> {
-        let data = self.federation_config.to_request_data();
-
-        let followers = data.federation_repo.get_followers(user_id.clone()).await?;
-        tracing::debug!(user_id = %user_id.value(), count = followers.len(), "AP: got followers for review");
-
-        let accepted: Vec<_> = followers
-            .into_iter()
-            .filter(|f| f.status == FollowerStatus::Accepted)
-            .collect();
-
-        tracing::debug!(accepted = accepted.len(), "AP: accepted followers");
-
-        if accepted.is_empty() {
-            return Ok(());
-        }
-
-        let review = match data.movie_repo.get_review_by_id(review_id).await? {
+        let review = match self.movie_repo.get_review_by_id(review_id).await? {
             Some(r) => r,
             None => return Ok(()),
         };
 
-        let local_actor = get_local_actor(user_id.clone(), &data)
-            .await
-            .map_err(|e| anyhow::anyhow!("{e}"))?;
+        let ap_id = review_url(&self.base_url, review_id);
+        let actor = actor_url(&self.base_url, user_id.value());
 
-        let activity_id = crate::urls::activity_url(&self.base_url).map_err(|e| anyhow::anyhow!("{e}"))?;
+        let movie = self.movie_repo.get_movie_by_id(review.movie_id()).await.ok().flatten();
+        let movie_title = movie.as_ref()
+            .map(|m| m.title().value().to_string())
+            .unwrap_or_else(|| "Unknown".to_string());
+        let release_year = movie.as_ref().map(|m| m.release_year().value()).unwrap_or(0);
+        let poster_url = movie.as_ref()
+            .and_then(|m| m.poster_path())
+            .map(|p| format!("{}/posters/{}", self.base_url, p.value()));
 
-        let db_review = DbReview {
-            ap_id: crate::urls::review_url(&self.base_url, review_id),
-            review,
-        };
-        let object = db_review
-            .into_json(&data)
-            .await
-            .map_err(|e| anyhow::anyhow!("{e}"))?;
+        let obj = review_to_ap_object(&review, ap_id.clone(), actor, movie_title, release_year, poster_url);
+        let json = serde_json::to_value(obj)?;
 
-        let create = CreateActivity {
-            id: activity_id,
-            kind: Default::default(),
-            actor: ObjectId::from(local_actor.ap_id.clone()),
-            object,
-        };
-        let create_with_ctx = WithContext::new_default(create);
-
-        let inboxes: Vec<Url> = accepted
-            .iter()
-            .filter_map(|f| {
-                let url = Url::parse(&f.actor.inbox_url);
-                if url.is_err() {
-                    tracing::warn!(inbox = %f.actor.inbox_url, "AP: invalid inbox URL, skipping follower");
-                }
-                url.ok()
-            })
-            .collect();
-
-        tracing::debug!(inboxes = inboxes.len(), "AP: delivering to inboxes");
-
-        let sends =
-            SendActivityTask::prepare(&create_with_ctx, &local_actor, inboxes, &data).await?;
-        tracing::debug!(sends = sends.len(), "AP: prepared sends");
-        let failures = crate::service::send_with_retry(sends, &data).await;
-        if !failures.is_empty() {
-            tracing::warn!(count = failures.len(), "some activity deliveries failed permanently");
-        }
+        self.ap_service
+            .broadcast_to_followers(user_id.value(), ap_id, json)
+            .await?;
 
         Ok(())
     }

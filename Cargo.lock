@@ -6,15 +6,31 @@ version = 4
 name = "activitypub"
 version = "0.1.0"
 dependencies = [
+ "activitypub-base",
  "activitypub_federation",
  "anyhow",
- "application",
+ "async-trait",
+ "chrono",
+ "domain",
+ "event-publisher",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "url",
+ "uuid",
+]
+
+[[package]]
+name = "activitypub-base"
+version = "0.1.0"
+dependencies = [
+ "activitypub_federation",
+ "anyhow",
  "async-trait",
  "axum",
  "chrono",
- "domain",
  "enum_delegate",
- "event-publisher",
  "reqwest 0.13.3",
  "serde",
  "serde_json",
@@ -4005,6 +4021,7 @@ name = "sqlite"
 version = "0.1.0"
 dependencies = [
  "activitypub",
+ "activitypub-base",
  "anyhow",
  "async-trait",
  "chrono",

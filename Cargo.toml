@@ -9,6 +9,7 @@ members = [
     "crates/adapters/sqlite",
     "crates/adapters/template-askama",
     "crates/adapters/activitypub",
+    "crates/adapters/activitypub-base",
     "crates/application",
     "crates/domain",
     "crates/presentation",
@@ -49,3 +50,4 @@ rss = { path = "crates/adapters/rss" }
 sqlite = { path = "crates/adapters/sqlite" }
 template-askama = { path = "crates/adapters/template-askama" }
 activitypub = { path = "crates/adapters/activitypub" }
+activitypub-base = { path = "crates/adapters/activitypub-base" }
