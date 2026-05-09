@@ -19,7 +19,7 @@ use crate::{
     followers_handler::{followers_handler, following_handler},
     inbox::inbox_handler,
     outbox::outbox_handler,
-    repository::{FederationRepository, FollowerStatus, RemoteActor},
+    repository::{FederationRepository, FollowerStatus, FollowingStatus, RemoteActor},
     user::ApUserRepository,
     urls::activity_url,
     webfinger::webfinger_handler,
@@ -102,6 +102,12 @@ impl ActivityPubService {
     pub async fn follow(&self, local_user_id: uuid::Uuid, handle: &str) -> anyhow::Result<()> {
         let data = self.federation_config.to_request_data();
 
+        let normalized = handle.trim_start_matches('@');
+        let parts: Vec<&str> = normalized.splitn(2, '@').collect();
+        if parts.len() == 2 && parts[1] == data.domain {
+            return self.follow_local(local_user_id, parts[0], &data).await;
+        }
+
         let remote_actor: DbActor = webfinger_resolve_actor(handle, &data)
             .await
             .map_err(|e| anyhow::anyhow!("{e}"))?;
@@ -148,6 +154,10 @@ impl ActivityPubService {
 
     pub async fn unfollow(&self, local_user_id: uuid::Uuid, actor_url_str: &str) -> anyhow::Result<()> {
         let data = self.federation_config.to_request_data();
+
+        if actor_url_str.starts_with(&self.base_url) {
+            return self.unfollow_local(local_user_id, actor_url_str, &data).await;
+        }
 
         let remote = data
             .federation_repo
@@ -393,6 +403,69 @@ impl ActivityPubService {
             tracing::warn!(count = failures.len(), "some activity deliveries failed permanently");
         }
 
+        Ok(())
+    }
+
+    async fn follow_local(
+        &self,
+        local_user_id: uuid::Uuid,
+        target_username: &str,
+        data: &activitypub_federation::config::Data<FederationData>,
+    ) -> anyhow::Result<()> {
+        let target = data
+            .user_repo
+            .find_by_username(target_username)
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("user not found: {}", target_username))?;
+
+        if target.id == local_user_id {
+            return Err(anyhow::anyhow!("cannot follow yourself"));
+        }
+
+        let follower_actor_url = crate::urls::actor_url(&self.base_url, local_user_id).to_string();
+        let target_actor_url = crate::urls::actor_url(&self.base_url, target.id);
+        let target_inbox_url = format!("{}/inbox", target_actor_url);
+        let follow_id = activity_url(&self.base_url).map_err(|e| anyhow::anyhow!("{e}"))?.to_string();
+
+        data.federation_repo
+            .add_follower(target.id, &follower_actor_url, FollowerStatus::Accepted, &follow_id)
+            .await?;
+
+        let target_as_remote = RemoteActor {
+            url: target_actor_url.to_string(),
+            handle: format!("{}@{}", target.username, data.domain),
+            inbox_url: target_inbox_url,
+            shared_inbox_url: None,
+            display_name: Some(target.username),
+        };
+        data.federation_repo
+            .add_following(local_user_id, target_as_remote, &follow_id)
+            .await?;
+
+        data.federation_repo
+            .update_following_status(local_user_id, &target_actor_url.to_string(), FollowingStatus::Accepted)
+            .await?;
+
+        tracing::info!(follower = %local_user_id, followee = %target.id, "local follow");
+        Ok(())
+    }
+
+    async fn unfollow_local(
+        &self,
+        local_user_id: uuid::Uuid,
+        target_actor_url: &str,
+        data: &activitypub_federation::config::Data<FederationData>,
+    ) -> anyhow::Result<()> {
+        let target_url = Url::parse(target_actor_url)?;
+        let target_user_id = crate::urls::extract_user_id_from_url(&target_url)
+            .ok_or_else(|| anyhow::anyhow!("invalid local actor URL: {}", target_actor_url))?;
+
+        let local_actor_url = crate::urls::actor_url(&self.base_url, local_user_id).to_string();
+
+        data.federation_repo.remove_follower(target_user_id, &local_actor_url).await?;
+        data.federation_repo.remove_following(local_user_id, target_actor_url).await?;
+
+        tracing::info!(follower = %local_user_id, followee = %target_user_id, "local unfollow");
         Ok(())
     }
 
