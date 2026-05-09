@@ -1,6 +1,6 @@
 use axum::{
     extract::{FromRef, FromRequestParts},
-    http::{header, header::AUTHORIZATION, request::Parts},
+    http::{StatusCode, header, header::AUTHORIZATION, request::Parts},
     response::{IntoResponse, Redirect},
 };
 use domain::{errors::DomainError, value_objects::UserId};
@@ -88,6 +88,33 @@ where
             .await
             .map_err(|_| Redirect::to("/login").into_response())?;
         Ok(RequiredCookieUser(user_id))
+    }
+}
+
+pub struct AdminUser(pub UserId);
+
+impl<S> FromRequestParts<S> for AdminUser
+where
+    AppState: FromRef<S>,
+    S: Send + Sync,
+{
+    type Rejection = axum::response::Response;
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        let app_state = AppState::from_ref(state);
+        let RequiredCookieUser(user_id) =
+            RequiredCookieUser::from_request_parts(parts, state).await?;
+        let user = app_state
+            .app_ctx
+            .user_repository
+            .find_by_id(&user_id)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
+            .ok_or_else(|| StatusCode::UNAUTHORIZED.into_response())?;
+        match user.role() {
+            domain::models::UserRole::Admin => Ok(AdminUser(user_id)),
+            _ => Err(StatusCode::FORBIDDEN.into_response()),
+        }
     }
 }
 

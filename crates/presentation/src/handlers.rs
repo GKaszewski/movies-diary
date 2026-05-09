@@ -203,6 +203,7 @@ pub mod html {
                 email: form.email,
                 username: form.username,
                 password: form.password,
+                role: domain::models::UserRole::Standard,
             },
         )
         .await
@@ -1181,6 +1182,7 @@ pub mod api {
                 email: req.email,
                 username: req.username,
                 password: req.password,
+                role: domain::models::UserRole::Standard,
             },
         )
         .await?;

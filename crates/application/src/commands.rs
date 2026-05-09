@@ -1,5 +1,5 @@
 use chrono::NaiveDateTime;
-use domain::models::ExportFormat;
+use domain::models::{ExportFormat, UserRole};
 use uuid::Uuid;
 
 pub struct LogReviewCommand {
@@ -30,6 +30,7 @@ pub struct RegisterCommand {
     pub email: String,
     pub username: String,
     pub password: String,
+    pub role: UserRole,
 }
 
 pub struct DeleteReviewCommand {

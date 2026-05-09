@@ -41,6 +41,6 @@ pub async fn execute(ctx: &AppContext, cmd: RegisterCommand) -> Result<(), Domai
 
     let hash = ctx.password_hasher.hash(&cmd.password).await?;
     ctx.user_repository
-        .save(&User::new(email, username, hash))
+        .save(&User::new(email, username, hash, cmd.role))
         .await
 }

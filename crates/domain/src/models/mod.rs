@@ -1,3 +1,5 @@
+use std::default;
+
 use chrono::{NaiveDateTime, Utc};
 
 use crate::{
@@ -254,21 +256,35 @@ impl ReviewHistory {
     }
 }
 
+#[derive(Clone, Debug, Default)]
+pub enum UserRole {
+    #[default]
+    Standard,
+    Admin,
+}
+
 #[derive(Clone, Debug)]
 pub struct User {
     id: UserId,
     email: Email,
     username: Username,
     password_hash: PasswordHash,
+    role: UserRole,
 }
 
 impl User {
-    pub fn new(email: Email, username: Username, password_hash: PasswordHash) -> Self {
+    pub fn new(
+        email: Email,
+        username: Username,
+        password_hash: PasswordHash,
+        role: UserRole,
+    ) -> Self {
         Self {
             id: UserId::generate(),
             email,
             username,
             password_hash,
+            role,
         }
     }
 
@@ -277,12 +293,14 @@ impl User {
         email: Email,
         username: Username,
         password_hash: PasswordHash,
+        role: UserRole,
     ) -> Self {
         Self {
             id,
             email,
             username,
             password_hash,
+            role,
         }
     }
 
@@ -301,6 +319,9 @@ impl User {
     }
     pub fn password_hash(&self) -> &PasswordHash {
         &self.password_hash
+    }
+    pub fn role(&self) -> &UserRole {
+        &self.role
     }
 }
 

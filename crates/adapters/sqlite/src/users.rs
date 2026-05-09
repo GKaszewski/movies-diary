@@ -5,7 +5,7 @@ use sqlx::SqlitePool;
 use super::models::UserSummaryRow;
 use domain::{
     errors::DomainError,
-    models::User,
+    models::{User, UserRole},
     ports::UserRepository,
     value_objects::{Email, PasswordHash, UserId, Username},
 };
@@ -24,11 +24,19 @@ impl SqliteUserRepository {
         DomainError::InfrastructureError("Database operation failed".into())
     }
 
+    fn parse_role(s: &str) -> UserRole {
+        match s {
+            "admin" => UserRole::Admin,
+            _ => UserRole::Standard,
+        }
+    }
+
     fn row_to_user(
         id_str: String,
         email_str: String,
         username_str: String,
         hash_str: String,
+        role: UserRole,
     ) -> Result<User, DomainError> {
         let id = uuid::Uuid::parse_str(&id_str)
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
@@ -43,6 +51,7 @@ impl SqliteUserRepository {
             email,
             username,
             hash,
+            role,
         ))
     }
 }
@@ -52,7 +61,7 @@ impl UserRepository for SqliteUserRepository {
     async fn find_by_email(&self, email: &Email) -> Result<Option<User>, DomainError> {
         let email_str = email.value();
         let row = sqlx::query!(
-            "SELECT id, email, username, password_hash FROM users WHERE email = ?",
+            "SELECT id, email, username, password_hash, role FROM users WHERE email = ?",
             email_str
         )
         .fetch_optional(&self.pool)
@@ -65,6 +74,7 @@ impl UserRepository for SqliteUserRepository {
                 r.email,
                 r.username,
                 r.password_hash,
+                Self::parse_role(&r.role),
             )
         })
         .transpose()
@@ -73,7 +83,7 @@ impl UserRepository for SqliteUserRepository {
     async fn find_by_username(&self, username: &Username) -> Result<Option<User>, DomainError> {
         let username_str = username.value();
         let row = sqlx::query!(
-            "SELECT id, email, username, password_hash FROM users WHERE username = ?",
+            "SELECT id, email, username, password_hash, role FROM users WHERE username = ?",
             username_str
         )
         .fetch_optional(&self.pool)
@@ -86,6 +96,7 @@ impl UserRepository for SqliteUserRepository {
                 r.email,
                 r.username,
                 r.password_hash,
+                Self::parse_role(&r.role),
             )
         })
         .transpose()
@@ -111,9 +122,13 @@ impl UserRepository for SqliteUserRepository {
         let hash = user.password_hash().value();
         let created_at = Utc::now().to_rfc3339();
 
+        let role = match user.role() {
+            UserRole::Admin => "admin",
+            UserRole::Standard => "standard",
+        };
         sqlx::query!(
-            "INSERT INTO users (id, email, username, password_hash, created_at) VALUES (?, ?, ?, ?, ?)",
-            id, email, username, hash, created_at
+            "INSERT INTO users (id, email, username, password_hash, created_at, role) VALUES (?, ?, ?, ?, ?, ?)",
+            id, email, username, hash, created_at, role
         )
         .execute(&self.pool)
         .await
@@ -125,7 +140,7 @@ impl UserRepository for SqliteUserRepository {
     async fn find_by_id(&self, id: &UserId) -> Result<Option<User>, DomainError> {
         let id_str = id.value().to_string();
         let row = sqlx::query!(
-            "SELECT id, email, username, password_hash FROM users WHERE id = ?",
+            "SELECT id, email, username, password_hash, role FROM users WHERE id = ?",
             id_str
         )
         .fetch_optional(&self.pool)
@@ -138,6 +153,7 @@ impl UserRepository for SqliteUserRepository {
                 r.email,
                 r.username,
                 r.password_hash,
+                Self::parse_role(&r.role),
             )
         })
         .transpose()
@@ -172,7 +188,7 @@ mod tests {
     async fn setup() -> (SqlitePool, SqliteUserRepository) {
         let pool = SqlitePool::connect(":memory:").await.unwrap();
         sqlx::query(
-            "CREATE TABLE users (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, username TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, created_at TEXT NOT NULL)"
+            "CREATE TABLE users (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, username TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, created_at TEXT NOT NULL, role TEXT NOT NULL DEFAULT 'standard')"
         )
         .execute(&pool)
         .await
