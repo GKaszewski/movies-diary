@@ -1,5 +1,35 @@
 {% extends "base.html" %}
 {% block content %}
+<form method="get" class="feed-filters" action="/">
+  {% if ctx.user_email.is_some() %}
+  <label class="pill{% if filter == "all" %} active{% endif %}">
+    <input type="radio" name="filter" value="all"
+           {% if filter == "all" %}checked{% endif %}
+           onchange="this.form.submit()">
+    Global
+  </label>
+  <label class="pill{% if filter == "following" %} active{% endif %}">
+    <input type="radio" name="filter" value="following"
+           {% if filter == "following" %}checked{% endif %}
+           onchange="this.form.submit()">
+    Following
+  </label>
+  {% endif %}
+  <div class="feed-controls">
+    <select name="sort_by" onchange="this.form.submit()">
+      <option value="date"{% if sort_by == "date" %} selected{% endif %}>Date: newest first</option>
+      <option value="date_asc"{% if sort_by == "date_asc" %} selected{% endif %}>Date: oldest first</option>
+      <option value="rating"{% if sort_by == "rating" %} selected{% endif %}>Rating: highest first</option>
+      <option value="rating_asc"{% if sort_by == "rating_asc" %} selected{% endif %}>Rating: lowest first</option>
+    </select>
+    <input type="text" name="search" value="{{ search }}" placeholder="Search movies...">
+    <button type="submit" class="btn-search">Search</button>
+    {% if filter != "all" || sort_by != "date" || !search.is_empty() %}
+    <a href="/" class="clear-filters">Clear</a>
+    {% endif %}
+  </div>
+  <input type="hidden" name="limit" value="{{ limit }}">
+</form>
 <div class="diary">
   {% for entry in entries %}
   <article class="entry">
@@ -37,7 +67,7 @@
       </div>
       {% if ctx.is_current_user(entry.review().user_id().value()) %}
       <form method="post" action="/reviews/{{ entry.review().id().value() }}/delete" class="delete-form">
-        <input type="hidden" name="redirect_after" value="/?offset={{ current_offset }}">
+        <input type="hidden" name="redirect_after" value="/?offset={{ current_offset }}{{ self.filter_qs() }}">
         <input type="hidden" name="_csrf" value="{{ ctx.csrf_token }}">
         <button type="submit">Delete</button>
       </form>
@@ -50,7 +80,7 @@
 </div>
 <nav class="pagination">
   {% if current_offset >= limit %}
-  <a href="/?offset={{ current_offset - limit }}" class="page-nav">&larr; Prev</a>
+  <a href="/?offset={{ current_offset - limit }}{{ self.filter_qs() }}" class="page-nav">&larr; Prev</a>
   {% endif %}
   {% for item in page_items %}
   {% if item.is_ellipsis %}
@@ -58,11 +88,11 @@
   {% elif item.is_current %}
   <span class="page-num current">{{ item.number + 1 }}</span>
   {% else %}
-  <a href="/?offset={{ item.number * limit }}" class="page-num">{{ item.number + 1 }}</a>
+  <a href="/?offset={{ item.number * limit }}{{ self.filter_qs() }}" class="page-num">{{ item.number + 1 }}</a>
   {% endif %}
   {% endfor %}
   {% if has_more %}
-  <a href="/?offset={{ current_offset + limit }}" class="page-nav">Next &rarr;</a>
+  <a href="/?offset={{ current_offset + limit }}{{ self.filter_qs() }}" class="page-nav">Next &rarr;</a>
   {% endif %}
 </nav>
 {% endblock %}

@@ -15,6 +15,54 @@ use crate::{
     },
 };
 
+#[derive(Debug, Clone, Default, PartialEq)]
+pub enum FeedSortBy {
+    #[default]
+    Date,
+    DateAsc,
+    Rating,
+    RatingAsc,
+}
+
+impl FeedSortBy {
+    pub fn from_str(s: &str) -> Self {
+        match s {
+            "date_asc" => Self::DateAsc,
+            "rating" => Self::Rating,
+            "rating_asc" => Self::RatingAsc,
+            _ => Self::Date,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct FollowingFilter {
+    pub local_user_ids: Vec<uuid::Uuid>,
+    pub remote_actor_urls: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct RemoteActorInfo {
+    pub url: String,
+    pub handle: String,
+    pub display_name: Option<String>,
+}
+
+/// New trait for social/federation read queries
+#[async_trait]
+pub trait SocialQueryPort: Send + Sync {
+    /// Returns all accepted remote_actor_urls followed by `user_id`.
+    async fn get_accepted_following_urls(
+        &self,
+        user_id: uuid::Uuid,
+    ) -> Result<Vec<String>, DomainError>;
+
+    /// Returns all distinct remote actors followed by any local user on this instance.
+    async fn list_all_followed_remote_actors(
+        &self,
+    ) -> Result<Vec<RemoteActorInfo>, DomainError>;
+}
+
 #[async_trait]
 pub trait MovieRepository: Send + Sync {
     async fn get_movie_by_external_id(
@@ -46,6 +94,13 @@ pub trait DiaryRepository: Send + Sync {
     async fn query_activity_feed(
         &self,
         page: &PageParams,
+    ) -> Result<Paginated<FeedEntry>, DomainError>;
+    async fn query_activity_feed_filtered(
+        &self,
+        page: &PageParams,
+        sort_by: &FeedSortBy,
+        search: Option<&str>,
+        following: Option<&FollowingFilter>,
     ) -> Result<Paginated<FeedEntry>, DomainError>;
     async fn get_review_history(&self, movie_id: &MovieId) -> Result<ReviewHistory, DomainError>;
     async fn get_user_history(&self, user_id: &UserId) -> Result<Vec<DiaryEntry>, DomainError>;

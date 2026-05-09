@@ -11,4 +11,5 @@ pub struct AppState {
     pub html_renderer: Arc<dyn HtmlRenderer>,
     pub rss_renderer: Arc<dyn RssFeedRenderer>,
     pub ap_service: Arc<dyn ActivityPubPort>,
+    pub social_query: Arc<dyn domain::ports::SocialQueryPort>,
 }

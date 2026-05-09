@@ -1,43 +1,59 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ ctx.page_title }}</title>
-  <meta name="description" content="A personal movie diary — track what you watch, rate and review films.">
-  <meta property="og:type" content="website">
-  <meta property="og:site_name" content="Movies Diary">
-  <meta property="og:title" content="{{ ctx.page_title }}">
-  <meta property="og:url" content="{{ ctx.canonical_url }}">
-  <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="{{ ctx.page_title }}">
-  <link rel="canonical" href="{{ ctx.canonical_url }}">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="icon" type="image/webp" href="/static/logo.webp">
-  <link rel="stylesheet" href="/static/style.css">
-</head>
-<body>
-  <header>
-    <a href="/" class="site-title">Movies Diary</a>
-    <nav>
-      <a href="/">Feed</a>
-      <a href="/users">Users</a>
-      <a href="{{ ctx.rss_url }}">RSS</a>
-      {% if let Some(email) = ctx.user_email %}
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ ctx.page_title }}</title>
+    <meta
+      name="description"
+      content="A personal movie diary — track what you watch, rate and review films."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Movies Diary" />
+    <meta property="og:title" content="{{ ctx.page_title }}" />
+    <meta property="og:url" content="{{ ctx.canonical_url }}" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="{{ ctx.page_title }}" />
+    <link rel="canonical" href="{{ ctx.canonical_url }}" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="icon" type="image/webp" href="/static/logo.webp" />
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
+    <header>
+      <a href="/" class="site-title">Movies Diary</a>
+      <nav>
+        <a href="/">Feed</a>
+        <a href="/users">Users</a>
+        {% if let Some(uid) = ctx.user_id %}
+        <a href="/users/{{ uid }}">Profile</a>
         <a href="/reviews/new">Add Review</a>
         <a href="/logout">Logout</a>
-      {% else %}
+        {% else %}
         <a href="/login">Login</a>
         {% if ctx.register_enabled %}
-          <a href="/register">Register</a>
-        {% endif %}
+        <a href="/register">Register</a>
+        {% endif %} {% endif %}
+      </nav>
+    </header>
+    <main>{% block content %}{% endblock %}</main>
+    <footer class="site-footer">
+      <span class="footer-made">Made with passion</span>
+      <span class="footer-sep">·</span>
+      <a href="/feed.rss" class="footer-link">RSS</a>
+      {% if let Some(uid) = ctx.user_id %}
+      <span class="footer-sep">·</span>
+      <a href="/users/{{ uid }}" class="footer-link">My Profile</a>
+      <span class="footer-sep">·</span>
+      <a href="/users/{{ uid }}/feed.rss" class="footer-link">My RSS</a>
       {% endif %}
-    </nav>
-  </header>
-  <main>
-    {% block content %}{% endblock %}
-  </main>
-</body>
+      <span class="footer-sep">·</span>
+      <a href="/docs" target="_blank" class="footer-link">API Docs</a>
+    </footer>
+  </body>
 </html>

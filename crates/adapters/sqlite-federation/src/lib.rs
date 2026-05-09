@@ -494,3 +494,136 @@ impl RemoteReviewRepository for SqliteFederationRepository {
         Ok(())
     }
 }
+
+#[async_trait]
+impl domain::ports::SocialQueryPort for SqliteFederationRepository {
+    async fn get_accepted_following_urls(
+        &self,
+        user_id: uuid::Uuid,
+    ) -> Result<Vec<String>, domain::errors::DomainError> {
+        let user_id_str = user_id.to_string();
+        let rows = sqlx::query_scalar::<_, String>(
+            "SELECT remote_actor_url FROM ap_following
+             WHERE local_user_id = ? AND status = 'accepted'",
+        )
+        .bind(&user_id_str)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| domain::errors::DomainError::InfrastructureError(e.to_string()))?;
+        Ok(rows)
+    }
+
+    async fn list_all_followed_remote_actors(
+        &self,
+    ) -> Result<Vec<domain::ports::RemoteActorInfo>, domain::errors::DomainError> {
+        let rows = sqlx::query_as::<_, (String, String, Option<String>)>(
+            "SELECT DISTINCT ar.url, ar.handle, ar.display_name
+             FROM ap_remote_actors ar
+             JOIN ap_following f ON f.remote_actor_url = ar.url
+             WHERE f.status = 'accepted'",
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| domain::errors::DomainError::InfrastructureError(e.to_string()))?;
+
+        Ok(rows
+            .into_iter()
+            .map(|(url, handle, display_name)| domain::ports::RemoteActorInfo {
+                url,
+                handle,
+                display_name,
+            })
+            .collect())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use domain::ports::SocialQueryPort;
+    use sqlx::SqlitePool;
+
+    async fn setup_db(pool: &SqlitePool) {
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS ap_remote_actors (
+                url TEXT PRIMARY KEY,
+                handle TEXT NOT NULL,
+                inbox_url TEXT NOT NULL,
+                shared_inbox_url TEXT,
+                display_name TEXT,
+                fetched_at TEXT NOT NULL
+            )",
+        )
+        .execute(pool)
+        .await
+        .unwrap();
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS ap_following (
+                local_user_id TEXT NOT NULL,
+                remote_actor_url TEXT NOT NULL,
+                follow_activity_id TEXT NOT NULL,
+                status TEXT NOT NULL,
+                PRIMARY KEY (local_user_id, remote_actor_url)
+            )",
+        )
+        .execute(pool)
+        .await
+        .unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_get_accepted_following_urls_returns_only_accepted() {
+        let pool = SqlitePool::connect(":memory:").await.unwrap();
+        setup_db(&pool).await;
+        let repo = SqliteFederationRepository::new(pool.clone());
+        let user_id = uuid::Uuid::new_v4();
+
+        sqlx::query(
+            "INSERT INTO ap_following (local_user_id, remote_actor_url, follow_activity_id, status)
+             VALUES (?, 'https://other.social/users/alice', 'act1', 'accepted'),
+                    (?, 'https://other.social/users/bob', 'act2', 'pending')",
+        )
+        .bind(user_id.to_string())
+        .bind(user_id.to_string())
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let urls = repo.get_accepted_following_urls(user_id).await.unwrap();
+        assert_eq!(urls.len(), 1);
+        assert_eq!(urls[0], "https://other.social/users/alice");
+    }
+
+    #[tokio::test]
+    async fn test_list_all_followed_remote_actors_deduplicates() {
+        let pool = SqlitePool::connect(":memory:").await.unwrap();
+        setup_db(&pool).await;
+        let repo = SqliteFederationRepository::new(pool.clone());
+        let user1 = uuid::Uuid::new_v4();
+        let user2 = uuid::Uuid::new_v4();
+
+        sqlx::query(
+            "INSERT INTO ap_remote_actors (url, handle, inbox_url, fetched_at, display_name)
+             VALUES ('https://other.social/users/alice', 'alice@other.social', 'https://other.social/inbox', '2024-01-01', 'Alice')",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        sqlx::query(
+            "INSERT INTO ap_following (local_user_id, remote_actor_url, follow_activity_id, status)
+             VALUES (?, 'https://other.social/users/alice', 'act1', 'accepted'),
+                    (?, 'https://other.social/users/alice', 'act2', 'accepted')",
+        )
+        .bind(user1.to_string())
+        .bind(user2.to_string())
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let actors = repo.list_all_followed_remote_actors().await.unwrap();
+        assert_eq!(actors.len(), 1);
+        assert_eq!(actors[0].handle, "alice@other.social");
+    }
+}

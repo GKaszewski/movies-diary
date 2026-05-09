@@ -125,6 +125,22 @@ impl domain::ports::DiaryExporter for PanicExporter {
     }
 }
 
+struct PanicSocialQuery;
+#[async_trait::async_trait]
+impl domain::ports::SocialQueryPort for PanicSocialQuery {
+    async fn get_accepted_following_urls(
+        &self,
+        _: uuid::Uuid,
+    ) -> Result<Vec<String>, DomainError> {
+        panic!()
+    }
+    async fn list_all_followed_remote_actors(
+        &self,
+    ) -> Result<Vec<domain::ports::RemoteActorInfo>, DomainError> {
+        panic!()
+    }
+}
+
 async fn test_app() -> Router {
     let pool = SqlitePool::connect("sqlite::memory:")
         .await
@@ -156,6 +172,7 @@ async fn test_app() -> Router {
         html_renderer: Arc::new(AskamaHtmlRenderer::new()),
         rss_renderer: Arc::new(RssAdapter::new("http://localhost:3000".into())),
         ap_service: Arc::new(activitypub::NoopActivityPubService),
+        social_query: Arc::new(PanicSocialQuery),
     };
 
     routes::build_router(state, axum::Router::new())

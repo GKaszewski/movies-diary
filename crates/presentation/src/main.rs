@@ -114,6 +114,7 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
 
     // Federation
     let federation_repo = Arc::new(SqliteFederationRepository::new(pool));
+    let social_query: Arc<dyn domain::ports::SocialQueryPort> = Arc::clone(&federation_repo) as _;
     let user_repo_adapter = Arc::new(DomainUserRepoAdapter(Arc::clone(&user_repository)));
     let review_handler = Arc::new(ReviewObjectHandler {
         movie_repository: Arc::clone(&movie_repository),
@@ -170,6 +171,7 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
             std::env::var("BASE_URL").unwrap_or_else(|_| "http://localhost:3000".into()),
         )),
         ap_service,
+        social_query,
     };
     Ok((state, ap_router))
 }

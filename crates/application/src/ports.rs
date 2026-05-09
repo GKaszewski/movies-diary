@@ -48,11 +48,15 @@ pub struct ActivityFeedPageData {
     pub current_offset: u32,
     pub has_more: bool,
     pub limit: u32,
+    pub filter: String,
+    pub sort_by: String,
+    pub search: String,
 }
 
 pub struct UsersPageData {
     pub ctx: HtmlPageContext,
     pub users: Vec<UserSummary>,
+    pub remote_actors: Vec<RemoteActorView>,
 }
 
 pub struct ProfilePageData {

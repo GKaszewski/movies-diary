@@ -67,6 +67,18 @@ pub struct ErrorQuery {
     pub error: Option<String>,
 }
 
+#[derive(serde::Deserialize, Default)]
+pub struct FeedQueryParams {
+    #[serde(default)]
+    pub filter: String,
+    #[serde(default)]
+    pub sort_by: String,
+    #[serde(default)]
+    pub search: String,
+    pub limit: Option<u32>,
+    pub offset: Option<u32>,
+}
+
 #[derive(Deserialize, Default)]
 pub struct DeleteRedirectForm {
     #[serde(default)]

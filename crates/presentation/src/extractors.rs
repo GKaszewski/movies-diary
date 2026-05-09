@@ -177,10 +177,33 @@ mod tests {
         ) -> Result<Paginated<FeedEntry>, DomainError> {
             panic!()
         }
+        async fn query_activity_feed_filtered(
+            &self,
+            _: &PageParams,
+            _: &domain::ports::FeedSortBy,
+            _: Option<&str>,
+            _: Option<&domain::ports::FollowingFilter>,
+        ) -> Result<Paginated<FeedEntry>, DomainError> {
+            panic!()
+        }
         async fn get_review_history(&self, _: &MovieId) -> Result<ReviewHistory, DomainError> {
             panic!()
         }
         async fn get_user_history(&self, _: &UserId) -> Result<Vec<DiaryEntry>, DomainError> {
+            panic!()
+        }
+    }
+    #[async_trait::async_trait]
+    impl domain::ports::SocialQueryPort for Panic {
+        async fn get_accepted_following_urls(
+            &self,
+            _: uuid::Uuid,
+        ) -> Result<Vec<String>, DomainError> {
+            panic!()
+        }
+        async fn list_all_followed_remote_actors(
+            &self,
+        ) -> Result<Vec<domain::ports::RemoteActorInfo>, DomainError> {
             panic!()
         }
     }
@@ -386,6 +409,7 @@ mod tests {
             html_renderer: Arc::new(Panic),
             rss_renderer: Arc::new(Panic),
             ap_service: Arc::new(activitypub::NoopActivityPubService),
+            social_query: Arc::new(Panic),
         }
     }
 

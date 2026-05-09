@@ -30,7 +30,7 @@ pub mod html {
     use crate::{
         csrf::CsrfToken,
         dtos::{
-            DiaryQueryParams, ErrorQuery, FollowForm, FollowerActionForm, LogReviewData,
+            ErrorQuery, FeedQueryParams, FollowForm, FollowerActionForm, LogReviewData,
             LogReviewForm, LoginForm, RegisterForm, UnfollowForm,
         },
         extractors::{OptionalCookieUser, RequiredCookieUser},
@@ -338,29 +338,87 @@ pub mod html {
     pub async fn get_activity_feed(
         OptionalCookieUser(user_id): OptionalCookieUser,
         State(state): State<AppState>,
-        Query(params): Query<DiaryQueryParams>,
+        Query(params): Query<FeedQueryParams>,
         Extension(csrf): Extension<CsrfToken>,
     ) -> impl IntoResponse {
-        let ctx = build_page_context(&state, user_id, csrf.0).await;
-        let query = application::queries::GetActivityFeedQuery {
-            limit: params.limit,
-            offset: params.offset,
+        let ctx = build_page_context(&state, user_id.clone(), csrf.0).await;
+        let limit = params.limit.unwrap_or(20);
+        let offset = params.offset.unwrap_or(0);
+
+        let filter_str = if params.filter == "following" && user_id.is_some() {
+            "following"
+        } else {
+            "all"
         };
+        let sort_by_str = match params.sort_by.as_str() {
+            "date_asc" => "date_asc",
+            "rating" => "rating",
+            "rating_asc" => "rating_asc",
+            _ => "date",
+        };
+
+        let following = if filter_str == "following" {
+            if let Some(uid) = user_id {
+                let urls = state.social_query
+                    .get_accepted_following_urls(uid.value())
+                    .await
+                    .unwrap_or_default();
+                let base_url = &state.app_ctx.config.base_url;
+                let mut local_ids = vec![uid.value()];
+                let mut remote_urls = Vec::new();
+                for url in urls {
+                    if let Some(suffix) = url.strip_prefix(&format!("{}/users/", base_url)) {
+                        if let Ok(parsed_id) = uuid::Uuid::parse_str(suffix) {
+                            local_ids.push(parsed_id);
+                            continue;
+                        }
+                    }
+                    remote_urls.push(url);
+                }
+                Some(domain::ports::FollowingFilter {
+                    local_user_ids: local_ids,
+                    remote_actor_urls: remote_urls,
+                })
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        let search_opt = if params.search.is_empty() {
+            None
+        } else {
+            Some(params.search.clone())
+        };
+
+        let query = application::queries::GetActivityFeedQuery {
+            limit,
+            offset,
+            sort_by: domain::ports::FeedSortBy::from_str(sort_by_str),
+            search: search_opt,
+            following,
+        };
+
         match application::use_cases::get_activity_feed::execute(&state.app_ctx, query).await {
             Ok(entries) => {
-                let limit = entries.limit;
-                let offset = entries.offset;
-                let has_more = (offset as u64).saturating_add(limit as u64) < entries.total_count;
+                let entry_limit = entries.limit;
+                let entry_offset = entries.offset;
+                let has_more = (entry_offset as u64).saturating_add(entry_limit as u64)
+                    < entries.total_count;
                 let data = application::ports::ActivityFeedPageData {
                     ctx,
-                    current_offset: offset,
+                    current_offset: entry_offset,
                     has_more,
-                    limit,
+                    limit: entry_limit,
                     entries,
+                    filter: filter_str.to_string(),
+                    sort_by: sort_by_str.to_string(),
+                    search: params.search,
                 };
                 match state.html_renderer.render_activity_feed_page(data) {
                     Ok(html) => Html(html).into_response(),
-                    Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
+                    Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
                 }
             }
             Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
@@ -375,20 +433,37 @@ pub mod html {
         let mut ctx = build_page_context(&state, user_id, csrf.0).await;
         ctx.page_title = "Members — Movies Diary".to_string();
         ctx.canonical_url = format!("{}/users", state.app_ctx.config.base_url);
-        match application::use_cases::get_users::execute(
-            &state.app_ctx,
-            application::queries::GetUsersQuery,
-        )
-        .await
-        {
-            Ok(users) => {
-                let data = application::ports::UsersPageData { ctx, users };
+
+        let (users_result, actors_result) = tokio::join!(
+            application::use_cases::get_users::execute(
+                &state.app_ctx,
+                application::queries::GetUsersQuery,
+            ),
+            state.social_query.list_all_followed_remote_actors()
+        );
+
+        match (users_result, actors_result) {
+            (Ok(users), Ok(remote_actors)) => {
+                let actor_views = remote_actors
+                    .into_iter()
+                    .map(|a| application::ports::RemoteActorView {
+                        handle: a.handle,
+                        display_name: a.display_name,
+                        url: a.url,
+                    })
+                    .collect();
+                let data = application::ports::UsersPageData {
+                    ctx,
+                    users,
+                    remote_actors: actor_views,
+                };
                 match state.html_renderer.render_users_page(data) {
                     Ok(html) => Html(html).into_response(),
                     Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
                 }
             }
-            Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+            (Err(e), _) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+            (_, Err(e)) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
         }
     }
 
@@ -1352,7 +1427,13 @@ pub mod api {
     ) -> Result<Json<ActivityFeedResponse>, ApiError> {
         let page = get_feed_uc::execute(
             &state.app_ctx,
-            GetActivityFeedQuery { limit: params.limit, offset: params.offset },
+            GetActivityFeedQuery {
+                limit: params.limit.unwrap_or(20),
+                offset: params.offset.unwrap_or(0),
+                sort_by: domain::ports::FeedSortBy::Date,
+                search: None,
+                following: None,
+            },
         )
         .await?;
         Ok(Json(ActivityFeedResponse {

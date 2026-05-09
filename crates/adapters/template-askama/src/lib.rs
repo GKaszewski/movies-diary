@@ -87,6 +87,34 @@ struct ActivityFeedTemplate<'a> {
     has_more: bool,
     ctx: &'a HtmlPageContext,
     page_items: Vec<PageItem>,
+    pub filter: String,
+    pub sort_by: String,
+    pub search: String,
+}
+
+impl<'a> ActivityFeedTemplate<'a> {
+    pub fn filter_qs(&self) -> String {
+        let mut parts = vec![
+            format!("filter={}", self.filter),
+            format!("sort_by={}", self.sort_by),
+        ];
+        if !self.search.is_empty() {
+            let encoded = self.search
+                .replace(' ', "+")
+                .replace('#', "%23")
+                .replace('&', "%26")
+                .replace('=', "%3D");
+            parts.push(format!("search={}", encoded));
+        }
+        format!("&{}", parts.join("&"))
+    }
+}
+
+pub struct RemoteActorDisplay {
+    pub handle: String,
+    pub display_name: String,
+    pub initial: char,
+    pub url: String,
 }
 
 struct UserSummaryView {
@@ -102,6 +130,7 @@ struct UserSummaryView {
 struct UsersTemplate<'a> {
     users: Vec<UserSummaryView>,
     ctx: &'a HtmlPageContext,
+    remote_actors: Vec<RemoteActorDisplay>,
 }
 
 struct MonthlyRatingRow<'a> {
@@ -320,6 +349,9 @@ impl HtmlRenderer for AskamaHtmlRenderer {
             has_more: data.has_more,
             ctx: &data.ctx,
             page_items: build_page_items(total_pages, current_page),
+            filter: data.filter,
+            sort_by: data.sort_by,
+            search: data.search,
         }
         .render()
         .map_err(|e| e.to_string())
@@ -350,9 +382,23 @@ impl HtmlRenderer for AskamaHtmlRenderer {
                 }
             })
             .collect();
+        let remote_actors = data.remote_actors
+            .into_iter()
+            .map(|a| {
+                let name = a.display_name.unwrap_or_else(|| a.handle.clone());
+                let initial = name.chars().next().unwrap_or('?');
+                RemoteActorDisplay {
+                    display_name: name,
+                    initial,
+                    handle: a.handle,
+                    url: a.url,
+                }
+            })
+            .collect();
         UsersTemplate {
             users,
             ctx: &data.ctx,
+            remote_actors,
         }
         .render()
         .map_err(|e| e.to_string())

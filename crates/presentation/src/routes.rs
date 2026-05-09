@@ -1,4 +1,3 @@
-use std::net::SocketAddr;
 use std::num::NonZeroU32;
 
 use axum::{Router, routing};
@@ -130,17 +129,38 @@ fn api_routes(rate_limit: u64) -> Router<AppState> {
             .route("/auth/login", routing::post(handlers::api::login))
             .route("/auth/register", routing::post(handlers::api::register))
             .route("/diary/export", routing::get(handlers::api::export_diary))
-            .route("/activity-feed", routing::get(handlers::api::get_activity_feed))
+            .route(
+                "/activity-feed",
+                routing::get(handlers::api::get_activity_feed),
+            )
             .route("/users", routing::get(handlers::api::list_users))
             .route("/users/{id}", routing::get(handlers::api::get_user_profile))
-            .route("/social/following", routing::get(handlers::api::get_following))
-            .route("/social/followers", routing::get(handlers::api::get_followers))
-            .route("/social/followers/pending", routing::get(handlers::api::get_pending_followers))
+            .route(
+                "/social/following",
+                routing::get(handlers::api::get_following),
+            )
+            .route(
+                "/social/followers",
+                routing::get(handlers::api::get_followers),
+            )
+            .route(
+                "/social/followers/pending",
+                routing::get(handlers::api::get_pending_followers),
+            )
             .route("/social/follow", routing::post(handlers::api::follow))
             .route("/social/unfollow", routing::post(handlers::api::unfollow))
-            .route("/social/followers/accept", routing::post(handlers::api::accept_follower))
-            .route("/social/followers/reject", routing::post(handlers::api::reject_follower))
-            .route("/social/followers/remove", routing::post(handlers::api::remove_follower))
+            .route(
+                "/social/followers/accept",
+                routing::post(handlers::api::accept_follower),
+            )
+            .route(
+                "/social/followers/reject",
+                routing::post(handlers::api::reject_follower),
+            )
+            .route(
+                "/social/followers/remove",
+                routing::post(handlers::api::remove_follower),
+            )
             .layer(GovernorLayer::new(cfg)),
     )
 }

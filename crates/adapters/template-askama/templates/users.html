@@ -14,5 +14,21 @@
   {% else %}
   <p class="empty">No users yet.</p>
   {% endfor %}
+
+  {% if !remote_actors.is_empty() %}
+  <h2 class="page-title federated-title">Federated</h2>
+  {% for actor in remote_actors %}
+  <div class="user-row">
+    <div class="user-avatar federated-avatar">{{ actor.initial }}</div>
+    <div class="user-info">
+      <div class="user-name">{{ actor.display_name }}</div>
+      <div class="user-meta muted">{{ actor.handle }}</div>
+    </div>
+    <a href="{{ actor.url }}" target="_blank" rel="noopener noreferrer" class="btn-secondary">
+      View profile ↗
+    </a>
+  </div>
+  {% endfor %}
+  {% endif %}
 </div>
 {% endblock %}
