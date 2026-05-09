@@ -8,6 +8,7 @@ WORKDIR /build
 # Cache dependency compilation separately from source
 COPY Cargo.toml Cargo.lock ./
 COPY crates/adapters/activitypub/Cargo.toml       crates/adapters/activitypub/Cargo.toml
+COPY crates/adapters/activitypub-base/Cargo.toml  crates/adapters/activitypub-base/Cargo.toml
 COPY crates/adapters/auth/Cargo.toml              crates/adapters/auth/Cargo.toml
 COPY crates/adapters/event-publisher/Cargo.toml   crates/adapters/event-publisher/Cargo.toml
 COPY crates/adapters/metadata/Cargo.toml          crates/adapters/metadata/Cargo.toml
