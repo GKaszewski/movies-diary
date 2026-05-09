@@ -846,24 +846,24 @@ pub mod api {
     use uuid::Uuid;
 
     use application::{
-        commands::{DeleteReviewCommand, LoginCommand, RegisterCommand, SyncPosterCommand},
+        commands::{DeleteReviewCommand, ExportCommand, LoginCommand, RegisterCommand, SyncPosterCommand},
         queries::GetReviewHistoryQuery,
         use_cases::{
-            delete_review, get_diary, get_review_history, log_review, login as login_uc,
-            register as register_uc, sync_poster,
+            delete_review, export_diary as export_diary_uc, get_diary, get_review_history,
+            log_review, login as login_uc, register as register_uc, sync_poster,
         },
     };
     use domain::{
         errors::DomainError,
-        models::{DiaryEntry, Movie, Review},
+        models::{DiaryEntry, ExportFormat, Movie, Review},
         services::review_history::Trend,
         value_objects::MovieId,
     };
 
     use crate::{
         dtos::{
-            DiaryEntryDto, DiaryQueryParams, DiaryResponse, LogReviewData, LogReviewRequest,
-            LoginRequest, LoginResponse, MovieDto, RegisterRequest, ReviewDto,
+            DiaryEntryDto, DiaryQueryParams, DiaryResponse, ExportQueryParams, LogReviewData,
+            LogReviewRequest, LoginRequest, LoginResponse, MovieDto, RegisterRequest, ReviewDto,
             ReviewHistoryResponse,
         },
         errors::ApiError,
@@ -1027,6 +1027,41 @@ pub mod api {
         DiaryEntryDto {
             movie: movie_to_dto(entry.movie()),
             review: review_to_dto(entry.review()),
+        }
+    }
+
+    pub async fn export_diary(
+        State(state): State<AppState>,
+        user: AuthenticatedUser,
+        Query(params): Query<ExportQueryParams>,
+    ) -> impl IntoResponse {
+        let format = match params.format.as_str() {
+            "csv" => ExportFormat::Csv,
+            "json" => ExportFormat::Json,
+            _ => return StatusCode::BAD_REQUEST.into_response(),
+        };
+        let (content_type, filename) = match &format {
+            ExportFormat::Csv => ("text/csv; charset=utf-8", "diary.csv"),
+            ExportFormat::Json => ("application/json", "diary.json"),
+        };
+        let cmd = ExportCommand { user_id: user.0.value(), format };
+        match export_diary_uc::execute(&state.app_ctx, cmd).await {
+            Ok(bytes) => (
+                StatusCode::OK,
+                [
+                    (axum::http::header::CONTENT_TYPE, content_type.to_string()),
+                    (
+                        axum::http::header::CONTENT_DISPOSITION,
+                        format!("attachment; filename=\"{}\"", filename),
+                    ),
+                ],
+                bytes,
+            )
+                .into_response(),
+            Err(e) => {
+                tracing::error!("export error: {:?}", e);
+                StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            }
         }
     }
 }

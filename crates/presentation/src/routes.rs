@@ -157,7 +157,7 @@ fn api_routes(rate_limit: u64) -> Router<AppState> {
         });
 
     Router::new().nest(
-        "/api",
+        "/api/v1",
         Router::new()
             .route("/diary", routing::get(handlers::api::get_diary))
             .route(
@@ -175,6 +175,7 @@ fn api_routes(rate_limit: u64) -> Router<AppState> {
             )
             .route("/auth/login", routing::post(handlers::api::login))
             .route("/auth/register", routing::post(handlers::api::register))
+            .route("/diary/export", routing::get(handlers::api::export_diary))
             .route_layer(auth_rate_limit),
     )
 }
