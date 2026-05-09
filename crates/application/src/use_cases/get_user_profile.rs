@@ -1,3 +1,4 @@
+use chrono::Datelike;
 use domain::{
     errors::DomainError,
     models::{
@@ -6,7 +7,7 @@ use domain::{
     },
     value_objects::UserId,
 };
-use crate::{context::AppContext, queries::GetUserProfileQuery};
+use crate::{context::AppContext, queries::{GetUserProfileQuery, ProfileView}};
 
 pub struct UserProfileData {
     pub stats: UserStats,
@@ -22,62 +23,62 @@ pub async fn execute(
     let user_id = UserId::from_uuid(query.user_id);
     let stats = ctx.repository.get_user_stats(&user_id).await?;
 
-    match query.view.as_str() {
-        "history" => {
+    match query.view {
+        ProfileView::History => {
             // V1: loads all entries into memory. Personal diaries are bounded in size;
             // spec calls for showing every movie grouped by month, so full load is intentional.
             let all_entries = ctx.repository.get_user_history(&user_id).await?;
             let history = group_by_month(all_entries);
             Ok(UserProfileData { stats, entries: None, history: Some(history), trends: None })
         }
-        "trends" => {
+        ProfileView::Trends => {
             let trends = ctx.repository.get_user_trends(&user_id).await?;
             Ok(UserProfileData { stats, entries: None, history: None, trends: Some(trends) })
         }
-        "ratings" => {
-            let page = PageParams::new(query.limit, query.offset)?;
-            let filter = DiaryFilter {
-                sort_by: SortDirection::ByRatingDesc,
-                page,
-                movie_id: None,
-                user_id: Some(user_id),
-            };
+        ProfileView::Ratings => {
+            let filter = paged_user_filter(user_id, SortDirection::ByRatingDesc, query.limit, query.offset)?;
             let entries = ctx.repository.query_diary(&filter).await?;
             Ok(UserProfileData { stats, entries: Some(entries), history: None, trends: None })
         }
-        "recent" => {
-            let page = PageParams::new(query.limit, query.offset)?;
-            let filter = DiaryFilter {
-                sort_by: SortDirection::Descending,
-                page,
-                movie_id: None,
-                user_id: Some(user_id),
-            };
+        ProfileView::Recent => {
+            let filter = paged_user_filter(user_id, SortDirection::Descending, query.limit, query.offset)?;
             let entries = ctx.repository.query_diary(&filter).await?;
             Ok(UserProfileData { stats, entries: Some(entries), history: None, trends: None })
         }
-        other => Err(DomainError::ValidationError(format!("unknown view: {}", other))),
     }
+}
+
+fn paged_user_filter(user_id: UserId, sort_by: SortDirection, limit: Option<u32>, offset: Option<u32>) -> Result<DiaryFilter, DomainError> {
+    let page = PageParams::new(limit, offset)?;
+    Ok(DiaryFilter {
+        sort_by,
+        page,
+        movie_id: None,
+        user_id: Some(user_id),
+    })
 }
 
 fn group_by_month(entries: Vec<DiaryEntry>) -> Vec<MonthActivity> {
     use std::collections::BTreeMap;
-    let mut map: BTreeMap<String, Vec<DiaryEntry>> = BTreeMap::new();
+    let mut map: BTreeMap<(i32, u32), Vec<DiaryEntry>> = BTreeMap::new();
     for entry in entries {
-        let ym = entry.review().watched_at().format("%Y-%m").to_string();
-        map.entry(ym).or_default().push(entry);
+        let watched_at = entry.review().watched_at();
+        let year = watched_at.year();
+        let month = watched_at.month();
+        map.entry((year, month)).or_default().push(entry);
     }
-    let mut result: Vec<MonthActivity> = map
-        .into_iter()
-        .map(|(ym, entries)| MonthActivity {
-            month_label: format_year_month_long(&ym),
-            count: entries.len() as i64,
-            entries,
-            year_month: ym,
+    map.into_iter()
+        .rev()
+        .map(|((year, month), entries)| {
+            let year_month = format!("{:04}-{:02}", year, month);
+            MonthActivity {
+                month_label: format_year_month_long(&year_month),
+                count: entries.len() as i64,
+                entries,
+                year_month,
+            }
         })
-        .collect();
-    result.reverse();
-    result
+        .collect()
 }
 
 fn format_year_month_long(ym: &str) -> String {

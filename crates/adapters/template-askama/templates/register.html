@@ -6,6 +6,12 @@
 {% endif %}
 <form method="POST" action="/register">
   <label>
+    Username<br>
+    <small>2–30 chars: letters, digits, underscores, hyphens. This becomes your ActivityPub handle.</small><br>
+    <input type="text" name="username" required autocomplete="username"
+           pattern="[a-z0-9_\-]{2,30}" title="2–30 lowercase letters, digits, underscores or hyphens">
+  </label>
+  <label>
     Email<br>
     <input type="email" name="email" required autocomplete="email">
   </label>

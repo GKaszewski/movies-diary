@@ -19,7 +19,7 @@ use crate::repository::RemoteActor;
 #[derive(Debug, Clone)]
 pub struct DbActor {
     pub user_id: UserId,
-    pub email: String,
+    pub username: String,
     pub public_key_pem: String,
     pub private_key_pem: Option<String>,
     pub inbox_url: Url,
@@ -45,10 +45,6 @@ pub struct Person {
     name: Option<String>,
 }
 
-pub fn actor_url(base_url: &str, user_id: &UserId) -> Url {
-    Url::parse(&format!("{}/users/{}", base_url, user_id.value())).expect("valid actor url")
-}
-
 pub async fn get_local_actor(
     user_id: UserId,
     data: &Data<FederationData>,
@@ -57,8 +53,8 @@ pub async fn get_local_actor(
         .user_repo
         .find_by_id(&user_id)
         .await
-        .map_err(|e| Error(e.into()))?
-        .ok_or_else(|| Error(anyhow::anyhow!("user not found: {}", user_id.value())))?;
+        .map_err(Error::from)?
+        .ok_or_else(|| Error::not_found(anyhow::anyhow!("user not found: {}", user_id.value())))?;
 
     let (public_key, private_key) = match data
         .federation_repo
@@ -79,7 +75,7 @@ pub async fn get_local_actor(
         }
     };
 
-    let ap_id = actor_url(&data.base_url, user.id());
+    let ap_id = crate::urls::actor_url(&data.base_url, user.id());
     let inbox_url = Url::parse(&format!("{}/inbox", &ap_id)).expect("valid inbox url");
     let outbox_url = Url::parse(&format!("{}/outbox", &ap_id)).expect("valid outbox url");
     let followers_url = Url::parse(&format!("{}/followers", &ap_id)).expect("valid followers url");
@@ -87,7 +83,7 @@ pub async fn get_local_actor(
 
     Ok(DbActor {
         user_id: user.id().clone(),
-        email: user.email().value().to_string(),
+        username: user.username().value().to_string(),
         public_key_pem: public_key,
         private_key_pem: Some(private_key),
         inbox_url,
@@ -118,22 +114,10 @@ impl Object for DbActor {
         data: &Data<Self::DataType>,
     ) -> Result<Option<Self>, Self::Error> {
         // Extract user_id from URL path: /users/{uuid}
-        let path = object_id.path();
-        let user_id_str = path
-            .strip_prefix("/users/")
-            .and_then(|s| s.split('/').next());
-
-        let user_id_str = match user_id_str {
-            Some(s) => s,
+        let user_id = match crate::urls::extract_user_id_from_url(&object_id) {
+            Some(id) => id,
             None => return Ok(None),
         };
-
-        let uuid = match uuid::Uuid::parse_str(user_id_str) {
-            Ok(u) => u,
-            Err(_) => return Ok(None),
-        };
-
-        let user_id = UserId::from_uuid(uuid);
         let user = match data.user_repo.find_by_id(&user_id).await {
             Ok(Some(u)) => u,
             _ => return Ok(None),
@@ -149,7 +133,7 @@ impl Object for DbActor {
             None => return Ok(None),
         };
 
-        let ap_id = actor_url(&data.base_url, user.id());
+        let ap_id = crate::urls::actor_url(&data.base_url, user.id());
         let inbox_url = Url::parse(&format!("{}/inbox", &ap_id)).expect("valid url");
         let outbox_url = Url::parse(&format!("{}/outbox", &ap_id)).expect("valid url");
         let followers_url = Url::parse(&format!("{}/followers", &ap_id)).expect("valid url");
@@ -157,7 +141,7 @@ impl Object for DbActor {
 
         Ok(Some(DbActor {
             user_id: user.id().clone(),
-            email: user.email().value().to_string(),
+            username: user.username().value().to_string(),
             public_key_pem: public_key,
             private_key_pem: private_key,
             inbox_url,
@@ -179,18 +163,13 @@ impl Object for DbActor {
         Ok(Person {
             kind: Default::default(),
             id: self.ap_id.clone().into(),
-            preferred_username: self
-                .email
-                .split('@')
-                .next()
-                .unwrap_or(&self.email)
-                .to_string(),
+            preferred_username: self.username.clone(),
             inbox: self.inbox_url.clone(),
             outbox: self.outbox_url.clone(),
             followers: self.followers_url.clone(),
             following: self.following_url.clone(),
             public_key,
-            name: Some(self.email.clone()),
+            name: Some(self.username.clone()),
         })
     }
 
@@ -228,9 +207,7 @@ impl Object for DbActor {
 
         Ok(DbActor {
             user_id,
-            email: json
-                .name
-                .unwrap_or_else(|| json.preferred_username.clone()),
+            username: json.preferred_username.clone(),
             public_key_pem: json.public_key.public_key_pem,
             private_key_pem: None,
             inbox_url,

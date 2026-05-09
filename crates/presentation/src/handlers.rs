@@ -2,6 +2,8 @@ const DEFAULT_PAGE_LIMIT: u32 = 5;
 const RSS_FEED_LIMIT: u32 = 50;
 
 pub mod html {
+    use std::str::FromStr;
+
     use axum::{
         extract::{Path, Query, State},
         http::{HeaderValue, StatusCode, header::SET_COOKIE},
@@ -19,7 +21,7 @@ pub mod html {
     use domain::{errors::DomainError, value_objects::UserId};
 
     use crate::{
-        dtos::{DiaryQueryParams, ErrorQuery, FollowForm, LoginForm, LogReviewData, LogReviewForm, RegisterForm, UnfollowForm},
+        dtos::{DiaryQueryParams, ErrorQuery, FollowForm, FollowerActionForm, LoginForm, LogReviewData, LogReviewForm, RegisterForm, UnfollowForm},
         extractors::{OptionalCookieUser, RequiredCookieUser},
         state::AppState,
     };
@@ -153,6 +155,7 @@ pub mod html {
             &state.app_ctx,
             RegisterCommand {
                 email: form.email,
+                username: form.username,
                 password: form.password,
             },
         )
@@ -294,10 +297,29 @@ pub mod html {
         OptionalCookieUser(user_id): OptionalCookieUser,
         State(state): State<AppState>,
         Path(profile_user_uuid): Path<Uuid>,
+        headers: axum::http::HeaderMap,
         Query(params): Query<crate::dtos::ProfileQueryParams>,
     ) -> impl IntoResponse {
+        // Content negotiation: AP clients request application/activity+json
+        let accept = headers.get(axum::http::header::ACCEPT)
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("");
+        if accept.contains("application/activity+json") || accept.contains("application/ld+json") {
+            return match state.ap_service.actor_json(&profile_user_uuid.to_string()).await {
+                Ok(json) => (
+                    [(axum::http::header::CONTENT_TYPE, "application/activity+json")],
+                    json,
+                ).into_response(),
+                Err(_) => StatusCode::NOT_FOUND.into_response(),
+            };
+        }
+
         let mut ctx = build_page_context(&state, user_id.clone()).await;
-        let view = params.view.unwrap_or_else(|| "recent".to_string());
+        let view_str = params.view.as_deref().unwrap_or("recent");
+        let profile_view = match application::queries::ProfileView::from_str(view_str) {
+            Ok(v) => v,
+            Err(_) => return (axum::http::StatusCode::BAD_REQUEST, "invalid view parameter").into_response(),
+        };
 
         let profile_user = match state.app_ctx.user_repository
             .find_by_id(&domain::value_objects::UserId::from_uuid(profile_user_uuid))
@@ -308,8 +330,7 @@ pub mod html {
             Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
         };
 
-        let display_name = profile_user.email().value()
-            .split('@').next().unwrap_or("User");
+        let display_name = profile_user.username().value();
         ctx.page_title = format!("{}'s Diary — Movies Diary", display_name);
         ctx.canonical_url = format!("{}/users/{}", state.app_ctx.config.base_url, profile_user_uuid);
 
@@ -328,9 +349,25 @@ pub mod html {
             0
         };
 
+        let pending_followers = if is_own_profile {
+            state.ap_service
+                .get_pending_followers(domain::value_objects::UserId::from_uuid(profile_user_uuid))
+                .await
+                .unwrap_or_default()
+                .into_iter()
+                .map(|a| application::ports::RemoteActorView {
+                    handle: a.handle,
+                    url: a.url,
+                    display_name: a.display_name,
+                })
+                .collect()
+        } else {
+            vec![]
+        };
+
         let query = application::queries::GetUserProfileQuery {
             user_id: profile_user_uuid,
-            view: view.clone(),
+            view: profile_view,
             limit: params.limit,
             offset: params.offset,
         };
@@ -349,7 +386,7 @@ pub mod html {
                     profile_user_id: profile_user_uuid,
                     profile_user_email: profile_user.email().value().to_string(),
                     stats: profile.stats,
-                    view,
+                    view: profile_view.as_str().to_string(),
                     entries: profile.entries,
                     current_offset: offset,
                     has_more,
@@ -359,6 +396,7 @@ pub mod html {
                     is_own_profile,
                     error: params.error,
                     following_count,
+                    pending_followers,
                 };
                 match state.html_renderer.render_profile_page(data) {
                     Ok(html) => Html(html).into_response(),
@@ -402,6 +440,42 @@ pub mod html {
             Err(e) => {
                 let msg = encode_error(&e.to_string());
                 Redirect::to(&format!("/users/{}/following-list?error={}", profile_user_uuid, msg)).into_response()
+            }
+        }
+    }
+
+    pub async fn accept_follower(
+        RequiredCookieUser(user_id): RequiredCookieUser,
+        State(state): State<AppState>,
+        Path(profile_user_uuid): Path<Uuid>,
+        Form(form): Form<FollowerActionForm>,
+    ) -> impl IntoResponse {
+        if user_id.value() != profile_user_uuid {
+            return StatusCode::FORBIDDEN.into_response();
+        }
+        match state.ap_service.accept_follower(user_id, &form.actor_url).await {
+            Ok(_) => Redirect::to(&format!("/users/{}", profile_user_uuid)).into_response(),
+            Err(e) => {
+                let msg = encode_error(&e.to_string());
+                Redirect::to(&format!("/users/{}?error={}", profile_user_uuid, msg)).into_response()
+            }
+        }
+    }
+
+    pub async fn reject_follower(
+        RequiredCookieUser(user_id): RequiredCookieUser,
+        State(state): State<AppState>,
+        Path(profile_user_uuid): Path<Uuid>,
+        Form(form): Form<FollowerActionForm>,
+    ) -> impl IntoResponse {
+        if user_id.value() != profile_user_uuid {
+            return StatusCode::FORBIDDEN.into_response();
+        }
+        match state.ap_service.reject_follower(user_id, &form.actor_url).await {
+            Ok(_) => Redirect::to(&format!("/users/{}", profile_user_uuid)).into_response(),
+            Err(e) => {
+                let msg = encode_error(&e.to_string());
+                Redirect::to(&format!("/users/{}?error={}", profile_user_uuid, msg)).into_response()
             }
         }
     }
@@ -459,6 +533,11 @@ pub mod posters {
         State(state): State<AppState>,
         Path(path): Path<String>,
     ) -> impl IntoResponse {
+        // If path is a remote URL, redirect directly instead of serving from local storage.
+        if path.starts_with("http://") || path.starts_with("https://") {
+            return axum::response::Redirect::temporary(&path).into_response();
+        }
+
         let poster_path = match PosterPath::new(path) {
             Ok(p) => p,
             Err(_) => return StatusCode::BAD_REQUEST.into_response(),
@@ -672,6 +751,7 @@ pub mod api {
     ) -> Result<StatusCode, ApiError> {
         register_uc::execute(&state.app_ctx, RegisterCommand {
             email: req.email,
+            username: req.username,
             password: req.password,
         })
         .await?;

@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,\n                    r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url,\n                    u.email AS user_email\n             FROM reviews r\n             INNER JOIN movies m ON m.id = r.movie_id\n             INNER JOIN users u ON u.id = r.user_id\n             ORDER BY r.watched_at DESC\n             LIMIT ? OFFSET ?",
+  "query": "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,\n                    r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url,\n                    COALESCE(u.email, r.remote_actor_url) AS \"user_email!: String\"\n             FROM reviews r\n             INNER JOIN movies m ON m.id = r.movie_id\n             LEFT JOIN users u ON u.id = r.user_id\n             ORDER BY r.watched_at DESC\n             LIMIT ? OFFSET ?",
   "describe": {
     "columns": [
       {
@@ -74,7 +74,7 @@
         "type_info": "Text"
       },
       {
-        "name": "user_email",
+        "name": "user_email!: String",
         "ordinal": 14,
         "type_info": "Text"
       }
@@ -97,8 +97,8 @@
       false,
       false,
       true,
-      false
+      true
     ]
   },
-  "hash": "1d62f367cd14f6fa82aff8aa289e499a56832d1c90eac2f5ba06b019c3f86541"
+  "hash": "70843058606802f0958d216a47473f78b29854518c48c2da3cc11a94d6d37bb1"
 }

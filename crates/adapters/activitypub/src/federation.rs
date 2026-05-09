@@ -1,18 +1,42 @@
-use activitypub_federation::config::{Data, FederationConfig, FederationMiddleware};
+use activitypub_federation::config::{Data, FederationConfig, FederationMiddleware, UrlVerifier};
+use activitypub_federation::error::Error as FedError;
+use url::Url;
 
 use crate::data::FederationData;
+
+// In debug mode, allow all URLs (including http://localhost:3000 where the
+// port colon would otherwise fail the default domain character check).
+#[derive(Clone)]
+struct PermissiveVerifier;
+
+#[async_trait::async_trait]
+impl UrlVerifier for PermissiveVerifier {
+    async fn verify(&self, _url: &Url) -> Result<(), FedError> {
+        Ok(())
+    }
+}
 
 #[derive(Clone)]
 pub struct ApFederationConfig(pub FederationConfig<FederationData>);
 
 impl ApFederationConfig {
     pub async fn new(data: FederationData, debug: bool) -> anyhow::Result<Self> {
-        let config = FederationConfig::builder()
-            .domain(&data.domain)
-            .app_data(data)
-            .debug(debug)
-            .build()
-            .await?;
+        let config = if debug {
+            FederationConfig::builder()
+                .domain(&data.domain)
+                .app_data(data)
+                .debug(true)
+                .url_verifier(Box::new(PermissiveVerifier))
+                .build()
+                .await?
+        } else {
+            FederationConfig::builder()
+                .domain(&data.domain)
+                .app_data(data)
+                .debug(false)
+                .build()
+                .await?
+        };
         Ok(Self(config))
     }
 

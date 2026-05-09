@@ -108,8 +108,8 @@ impl ResolutionStrategy for TitleSearchStrategy {
     ) -> Result<Option<(Movie, bool)>, DomainError> {
         let title = cmd.manual_title.as_deref().unwrap();
         let criteria = MetadataSearchCriteria::Title {
-            title: title.to_string(),
-            year: cmd.manual_release_year,
+            title: MovieTitle::new(title.to_string())?,
+            year: cmd.manual_release_year.map(ReleaseYear::new).transpose()?,
         };
         match deps.metadata_client.fetch_movie_metadata(&criteria).await {
             Ok(m) => Ok(Some((m, true))),

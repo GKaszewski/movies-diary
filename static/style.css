@@ -549,3 +549,72 @@ form button[type="submit"]:hover {
   align-items: center;
   gap: 0.5rem;
 }
+
+/* Pending follow requests */
+.pending-followers {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.pending-list {
+  list-style: none;
+  padding: 0;
+}
+
+.pending-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  flex-wrap: wrap;
+}
+
+.pending-url {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.inline-form {
+  display: inline;
+}
+
+.btn-accept {
+  background: rgba(60, 180, 80, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  color: #fff;
+  border: 1px solid rgba(80, 200, 100, 0.3);
+  border-radius: 16px;
+  padding: 0.2rem 0.6rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.btn-accept:hover {
+  background: rgba(60, 200, 80, 0.85);
+}
+
+.btn-reject {
+  background: rgba(200, 60, 60, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  color: #fff;
+  border: 1px solid rgba(220, 80, 80, 0.3);
+  border-radius: 16px;
+  padding: 0.2rem 0.6rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.btn-reject:hover {
+  background: rgba(220, 60, 60, 0.85);
+}

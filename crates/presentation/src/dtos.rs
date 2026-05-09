@@ -51,6 +51,7 @@ pub struct LoginForm {
 #[derive(Deserialize)]
 pub struct RegisterForm {
     pub email: String,
+    pub username: String,
     pub password: String,
 }
 
@@ -131,6 +132,7 @@ pub struct LoginResponse {
 #[derive(Deserialize)]
 pub struct RegisterRequest {
     pub email: String,
+    pub username: String,
     pub password: String,
 }
 
@@ -241,6 +243,11 @@ pub struct FollowForm {
 
 #[derive(Deserialize)]
 pub struct UnfollowForm {
+    pub actor_url: String,
+}
+
+#[derive(Deserialize)]
+pub struct FollowerActionForm {
     pub actor_url: String,
 }
 

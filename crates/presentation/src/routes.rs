@@ -113,6 +113,14 @@ fn html_routes(rate_limit: u64) -> Router<AppState> {
             routing::post(handlers::html::unfollow_remote_user),
         )
         .route(
+            "/users/{id}/followers/accept",
+            routing::post(handlers::html::accept_follower),
+        )
+        .route(
+            "/users/{id}/followers/reject",
+            routing::post(handlers::html::reject_follower),
+        )
+        .route(
             "/users/{id}/following-list",
             routing::get(handlers::html::get_following_page),
         )
@@ -127,7 +135,7 @@ fn html_routes(rate_limit: u64) -> Router<AppState> {
             routing::post(handlers::html::post_delete_review),
         )
         .route(
-            "/posters/{path}",
+            "/posters/{*path}",
             routing::get(handlers::posters::get_poster),
         )
         .route("/feed.rss", routing::get(handlers::rss::get_feed))

@@ -11,6 +11,13 @@ pub enum DomainEvent {
         rating: Rating,
         watched_at: NaiveDateTime,
     },
+    ReviewUpdated {
+        review_id: ReviewId,
+        movie_id: MovieId,
+        user_id: UserId,
+        rating: Rating,
+        watched_at: NaiveDateTime,
+    },
     MovieDiscovered {
         movie_id: MovieId,
         external_metadata_id: ExternalMetadataId,

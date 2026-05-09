@@ -11,6 +11,7 @@ pub mod objects;
 pub mod outbox;
 pub mod repository;
 pub mod service;
+pub(crate) mod urls;
 pub mod webfinger;
 
 pub use data::FederationData;

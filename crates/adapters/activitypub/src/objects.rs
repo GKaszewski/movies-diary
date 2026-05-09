@@ -1,6 +1,7 @@
 use activitypub_federation::{
     config::Data,
     fetch::object_id::ObjectId,
+    kinds::object::NoteType,
     protocol::verification::verify_domains_match,
     traits::Object,
 };
@@ -19,12 +20,16 @@ use crate::error::Error;
 #[serde(rename_all = "camelCase")]
 pub struct ReviewObject {
     #[serde(rename = "type")]
-    pub(crate) kind: String,
+    pub(crate) kind: NoteType,
     pub(crate) id: ObjectId<DbReview>,
     pub(crate) attributed_to: ObjectId<DbActor>,
     pub(crate) content: String,
     pub(crate) published: DateTime<Utc>,
     pub(crate) movie_title: String,
+    #[serde(default)]
+    pub(crate) release_year: u16,   // 0 = unknown; default for old AP messages
+    #[serde(default)]
+    pub(crate) poster_url: Option<String>,
     pub(crate) rating: u8,
     pub(crate) comment: Option<String>,
     pub(crate) watched_at: DateTime<Utc>,
@@ -34,10 +39,6 @@ pub struct ReviewObject {
 pub struct DbReview {
     pub review: Review,
     pub ap_id: Url,
-}
-
-pub fn review_url(base_url: &str, review_id: &ReviewId) -> Url {
-    Url::parse(&format!("{}/reviews/{}", base_url, review_id.value())).expect("valid review url")
 }
 
 #[async_trait::async_trait]
@@ -60,26 +61,39 @@ impl Object for DbReview {
 
     async fn into_json(self, data: &Data<Self::DataType>) -> Result<Self::Kind, Self::Error> {
         let r = &self.review;
-        let ap_id = review_url(&data.base_url, r.id());
-        let actor_url = crate::actors::actor_url(&data.base_url, r.user_id());
+        let ap_id = crate::urls::review_url(&data.base_url, r.id());
+        let actor_url = crate::urls::actor_url(&data.base_url, r.user_id());
+
+        let movie = data.movie_repo.get_movie_by_id(r.movie_id()).await
+            .ok().flatten();
+        let movie_title = movie.as_ref()
+            .map(|m| m.title().value().to_string())
+            .unwrap_or_else(|| "Unknown".to_string());
+        let release_year = movie.as_ref()
+            .map(|m| m.release_year().value())
+            .unwrap_or(0);
+        let poster_url = movie.as_ref()
+            .and_then(|m| m.poster_path())
+            .map(|p| format!("{}/posters/{}", data.base_url, p.value()));
 
         let stars: String = "\u{2B50}".repeat(r.rating().value() as usize);
         let comment_text = r.comment().map(|c| c.value().to_string());
-        // TODO(ap): fetch movie title from MovieRepository via FederationData
-        let movie_title = "Unknown".to_string();
-
-        let fallback = match &comment_text {
-            Some(c) => format!("{} Watched '{}': {}", stars, movie_title, c),
-            None => format!("{} Watched '{}'", stars, movie_title),
+        let year_str = if release_year > 0 { format!(" ({})", release_year) } else { String::new() };
+        let watched_str = format!("Watched: {}", r.watched_at().format("%b %-d, %Y"));
+        let content = match &comment_text {
+            Some(c) => format!("{} {}{}\n{}\n{}", stars, movie_title, year_str, c, watched_str),
+            None => format!("{} {}{}\n{}", stars, movie_title, year_str, watched_str),
         };
 
         Ok(ReviewObject {
-            kind: "Review".to_string(),
+            kind: NoteType::default(),
             id: ap_id.into(),
             attributed_to: actor_url.into(),
-            content: fallback,
+            content,
             published: DateTime::from_naive_utc_and_offset(*r.created_at(), Utc),
             movie_title,
+            release_year,
+            poster_url,
             rating: r.rating().value(),
             comment: comment_text,
             watched_at: DateTime::from_naive_utc_and_offset(*r.watched_at(), Utc),
@@ -102,19 +116,17 @@ impl Object for DbReview {
         let actor_url = json.attributed_to.inner().to_string();
 
         let review_id = ReviewId::generate();
-        // TODO(ap): create stub movie/user entries in DB so feed JOIN queries work.
-        // For now, use deterministic UUIDs from content hash; reviews will be orphaned in JOINs.
         let movie_id_uuid = uuid::Uuid::new_v5(&uuid::Uuid::NAMESPACE_URL, json.movie_title.as_bytes());
         let movie_id = domain::value_objects::MovieId::from_uuid(movie_id_uuid);
         let user_id_uuid = uuid::Uuid::new_v5(&uuid::Uuid::NAMESPACE_URL, actor_url.as_bytes());
         let user_id = domain::value_objects::UserId::from_uuid(user_id_uuid);
         let rating = domain::value_objects::Rating::new(json.rating.min(5))
-            .map_err(|e| Error(anyhow::anyhow!("{}", e)))?;
+            .map_err(|e| Error::bad_request(anyhow::anyhow!("{}", e)))?;
         let comment = json
             .comment
             .map(|c| domain::value_objects::Comment::new(c))
             .transpose()
-            .map_err(|e| Error(anyhow::anyhow!("{}", e)))?;
+            .map_err(|e| Error::bad_request(anyhow::anyhow!("{}", e)))?;
         let watched_at = json.watched_at.naive_utc();
         let created_at = json.published.naive_utc();
 
@@ -129,9 +141,9 @@ impl Object for DbReview {
             ReviewSource::Remote { actor_url },
         );
 
-        let ap_id = review_url(&data.base_url, review.id());
-        data.federation_repo.save_remote_review(&review).await?;
+        let ap_id_url = json.id.into_inner();
+        data.federation_repo.save_remote_review(&review, ap_id_url.as_str(), &json.movie_title, json.release_year, json.poster_url.as_deref()).await?;
 
-        Ok(DbReview { review, ap_id })
+        Ok(DbReview { review, ap_id: ap_id_url })
     }
 }

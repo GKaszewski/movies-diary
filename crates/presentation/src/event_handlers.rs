@@ -142,6 +142,7 @@ mod tests {
         async fn find_by_email(&self, _: &Email) -> Result<Option<User>, DomainError> { panic!("unexpected") }
         async fn save(&self, _: &User) -> Result<(), DomainError> { panic!("unexpected") }
         async fn find_by_id(&self, _: &domain::value_objects::UserId) -> Result<Option<User>, DomainError> { panic!("unexpected") }
+        async fn find_by_username(&self, _: &domain::value_objects::Username) -> Result<Option<User>, DomainError> { panic!("unexpected") }
         async fn list_with_stats(&self) -> Result<Vec<domain::models::UserSummary>, DomainError> { panic!("unexpected") }
     }
 

@@ -83,6 +83,7 @@ struct NobodyUserRepo;
 #[async_trait]
 impl UserRepository for NobodyUserRepo {
     async fn find_by_email(&self, _: &Email) -> Result<Option<User>, DomainError> { Ok(None) }
+    async fn find_by_username(&self, _: &domain::value_objects::Username) -> Result<Option<User>, DomainError> { Ok(None) }
     async fn save(&self, _: &User) -> Result<(), DomainError> { panic!() }
     async fn find_by_id(&self, _: &UserId) -> Result<Option<User>, DomainError> { panic!() }
     async fn list_with_stats(&self) -> Result<Vec<domain::models::UserSummary>, DomainError> { panic!() }
@@ -103,12 +104,15 @@ async fn test_ap_service() -> Arc<activitypub::ActivityPubService> {
     #[async_trait]
     impl UserRepository for DummyUserRepo {
         async fn find_by_email(&self, _: &Email) -> Result<Option<User>, DomainError> { Ok(None) }
+        async fn find_by_username(&self, _: &domain::value_objects::Username) -> Result<Option<User>, DomainError> { Ok(None) }
         async fn save(&self, _: &User) -> Result<(), DomainError> { Ok(()) }
         async fn find_by_id(&self, _: &UserId) -> Result<Option<User>, DomainError> { Ok(None) }
         async fn list_with_stats(&self) -> Result<Vec<domain::models::UserSummary>, DomainError> { Ok(vec![]) }
     }
+    let movie_pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+    let movie_repo = Arc::new(sqlite::SqliteMovieRepository::new(movie_pool));
     Arc::new(
-        activitypub::ActivityPubService::new(fed_repo, Arc::new(DummyUserRepo), "http://localhost:3000".to_string(), true)
+        activitypub::ActivityPubService::new(fed_repo, Arc::new(DummyUserRepo), movie_repo, "http://localhost:3000".to_string(), true)
             .await
             .unwrap(),
     )

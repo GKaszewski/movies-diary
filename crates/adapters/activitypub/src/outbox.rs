@@ -2,7 +2,7 @@ use activitypub_federation::{axum::json::FederationJson, config::Data};
 use axum::extract::Path;
 use serde::{Deserialize, Serialize};
 
-use domain::value_objects::UserId;
+use domain::{models::ReviewSource, value_objects::UserId};
 
 use crate::data::FederationData;
 use crate::error::Error;
@@ -24,15 +24,25 @@ pub async fn outbox_handler(
     data: Data<FederationData>,
 ) -> Result<FederationJson<OrderedCollection>, Error> {
     let uuid = uuid::Uuid::parse_str(&user_id_str)
-        .map_err(|_| Error(anyhow::anyhow!("invalid user id")))?;
+        .map_err(|_| Error::bad_request(anyhow::anyhow!("invalid user id")))?;
     let user_id = UserId::from_uuid(uuid);
 
-    // verify user exists
     data.user_repo
         .find_by_id(&user_id)
         .await
-        .map_err(|e| Error(e.into()))?
-        .ok_or_else(|| Error(anyhow::anyhow!("user not found")))?;
+        .map_err(Error::from)?
+        .ok_or_else(|| Error::not_found(anyhow::anyhow!("user not found")))?;
+
+    let history = data
+        .movie_repo
+        .get_user_history(&user_id)
+        .await
+        .map_err(Error::from)?;
+
+    let local_count = history
+        .iter()
+        .filter(|e| matches!(e.review().source(), ReviewSource::Local))
+        .count();
 
     let outbox_url = format!("{}/users/{}/outbox", data.base_url, user_id_str);
 
@@ -40,7 +50,7 @@ pub async fn outbox_handler(
         context: "https://www.w3.org/ns/activitystreams".to_string(),
         kind: "OrderedCollection".to_string(),
         id: outbox_url,
-        total_items: 0,
+        total_items: local_count as u64,
         ordered_items: vec![],
     }))
 }

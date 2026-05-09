@@ -56,9 +56,9 @@ impl MetadataProvider for OmdbProvider {
                     params.append_pair("i", id.value());
                 }
                 MetadataSearchCriteria::Title { title, year } => {
-                    params.append_pair("t", title);
+                    params.append_pair("t", title.value());
                     if let Some(y) = year {
-                        params.append_pair("y", &y.to_string());
+                        params.append_pair("y", &y.value().to_string());
                     }
                 }
             }

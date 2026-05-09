@@ -66,6 +66,7 @@ pub struct ProfilePageData {
     pub is_own_profile: bool,
     pub error: Option<String>,
     pub following_count: usize,
+    pub pending_followers: Vec<RemoteActorView>,
 }
 
 pub struct FollowingPageData {

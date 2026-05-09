@@ -98,6 +98,7 @@ async fn wire_dependencies() -> anyhow::Result<AppState> {
         ActivityPubService::new(
             federation_repo,
             Arc::clone(&user_repository),
+            Arc::clone(&repository),
             app_config.base_url.clone(),
             cfg!(debug_assertions),
         )

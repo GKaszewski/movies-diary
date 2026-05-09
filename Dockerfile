@@ -7,6 +7,7 @@ WORKDIR /build
 
 # Cache dependency compilation separately from source
 COPY Cargo.toml Cargo.lock ./
+COPY crates/adapters/activitypub/Cargo.toml       crates/adapters/activitypub/Cargo.toml
 COPY crates/adapters/auth/Cargo.toml              crates/adapters/auth/Cargo.toml
 COPY crates/adapters/event-publisher/Cargo.toml   crates/adapters/event-publisher/Cargo.toml
 COPY crates/adapters/metadata/Cargo.toml          crates/adapters/metadata/Cargo.toml
@@ -33,7 +34,9 @@ COPY crates ./crates
 RUN sqlite3 /build/dev.db \
       < crates/adapters/sqlite/migrations/0001_initial.sql && \
     sqlite3 /build/dev.db \
-      < crates/adapters/sqlite/migrations/0002_users.sql
+      < crates/adapters/sqlite/migrations/0002_users.sql && \
+    sqlite3 /build/dev.db \
+      < crates/adapters/sqlite/migrations/0003_activitypub.sql
 
 ENV DATABASE_URL=sqlite:///build/dev.db
 

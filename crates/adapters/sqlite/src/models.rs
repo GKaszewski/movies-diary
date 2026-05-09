@@ -3,7 +3,7 @@ use domain::{
     errors::DomainError,
     models::{DiaryEntry, FeedEntry, Movie, Review, ReviewSource, UserSummary},
     value_objects::{
-        Comment, ExternalMetadataId, MovieId, MovieTitle, PosterPath, Rating, ReleaseYear,
+        Comment, Email, ExternalMetadataId, MovieId, MovieTitle, PosterPath, Rating, ReleaseYear,
         ReviewId, UserId,
     },
 };
@@ -171,12 +171,12 @@ pub(crate) struct UserSummaryRow {
 
 impl UserSummaryRow {
     pub fn to_domain(self) -> Result<UserSummary, DomainError> {
-        Ok(UserSummary {
-            user_id: UserId::from_uuid(parse_uuid(&self.id)?),
-            email: self.email,
-            total_movies: self.total_movies,
-            avg_rating: self.avg_rating,
-        })
+        Ok(UserSummary::new(
+            UserId::from_uuid(parse_uuid(&self.id)?),
+            Email::new(self.email)?,
+            self.total_movies,
+            self.avg_rating,
+        ))
     }
 }
 

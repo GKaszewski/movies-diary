@@ -5,7 +5,7 @@ use crate::{
     models::collections::PageParams,
     value_objects::{
         Comment, Email, ExternalMetadataId, MovieId, MovieTitle, PasswordHash, PosterPath, Rating,
-        ReleaseYear, ReviewId, UserId,
+        ReleaseYear, ReviewId, UserId, Username,
     },
 };
 pub mod collections;
@@ -247,8 +247,8 @@ impl ReviewHistory {
     pub fn viewings(&self) -> &[Review] {
         &self.viewings
     }
-    pub fn viewings_mut(&mut self) -> &mut Vec<Review> {
-        &mut self.viewings
+    pub fn sort_by_date(&mut self) {
+        self.viewings.sort_by_key(|r| *r.watched_at());
     }
 }
 
@@ -256,37 +256,32 @@ impl ReviewHistory {
 pub struct User {
     id: UserId,
     email: Email,
+    username: Username,
     password_hash: PasswordHash,
 }
 
 impl User {
-    pub fn new(email: Email, password_hash: PasswordHash) -> Self {
-        Self {
-            id: UserId::generate(),
-            email,
-            password_hash,
-        }
+    pub fn new(email: Email, username: Username, password_hash: PasswordHash) -> Self {
+        Self { id: UserId::generate(), email, username, password_hash }
     }
 
-    pub fn from_persistence(id: UserId, email: Email, password_hash: PasswordHash) -> Self {
-        Self { id, email, password_hash }
+    pub fn from_persistence(
+        id: UserId,
+        email: Email,
+        username: Username,
+        password_hash: PasswordHash,
+    ) -> Self {
+        Self { id, email, username, password_hash }
     }
 
     pub fn update_password(&mut self, new_hash: PasswordHash) {
         self.password_hash = new_hash;
     }
 
-    pub fn email(&self) -> &Email {
-        &self.email
-    }
-
-    pub fn id(&self) -> &UserId {
-        &self.id
-    }
-
-    pub fn password_hash(&self) -> &PasswordHash {
-        &self.password_hash
-    }
+    pub fn email(&self) -> &Email { &self.email }
+    pub fn username(&self) -> &Username { &self.username }
+    pub fn id(&self) -> &UserId { &self.id }
+    pub fn password_hash(&self) -> &PasswordHash { &self.password_hash }
 }
 
 #[derive(Clone, Debug)]
@@ -310,21 +305,16 @@ impl FeedEntry {
 #[derive(Clone, Debug)]
 pub struct UserSummary {
     pub user_id: UserId,
-    pub email: String,
+    email: Email,
     pub total_movies: i64,
     pub avg_rating: Option<f64>,
 }
 
 impl UserSummary {
-    pub fn display_name(&self) -> &str {
-        self.email.split('@').next().unwrap_or(&self.email)
+    pub fn new(user_id: UserId, email: Email, total_movies: i64, avg_rating: Option<f64>) -> Self {
+        Self { user_id, email, total_movies, avg_rating }
     }
-    pub fn avg_rating_display(&self) -> String {
-        self.avg_rating.map(|r| format!("{:.1}", r)).unwrap_or_else(|| "—".to_string())
-    }
-    pub fn initial(&self) -> char {
-        self.display_name().chars().next().unwrap_or('?').to_ascii_uppercase()
-    }
+    pub fn email(&self) -> &str { self.email.value() }
 }
 
 #[derive(Clone, Debug)]
@@ -335,17 +325,6 @@ pub struct UserStats {
     pub most_active_month: Option<String>,
 }
 
-impl UserStats {
-    pub fn avg_rating_display(&self) -> String {
-        self.avg_rating.map(|r| format!("{:.1}", r)).unwrap_or_else(|| "—".to_string())
-    }
-    pub fn favorite_director_display(&self) -> &str {
-        self.favorite_director.as_deref().unwrap_or("—")
-    }
-    pub fn most_active_month_display(&self) -> &str {
-        self.most_active_month.as_deref().unwrap_or("—")
-    }
-}
 
 #[derive(Clone, Debug)]
 pub struct MonthActivity {

@@ -11,9 +11,7 @@ pub enum Trend {
 
 impl ReviewHistoryAnalyzer {
     pub fn sort_chronologically(history: &mut ReviewHistory) {
-        history
-            .viewings_mut()
-            .sort_by(|a, b| a.watched_at().cmp(&b.watched_at()));
+        history.sort_by_date();
     }
 
     pub fn get_latest_rating(history: &ReviewHistory) -> Option<&Rating> {
@@ -29,18 +27,20 @@ impl ReviewHistoryAnalyzer {
             return Ok(Trend::Neutral);
         }
 
-        let mut sorted_history = history.clone();
-        Self::sort_chronologically(&mut sorted_history);
-
-        let latest_review = sorted_history.viewings().last().unwrap();
-        let latest_rating = latest_review.rating().value() as f32;
-
-        let previous_sum: u32 = sorted_history
+        let latest_review = history
             .viewings()
             .iter()
-            .map(|r| r.rating().value() as u32)
+            .max_by_key(|r| r.watched_at())
+            .unwrap();
+        let latest_rating = latest_review.rating().value() as f32;
+
+        let count = history.viewings().len() as f32;
+        let total: f32 = history
+            .viewings()
+            .iter()
+            .map(|r| r.rating().value() as f32)
             .sum();
-        let historical_average = previous_sum as f32 / sorted_history.viewings().len() as f32;
+        let historical_average = total / count;
 
         if latest_rating > historical_average {
             Ok(Trend::Improved)

@@ -10,15 +10,15 @@
         <div class="stat-label">movies</div>
       </div>
       <div class="stat-tile">
-        <div class="stat-value">{{ stats.avg_rating_display() }}★</div>
+        <div class="stat-value">{{ avg_rating_display }}★</div>
         <div class="stat-label">avg rating</div>
       </div>
       <div class="stat-tile">
-        <div class="stat-value">{{ stats.favorite_director_display() }}</div>
+        <div class="stat-value">{{ favorite_director_display }}</div>
         <div class="stat-label">fav director</div>
       </div>
       <div class="stat-tile">
-        <div class="stat-value">{{ stats.most_active_month_display() }}</div>
+        <div class="stat-value">{{ most_active_month_display }}</div>
         <div class="stat-label">most active</div>
       </div>
     </div>
@@ -36,6 +36,27 @@
     {% endif %}
   </section>
   <a href="/users/{{ profile_user_id }}/following-list">View following ({{ following_count }})</a>
+  {% if !pending_followers.is_empty() %}
+  <section class="pending-followers">
+    <h3>Pending follow requests ({{ pending_followers.len() }})</h3>
+    <ul class="pending-list">
+    {% for actor in pending_followers %}
+    <li class="pending-item">
+      <span class="pending-handle"><strong>{{ actor.handle }}</strong></span>
+      <a href="{{ actor.url }}" class="pending-url" target="_blank" rel="noopener noreferrer">{{ actor.url }}</a>
+      <form method="POST" action="/users/{{ profile_user_id }}/followers/accept" class="inline-form">
+        <input type="hidden" name="actor_url" value="{{ actor.url }}">
+        <button type="submit" class="btn-accept">Accept</button>
+      </form>
+      <form method="POST" action="/users/{{ profile_user_id }}/followers/reject" class="inline-form">
+        <input type="hidden" name="actor_url" value="{{ actor.url }}">
+        <button type="submit" class="btn-reject">Reject</button>
+      </form>
+    </li>
+    {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
   {% endif %}
 
   <div class="view-tabs">

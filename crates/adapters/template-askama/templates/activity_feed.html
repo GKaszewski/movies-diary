@@ -25,12 +25,14 @@
       <div class="comment">{{ comment.value() }}</div>
       {% endif %}
       <div class="feed-meta">
-        <a href="/users/{{ entry.review().user_id().value() }}" class="feed-user">{{ entry.user_display_name() }}</a>
-        <span class="feed-time">{{ entry.review().watched_at().format("%b %-d, %Y") }}</span>
         {% match entry.review().source() %}
         {% when ReviewSource::Remote with { actor_url } %}
-        <span class="remote-badge" title="{{ actor_url }}">&#8599; federated</span>
+        <a href="{{ actor_url }}" class="feed-user" target="_blank" rel="noopener noreferrer">{{ entry.user_display_name() }}</a>
+        <span class="feed-time">{{ entry.review().watched_at().format("%b %-d, %Y") }}</span>
+        <span class="remote-badge">&#8599; federated</span>
         {% when ReviewSource::Local %}
+        <a href="/users/{{ entry.review().user_id().value() }}" class="feed-user">{{ entry.user_display_name() }}</a>
+        <span class="feed-time">{{ entry.review().watched_at().format("%b %-d, %Y") }}</span>
         {% endmatch %}
       </div>
       {% if ctx.is_current_user(entry.review().user_id().value()) %}

@@ -11,7 +11,7 @@ use crate::{
     },
     value_objects::{
         Email, ExternalMetadataId, MovieId, MovieTitle, PasswordHash, PosterPath, PosterUrl,
-        ReleaseYear, ReviewId, UserId,
+        ReleaseYear, ReviewId, UserId, Username,
     },
 };
 
@@ -57,7 +57,7 @@ pub trait MovieRepository: Send + Sync {
 
 pub enum MetadataSearchCriteria {
     ImdbId(ExternalMetadataId),
-    Title { title: String, year: Option<u16> },
+    Title { title: MovieTitle, year: Option<ReleaseYear> },
 }
 
 #[async_trait]
@@ -102,9 +102,9 @@ pub trait AuthService: Send + Sync {
 #[async_trait]
 pub trait UserRepository: Send + Sync {
     async fn find_by_email(&self, email: &Email) -> Result<Option<User>, DomainError>;
+    async fn find_by_username(&self, username: &Username) -> Result<Option<User>, DomainError>;
     async fn save(&self, user: &User) -> Result<(), DomainError>;
     async fn find_by_id(&self, id: &UserId) -> Result<Option<User>, DomainError>;
-
     async fn list_with_stats(&self) -> Result<Vec<UserSummary>, DomainError>;
 }
 

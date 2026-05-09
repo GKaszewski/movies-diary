@@ -60,6 +60,22 @@ impl EventWorker {
                         "event: review_logged"
                     );
                 }
+                DomainEvent::ReviewUpdated {
+                    review_id,
+                    movie_id,
+                    user_id,
+                    rating,
+                    watched_at,
+                } => {
+                    tracing::info!(
+                        review_id  = %review_id.value(),
+                        movie_id   = %movie_id.value(),
+                        user_id    = %user_id.value(),
+                        rating     = rating.value(),
+                        watched_at = %watched_at,
+                        "event: review_updated"
+                    );
+                }
                 DomainEvent::MovieDiscovered {
                     movie_id,
                     external_metadata_id,
@@ -122,8 +138,9 @@ mod tests {
     impl EventHandler for RecordingHandler {
         async fn handle(&self, event: &DomainEvent) -> Result<(), DomainError> {
             let label = match event {
-                DomainEvent::MovieDiscovered { .. } => "movie_discovered",
                 DomainEvent::ReviewLogged { .. } => "review_logged",
+                DomainEvent::ReviewUpdated { .. } => "review_updated",
+                DomainEvent::MovieDiscovered { .. } => "movie_discovered",
             };
             self.calls.lock().unwrap().push(label.to_string());
             Ok(())

@@ -5,7 +5,7 @@ use application::ports::{
     NewReviewPageData, ProfilePageData, RegisterPageData, UsersPageData,
 };
 use domain::models::{
-    DiaryEntry, FeedEntry, MonthActivity, MonthlyRating, ReviewSource, UserStats, UserSummary,
+    DiaryEntry, FeedEntry, MonthActivity, MonthlyRating, ReviewSource, UserStats,
     UserTrends, collections::Paginated,
 };
 
@@ -81,10 +81,18 @@ struct ActivityFeedTemplate<'a> {
     page_items: Vec<PageItem>,
 }
 
+struct UserSummaryView {
+    user_id: uuid::Uuid,
+    display_name: String,
+    initial: char,
+    avg_rating_display: String,
+    total_movies: i64,
+}
+
 #[derive(Template)]
 #[template(path = "users.html")]
 struct UsersTemplate<'a> {
-    users: &'a [UserSummary],
+    users: Vec<UserSummaryView>,
     ctx: &'a HtmlPageContext,
 }
 
@@ -100,6 +108,9 @@ struct ProfileTemplate<'a> {
     profile_display_name: String,
     profile_user_id: uuid::Uuid,
     stats: &'a UserStats,
+    avg_rating_display: String,
+    favorite_director_display: String,
+    most_active_month_display: String,
     view: &'a str,
     entries: Option<&'a Paginated<DiaryEntry>>,
     current_offset: u32,
@@ -113,6 +124,7 @@ struct ProfileTemplate<'a> {
     is_own_profile: bool,
     error: Option<String>,
     following_count: usize,
+    pending_followers: Vec<RemoteActorData>,
 }
 
 struct RemoteActorData {
@@ -255,8 +267,23 @@ impl HtmlRenderer for AskamaHtmlRenderer {
     }
 
     fn render_users_page(&self, data: UsersPageData) -> Result<String, String> {
+        let users: Vec<UserSummaryView> = data.users.iter().map(|u| {
+            let email = u.email();
+            let display_name = email.split('@').next().unwrap_or(email).to_string();
+            let initial = display_name.chars().next().unwrap_or('?').to_ascii_uppercase();
+            let avg_rating_display = u.avg_rating
+                .map(|r| format!("{:.1}", r))
+                .unwrap_or_else(|| "—".to_string());
+            UserSummaryView {
+                user_id: u.user_id.value(),
+                display_name,
+                initial,
+                avg_rating_display,
+                total_movies: u.total_movies,
+            }
+        }).collect();
         UsersTemplate {
-            users: &data.users,
+            users,
             ctx: &data.ctx,
         }
         .render()
@@ -279,11 +306,25 @@ impl HtmlRenderer for AskamaHtmlRenderer {
             .map(|e| if e.limit > 0 { ((e.total_count + e.limit as u64 - 1) / e.limit as u64) as u32 } else { 0 })
             .unwrap_or(0);
         let current_page = if data.limit > 0 { data.current_offset / data.limit } else { 0 };
+        let avg_rating_display = data.stats.avg_rating
+            .map(|r| format!("{:.1}", r))
+            .unwrap_or_else(|| "—".to_string());
+        let favorite_director_display = data.stats.favorite_director
+            .as_deref()
+            .unwrap_or("—")
+            .to_string();
+        let most_active_month_display = data.stats.most_active_month
+            .as_deref()
+            .unwrap_or("—")
+            .to_string();
         ProfileTemplate {
             ctx: &data.ctx,
             profile_display_name,
             profile_user_id: data.profile_user_id,
             stats: &data.stats,
+            avg_rating_display,
+            favorite_director_display,
+            most_active_month_display,
             view: &data.view,
             entries: data.entries.as_ref(),
             current_offset: data.current_offset,
@@ -297,6 +338,11 @@ impl HtmlRenderer for AskamaHtmlRenderer {
             is_own_profile: data.is_own_profile,
             error: data.error,
             following_count: data.following_count,
+            pending_followers: data.pending_followers.into_iter().map(|a| RemoteActorData {
+                handle: a.handle,
+                url: a.url,
+                display_name: a.display_name,
+            }).collect(),
         }
         .render()
         .map_err(|e| e.to_string())

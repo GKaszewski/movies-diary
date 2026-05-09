@@ -14,7 +14,7 @@ pub async fn actor_handler(
     data: Data<FederationData>,
 ) -> Result<FederationJson<WithContext<Person>>, Error> {
     let uuid = uuid::Uuid::parse_str(&user_id_str)
-        .map_err(|_| Error(anyhow::anyhow!("invalid user id")))?;
+        .map_err(|_| Error::bad_request(anyhow::anyhow!("invalid user id")))?;
     let user_id = UserId::from_uuid(uuid);
 
     let db_actor = get_local_actor(user_id, &data).await?;
