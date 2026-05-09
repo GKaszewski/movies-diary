@@ -91,11 +91,11 @@ impl ActivityPubService {
     pub fn router(&self) -> Router {
         Router::new()
             .route("/.well-known/webfinger", get(webfinger_handler))
-            .route("/users/{user_id}", get(actor_handler))
-            .route("/users/{user_id}/inbox", post(inbox_handler))
-            .route("/users/{user_id}/outbox", get(outbox_handler))
-            .route("/users/{user_id}/followers", get(followers_handler))
-            .route("/users/{user_id}/following", get(following_handler))
+            .route("/users/{id}", get(actor_handler))
+            .route("/users/{id}/inbox", post(inbox_handler))
+            .route("/users/{id}/outbox", get(outbox_handler))
+            .route("/users/{id}/followers", get(followers_handler))
+            .route("/users/{id}/following", get(following_handler))
             .layer(self.federation_config.middleware())
     }
 
