@@ -14,6 +14,7 @@ COPY crates/adapters/event-publisher/Cargo.toml   crates/adapters/event-publishe
 COPY crates/adapters/metadata/Cargo.toml          crates/adapters/metadata/Cargo.toml
 COPY crates/adapters/poster-fetcher/Cargo.toml    crates/adapters/poster-fetcher/Cargo.toml
 COPY crates/adapters/poster-storage/Cargo.toml    crates/adapters/poster-storage/Cargo.toml
+COPY crates/adapters/export/Cargo.toml            crates/adapters/export/Cargo.toml
 COPY crates/adapters/rss/Cargo.toml               crates/adapters/rss/Cargo.toml
 COPY crates/adapters/sqlite/Cargo.toml            crates/adapters/sqlite/Cargo.toml
 COPY crates/adapters/sqlite-federation/Cargo.toml crates/adapters/sqlite-federation/Cargo.toml
