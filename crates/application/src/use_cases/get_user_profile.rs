@@ -21,28 +21,26 @@ pub async fn execute(
     query: GetUserProfileQuery,
 ) -> Result<UserProfileData, DomainError> {
     let user_id = UserId::from_uuid(query.user_id);
-    let stats = ctx.repository.get_user_stats(&user_id).await?;
+    let stats = ctx.stats_repository.get_user_stats(&user_id).await?;
 
     match query.view {
         ProfileView::History => {
-            // V1: loads all entries into memory. Personal diaries are bounded in size;
-            // spec calls for showing every movie grouped by month, so full load is intentional.
-            let all_entries = ctx.repository.get_user_history(&user_id).await?;
+            let all_entries = ctx.diary_repository.get_user_history(&user_id).await?;
             let history = group_by_month(all_entries);
             Ok(UserProfileData { stats, entries: None, history: Some(history), trends: None })
         }
         ProfileView::Trends => {
-            let trends = ctx.repository.get_user_trends(&user_id).await?;
+            let trends = ctx.stats_repository.get_user_trends(&user_id).await?;
             Ok(UserProfileData { stats, entries: None, history: None, trends: Some(trends) })
         }
         ProfileView::Ratings => {
             let filter = paged_user_filter(user_id, SortDirection::ByRatingDesc, query.limit, query.offset)?;
-            let entries = ctx.repository.query_diary(&filter).await?;
+            let entries = ctx.diary_repository.query_diary(&filter).await?;
             Ok(UserProfileData { stats, entries: Some(entries), history: None, trends: None })
         }
         ProfileView::Recent => {
             let filter = paged_user_filter(user_id, SortDirection::Descending, query.limit, query.offset)?;
-            let entries = ctx.repository.query_diary(&filter).await?;
+            let entries = ctx.diary_repository.query_diary(&filter).await?;
             Ok(UserProfileData { stats, entries: Some(entries), history: None, trends: None })
         }
     }

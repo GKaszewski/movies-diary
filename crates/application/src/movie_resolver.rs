@@ -170,12 +170,9 @@ mod tests {
     use chrono::NaiveDate;
     use domain::{
         errors::DomainError,
-        events::DomainEvent,
-        models::{DiaryEntry, DiaryFilter, Movie, Review, ReviewHistory, collections::Paginated},
+        models::Movie,
         ports::{MetadataSearchCriteria, MovieRepository},
-        value_objects::{
-            ExternalMetadataId, MovieId, MovieTitle, PosterUrl, ReleaseYear, ReviewId,
-        },
+        value_objects::{ExternalMetadataId, MovieId, MovieTitle, PosterUrl, ReleaseYear},
     };
 
     fn make_cmd(ext_id: Option<&str>, title: Option<&str>, year: Option<u16>) -> LogReviewCommand {
@@ -210,155 +207,29 @@ mod tests {
 
     #[async_trait]
     impl MovieRepository for RepoWithExternalMovie {
-        async fn get_movie_by_external_id(
-            &self,
-            _: &ExternalMetadataId,
-        ) -> Result<Option<Movie>, DomainError> {
-            Ok(Some(self.0.clone()))
-        }
-        async fn get_movie_by_id(&self, _: &MovieId) -> Result<Option<Movie>, DomainError> {
-            panic!("unexpected")
-        }
-        async fn get_movies_by_title_and_year(
-            &self,
-            _: &MovieTitle,
-            _: &ReleaseYear,
-        ) -> Result<Vec<Movie>, DomainError> {
-            panic!("unexpected")
-        }
-        async fn upsert_movie(&self, _: &Movie) -> Result<(), DomainError> {
-            panic!("unexpected")
-        }
-        async fn save_review(&self, _: &Review) -> Result<DomainEvent, DomainError> {
-            panic!("unexpected")
-        }
-        async fn query_diary(
-            &self,
-            _: &DiaryFilter,
-        ) -> Result<Paginated<DiaryEntry>, DomainError> {
-            panic!("unexpected")
-        }
-        async fn get_review_history(&self, _: &MovieId) -> Result<ReviewHistory, DomainError> {
-            panic!("unexpected")
-        }
-        async fn get_review_by_id(
-            &self,
-            _: &ReviewId,
-        ) -> Result<Option<Review>, DomainError> {
-            panic!("unexpected")
-        }
-        async fn delete_review(&self, _: &ReviewId) -> Result<(), DomainError> {
-            panic!("unexpected")
-        }
-        async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> {
-            panic!("unexpected")
-        }
-        async fn query_activity_feed(&self, _: &domain::models::collections::PageParams) -> Result<domain::models::collections::Paginated<domain::models::FeedEntry>, DomainError> { panic!("unexpected") }
-        async fn get_user_stats(&self, _: &domain::value_objects::UserId) -> Result<domain::models::UserStats, DomainError> { panic!("unexpected") }
-        async fn get_user_history(&self, _: &domain::value_objects::UserId) -> Result<Vec<domain::models::DiaryEntry>, DomainError> { panic!("unexpected") }
-        async fn get_user_trends(&self, _: &domain::value_objects::UserId) -> Result<domain::models::UserTrends, DomainError> { panic!("unexpected") }
+        async fn get_movie_by_external_id(&self, _: &ExternalMetadataId) -> Result<Option<Movie>, DomainError> { Ok(Some(self.0.clone())) }
+        async fn get_movie_by_id(&self, _: &MovieId) -> Result<Option<Movie>, DomainError> { panic!("unexpected") }
+        async fn get_movies_by_title_and_year(&self, _: &MovieTitle, _: &ReleaseYear) -> Result<Vec<Movie>, DomainError> { panic!("unexpected") }
+        async fn upsert_movie(&self, _: &Movie) -> Result<(), DomainError> { panic!("unexpected") }
+        async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> { panic!("unexpected") }
     }
 
     #[async_trait]
     impl MovieRepository for RepoEmpty {
-        async fn get_movie_by_external_id(
-            &self,
-            _: &ExternalMetadataId,
-        ) -> Result<Option<Movie>, DomainError> {
-            Ok(None)
-        }
-        async fn get_movie_by_id(&self, _: &MovieId) -> Result<Option<Movie>, DomainError> {
-            panic!("unexpected")
-        }
-        async fn get_movies_by_title_and_year(
-            &self,
-            _: &MovieTitle,
-            _: &ReleaseYear,
-        ) -> Result<Vec<Movie>, DomainError> {
-            Ok(vec![])
-        }
-        async fn upsert_movie(&self, _: &Movie) -> Result<(), DomainError> {
-            panic!("unexpected")
-        }
-        async fn save_review(&self, _: &Review) -> Result<DomainEvent, DomainError> {
-            panic!("unexpected")
-        }
-        async fn query_diary(
-            &self,
-            _: &DiaryFilter,
-        ) -> Result<Paginated<DiaryEntry>, DomainError> {
-            panic!("unexpected")
-        }
-        async fn get_review_history(&self, _: &MovieId) -> Result<ReviewHistory, DomainError> {
-            panic!("unexpected")
-        }
-        async fn get_review_by_id(
-            &self,
-            _: &ReviewId,
-        ) -> Result<Option<Review>, DomainError> {
-            panic!("unexpected")
-        }
-        async fn delete_review(&self, _: &ReviewId) -> Result<(), DomainError> {
-            panic!("unexpected")
-        }
-        async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> {
-            panic!("unexpected")
-        }
-        async fn query_activity_feed(&self, _: &domain::models::collections::PageParams) -> Result<domain::models::collections::Paginated<domain::models::FeedEntry>, DomainError> { panic!("unexpected") }
-        async fn get_user_stats(&self, _: &domain::value_objects::UserId) -> Result<domain::models::UserStats, DomainError> { panic!("unexpected") }
-        async fn get_user_history(&self, _: &domain::value_objects::UserId) -> Result<Vec<domain::models::DiaryEntry>, DomainError> { panic!("unexpected") }
-        async fn get_user_trends(&self, _: &domain::value_objects::UserId) -> Result<domain::models::UserTrends, DomainError> { panic!("unexpected") }
+        async fn get_movie_by_external_id(&self, _: &ExternalMetadataId) -> Result<Option<Movie>, DomainError> { Ok(None) }
+        async fn get_movie_by_id(&self, _: &MovieId) -> Result<Option<Movie>, DomainError> { panic!("unexpected") }
+        async fn get_movies_by_title_and_year(&self, _: &MovieTitle, _: &ReleaseYear) -> Result<Vec<Movie>, DomainError> { Ok(vec![]) }
+        async fn upsert_movie(&self, _: &Movie) -> Result<(), DomainError> { panic!("unexpected") }
+        async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> { panic!("unexpected") }
     }
 
     #[async_trait]
     impl MovieRepository for RepoWithTitleMatch {
-        async fn get_movie_by_external_id(
-            &self,
-            _: &ExternalMetadataId,
-        ) -> Result<Option<Movie>, DomainError> {
-            panic!("unexpected")
-        }
-        async fn get_movie_by_id(&self, _: &MovieId) -> Result<Option<Movie>, DomainError> {
-            panic!("unexpected")
-        }
-        async fn get_movies_by_title_and_year(
-            &self,
-            _: &MovieTitle,
-            _: &ReleaseYear,
-        ) -> Result<Vec<Movie>, DomainError> {
-            Ok(vec![self.0.clone()])
-        }
-        async fn upsert_movie(&self, _: &Movie) -> Result<(), DomainError> {
-            panic!("unexpected")
-        }
-        async fn save_review(&self, _: &Review) -> Result<DomainEvent, DomainError> {
-            panic!("unexpected")
-        }
-        async fn query_diary(
-            &self,
-            _: &DiaryFilter,
-        ) -> Result<Paginated<DiaryEntry>, DomainError> {
-            panic!("unexpected")
-        }
-        async fn get_review_history(&self, _: &MovieId) -> Result<ReviewHistory, DomainError> {
-            panic!("unexpected")
-        }
-        async fn get_review_by_id(
-            &self,
-            _: &ReviewId,
-        ) -> Result<Option<Review>, DomainError> {
-            panic!("unexpected")
-        }
-        async fn delete_review(&self, _: &ReviewId) -> Result<(), DomainError> {
-            panic!("unexpected")
-        }
-        async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> {
-            panic!("unexpected")
-        }
-        async fn query_activity_feed(&self, _: &domain::models::collections::PageParams) -> Result<domain::models::collections::Paginated<domain::models::FeedEntry>, DomainError> { panic!("unexpected") }
-        async fn get_user_stats(&self, _: &domain::value_objects::UserId) -> Result<domain::models::UserStats, DomainError> { panic!("unexpected") }
-        async fn get_user_history(&self, _: &domain::value_objects::UserId) -> Result<Vec<domain::models::DiaryEntry>, DomainError> { panic!("unexpected") }
-        async fn get_user_trends(&self, _: &domain::value_objects::UserId) -> Result<domain::models::UserTrends, DomainError> { panic!("unexpected") }
+        async fn get_movie_by_external_id(&self, _: &ExternalMetadataId) -> Result<Option<Movie>, DomainError> { panic!("unexpected") }
+        async fn get_movie_by_id(&self, _: &MovieId) -> Result<Option<Movie>, DomainError> { panic!("unexpected") }
+        async fn get_movies_by_title_and_year(&self, _: &MovieTitle, _: &ReleaseYear) -> Result<Vec<Movie>, DomainError> { Ok(vec![self.0.clone()]) }
+        async fn upsert_movie(&self, _: &Movie) -> Result<(), DomainError> { panic!("unexpected") }
+        async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> { panic!("unexpected") }
     }
 
     struct MetaReturnsMovie(Movie);

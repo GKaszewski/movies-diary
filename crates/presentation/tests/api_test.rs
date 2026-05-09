@@ -96,9 +96,13 @@ async fn test_app() -> Router {
     let repo = SqliteMovieRepository::new(pool);
     repo.migrate().await.expect("migration failed");
 
+    let repo = Arc::new(repo);
     let state = AppState {
         app_ctx: AppContext {
-            repository: Arc::new(repo),
+            movie_repository: Arc::clone(&repo) as _,
+            review_repository: Arc::clone(&repo) as _,
+            diary_repository: Arc::clone(&repo) as _,
+            stats_repository: Arc::clone(&repo) as _,
             metadata_client: Arc::new(PanicMeta),
             poster_fetcher: Arc::new(PanicFetcher),
             poster_storage: Arc::new(PanicStorage),

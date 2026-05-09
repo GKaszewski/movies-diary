@@ -24,5 +24,5 @@ pub async fn execute(
         user_id,
     };
 
-    ctx.repository.query_diary(&filter).await
+    ctx.diary_repository.query_diary(&filter).await
 }

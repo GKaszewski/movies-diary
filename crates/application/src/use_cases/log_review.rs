@@ -17,15 +17,15 @@ pub async fn execute(ctx: &AppContext, cmd: LogReviewCommand) -> Result<(), Doma
     let comment = cmd.comment.clone().map(Comment::new).transpose()?;
 
     let deps = MovieResolverDeps {
-        repository: ctx.repository.as_ref(),
+        repository: ctx.movie_repository.as_ref(),
         metadata_client: ctx.metadata_client.as_ref(),
     };
     let (movie, is_new_movie) = MovieResolver::default_pipeline().resolve(&cmd, &deps).await?;
 
-    ctx.repository.upsert_movie(&movie).await?;
+    ctx.movie_repository.upsert_movie(&movie).await?;
 
     let review = Review::new(movie.id().clone(), user_id, rating, comment, cmd.watched_at)?;
-    let review_event = ctx.repository.save_review(&review).await?;
+    let review_event = ctx.review_repository.save_review(&review).await?;
 
     publish_events(ctx, &movie, is_new_movie, review_event).await?;
 

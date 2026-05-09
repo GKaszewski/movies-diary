@@ -68,10 +68,11 @@ mod tests {
     use domain::{
         errors::DomainError,
         events::DomainEvent,
-        models::{DiaryEntry, DiaryFilter, Movie, Review, ReviewHistory, User, collections::Paginated},
+        models::{DiaryEntry, DiaryFilter, FeedEntry, Movie, Review, ReviewHistory, User, UserStats, UserTrends, collections::{PageParams, Paginated}},
         ports::{
-            AuthService, EventPublisher, GeneratedToken, MetadataClient, MetadataSearchCriteria,
-            MovieRepository, PasswordHasher, PosterFetcherClient, PosterStorage, UserRepository,
+            AuthService, DiaryRepository, EventPublisher, GeneratedToken, MetadataClient,
+            MetadataSearchCriteria, MovieRepository, PasswordHasher, PosterFetcherClient,
+            PosterStorage, ReviewRepository, StatsRepository, UserRepository,
         },
         value_objects::{
             Email, ExternalMetadataId, MovieId, MovieTitle, PasswordHash, PosterPath, PosterUrl,
@@ -79,8 +80,6 @@ mod tests {
         },
     };
 
-    // Panic-stub ports: each method panics so any accidental dispatch into a service
-    // fails the test loudly rather than silently succeeding.
     struct PanicRepo;
     struct PanicMetadata;
     struct PanicFetcher;
@@ -96,16 +95,28 @@ mod tests {
         async fn get_movie_by_id(&self, _: &MovieId) -> Result<Option<Movie>, DomainError> { panic!("unexpected") }
         async fn get_movies_by_title_and_year(&self, _: &MovieTitle, _: &ReleaseYear) -> Result<Vec<Movie>, DomainError> { panic!("unexpected") }
         async fn upsert_movie(&self, _: &Movie) -> Result<(), DomainError> { panic!("unexpected") }
+        async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> { panic!("unexpected") }
+    }
+
+    #[async_trait]
+    impl ReviewRepository for PanicRepo {
         async fn save_review(&self, _: &Review) -> Result<DomainEvent, DomainError> { panic!("unexpected") }
-        async fn query_diary(&self, _: &DiaryFilter) -> Result<Paginated<DiaryEntry>, DomainError> { panic!("unexpected") }
-        async fn get_review_history(&self, _: &MovieId) -> Result<ReviewHistory, DomainError> { panic!("unexpected") }
         async fn get_review_by_id(&self, _: &ReviewId) -> Result<Option<Review>, DomainError> { panic!("unexpected") }
         async fn delete_review(&self, _: &ReviewId) -> Result<(), DomainError> { panic!("unexpected") }
-        async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> { panic!("unexpected") }
-        async fn query_activity_feed(&self, _: &domain::models::collections::PageParams) -> Result<domain::models::collections::Paginated<domain::models::FeedEntry>, DomainError> { panic!("unexpected") }
-        async fn get_user_stats(&self, _: &UserId) -> Result<domain::models::UserStats, DomainError> { panic!("unexpected") }
+    }
+
+    #[async_trait]
+    impl DiaryRepository for PanicRepo {
+        async fn query_diary(&self, _: &DiaryFilter) -> Result<Paginated<DiaryEntry>, DomainError> { panic!("unexpected") }
+        async fn query_activity_feed(&self, _: &PageParams) -> Result<Paginated<FeedEntry>, DomainError> { panic!("unexpected") }
+        async fn get_review_history(&self, _: &MovieId) -> Result<ReviewHistory, DomainError> { panic!("unexpected") }
         async fn get_user_history(&self, _: &UserId) -> Result<Vec<DiaryEntry>, DomainError> { panic!("unexpected") }
-        async fn get_user_trends(&self, _: &UserId) -> Result<domain::models::UserTrends, DomainError> { panic!("unexpected") }
+    }
+
+    #[async_trait]
+    impl StatsRepository for PanicRepo {
+        async fn get_user_stats(&self, _: &UserId) -> Result<UserStats, DomainError> { panic!("unexpected") }
+        async fn get_user_trends(&self, _: &UserId) -> Result<UserTrends, DomainError> { panic!("unexpected") }
     }
 
     #[async_trait]
@@ -152,8 +163,12 @@ mod tests {
     }
 
     fn panic_ctx() -> AppContext {
+        let repo = Arc::new(PanicRepo);
         AppContext {
-            repository: Arc::new(PanicRepo),
+            movie_repository: Arc::clone(&repo) as _,
+            review_repository: Arc::clone(&repo) as _,
+            diary_repository: Arc::clone(&repo) as _,
+            stats_repository: repo as _,
             metadata_client: Arc::new(PanicMetadata),
             poster_fetcher: Arc::new(PanicFetcher),
             poster_storage: Arc::new(PanicStorage),

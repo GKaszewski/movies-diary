@@ -60,18 +60,22 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
         .await
         .context("Failed to connect to SQLite database")?;
 
-    let movie_repo = SqliteMovieRepository::new(pool.clone());
-    movie_repo
+    let sqlite_repo = Arc::new(SqliteMovieRepository::new(pool.clone()));
+    sqlite_repo
         .migrate()
         .await
         .map_err(|e| anyhow::anyhow!("{}", e))
         .context("Database migration failed")?;
 
     use domain::ports::{
-        AuthService, MetadataClient, MovieRepository, PasswordHasher,
-        PosterFetcherClient, PosterStorage, UserRepository,
+        AuthService, DiaryRepository, MetadataClient, MovieRepository, PasswordHasher,
+        PosterFetcherClient, PosterStorage, ReviewRepository, StatsRepository, UserRepository,
     };
-    let repository: Arc<dyn MovieRepository> = Arc::new(movie_repo);
+    let movie_repository: Arc<dyn MovieRepository>  = Arc::clone(&sqlite_repo) as _;
+    let review_repository: Arc<dyn ReviewRepository> = Arc::clone(&sqlite_repo) as _;
+    let diary_repository: Arc<dyn DiaryRepository>  = Arc::clone(&sqlite_repo) as _;
+    let stats_repository: Arc<dyn StatsRepository>  = Arc::clone(&sqlite_repo) as _;
+
     let user_repository: Arc<dyn UserRepository> = Arc::new(SqliteUserRepository::new(pool.clone()));
     let metadata_client: Arc<dyn MetadataClient> = Arc::new(MetadataClientImpl::new_omdb(omdb_api_key));
     let poster_fetcher: Arc<dyn PosterFetcherClient> = Arc::new(ReqwestPosterFetcher::new(PosterFetcherConfig::from_env())?);
@@ -82,7 +86,10 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
     // Build a context for the poster handler. sync_poster doesn't publish events,
     // so a noop publisher here is safe and avoids a circular dependency.
     let handler_ctx = AppContext {
-        repository: Arc::clone(&repository),
+        movie_repository: Arc::clone(&movie_repository),
+        review_repository: Arc::clone(&review_repository),
+        diary_repository: Arc::clone(&diary_repository),
+        stats_repository: Arc::clone(&stats_repository),
         metadata_client: Arc::clone(&metadata_client),
         poster_fetcher: Arc::clone(&poster_fetcher),
         poster_storage: Arc::clone(&poster_storage),
@@ -97,7 +104,8 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
     let federation_repo = Arc::new(SqliteFederationRepository::new(pool));
     let user_repo_adapter = Arc::new(DomainUserRepoAdapter(Arc::clone(&user_repository)));
     let review_handler = Arc::new(ReviewObjectHandler {
-        movie_repo: Arc::clone(&repository),
+        movie_repository: Arc::clone(&movie_repository),
+        diary_repository: Arc::clone(&diary_repository),
         review_store: Arc::clone(&federation_repo) as Arc<dyn activitypub::RemoteReviewRepository>,
         base_url: app_config.base_url.clone(),
     });
@@ -114,7 +122,8 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
     let ap_router = concrete_ap_service.router();
     let ap_event_handler = ActivityPubEventHandler::new(
         Arc::clone(&concrete_ap_service),
-        Arc::clone(&repository),
+        Arc::clone(&movie_repository),
+        Arc::clone(&review_repository),
         app_config.base_url.clone(),
     );
     let ap_service: Arc<dyn ActivityPubPort> = concrete_ap_service;
@@ -127,7 +136,10 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
     tokio::spawn(event_worker.run());
 
     let app_ctx = AppContext {
-        repository,
+        movie_repository,
+        review_repository,
+        diary_repository,
+        stats_repository,
         metadata_client,
         poster_fetcher,
         poster_storage,

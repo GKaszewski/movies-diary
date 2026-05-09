@@ -2,13 +2,13 @@ use std::sync::Arc;
 
 use domain::{
     errors::DomainError,
-    ports::{DiaryExporter, MovieRepository},
+    ports::{DiaryExporter, DiaryRepository},
 };
 
 use crate::commands::ExportCommand;
 
 pub struct ExportDiary {
-    repository: Arc<dyn MovieRepository>,
+    repository: Arc<dyn DiaryRepository>,
     exporter: Arc<dyn DiaryExporter>,
 }
 

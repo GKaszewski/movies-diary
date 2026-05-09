@@ -9,5 +9,5 @@ pub async fn execute(
     query: GetActivityFeedQuery,
 ) -> Result<Paginated<FeedEntry>, DomainError> {
     let page = PageParams::new(query.limit, query.offset)?;
-    ctx.repository.query_activity_feed(&page).await
+    ctx.diary_repository.query_activity_feed(&page).await
 }

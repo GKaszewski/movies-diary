@@ -4,7 +4,7 @@ use activitypub_base::ApObjectHandler;
 use async_trait::async_trait;
 use domain::{
     models::{Review, ReviewSource},
-    ports::MovieRepository,
+    ports::{DiaryRepository, MovieRepository},
     value_objects::{Comment, MovieId, Rating, ReviewId, UserId},
 };
 use url::Url;
@@ -14,7 +14,8 @@ use crate::remote_review_repository::RemoteReviewRepository;
 use crate::urls::{actor_url, review_url};
 
 pub struct ReviewObjectHandler {
-    pub movie_repo: Arc<dyn MovieRepository>,
+    pub movie_repository: Arc<dyn MovieRepository>,
+    pub diary_repository: Arc<dyn DiaryRepository>,
     pub review_store: Arc<dyn RemoteReviewRepository>,
     pub base_url: String,
 }
@@ -26,7 +27,7 @@ impl ApObjectHandler for ReviewObjectHandler {
         user_id: uuid::Uuid,
     ) -> anyhow::Result<Vec<(Url, serde_json::Value)>> {
         let domain_user_id = UserId::from_uuid(user_id);
-        let history = self.movie_repo.get_user_history(&domain_user_id).await?;
+        let history = self.diary_repository.get_user_history(&domain_user_id).await?;
 
         let mut results = Vec::new();
         for entry in history {
@@ -38,7 +39,7 @@ impl ApObjectHandler for ReviewObjectHandler {
             let ap_id = review_url(&self.base_url, review.id());
             let actor_url = actor_url(&self.base_url, user_id);
 
-            let movie = self.movie_repo.get_movie_by_id(review.movie_id()).await.ok().flatten();
+            let movie = self.movie_repository.get_movie_by_id(review.movie_id()).await.ok().flatten();
             let movie_title = movie.as_ref()
                 .map(|m| m.title().value().to_string())
                 .unwrap_or_else(|| "Unknown".to_string());

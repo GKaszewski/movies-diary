@@ -7,7 +7,7 @@ use domain::{
         Review, ReviewHistory, ReviewSource, SortDirection, UserStats, UserTrends,
         collections::{PageParams, Paginated},
     },
-    ports::MovieRepository,
+    ports::{DiaryRepository, MovieRepository, ReviewRepository, StatsRepository},
     value_objects::{ExternalMetadataId, MovieId, MovieTitle, ReleaseYear, ReviewId, UserId},
 };
 use sqlx::SqlitePool;
@@ -378,6 +378,18 @@ impl MovieRepository for SqliteMovieRepository {
         Ok(())
     }
 
+    async fn delete_movie(&self, movie_id: &MovieId) -> Result<(), DomainError> {
+        let id = movie_id.value().to_string();
+        sqlx::query!("DELETE FROM movies WHERE id = ?", id)
+            .execute(&self.pool)
+            .await
+            .map_err(Self::map_err)?;
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl ReviewRepository for SqliteMovieRepository {
     async fn save_review(&self, review: &Review) -> Result<DomainEvent, DomainError> {
         let id = review.id().value().to_string();
         let movie_id = review.movie_id().value().to_string();
@@ -416,6 +428,33 @@ impl MovieRepository for SqliteMovieRepository {
         })
     }
 
+    async fn get_review_by_id(&self, review_id: &ReviewId) -> Result<Option<Review>, DomainError> {
+        let id = review_id.value().to_string();
+        sqlx::query_as!(
+            ReviewRow,
+            "SELECT id, movie_id, user_id, rating, comment, watched_at, created_at, remote_actor_url
+             FROM reviews WHERE id = ?",
+            id
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(Self::map_err)?
+        .map(ReviewRow::to_domain)
+        .transpose()
+    }
+
+    async fn delete_review(&self, review_id: &ReviewId) -> Result<(), DomainError> {
+        let id = review_id.value().to_string();
+        sqlx::query!("DELETE FROM reviews WHERE id = ?", id)
+            .execute(&self.pool)
+            .await
+            .map_err(Self::map_err)?;
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl DiaryRepository for SqliteMovieRepository {
     async fn query_diary(&self, filter: &DiaryFilter) -> Result<Paginated<DiaryEntry>, DomainError> {
         let limit = filter.page.limit as i64;
         let offset = filter.page.offset as i64;
@@ -465,37 +504,29 @@ impl MovieRepository for SqliteMovieRepository {
         })
     }
 
-    async fn get_review_by_id(&self, review_id: &ReviewId) -> Result<Option<Review>, DomainError> {
-        let id = review_id.value().to_string();
-        sqlx::query_as!(
-            ReviewRow,
-            "SELECT id, movie_id, user_id, rating, comment, watched_at, created_at, remote_actor_url
-             FROM reviews WHERE id = ?",
-            id
-        )
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(Self::map_err)?
-        .map(ReviewRow::to_domain)
-        .transpose()
-    }
+    async fn query_activity_feed(
+        &self,
+        page: &PageParams,
+    ) -> Result<Paginated<FeedEntry>, DomainError> {
+        let limit = page.limit as i64;
+        let offset = page.offset as i64;
 
-    async fn delete_review(&self, review_id: &ReviewId) -> Result<(), DomainError> {
-        let id = review_id.value().to_string();
-        sqlx::query!("DELETE FROM reviews WHERE id = ?", id)
-            .execute(&self.pool)
-            .await
-            .map_err(Self::map_err)?;
-        Ok(())
-    }
+        let (total, rows) = tokio::try_join!(
+            self.count_feed_entries(),
+            self.fetch_feed_rows(limit, offset)
+        )?;
 
-    async fn delete_movie(&self, movie_id: &MovieId) -> Result<(), DomainError> {
-        let id = movie_id.value().to_string();
-        sqlx::query!("DELETE FROM movies WHERE id = ?", id)
-            .execute(&self.pool)
-            .await
-            .map_err(Self::map_err)?;
-        Ok(())
+        let items = rows
+            .into_iter()
+            .map(FeedRow::to_domain)
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(Paginated {
+            items,
+            total_count: total as u64,
+            limit: page.limit,
+            offset: page.offset,
+        })
     }
 
     async fn get_review_history(&self, movie_id: &MovieId) -> Result<ReviewHistory, DomainError> {
@@ -529,50 +560,6 @@ impl MovieRepository for SqliteMovieRepository {
         Ok(ReviewHistory::new(movie, viewings))
     }
 
-    async fn query_activity_feed(
-        &self,
-        page: &PageParams,
-    ) -> Result<Paginated<FeedEntry>, DomainError> {
-        let limit = page.limit as i64;
-        let offset = page.offset as i64;
-
-        let (total, rows) = tokio::try_join!(
-            self.count_feed_entries(),
-            self.fetch_feed_rows(limit, offset)
-        )?;
-
-        let items = rows
-            .into_iter()
-            .map(FeedRow::to_domain)
-            .collect::<Result<Vec<_>, _>>()?;
-
-        Ok(Paginated {
-            items,
-            total_count: total as u64,
-            limit: page.limit,
-            offset: page.offset,
-        })
-    }
-
-    async fn get_user_stats(&self, user_id: &UserId) -> Result<UserStats, DomainError> {
-        let uid = user_id.value().to_string();
-
-        let (totals, fav_director, most_active) = tokio::try_join!(
-            self.fetch_user_totals(&uid),
-            self.fetch_user_favorite_director(&uid),
-            self.fetch_user_most_active_month(&uid)
-        )?;
-
-        let most_active_month = most_active.map(|ym| format_year_month(&ym));
-
-        Ok(UserStats {
-            total_movies: totals.total,
-            avg_rating: totals.avg_rating,
-            favorite_director: fav_director,
-            most_active_month,
-        })
-    }
-
     async fn get_user_history(&self, user_id: &UserId) -> Result<Vec<DiaryEntry>, DomainError> {
         let uid = user_id.value().to_string();
         let rows = sqlx::query_as!(
@@ -590,6 +577,28 @@ impl MovieRepository for SqliteMovieRepository {
         .map_err(Self::map_err)?;
 
         rows.into_iter().map(DiaryRow::to_domain).collect()
+    }
+}
+
+#[async_trait]
+impl StatsRepository for SqliteMovieRepository {
+    async fn get_user_stats(&self, user_id: &UserId) -> Result<UserStats, DomainError> {
+        let uid = user_id.value().to_string();
+
+        let (totals, fav_director, most_active) = tokio::try_join!(
+            self.fetch_user_totals(&uid),
+            self.fetch_user_favorite_director(&uid),
+            self.fetch_user_most_active_month(&uid)
+        )?;
+
+        let most_active_month = most_active.map(|ym| format_year_month(&ym));
+
+        Ok(UserStats {
+            total_movies: totals.total,
+            avg_rating: totals.avg_rating,
+            favorite_director: fav_director,
+            most_active_month,
+        })
     }
 
     async fn get_user_trends(&self, user_id: &UserId) -> Result<UserTrends, DomainError> {

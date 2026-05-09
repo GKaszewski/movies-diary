@@ -128,15 +128,24 @@ mod tests {
             async fn get_movie_by_id(&self, _: &domain::value_objects::MovieId) -> Result<Option<domain::models::Movie>, domain::errors::DomainError> { panic!() }
             async fn get_movies_by_title_and_year(&self, _: &domain::value_objects::MovieTitle, _: &domain::value_objects::ReleaseYear) -> Result<Vec<domain::models::Movie>, domain::errors::DomainError> { panic!() }
             async fn upsert_movie(&self, _: &domain::models::Movie) -> Result<(), domain::errors::DomainError> { panic!() }
+            async fn delete_movie(&self, _: &domain::value_objects::MovieId) -> Result<(), domain::errors::DomainError> { panic!() }
+        }
+        #[async_trait::async_trait]
+        impl domain::ports::ReviewRepository for PanicRepo {
             async fn save_review(&self, _: &domain::models::Review) -> Result<domain::events::DomainEvent, domain::errors::DomainError> { panic!() }
-            async fn query_diary(&self, _: &domain::models::DiaryFilter) -> Result<domain::models::collections::Paginated<domain::models::DiaryEntry>, domain::errors::DomainError> { panic!() }
-            async fn get_review_history(&self, _: &domain::value_objects::MovieId) -> Result<domain::models::ReviewHistory, domain::errors::DomainError> { panic!() }
             async fn get_review_by_id(&self, _: &domain::value_objects::ReviewId) -> Result<Option<domain::models::Review>, domain::errors::DomainError> { panic!() }
             async fn delete_review(&self, _: &domain::value_objects::ReviewId) -> Result<(), domain::errors::DomainError> { panic!() }
-            async fn delete_movie(&self, _: &domain::value_objects::MovieId) -> Result<(), domain::errors::DomainError> { panic!() }
+        }
+        #[async_trait::async_trait]
+        impl domain::ports::DiaryRepository for PanicRepo {
+            async fn query_diary(&self, _: &domain::models::DiaryFilter) -> Result<domain::models::collections::Paginated<domain::models::DiaryEntry>, domain::errors::DomainError> { panic!() }
             async fn query_activity_feed(&self, _: &domain::models::collections::PageParams) -> Result<domain::models::collections::Paginated<domain::models::FeedEntry>, domain::errors::DomainError> { panic!() }
-            async fn get_user_stats(&self, _: &domain::value_objects::UserId) -> Result<domain::models::UserStats, domain::errors::DomainError> { panic!() }
+            async fn get_review_history(&self, _: &domain::value_objects::MovieId) -> Result<domain::models::ReviewHistory, domain::errors::DomainError> { panic!() }
             async fn get_user_history(&self, _: &domain::value_objects::UserId) -> Result<Vec<domain::models::DiaryEntry>, domain::errors::DomainError> { panic!() }
+        }
+        #[async_trait::async_trait]
+        impl domain::ports::StatsRepository for PanicRepo {
+            async fn get_user_stats(&self, _: &domain::value_objects::UserId) -> Result<domain::models::UserStats, domain::errors::DomainError> { panic!() }
             async fn get_user_trends(&self, _: &domain::value_objects::UserId) -> Result<domain::models::UserTrends, domain::errors::DomainError> { panic!() }
         }
 
@@ -169,7 +178,10 @@ mod tests {
 
         let state = crate::state::AppState {
             app_ctx: AppContext {
-                repository: Arc::new(PanicRepo),
+                movie_repository: Arc::new(PanicRepo) as _,
+                review_repository: Arc::new(PanicRepo) as _,
+                diary_repository: Arc::new(PanicRepo) as _,
+                stats_repository: Arc::new(PanicRepo) as _,
                 metadata_client: Arc::new(PanicMeta),
                 poster_fetcher: Arc::new(PanicFetcher),
                 poster_storage: Arc::new(PanicStorage),
@@ -241,15 +253,24 @@ mod tests {
             async fn get_movie_by_id(&self, _: &domain::value_objects::MovieId) -> Result<Option<domain::models::Movie>, domain::errors::DomainError> { panic!() }
             async fn get_movies_by_title_and_year(&self, _: &domain::value_objects::MovieTitle, _: &domain::value_objects::ReleaseYear) -> Result<Vec<domain::models::Movie>, domain::errors::DomainError> { panic!() }
             async fn upsert_movie(&self, _: &domain::models::Movie) -> Result<(), domain::errors::DomainError> { panic!() }
+            async fn delete_movie(&self, _: &domain::value_objects::MovieId) -> Result<(), domain::errors::DomainError> { panic!() }
+        }
+        #[async_trait::async_trait]
+        impl domain::ports::ReviewRepository for PanicRepo2 {
             async fn save_review(&self, _: &domain::models::Review) -> Result<domain::events::DomainEvent, domain::errors::DomainError> { panic!() }
-            async fn query_diary(&self, _: &domain::models::DiaryFilter) -> Result<domain::models::collections::Paginated<domain::models::DiaryEntry>, domain::errors::DomainError> { panic!() }
-            async fn get_review_history(&self, _: &domain::value_objects::MovieId) -> Result<domain::models::ReviewHistory, domain::errors::DomainError> { panic!() }
             async fn get_review_by_id(&self, _: &domain::value_objects::ReviewId) -> Result<Option<domain::models::Review>, domain::errors::DomainError> { panic!() }
             async fn delete_review(&self, _: &domain::value_objects::ReviewId) -> Result<(), domain::errors::DomainError> { panic!() }
-            async fn delete_movie(&self, _: &domain::value_objects::MovieId) -> Result<(), domain::errors::DomainError> { panic!() }
+        }
+        #[async_trait::async_trait]
+        impl domain::ports::DiaryRepository for PanicRepo2 {
+            async fn query_diary(&self, _: &domain::models::DiaryFilter) -> Result<domain::models::collections::Paginated<domain::models::DiaryEntry>, domain::errors::DomainError> { panic!() }
             async fn query_activity_feed(&self, _: &domain::models::collections::PageParams) -> Result<domain::models::collections::Paginated<domain::models::FeedEntry>, domain::errors::DomainError> { panic!() }
-            async fn get_user_stats(&self, _: &domain::value_objects::UserId) -> Result<domain::models::UserStats, domain::errors::DomainError> { panic!() }
+            async fn get_review_history(&self, _: &domain::value_objects::MovieId) -> Result<domain::models::ReviewHistory, domain::errors::DomainError> { panic!() }
             async fn get_user_history(&self, _: &domain::value_objects::UserId) -> Result<Vec<domain::models::DiaryEntry>, domain::errors::DomainError> { panic!() }
+        }
+        #[async_trait::async_trait]
+        impl domain::ports::StatsRepository for PanicRepo2 {
+            async fn get_user_stats(&self, _: &domain::value_objects::UserId) -> Result<domain::models::UserStats, domain::errors::DomainError> { panic!() }
             async fn get_user_trends(&self, _: &domain::value_objects::UserId) -> Result<domain::models::UserTrends, domain::errors::DomainError> { panic!() }
         }
         struct PanicMeta2; struct PanicFetcher2; struct PanicStorage2; struct PanicEvent2; struct PanicHasher2; struct PanicUserRepo2;
@@ -279,7 +300,10 @@ mod tests {
         struct PanicAuth2;
         crate::state::AppState {
             app_ctx: AppContext {
-                repository: Arc::new(PanicRepo2),
+                movie_repository: Arc::new(PanicRepo2) as _,
+                review_repository: Arc::new(PanicRepo2) as _,
+                diary_repository: Arc::new(PanicRepo2) as _,
+                stats_repository: Arc::new(PanicRepo2) as _,
                 metadata_client: Arc::new(PanicMeta2),
                 poster_fetcher: Arc::new(PanicFetcher2),
                 poster_storage: Arc::new(PanicStorage2),
@@ -305,15 +329,24 @@ mod tests {
             async fn get_movie_by_id(&self, _: &domain::value_objects::MovieId) -> Result<Option<domain::models::Movie>, domain::errors::DomainError> { panic!() }
             async fn get_movies_by_title_and_year(&self, _: &domain::value_objects::MovieTitle, _: &domain::value_objects::ReleaseYear) -> Result<Vec<domain::models::Movie>, domain::errors::DomainError> { panic!() }
             async fn upsert_movie(&self, _: &domain::models::Movie) -> Result<(), domain::errors::DomainError> { panic!() }
+            async fn delete_movie(&self, _: &domain::value_objects::MovieId) -> Result<(), domain::errors::DomainError> { panic!() }
+        }
+        #[async_trait::async_trait]
+        impl domain::ports::ReviewRepository for PanicRepo3 {
             async fn save_review(&self, _: &domain::models::Review) -> Result<domain::events::DomainEvent, domain::errors::DomainError> { panic!() }
-            async fn query_diary(&self, _: &domain::models::DiaryFilter) -> Result<domain::models::collections::Paginated<domain::models::DiaryEntry>, domain::errors::DomainError> { panic!() }
-            async fn get_review_history(&self, _: &domain::value_objects::MovieId) -> Result<domain::models::ReviewHistory, domain::errors::DomainError> { panic!() }
             async fn get_review_by_id(&self, _: &domain::value_objects::ReviewId) -> Result<Option<domain::models::Review>, domain::errors::DomainError> { panic!() }
             async fn delete_review(&self, _: &domain::value_objects::ReviewId) -> Result<(), domain::errors::DomainError> { panic!() }
-            async fn delete_movie(&self, _: &domain::value_objects::MovieId) -> Result<(), domain::errors::DomainError> { panic!() }
+        }
+        #[async_trait::async_trait]
+        impl domain::ports::DiaryRepository for PanicRepo3 {
+            async fn query_diary(&self, _: &domain::models::DiaryFilter) -> Result<domain::models::collections::Paginated<domain::models::DiaryEntry>, domain::errors::DomainError> { panic!() }
             async fn query_activity_feed(&self, _: &domain::models::collections::PageParams) -> Result<domain::models::collections::Paginated<domain::models::FeedEntry>, domain::errors::DomainError> { panic!() }
-            async fn get_user_stats(&self, _: &domain::value_objects::UserId) -> Result<domain::models::UserStats, domain::errors::DomainError> { panic!() }
+            async fn get_review_history(&self, _: &domain::value_objects::MovieId) -> Result<domain::models::ReviewHistory, domain::errors::DomainError> { panic!() }
             async fn get_user_history(&self, _: &domain::value_objects::UserId) -> Result<Vec<domain::models::DiaryEntry>, domain::errors::DomainError> { panic!() }
+        }
+        #[async_trait::async_trait]
+        impl domain::ports::StatsRepository for PanicRepo3 {
+            async fn get_user_stats(&self, _: &domain::value_objects::UserId) -> Result<domain::models::UserStats, domain::errors::DomainError> { panic!() }
             async fn get_user_trends(&self, _: &domain::value_objects::UserId) -> Result<domain::models::UserTrends, domain::errors::DomainError> { panic!() }
         }
         struct PanicMeta3; struct PanicFetcher3; struct PanicStorage3; struct PanicEvent3; struct PanicHasher3; struct PanicUserRepo3;
@@ -341,7 +374,10 @@ mod tests {
         }
         crate::state::AppState {
             app_ctx: AppContext {
-                repository: Arc::new(PanicRepo3),
+                movie_repository: Arc::new(PanicRepo3) as _,
+                review_repository: Arc::new(PanicRepo3) as _,
+                diary_repository: Arc::new(PanicRepo3) as _,
+                stats_repository: Arc::new(PanicRepo3) as _,
                 metadata_client: Arc::new(PanicMeta3),
                 poster_fetcher: Arc::new(PanicFetcher3),
                 poster_storage: Arc::new(PanicStorage3),

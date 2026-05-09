@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use domain::{
     errors::DomainError,
     events::DomainEvent,
-    ports::MovieRepository,
+    ports::{MovieRepository, ReviewRepository},
     value_objects::{ReviewId, UserId},
 };
 use domain::ports::EventHandler;
@@ -15,17 +15,19 @@ use crate::urls::{actor_url, review_url};
 
 pub struct ActivityPubEventHandler {
     ap_service: Arc<ActivityPubService>,
-    movie_repo: Arc<dyn MovieRepository>,
+    movie_repository: Arc<dyn MovieRepository>,
+    review_repository: Arc<dyn ReviewRepository>,
     base_url: String,
 }
 
 impl ActivityPubEventHandler {
     pub fn new(
         ap_service: Arc<ActivityPubService>,
-        movie_repo: Arc<dyn MovieRepository>,
+        movie_repository: Arc<dyn MovieRepository>,
+        review_repository: Arc<dyn ReviewRepository>,
         base_url: String,
     ) -> Self {
-        Self { ap_service, movie_repo, base_url }
+        Self { ap_service, movie_repository, review_repository, base_url }
     }
 }
 
@@ -48,7 +50,7 @@ impl ActivityPubEventHandler {
         user_id: &UserId,
         review_id: &ReviewId,
     ) -> anyhow::Result<()> {
-        let review = match self.movie_repo.get_review_by_id(review_id).await? {
+        let review = match self.review_repository.get_review_by_id(review_id).await? {
             Some(r) => r,
             None => return Ok(()),
         };
@@ -56,7 +58,7 @@ impl ActivityPubEventHandler {
         let ap_id = review_url(&self.base_url, review_id);
         let actor = actor_url(&self.base_url, user_id.value());
 
-        let movie = self.movie_repo.get_movie_by_id(review.movie_id()).await.ok().flatten();
+        let movie = self.movie_repository.get_movie_by_id(review.movie_id()).await.ok().flatten();
         let movie_title = movie.as_ref()
             .map(|m| m.title().value().to_string())
             .unwrap_or_else(|| "Unknown".to_string());

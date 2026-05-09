@@ -6,7 +6,7 @@ pub async fn execute(ctx: &AppContext, cmd: DeleteReviewCommand) -> Result<(), D
     let requesting_user_id = UserId::from_uuid(cmd.requesting_user_id);
 
     let review = ctx
-        .repository
+        .review_repository
         .get_review_by_id(&review_id)
         .await?
         .ok_or_else(|| DomainError::NotFound(format!("review {}", cmd.review_id)))?;
@@ -16,11 +16,11 @@ pub async fn execute(ctx: &AppContext, cmd: DeleteReviewCommand) -> Result<(), D
     }
 
     let movie_id = review.movie_id().clone();
-    ctx.repository.delete_review(&review_id).await?;
+    ctx.review_repository.delete_review(&review_id).await?;
 
-    let history = ctx.repository.get_review_history(&movie_id).await?;
+    let history = ctx.diary_repository.get_review_history(&movie_id).await?;
     if history.viewings().is_empty() {
-        ctx.repository.delete_movie(&movie_id).await?;
+        ctx.movie_repository.delete_movie(&movie_id).await?;
     }
 
     Ok(())

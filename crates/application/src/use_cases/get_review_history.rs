@@ -13,7 +13,7 @@ pub async fn execute(
 ) -> Result<(ReviewHistory, Trend), DomainError> {
     let movie_id = MovieId::from_uuid(query.movie_id);
 
-    let mut history = ctx.repository.get_review_history(&movie_id).await?;
+    let mut history = ctx.diary_repository.get_review_history(&movie_id).await?;
 
     let trend = ReviewHistoryAnalyzer::rating_trend(&history)?;
 

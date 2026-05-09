@@ -27,31 +27,28 @@ pub trait MovieRepository: Send + Sync {
         title: &MovieTitle,
         year: &ReleaseYear,
     ) -> Result<Vec<Movie>, DomainError>;
-
     async fn upsert_movie(&self, movie: &Movie) -> Result<(), DomainError>;
-
-    async fn save_review(&self, review: &Review) -> Result<DomainEvent, DomainError>;
-
-    async fn query_diary(&self, filter: &DiaryFilter)
-    -> Result<Paginated<DiaryEntry>, DomainError>;
-
-    async fn get_review_history(&self, movie_id: &MovieId) -> Result<ReviewHistory, DomainError>;
-
-    async fn get_review_by_id(&self, review_id: &ReviewId) -> Result<Option<Review>, DomainError>;
-
-    async fn delete_review(&self, review_id: &ReviewId) -> Result<(), DomainError>;
-
     async fn delete_movie(&self, movie_id: &MovieId) -> Result<(), DomainError>;
+}
 
-    async fn query_activity_feed(
-        &self,
-        page: &PageParams,
-    ) -> Result<Paginated<FeedEntry>, DomainError>;
+#[async_trait]
+pub trait ReviewRepository: Send + Sync {
+    async fn save_review(&self, review: &Review) -> Result<DomainEvent, DomainError>;
+    async fn get_review_by_id(&self, review_id: &ReviewId) -> Result<Option<Review>, DomainError>;
+    async fn delete_review(&self, review_id: &ReviewId) -> Result<(), DomainError>;
+}
 
-    async fn get_user_stats(&self, user_id: &UserId) -> Result<UserStats, DomainError>;
-
+#[async_trait]
+pub trait DiaryRepository: Send + Sync {
+    async fn query_diary(&self, filter: &DiaryFilter) -> Result<Paginated<DiaryEntry>, DomainError>;
+    async fn query_activity_feed(&self, page: &PageParams) -> Result<Paginated<FeedEntry>, DomainError>;
+    async fn get_review_history(&self, movie_id: &MovieId) -> Result<ReviewHistory, DomainError>;
     async fn get_user_history(&self, user_id: &UserId) -> Result<Vec<DiaryEntry>, DomainError>;
+}
 
+#[async_trait]
+pub trait StatsRepository: Send + Sync {
+    async fn get_user_stats(&self, user_id: &UserId) -> Result<UserStats, DomainError>;
     async fn get_user_trends(&self, user_id: &UserId) -> Result<UserTrends, DomainError>;
 }
 

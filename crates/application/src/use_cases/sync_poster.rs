@@ -9,7 +9,7 @@ pub async fn execute(ctx: &AppContext, cmd: SyncPosterCommand) -> Result<(), Dom
     let movie_id = MovieId::from_uuid(cmd.movie_id);
     let external_metadata_id = ExternalMetadataId::new(cmd.external_metadata_id)?;
 
-    let mut movie = match ctx.repository.get_movie_by_id(&movie_id).await? {
+    let mut movie = match ctx.movie_repository.get_movie_by_id(&movie_id).await? {
         Some(m) => m,
         None => {
             tracing::warn!(
@@ -41,7 +41,7 @@ pub async fn execute(ctx: &AppContext, cmd: SyncPosterCommand) -> Result<(), Dom
         .await?;
 
     movie.update_poster(stored_path);
-    ctx.repository.upsert_movie(&movie).await?;
+    ctx.movie_repository.upsert_movie(&movie).await?;
 
     Ok(())
 }

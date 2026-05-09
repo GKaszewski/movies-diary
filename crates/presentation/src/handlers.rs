@@ -878,7 +878,7 @@ pub mod api {
     ) -> Result<impl IntoResponse, ApiError> {
         let movie = state
             .app_ctx
-            .repository
+            .movie_repository
             .get_movie_by_id(&MovieId::from_uuid(movie_id))
             .await?
             .ok_or_else(|| ApiError(DomainError::NotFound(format!("Movie {movie_id}"))))?;
