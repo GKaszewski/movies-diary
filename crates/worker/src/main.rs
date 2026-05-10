@@ -2,27 +2,11 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use application::{config::AppConfig, context::AppContext, event_handlers::PosterSyncHandler, worker::WorkerService};
-use auth::{Argon2PasswordHasher, AuthConfig, JwtAuthService};
 use export::ExportAdapter;
-use metadata::MetadataClientImpl;
-use poster_fetcher::{PosterFetcherConfig, ReqwestPosterFetcher};
-use poster_storage::{PosterStorageAdapter, StorageConfig};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-#[cfg(feature = "sqlite-federation")]
-use sqlite_federation::SqliteFederationRepository;
-#[cfg(feature = "postgres-federation")]
-use postgres_federation::PostgresFederationRepository;
 
-#[cfg(feature = "federation")]
-use activitypub::{
-    ActivityPubEventHandler, ActivityPubService, DomainUserRepoAdapter, ReviewObjectHandler,
-};
-
-use domain::ports::{
-    AuthService, DiaryExporter, EventHandler, MetadataClient,
-    PasswordHasher, PosterFetcherClient, PosterStorage,
-};
+use domain::ports::{DiaryExporter, EventHandler};
 
 #[cfg(not(any(feature = "sqlite", feature = "postgres")))]
 compile_error!("At least one database backend must be enabled. Use --features sqlite or --features postgres");
@@ -34,24 +18,12 @@ async fn main() -> anyhow::Result<()> {
 
     let database_url = std::env::var("DATABASE_URL").context("DATABASE_URL must be set")?;
     let backend = std::env::var("DATABASE_BACKEND").unwrap_or_else(|_| "sqlite".to_string());
-    let auth_config = AuthConfig::from_env()?;
-    let storage_config = StorageConfig::from_env()?;
     let app_config = AppConfig::from_env();
 
-    let metadata_client: Arc<dyn MetadataClient> =
-        if let Ok(tmdb_key) = std::env::var("TMDB_API_KEY") {
-            Arc::new(MetadataClientImpl::new_tmdb(tmdb_key))
-        } else {
-            let omdb_key = std::env::var("OMDB_API_KEY")
-                .context("Either TMDB_API_KEY or OMDB_API_KEY must be set")?;
-            Arc::new(MetadataClientImpl::new_omdb(omdb_key))
-        };
-    let poster_fetcher: Arc<dyn PosterFetcherClient> =
-        Arc::new(ReqwestPosterFetcher::new(PosterFetcherConfig::from_env())?);
-    let poster_storage: Arc<dyn PosterStorage> =
-        Arc::new(PosterStorageAdapter::from_config(storage_config));
-    let auth_service: Arc<dyn AuthService> = Arc::new(JwtAuthService::new(auth_config));
-    let password_hasher: Arc<dyn PasswordHasher> = Arc::new(Argon2PasswordHasher);
+    let (auth_service, password_hasher) = auth::create()?;
+    let metadata_client = metadata::create()?;
+    let poster_fetcher = poster_fetcher::create()?;
+    let poster_storage = poster_storage::create()?;
 
     let (movie_repository, review_repository, diary_repository, stats_repository, user_repository, db_pool) =
         match backend.as_str() {
@@ -125,44 +97,22 @@ async fn main() -> anyhow::Result<()> {
 
         #[cfg(feature = "federation")]
         {
-            let (federation_repo, review_store): (
-                Arc<dyn activitypub::FederationRepository>,
-                Arc<dyn activitypub::RemoteReviewRepository>,
-            ) = match &db_pool {
+            let (federation_repo, _social_query, review_store) = match &db_pool {
                 #[cfg(feature = "sqlite-federation")]
-                DbPool::Sqlite(pool) => {
-                    let fed = Arc::new(SqliteFederationRepository::new(pool.clone()));
-                    (Arc::clone(&fed) as _, fed as _)
-                }
+                DbPool::Sqlite(pool) => sqlite_federation::wire(pool.clone()),
                 #[cfg(feature = "postgres-federation")]
-                DbPool::Postgres(pool) => {
-                    let fed = Arc::new(PostgresFederationRepository::new(pool.clone()));
-                    (Arc::clone(&fed) as _, fed as _)
-                }
+                DbPool::Postgres(pool) => postgres_federation::wire(pool.clone()),
             };
 
-            let ap_service = Arc::new(
-                ActivityPubService::new(
-                    federation_repo,
-                    Arc::new(DomainUserRepoAdapter(fed_user_repo)),
-                    Arc::new(ReviewObjectHandler {
-                        movie_repository: Arc::clone(&fed_movie_repo),
-                        diary_repository: fed_diary_repo,
-                        review_store,
-                        base_url: base_url.clone(),
-                    }),
-                    base_url.clone(),
-                    cfg!(debug_assertions),
-                )
-                .await?,
-            );
-
-            let ap = Arc::new(ActivityPubEventHandler::new(
-                ap_service,
+            let ap = activitypub::wire(
+                federation_repo,
+                review_store,
+                fed_user_repo,
                 fed_movie_repo,
                 fed_review_repo,
+                fed_diary_repo,
                 base_url,
-            )) as Arc<dyn EventHandler>;
+            ).await?.event_handler;
 
             tracing::info!("federation event handler registered");
             vec![poster, ap]

@@ -5,23 +5,8 @@ use anyhow::Context;
 use tokio::net::TcpListener;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-#[cfg(feature = "sqlite-federation")]
-use sqlite_federation::SqliteFederationRepository;
-#[cfg(feature = "postgres-federation")]
-use postgres_federation::PostgresFederationRepository;
-
-#[cfg(feature = "federation")]
-use activitypub::{
-    ActivityPubPort, ActivityPubService, DomainUserRepoAdapter,
-    ReviewObjectHandler,
-};
-
 use application::{config::AppConfig, context::AppContext};
-use auth::{Argon2PasswordHasher, AuthConfig, JwtAuthService};
 use export::ExportAdapter;
-use metadata::MetadataClientImpl;
-use poster_fetcher::{PosterFetcherConfig, ReqwestPosterFetcher};
-use poster_storage::{PosterStorageAdapter, StorageConfig};
 use rss::RssAdapter;
 use template_askama::AskamaHtmlRenderer;
 
@@ -29,10 +14,7 @@ use doc::ApiDocExt;
 use presentation::{openapi::ApiDoc, routes, state::AppState};
 use utoipa::OpenApi as _;
 
-use domain::ports::{
-    AuthService, DiaryExporter, EventPublisher, MetadataClient,
-    PasswordHasher, PosterFetcherClient, PosterStorage,
-};
+use domain::ports::{DiaryExporter, EventPublisher};
 
 #[cfg(not(any(feature = "sqlite", feature = "postgres")))]
 compile_error!("At least one database backend must be enabled. Use --features sqlite or --features postgres");
@@ -59,26 +41,14 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
-    let auth_config = AuthConfig::from_env()?;
-    let storage_config = StorageConfig::from_env()?;
     let app_config = AppConfig::from_env();
     let database_url = std::env::var("DATABASE_URL").context("DATABASE_URL must be set")?;
     let backend = std::env::var("DATABASE_BACKEND").unwrap_or_else(|_| "sqlite".to_string());
 
-    let metadata_client: Arc<dyn MetadataClient> =
-        if let Ok(tmdb_key) = std::env::var("TMDB_API_KEY") {
-            Arc::new(MetadataClientImpl::new_tmdb(tmdb_key))
-        } else {
-            let omdb_key = std::env::var("OMDB_API_KEY")
-                .context("Either TMDB_API_KEY or OMDB_API_KEY must be set")?;
-            Arc::new(MetadataClientImpl::new_omdb(omdb_key))
-        };
-    let poster_fetcher: Arc<dyn PosterFetcherClient> =
-        Arc::new(ReqwestPosterFetcher::new(PosterFetcherConfig::from_env())?);
-    let poster_storage: Arc<dyn PosterStorage> =
-        Arc::new(PosterStorageAdapter::from_config(storage_config));
-    let auth_service: Arc<dyn AuthService> = Arc::new(JwtAuthService::new(auth_config));
-    let password_hasher: Arc<dyn PasswordHasher> = Arc::new(Argon2PasswordHasher);
+    let (auth_service, password_hasher) = auth::create()?;
+    let metadata_client = metadata::create()?;
+    let poster_fetcher = poster_fetcher::create()?;
+    let poster_storage = poster_storage::create()?;
 
     let (movie_repository, review_repository, diary_repository, stats_repository, user_repository, db_pool) =
         match backend.as_str() {
@@ -101,44 +71,26 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
 
     #[cfg(feature = "federation")]
     let (event_publisher_arc, ap_router, ap_service, social_query) = {
-        let (federation_repo, social_query_arc, review_store): (
-            Arc<dyn activitypub::FederationRepository>,
-            Arc<dyn domain::ports::SocialQueryPort>,
-            Arc<dyn activitypub::RemoteReviewRepository>,
-        ) = match &db_pool {
+        let (federation_repo, social_query_arc, review_store) = match &db_pool {
             #[cfg(feature = "postgres-federation")]
-            DbPool::Postgres(pool) => {
-                let fed = Arc::new(PostgresFederationRepository::new(pool.clone()));
-                (Arc::clone(&fed) as _, Arc::clone(&fed) as _, fed as _)
-            }
+            DbPool::Postgres(pool) => postgres_federation::wire(pool.clone()),
             #[cfg(feature = "sqlite-federation")]
-            DbPool::Sqlite(pool) => {
-                let fed = Arc::new(SqliteFederationRepository::new(pool.clone()));
-                (Arc::clone(&fed) as _, Arc::clone(&fed) as _, fed as _)
-            }
+            DbPool::Sqlite(pool) => sqlite_federation::wire(pool.clone()),
             #[cfg(not(feature = "sqlite-federation"))]
             _ => anyhow::bail!("DATABASE_BACKEND={backend} federation is not supported by this build"),
         };
 
-        let user_repo_adapter = Arc::new(DomainUserRepoAdapter(Arc::clone(&user_repository)));
-        let review_handler = Arc::new(ReviewObjectHandler {
-            movie_repository: Arc::clone(&movie_repository),
-            diary_repository: Arc::clone(&diary_repository),
+        let ap = activitypub::wire(
+            federation_repo,
             review_store,
-            base_url: app_config.base_url.clone(),
-        });
-        let concrete_ap_service = Arc::new(
-            ActivityPubService::new(
-                federation_repo,
-                user_repo_adapter,
-                review_handler,
-                app_config.base_url.clone(),
-                cfg!(debug_assertions),
-            )
-            .await?,
-        );
-        let ap_router = concrete_ap_service.router();
-        let ap_service_arc: Arc<dyn ActivityPubPort> = concrete_ap_service;
+            Arc::clone(&user_repository),
+            Arc::clone(&movie_repository),
+            Arc::clone(&review_repository),
+            Arc::clone(&diary_repository),
+            app_config.base_url.clone(),
+        ).await?;
+        let ap_router = ap.router;
+        let ap_service_arc = ap.service;
 
         let ep: Arc<dyn EventPublisher> = match event_bus {
             EventBusBackend::Db => {

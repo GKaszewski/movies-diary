@@ -68,6 +68,10 @@ impl PosterStorage for PosterStorageAdapter {
     }
 }
 
+pub fn create() -> anyhow::Result<std::sync::Arc<dyn domain::ports::PosterStorage>> {
+    Ok(std::sync::Arc::new(PosterStorageAdapter::from_config(StorageConfig::from_env()?)))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

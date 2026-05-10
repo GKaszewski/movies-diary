@@ -537,6 +537,19 @@ impl domain::ports::SocialQueryPort for SqliteFederationRepository {
     }
 }
 
+pub fn wire(pool: sqlx::SqlitePool) -> (
+    std::sync::Arc<dyn activitypub::FederationRepository>,
+    std::sync::Arc<dyn domain::ports::SocialQueryPort>,
+    std::sync::Arc<dyn activitypub::RemoteReviewRepository>,
+) {
+    let fed = std::sync::Arc::new(SqliteFederationRepository::new(pool));
+    (
+        std::sync::Arc::clone(&fed) as _,
+        std::sync::Arc::clone(&fed) as _,
+        fed as _,
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

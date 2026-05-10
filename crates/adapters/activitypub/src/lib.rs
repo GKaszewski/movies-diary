@@ -17,3 +17,49 @@ pub use port::{ActivityPubPort, NoopActivityPubService};
 pub use remote_review_repository::RemoteReviewRepository;
 pub use review_handler::ReviewObjectHandler;
 pub use user_adapter::DomainUserRepoAdapter;
+
+pub struct ActivityPubWire {
+    pub service:       std::sync::Arc<dyn ActivityPubPort>,
+    pub router:        axum::Router,
+    pub event_handler: std::sync::Arc<dyn domain::ports::EventHandler>,
+}
+
+pub async fn wire(
+    federation_repo: std::sync::Arc<dyn FederationRepository>,
+    review_store:    std::sync::Arc<dyn RemoteReviewRepository>,
+    user_repo:       std::sync::Arc<dyn domain::ports::UserRepository>,
+    movie_repo:      std::sync::Arc<dyn domain::ports::MovieRepository>,
+    review_repo:     std::sync::Arc<dyn domain::ports::ReviewRepository>,
+    diary_repo:      std::sync::Arc<dyn domain::ports::DiaryRepository>,
+    base_url:        String,
+) -> anyhow::Result<ActivityPubWire> {
+    let concrete = std::sync::Arc::new(
+        ActivityPubService::new(
+            federation_repo,
+            std::sync::Arc::new(DomainUserRepoAdapter(user_repo)),
+            std::sync::Arc::new(ReviewObjectHandler {
+                movie_repository: std::sync::Arc::clone(&movie_repo),
+                diary_repository: diary_repo,
+                review_store,
+                base_url: base_url.clone(),
+            }),
+            base_url.clone(),
+            cfg!(debug_assertions),
+        )
+        .await?,
+    );
+
+    let router = concrete.router();
+    let event_handler = std::sync::Arc::new(ActivityPubEventHandler::new(
+        std::sync::Arc::clone(&concrete),
+        movie_repo,
+        review_repo,
+        base_url,
+    )) as std::sync::Arc<dyn domain::ports::EventHandler>;
+
+    Ok(ActivityPubWire {
+        service: concrete as std::sync::Arc<dyn ActivityPubPort>,
+        router,
+        event_handler,
+    })
+}

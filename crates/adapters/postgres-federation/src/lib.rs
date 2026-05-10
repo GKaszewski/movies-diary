@@ -474,3 +474,16 @@ impl domain::ports::SocialQueryPort for PostgresFederationRepository {
         Ok(rows.into_iter().map(|(url, handle, display_name)| domain::ports::RemoteActorInfo { url, handle, display_name }).collect())
     }
 }
+
+pub fn wire(pool: sqlx::PgPool) -> (
+    std::sync::Arc<dyn activitypub::FederationRepository>,
+    std::sync::Arc<dyn domain::ports::SocialQueryPort>,
+    std::sync::Arc<dyn activitypub::RemoteReviewRepository>,
+) {
+    let fed = std::sync::Arc::new(PostgresFederationRepository::new(pool));
+    (
+        std::sync::Arc::clone(&fed) as _,
+        std::sync::Arc::clone(&fed) as _,
+        fed as _,
+    )
+}

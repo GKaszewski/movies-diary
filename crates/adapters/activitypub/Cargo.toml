@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 activitypub-base = { workspace = true }
 domain = { workspace = true }
+axum = { workspace = true }
 tokio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

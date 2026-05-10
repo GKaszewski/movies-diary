@@ -10,6 +10,7 @@ dependencies = [
  "activitypub_federation",
  "anyhow",
  "async-trait",
+ "axum",
  "chrono",
  "domain",
  "serde",
@@ -2761,6 +2762,7 @@ dependencies = [
 name = "metadata"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "async-trait",
  "domain",
  "reqwest 0.13.3",

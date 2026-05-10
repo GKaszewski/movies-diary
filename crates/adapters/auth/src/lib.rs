@@ -105,3 +105,14 @@ impl PasswordHasher for Argon2PasswordHasher {
             .is_ok())
     }
 }
+
+pub fn create() -> anyhow::Result<(
+    std::sync::Arc<dyn domain::ports::AuthService>,
+    std::sync::Arc<dyn domain::ports::PasswordHasher>,
+)> {
+    let config = AuthConfig::from_env()?;
+    Ok((
+        std::sync::Arc::new(JwtAuthService::new(config)),
+        std::sync::Arc::new(Argon2PasswordHasher),
+    ))
+}
