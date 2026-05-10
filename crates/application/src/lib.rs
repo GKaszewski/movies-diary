@@ -1,4 +1,6 @@
 pub mod commands;
+pub mod event_handlers;
+pub mod worker;
 pub mod config;
 pub mod context;
 pub mod movie_resolver;

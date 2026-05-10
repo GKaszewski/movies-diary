@@ -1,6 +1,10 @@
+use async_trait::async_trait;
 use chrono::NaiveDateTime;
 
-use crate::value_objects::{ExternalMetadataId, MovieId, Rating, ReviewId, UserId};
+use crate::{
+    errors::DomainError,
+    value_objects::{ExternalMetadataId, MovieId, Rating, ReviewId, UserId},
+};
 
 #[derive(Clone, Debug)]
 pub enum DomainEvent {
@@ -22,4 +26,29 @@ pub enum DomainEvent {
         movie_id: MovieId,
         external_metadata_id: ExternalMetadataId,
     },
+}
+
+#[async_trait]
+pub trait AckHandle: Send + Sync {
+    async fn ack(&self) -> Result<(), DomainError>;
+    async fn nack(&self) -> Result<(), DomainError>;
+}
+
+pub struct EventEnvelope {
+    pub event: DomainEvent,
+    ack: Box<dyn AckHandle>,
+}
+
+impl EventEnvelope {
+    pub fn new(event: DomainEvent, ack: Box<dyn AckHandle>) -> Self {
+        Self { event, ack }
+    }
+
+    pub async fn ack(self) -> Result<(), DomainError> {
+        self.ack.ack().await
+    }
+
+    pub async fn nack(self) -> Result<(), DomainError> {
+        self.ack.nack().await
+    }
 }

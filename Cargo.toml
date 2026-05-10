@@ -19,6 +19,7 @@ members = [
     "crates/presentation",
     "crates/tui",
     "crates/doc",
+    "crates/worker",
 ]
 resolver = "2"
 

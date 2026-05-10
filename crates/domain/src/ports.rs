@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 
 use crate::{
     errors::DomainError,
-    events::DomainEvent,
+    events::{DomainEvent, EventEnvelope},
     models::{
         DiaryEntry, DiaryFilter, ExportFormat, FeedEntry, Movie, Review, ReviewHistory, User,
         UserStats, UserSummary, UserTrends,
@@ -174,9 +174,10 @@ pub trait EventPublisher: Send + Sync {
 }
 
 pub trait EventConsumer: Send + Sync {
-    /// Returns a stream of domain events. Implementations decide whether this
-    /// is push-based (NATS) or poll-based (DB queue) — callers don't care.
-    fn consume(&self) -> futures::stream::BoxStream<'_, Result<DomainEvent, DomainError>>;
+    /// Returns a stream of event envelopes. Each envelope carries a domain event
+    /// and an ack handle — callers ack after successful dispatch, nack on failure.
+    /// Implementations decide transport (NATS, DB queue, in-memory channel).
+    fn consume(&self) -> futures::stream::BoxStream<'_, Result<EventEnvelope, DomainError>>;
 }
 
 #[async_trait]

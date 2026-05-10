@@ -26,6 +26,7 @@ COPY crates/domain/Cargo.toml                     crates/domain/Cargo.toml
 COPY crates/presentation/Cargo.toml               crates/presentation/Cargo.toml
 COPY crates/doc/Cargo.toml                        crates/doc/Cargo.toml
 COPY crates/tui/Cargo.toml                        crates/tui/Cargo.toml
+COPY crates/worker/Cargo.toml                     crates/worker/Cargo.toml
 
 # Stub every crate so cargo can resolve and fetch deps
 RUN find crates -name "Cargo.toml" | sed 's|/Cargo.toml||' | \
@@ -42,7 +43,7 @@ COPY crates ./crates
 # To build with PostgreSQL backend instead:
 #   --build-arg FEATURES=postgres,postgres-federation
 ARG FEATURES=sqlite,sqlite-federation
-RUN cargo build --release -p presentation --no-default-features --features "${FEATURES}"
+RUN cargo build --release -p presentation -p worker --no-default-features --features "${FEATURES}"
 
 # ----- runtime -----
 FROM debian:bookworm-slim
@@ -54,6 +55,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 COPY --from=builder /build/target/release/presentation ./presentation
+COPY --from=builder /build/target/release/worker ./worker
 COPY static ./static
 
 EXPOSE 3000

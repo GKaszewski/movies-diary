@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use event_publisher::{EventPublisherConfig, NoopEventPublisher, create_event_channel};
-use presentation::event_handlers::PosterSyncHandler;
+use application::event_handlers::PosterSyncHandler;
 use std::str::FromStr;
 
 use tokio::net::TcpListener;
@@ -24,7 +24,7 @@ use activitypub::{
     ReviewObjectHandler,
 };
 
-use application::{config::AppConfig, context::AppContext};
+use application::{config::AppConfig, context::AppContext, worker::WorkerService};
 use auth::{Argon2PasswordHasher, AuthConfig, JwtAuthService};
 use export::ExportAdapter;
 use metadata::MetadataClientImpl;
@@ -184,12 +184,13 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
         );
         let ap_service_arc: Arc<dyn ActivityPubPort> = concrete_ap_service;
 
-        let poster_handler = PosterSyncHandler::new(handler_ctx, 3);
-        let (event_publisher, event_worker) = create_event_channel(
-            EventPublisherConfig::from_env(),
-            vec![Box::new(poster_handler), Box::new(ap_event_handler)],
+        let poster_handler = Arc::new(PosterSyncHandler::new(handler_ctx, 3));
+        let (event_publisher, consumer) = create_event_channel(EventPublisherConfig::from_env());
+        let worker = WorkerService::new(
+            Arc::new(consumer),
+            vec![poster_handler, Arc::new(ap_event_handler)],
         );
-        tokio::spawn(event_worker.run());
+        tokio::spawn(worker.run());
 
         let ep: Arc<dyn domain::ports::EventPublisher> = Arc::new(event_publisher);
         (ep, ap_router, ap_service_arc, social_query_arc)
@@ -197,12 +198,10 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
 
     #[cfg(not(feature = "federation"))]
     let (event_publisher_arc, ap_router): (Arc<dyn domain::ports::EventPublisher>, axum::Router) = {
-        let poster_handler = PosterSyncHandler::new(handler_ctx, 3);
-        let (event_publisher, event_worker) = create_event_channel(
-            EventPublisherConfig::from_env(),
-            vec![Box::new(poster_handler)],
-        );
-        tokio::spawn(event_worker.run());
+        let poster_handler = Arc::new(PosterSyncHandler::new(handler_ctx, 3));
+        let (event_publisher, consumer) = create_event_channel(EventPublisherConfig::from_env());
+        let worker = WorkerService::new(Arc::new(consumer), vec![poster_handler]);
+        tokio::spawn(worker.run());
         (Arc::new(event_publisher), axum::Router::new())
     };
 

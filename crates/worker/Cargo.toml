@@ -1,0 +1,36 @@
+[package]
+name = "worker"
+version = "0.1.0"
+edition = "2024"
+
+[features]
+default = ["sqlite"]
+sqlite = ["dep:sqlite"]
+postgres = ["dep:postgres"]
+
+[dependencies]
+domain = { workspace = true }
+application = { workspace = true }
+event-publisher = { workspace = true }
+tokio = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+chrono = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+futures = { workspace = true }
+dotenvy = { workspace = true }
+uuid = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+async-trait = { workspace = true }
+auth = { workspace = true }
+metadata = { workspace = true }
+poster-fetcher = { workspace = true }
+poster-storage = { workspace = true }
+export = { workspace = true }
+sqlx = { workspace = true }
+
+# Optional — database backends
+sqlite   = { workspace = true, optional = true }
+postgres = { workspace = true, optional = true }
