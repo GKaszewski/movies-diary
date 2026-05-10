@@ -1,12 +1,12 @@
 # ----- build -----
 FROM rust:slim-bookworm AS builder
 
-RUN apt-get update && apt-get install -y --no-install-recommends sqlite3 && rm -rf /var/lib/apt/lists/*
-
 WORKDIR /build
 
 # Cache dependency compilation separately from source
 COPY Cargo.toml Cargo.lock ./
+COPY .cargo ./.cargo
+COPY .sqlx ./.sqlx
 COPY crates/adapters/activitypub/Cargo.toml       crates/adapters/activitypub/Cargo.toml
 COPY crates/adapters/activitypub-base/Cargo.toml  crates/adapters/activitypub-base/Cargo.toml
 COPY crates/adapters/auth/Cargo.toml              crates/adapters/auth/Cargo.toml
@@ -36,25 +36,13 @@ RUN cargo fetch
 # Now copy real sources (invalidates cache only on source changes)
 COPY crates ./crates
 
-# sqlx macros verify queries at compile time; create a real DB from migrations
-RUN sqlite3 /build/dev.db \
-      < crates/adapters/sqlite/migrations/0001_initial.sql && \
-    sqlite3 /build/dev.db \
-      < crates/adapters/sqlite/migrations/0002_users.sql && \
-    sqlite3 /build/dev.db \
-      < crates/adapters/sqlite/migrations/0003_activitypub.sql && \
-    sqlite3 /build/dev.db \
-      < crates/adapters/sqlite/migrations/0004_username.sql && \
-    sqlite3 /build/dev.db \
-      < crates/adapters/sqlite/migrations/0005_activitypub_v2.sql && \
-    sqlite3 /build/dev.db \
-      < crates/adapters/sqlite/migrations/0006_follower_activity_id.sql && \
-    sqlite3 /build/dev.db \
-      < crates/adapters/sqlite/migrations/0007_user_role.sql
-
-ENV DATABASE_URL=sqlite:///build/dev.db
-
-RUN cargo build --release -p presentation
+# .cargo/config.toml sets SQLX_OFFLINE=true; .sqlx contains the pre-verified query cache.
+# No live database needed at compile time.
+#
+# To build with PostgreSQL backend instead:
+#   --build-arg FEATURES=postgres,postgres-federation
+ARG FEATURES=sqlite,sqlite-federation
+RUN cargo build --release -p presentation --no-default-features --features "${FEATURES}"
 
 # ----- runtime -----
 FROM debian:bookworm-slim

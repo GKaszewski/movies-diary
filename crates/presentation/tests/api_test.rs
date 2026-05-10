@@ -125,7 +125,9 @@ impl domain::ports::DiaryExporter for PanicExporter {
     }
 }
 
+#[cfg(feature = "federation")]
 struct PanicSocialQuery;
+#[cfg(feature = "federation")]
 #[async_trait::async_trait]
 impl domain::ports::SocialQueryPort for PanicSocialQuery {
     async fn get_accepted_following_urls(
@@ -171,7 +173,9 @@ async fn test_app() -> Router {
         },
         html_renderer: Arc::new(AskamaHtmlRenderer::new()),
         rss_renderer: Arc::new(RssAdapter::new("http://localhost:3000".into())),
+        #[cfg(feature = "federation")]
         ap_service: Arc::new(activitypub::NoopActivityPubService),
+        #[cfg(feature = "federation")]
         social_query: Arc::new(PanicSocialQuery),
     };
 

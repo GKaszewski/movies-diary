@@ -15,27 +15,25 @@ pub mod html {
 
     use application::{
         commands::{DeleteReviewCommand, ExportCommand, LoginCommand, RegisterCommand},
-        ports::{
-            FollowersPageData, FollowingPageData, HtmlPageContext, LoginPageData,
-            NewReviewPageData, RegisterPageData, RemoteActorView,
-        },
+        ports::{HtmlPageContext, LoginPageData, NewReviewPageData, RegisterPageData, RemoteActorView},
         use_cases::{
             delete_review, export_diary as export_diary_uc, log_review, login as login_uc,
             register as register_uc,
         },
     };
+    #[cfg(feature = "federation")]
+    use application::ports::{FollowersPageData, FollowingPageData};
     use domain::models::ExportFormat;
     use domain::{errors::DomainError, value_objects::UserId};
 
     use crate::{
         csrf::CsrfToken,
-        dtos::{
-            ErrorQuery, FeedQueryParams, FollowForm, FollowerActionForm, LogReviewData,
-            LogReviewForm, LoginForm, RegisterForm, UnfollowForm,
-        },
+        dtos::{ErrorQuery, FeedQueryParams, LogReviewData, LogReviewForm, LoginForm, RegisterForm},
         extractors::{OptionalCookieUser, RequiredCookieUser},
         state::AppState,
     };
+    #[cfg(feature = "federation")]
+    use crate::dtos::{FollowForm, FollowerActionForm, UnfollowForm};
 
     async fn build_page_context(
         state: &AppState,
@@ -349,11 +347,15 @@ pub mod html {
         let limit = params.limit.unwrap_or(20);
         let offset = params.offset.unwrap_or(0);
 
+        #[cfg(feature = "federation")]
         let filter_str = if params.filter == "following" && user_id.is_some() {
             "following"
         } else {
             "all"
         };
+        #[cfg(not(feature = "federation"))]
+        let filter_str = "all";
+
         let sort_by_str = match params.sort_by.as_str() {
             "date_asc" => "date_asc",
             "rating" => "rating",
@@ -361,6 +363,7 @@ pub mod html {
             _ => "date",
         };
 
+        #[cfg(feature = "federation")]
         let following = if filter_str == "following" {
             if let Some(uid) = user_id {
                 let urls = state.social_query
@@ -389,6 +392,8 @@ pub mod html {
         } else {
             None
         };
+        #[cfg(not(feature = "federation"))]
+        let following: Option<domain::ports::FollowingFilter> = None;
 
         let search_opt = if params.search.is_empty() {
             None
@@ -438,12 +443,22 @@ pub mod html {
         ctx.page_title = "Members — Movies Diary".to_string();
         ctx.canonical_url = format!("{}/users", state.app_ctx.config.base_url);
 
+        #[cfg(feature = "federation")]
         let (users_result, actors_result) = tokio::join!(
             application::use_cases::get_users::execute(
                 &state.app_ctx,
                 application::queries::GetUsersQuery,
             ),
             state.social_query.list_all_followed_remote_actors()
+        );
+        #[cfg(not(feature = "federation"))]
+        let (users_result, actors_result) = (
+            application::use_cases::get_users::execute(
+                &state.app_ctx,
+                application::queries::GetUsersQuery,
+            )
+            .await,
+            Ok::<Vec<domain::ports::RemoteActorInfo>, domain::errors::DomainError>(vec![]),
         );
 
         match (users_result, actors_result) {
@@ -480,26 +495,29 @@ pub mod html {
         Extension(csrf): Extension<CsrfToken>,
     ) -> impl IntoResponse {
         // Content negotiation: AP clients request application/activity+json
-        let accept = headers
-            .get(axum::http::header::ACCEPT)
-            .and_then(|v| v.to_str().ok())
-            .unwrap_or("");
-        if accept.contains("application/activity+json") || accept.contains("application/ld+json") {
-            return match state
-                .ap_service
-                .actor_json(&profile_user_uuid.to_string())
-                .await
-            {
-                Ok(json) => (
-                    [(
-                        axum::http::header::CONTENT_TYPE,
-                        "application/activity+json",
-                    )],
-                    json,
-                )
-                    .into_response(),
-                Err(_) => StatusCode::NOT_FOUND.into_response(),
-            };
+        #[cfg(feature = "federation")]
+        {
+            let accept = headers
+                .get(axum::http::header::ACCEPT)
+                .and_then(|v| v.to_str().ok())
+                .unwrap_or("");
+            if accept.contains("application/activity+json") || accept.contains("application/ld+json") {
+                return match state
+                    .ap_service
+                    .actor_json(&profile_user_uuid.to_string())
+                    .await
+                {
+                    Ok(json) => (
+                        [(
+                            axum::http::header::CONTENT_TYPE,
+                            "application/activity+json",
+                        )],
+                        json,
+                    )
+                        .into_response(),
+                    Err(_) => StatusCode::NOT_FOUND.into_response(),
+                };
+            }
         }
 
         let mut ctx = build_page_context(&state, user_id.clone(), csrf.0).await;
@@ -545,6 +563,7 @@ pub mod html {
             .map(|u| u.value() == profile_user_uuid)
             .unwrap_or(false);
 
+        #[cfg(feature = "federation")]
         let following_count = if is_own_profile {
             if let Some(ref uid) = user_id {
                 state
@@ -558,7 +577,10 @@ pub mod html {
         } else {
             0
         };
+        #[cfg(not(feature = "federation"))]
+        let following_count = 0usize;
 
+        #[cfg(feature = "federation")]
         let followers_count = if is_own_profile {
             state
                 .ap_service
@@ -568,8 +590,11 @@ pub mod html {
         } else {
             0
         };
+        #[cfg(not(feature = "federation"))]
+        let followers_count = 0usize;
 
-        let pending_followers = if is_own_profile {
+        #[cfg(feature = "federation")]
+        let pending_followers: Vec<application::ports::RemoteActorView> = if is_own_profile {
             state
                 .ap_service
                 .get_pending_followers(profile_user_uuid)
@@ -585,6 +610,8 @@ pub mod html {
         } else {
             vec![]
         };
+        #[cfg(not(feature = "federation"))]
+        let pending_followers: Vec<application::ports::RemoteActorView> = vec![];
 
         let query = application::queries::GetUserProfileQuery {
             user_id: profile_user_uuid,
@@ -639,6 +666,7 @@ pub mod html {
         }
     }
 
+    #[cfg(feature = "federation")]
     pub async fn follow_remote_user(
         RequiredCookieUser(user_id): RequiredCookieUser,
         State(state): State<AppState>,
@@ -662,6 +690,7 @@ pub mod html {
         }
     }
 
+    #[cfg(feature = "federation")]
     pub async fn unfollow_remote_user(
         RequiredCookieUser(user_id): RequiredCookieUser,
         State(state): State<AppState>,
@@ -693,6 +722,7 @@ pub mod html {
         }
     }
 
+    #[cfg(feature = "federation")]
     pub async fn accept_follower(
         RequiredCookieUser(user_id): RequiredCookieUser,
         State(state): State<AppState>,
@@ -719,6 +749,7 @@ pub mod html {
         }
     }
 
+    #[cfg(feature = "federation")]
     pub async fn reject_follower(
         RequiredCookieUser(user_id): RequiredCookieUser,
         State(state): State<AppState>,
@@ -745,6 +776,7 @@ pub mod html {
         }
     }
 
+    #[cfg(feature = "federation")]
     pub async fn get_following_page(
         RequiredCookieUser(user_id): RequiredCookieUser,
         State(state): State<AppState>,
@@ -793,6 +825,7 @@ pub mod html {
         }
     }
 
+    #[cfg(feature = "federation")]
     pub async fn get_followers_page(
         RequiredCookieUser(user_id): RequiredCookieUser,
         State(state): State<AppState>,
@@ -845,6 +878,7 @@ pub mod html {
         }
     }
 
+    #[cfg(feature = "federation")]
     pub async fn remove_follower(
         RequiredCookieUser(user_id): RequiredCookieUser,
         State(state): State<AppState>,
@@ -1010,17 +1044,19 @@ pub mod api {
 
     use crate::{
         dtos::{
-            ActivityFeedQueryParams, ActivityFeedResponse, ActorListResponse, ActorUrlRequest,
+            ActivityFeedQueryParams, ActivityFeedResponse,
             DiaryEntryDto, DiaryQueryParams, DiaryResponse, DirectorStatDto, ExportQueryParams,
-            FeedEntryDto, FollowRequest, LogReviewData, LogReviewRequest, LoginRequest,
+            FeedEntryDto, LogReviewData, LogReviewRequest, LoginRequest,
             LoginResponse, MonthActivityDto, MonthlyRatingDto, MovieDto, RegisterRequest,
-            RemoteActorDto, ReviewDto, ReviewHistoryResponse, UserProfileQueryParams,
+            ReviewDto, ReviewHistoryResponse, UserProfileQueryParams,
             UserProfileResponse, UserStatsDto, UserSummaryDto, UserTrendsDto, UsersResponse,
         },
         errors::ApiError,
         extractors::AuthenticatedUser,
         state::AppState,
     };
+    #[cfg(feature = "federation")]
+    use crate::dtos::{ActorListResponse, ActorUrlRequest, FollowRequest, RemoteActorDto};
 
     #[utoipa::path(
         get, path = "/api/v1/diary",
@@ -1246,11 +1282,13 @@ pub mod api {
         }
     }
 
+    #[cfg(feature = "federation")]
     fn ap_err(e: anyhow::Error) -> impl IntoResponse {
         tracing::error!("ActivityPub error: {:?}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     }
 
+    #[cfg(feature = "federation")]
     #[utoipa::path(
         get, path = "/api/v1/social/following",
         responses(
@@ -1279,6 +1317,7 @@ pub mod api {
         }
     }
 
+    #[cfg(feature = "federation")]
     #[utoipa::path(
         get, path = "/api/v1/social/followers",
         responses(
@@ -1307,6 +1346,7 @@ pub mod api {
         }
     }
 
+    #[cfg(feature = "federation")]
     #[utoipa::path(
         post, path = "/api/v1/social/follow",
         request_body = FollowRequest,
@@ -1327,6 +1367,7 @@ pub mod api {
         }
     }
 
+    #[cfg(feature = "federation")]
     #[utoipa::path(
         post, path = "/api/v1/social/unfollow",
         request_body = ActorUrlRequest,
@@ -1347,6 +1388,7 @@ pub mod api {
         }
     }
 
+    #[cfg(feature = "federation")]
     #[utoipa::path(
         post, path = "/api/v1/social/followers/accept",
         request_body = ActorUrlRequest,
@@ -1367,6 +1409,7 @@ pub mod api {
         }
     }
 
+    #[cfg(feature = "federation")]
     #[utoipa::path(
         post, path = "/api/v1/social/followers/reject",
         request_body = ActorUrlRequest,
@@ -1387,6 +1430,7 @@ pub mod api {
         }
     }
 
+    #[cfg(feature = "federation")]
     #[utoipa::path(
         post, path = "/api/v1/social/followers/remove",
         request_body = ActorUrlRequest,
@@ -1407,6 +1451,7 @@ pub mod api {
         }
     }
 
+    #[cfg(feature = "federation")]
     #[utoipa::path(
         get, path = "/api/v1/social/followers/pending",
         responses(
@@ -1549,12 +1594,19 @@ pub mod api {
             }
         };
 
+        #[cfg(feature = "federation")]
         let following_count = state.ap_service.count_following(user_id).await.unwrap_or(0);
+        #[cfg(not(feature = "federation"))]
+        let following_count = 0usize;
+
+        #[cfg(feature = "federation")]
         let followers_count = state
             .ap_service
             .count_accepted_followers(user_id)
             .await
             .unwrap_or(0);
+        #[cfg(not(feature = "federation"))]
+        let followers_count = 0usize;
 
         let entries = profile.entries.map(|p| DiaryResponse {
             items: p.items.iter().map(entry_to_dto).collect(),

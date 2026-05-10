@@ -4,7 +4,6 @@ target/
 *.db
 *.db-shm
 *.db-wal
-.cargo/
-.sqlx/
+# .cargo and .sqlx are needed at build time (SQLX_OFFLINE mode)
 docs/
 dev.db

@@ -43,13 +43,44 @@ fn html_routes(rate_limit: u64) -> Router<AppState> {
             GovernorLayer::new(cfg)
         });
 
-    Router::new()
+    let base = Router::new()
         .route("/", routing::get(handlers::html::get_activity_feed))
         .route("/users", routing::get(handlers::html::get_users_list))
         .route(
             "/users/{id}",
             routing::get(handlers::html::get_user_profile),
         )
+        .merge(auth)
+        .route(
+            "/reviews/new",
+            routing::get(handlers::html::get_new_review_page),
+        )
+        .route("/reviews", routing::post(handlers::html::post_review))
+        .route(
+            "/reviews/{id}/delete",
+            routing::post(handlers::html::post_delete_review),
+        )
+        .route(
+            "/posters/{*path}",
+            routing::get(handlers::posters::get_poster),
+        )
+        .route("/diary/export", routing::get(handlers::html::get_export))
+        .route("/feed.rss", routing::get(handlers::rss::get_feed))
+        .route(
+            "/users/{id}/feed.rss",
+            routing::get(handlers::rss::get_user_feed),
+        )
+        .layer(axum::middleware::from_fn(crate::csrf::csrf_middleware));
+
+    #[cfg(feature = "federation")]
+    let base = base.merge(federation_html_routes());
+
+    base
+}
+
+#[cfg(feature = "federation")]
+fn federation_html_routes() -> Router<AppState> {
+    Router::new()
         .route(
             "/users/{id}/follow",
             routing::post(handlers::html::follow_remote_user),
@@ -78,27 +109,6 @@ fn html_routes(rate_limit: u64) -> Router<AppState> {
             "/users/{id}/followers/remove",
             routing::post(handlers::html::remove_follower),
         )
-        .merge(auth)
-        .route(
-            "/reviews/new",
-            routing::get(handlers::html::get_new_review_page),
-        )
-        .route("/reviews", routing::post(handlers::html::post_review))
-        .route(
-            "/reviews/{id}/delete",
-            routing::post(handlers::html::post_delete_review),
-        )
-        .route(
-            "/posters/{*path}",
-            routing::get(handlers::posters::get_poster),
-        )
-        .route("/diary/export", routing::get(handlers::html::get_export))
-        .route("/feed.rss", routing::get(handlers::rss::get_feed))
-        .route(
-            "/users/{id}/feed.rss",
-            routing::get(handlers::rss::get_user_feed),
-        )
-        .layer(axum::middleware::from_fn(crate::csrf::csrf_middleware))
 }
 
 fn api_routes(rate_limit: u64) -> Router<AppState> {
@@ -109,58 +119,64 @@ fn api_routes(rate_limit: u64) -> Router<AppState> {
         .finish()
         .unwrap();
 
-    Router::new().nest(
-        "/api/v1",
-        Router::new()
-            .route("/diary", routing::get(handlers::api::get_diary))
-            .route(
-                "/movies/{id}/history",
-                routing::get(handlers::api::get_review_history),
-            )
-            .route("/reviews", routing::post(handlers::api::post_review))
-            .route(
-                "/reviews/{id}",
-                routing::delete(handlers::api::delete_review),
-            )
-            .route(
-                "/movies/{id}/sync-poster",
-                routing::post(handlers::api::sync_poster),
-            )
-            .route("/auth/login", routing::post(handlers::api::login))
-            .route("/auth/register", routing::post(handlers::api::register))
-            .route("/diary/export", routing::get(handlers::api::export_diary))
-            .route(
-                "/activity-feed",
-                routing::get(handlers::api::get_activity_feed),
-            )
-            .route("/users", routing::get(handlers::api::list_users))
-            .route("/users/{id}", routing::get(handlers::api::get_user_profile))
-            .route(
-                "/social/following",
-                routing::get(handlers::api::get_following),
-            )
-            .route(
-                "/social/followers",
-                routing::get(handlers::api::get_followers),
-            )
-            .route(
-                "/social/followers/pending",
-                routing::get(handlers::api::get_pending_followers),
-            )
-            .route("/social/follow", routing::post(handlers::api::follow))
-            .route("/social/unfollow", routing::post(handlers::api::unfollow))
-            .route(
-                "/social/followers/accept",
-                routing::post(handlers::api::accept_follower),
-            )
-            .route(
-                "/social/followers/reject",
-                routing::post(handlers::api::reject_follower),
-            )
-            .route(
-                "/social/followers/remove",
-                routing::post(handlers::api::remove_follower),
-            )
-            .layer(GovernorLayer::new(cfg)),
-    )
+    let base = Router::new()
+        .route("/diary", routing::get(handlers::api::get_diary))
+        .route(
+            "/movies/{id}/history",
+            routing::get(handlers::api::get_review_history),
+        )
+        .route("/reviews", routing::post(handlers::api::post_review))
+        .route(
+            "/reviews/{id}",
+            routing::delete(handlers::api::delete_review),
+        )
+        .route(
+            "/movies/{id}/sync-poster",
+            routing::post(handlers::api::sync_poster),
+        )
+        .route("/auth/login", routing::post(handlers::api::login))
+        .route("/auth/register", routing::post(handlers::api::register))
+        .route("/diary/export", routing::get(handlers::api::export_diary))
+        .route(
+            "/activity-feed",
+            routing::get(handlers::api::get_activity_feed),
+        )
+        .route("/users", routing::get(handlers::api::list_users))
+        .route("/users/{id}", routing::get(handlers::api::get_user_profile));
+
+    #[cfg(feature = "federation")]
+    let base = base.merge(federation_api_routes());
+
+    Router::new().nest("/api/v1", base.layer(GovernorLayer::new(cfg)))
+}
+
+#[cfg(feature = "federation")]
+fn federation_api_routes() -> Router<AppState> {
+    Router::new()
+        .route(
+            "/social/following",
+            routing::get(handlers::api::get_following),
+        )
+        .route(
+            "/social/followers",
+            routing::get(handlers::api::get_followers),
+        )
+        .route(
+            "/social/followers/pending",
+            routing::get(handlers::api::get_pending_followers),
+        )
+        .route("/social/follow", routing::post(handlers::api::follow))
+        .route("/social/unfollow", routing::post(handlers::api::unfollow))
+        .route(
+            "/social/followers/accept",
+            routing::post(handlers::api::accept_follower),
+        )
+        .route(
+            "/social/followers/reject",
+            routing::post(handlers::api::reject_follower),
+        )
+        .route(
+            "/social/followers/remove",
+            routing::post(handlers::api::remove_follower),
+        )
 }

@@ -220,6 +220,7 @@ mod tests {
             panic!()
         }
     }
+    #[cfg(feature = "federation")]
     #[async_trait::async_trait]
     impl domain::ports::SocialQueryPort for Panic {
         async fn get_accepted_following_urls(
@@ -435,7 +436,9 @@ mod tests {
             },
             html_renderer: Arc::new(Panic),
             rss_renderer: Arc::new(Panic),
+            #[cfg(feature = "federation")]
             ap_service: Arc::new(activitypub::NoopActivityPubService),
+            #[cfg(feature = "federation")]
             social_query: Arc::new(Panic),
         }
     }
