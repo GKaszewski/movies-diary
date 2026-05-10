@@ -8,6 +8,15 @@ use crate::{handlers, state::AppState};
 
 pub fn build_router(state: AppState, ap_router: Router) -> Router {
     let rate_limit = state.app_ctx.config.rate_limit;
+
+    let ap_cfg = GovernorConfigBuilder::default()
+        .with_extractor(PeerIp::default())
+        .expect_connect_info()
+        .quota_default(per_minute(rate_limit))
+        .finish()
+        .unwrap();
+    let ap_router = ap_router.layer(GovernorLayer::new(ap_cfg));
+
     Router::new()
         .merge(html_routes(rate_limit))
         .merge(api_routes(rate_limit))

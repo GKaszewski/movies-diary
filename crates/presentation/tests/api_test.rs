@@ -66,6 +66,9 @@ impl PosterStorage for PanicStorage {
     async fn get_poster(&self, _: &PosterPath) -> Result<Vec<u8>, DomainError> {
         panic!()
     }
+    async fn delete_poster(&self, _: &PosterPath) -> Result<(), DomainError> {
+        panic!()
+    }
 }
 
 struct PanicHasher;

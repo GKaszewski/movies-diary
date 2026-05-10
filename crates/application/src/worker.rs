@@ -93,6 +93,7 @@ mod tests {
                 DomainEvent::MovieDiscovered { .. } => "movie_discovered",
                 DomainEvent::ReviewLogged { .. } => "review_logged",
                 DomainEvent::ReviewUpdated { .. } => "review_updated",
+                DomainEvent::MovieDeleted { .. } => "movie_deleted",
             };
             self.calls.lock().unwrap().push(label);
             Ok(())

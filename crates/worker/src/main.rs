@@ -116,8 +116,12 @@ async fn main() -> anyhow::Result<()> {
             3,
         )) as Arc<dyn EventHandler>;
 
+        let cleanup = Arc::new(poster_storage::PosterCleanupHandler::new(
+            Arc::clone(&ctx.poster_storage),
+        )) as Arc<dyn EventHandler>;
+
         #[cfg(not(feature = "federation"))]
-        { vec![poster] }
+        { vec![poster, cleanup] }
 
         #[cfg(feature = "federation")]
         {
@@ -139,7 +143,7 @@ async fn main() -> anyhow::Result<()> {
             ).await?.event_handler;
 
             tracing::info!("federation event handler registered");
-            vec![poster, ap]
+            vec![poster, cleanup, ap]
         }
     };
 

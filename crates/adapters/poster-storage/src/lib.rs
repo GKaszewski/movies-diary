@@ -4,7 +4,8 @@ pub use config::StorageConfig;
 use async_trait::async_trait;
 use domain::{
     errors::DomainError,
-    ports::PosterStorage,
+    events::DomainEvent,
+    ports::{EventHandler, PosterStorage},
     value_objects::{MovieId, PosterPath},
 };
 use object_store::{Attribute, Attributes, ObjectStore, PutOptions, path::Path};
@@ -52,6 +53,15 @@ impl PosterStorage for PosterStorageAdapter {
         PosterPath::new(path.to_string())
     }
 
+    async fn delete_poster(&self, path: &PosterPath) -> Result<(), DomainError> {
+        let p = Path::from(path.value().to_string());
+        match self.store.delete(&p).await {
+            Ok(()) => Ok(()),
+            Err(object_store::Error::NotFound { .. }) => Ok(()),
+            Err(e) => Err(DomainError::InfrastructureError(e.to_string())),
+        }
+    }
+
     async fn get_poster(&self, poster_path: &PosterPath) -> Result<Vec<u8>, DomainError> {
         let path = Path::from(poster_path.value().to_string());
         let result = self.store.get(&path).await.map_err(|e| match e {
@@ -65,6 +75,31 @@ impl PosterStorage for PosterStorageAdapter {
             .await
             .map(|b| b.to_vec())
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))
+    }
+}
+
+pub struct PosterCleanupHandler {
+    poster_storage: Arc<dyn PosterStorage>,
+}
+
+impl PosterCleanupHandler {
+    pub fn new(poster_storage: Arc<dyn PosterStorage>) -> Self {
+        Self { poster_storage }
+    }
+}
+
+#[async_trait]
+impl EventHandler for PosterCleanupHandler {
+    async fn handle(&self, event: &DomainEvent) -> Result<(), DomainError> {
+        let poster_path = match event {
+            DomainEvent::MovieDeleted { poster_path, .. } => poster_path,
+            _ => return Ok(()),
+        };
+        let Some(path) = poster_path else { return Ok(()) };
+        if let Err(e) = self.poster_storage.delete_poster(path).await {
+            tracing::warn!("poster cleanup failed for {}: {e}", path.value());
+        }
+        Ok(())
     }
 }
 
@@ -100,5 +135,70 @@ mod tests {
         let path = PosterPath::new("nonexistent".into()).unwrap();
         let result = adapter.get_poster(&path).await;
         assert!(matches!(result, Err(DomainError::NotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn delete_poster_removes_file() {
+        let adapter = adapter();
+        let movie_id = MovieId::from_uuid(Uuid::new_v4());
+        let path = adapter.store_poster(&movie_id, b"img").await.unwrap();
+
+        adapter.delete_poster(&path).await.unwrap();
+
+        let result = adapter.get_poster(&path).await;
+        assert!(matches!(result, Err(DomainError::NotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn delete_poster_missing_file_returns_ok() {
+        let adapter = adapter();
+        let path = PosterPath::new("does-not-exist".into()).unwrap();
+        assert!(adapter.delete_poster(&path).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn cleanup_handler_deletes_poster_on_movie_deleted() {
+        use domain::{events::DomainEvent, ports::EventHandler};
+
+        let inner = Arc::new(adapter());
+        let path = inner
+            .store_poster(&MovieId::from_uuid(Uuid::new_v4()), b"img")
+            .await
+            .unwrap();
+        let movie_id = MovieId::from_uuid(Uuid::new_v4());
+
+        let handler = PosterCleanupHandler::new(Arc::clone(&inner) as Arc<dyn PosterStorage>);
+        handler
+            .handle(&DomainEvent::MovieDeleted { movie_id, poster_path: Some(path.clone()) })
+            .await
+            .unwrap();
+
+        assert!(matches!(inner.get_poster(&path).await, Err(DomainError::NotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn cleanup_handler_ignores_none_poster_path() {
+        use domain::{events::DomainEvent, ports::EventHandler};
+
+        let inner = Arc::new(adapter());
+        let handler = PosterCleanupHandler::new(Arc::clone(&inner) as Arc<dyn PosterStorage>);
+        let event = DomainEvent::MovieDeleted {
+            movie_id: MovieId::from_uuid(Uuid::new_v4()),
+            poster_path: None,
+        };
+        handler.handle(&event).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn cleanup_handler_ignores_other_events() {
+        use domain::{events::DomainEvent, ports::EventHandler, value_objects::ExternalMetadataId};
+
+        let inner = Arc::new(adapter());
+        let handler = PosterCleanupHandler::new(Arc::clone(&inner) as Arc<dyn PosterStorage>);
+        let event = DomainEvent::MovieDiscovered {
+            movie_id: MovieId::from_uuid(Uuid::new_v4()),
+            external_metadata_id: ExternalMetadataId::new("tt1234567".to_string()).unwrap(),
+        };
+        handler.handle(&event).await.unwrap();
     }
 }

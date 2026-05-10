@@ -286,6 +286,9 @@ mod tests {
         async fn get_poster(&self, _: &PosterPath) -> Result<Vec<u8>, DomainError> {
             panic!()
         }
+        async fn delete_poster(&self, _: &PosterPath) -> Result<(), DomainError> {
+            panic!()
+        }
     }
     #[async_trait::async_trait]
     impl AuthService for Panic {

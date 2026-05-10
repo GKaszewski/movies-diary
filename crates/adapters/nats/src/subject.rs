@@ -5,6 +5,7 @@ pub fn event_to_subject(prefix: &str, event: &DomainEvent) -> String {
         DomainEvent::ReviewLogged { .. }    => "review.logged",
         DomainEvent::ReviewUpdated { .. }   => "review.updated",
         DomainEvent::MovieDiscovered { .. } => "movie.discovered",
+        DomainEvent::MovieDeleted { .. }    => "movie.deleted",
     };
     format!("{prefix}.{suffix}")
 }

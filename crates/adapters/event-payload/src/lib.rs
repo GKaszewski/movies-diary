@@ -2,7 +2,7 @@ use chrono::NaiveDateTime;
 use domain::{
     errors::DomainError,
     events::DomainEvent,
-    value_objects::{ExternalMetadataId, MovieId, Rating, ReviewId, UserId},
+    value_objects::{ExternalMetadataId, MovieId, PosterPath, Rating, ReviewId, UserId},
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -28,6 +28,10 @@ pub enum EventPayload {
         movie_id: String,
         external_metadata_id: String,
     },
+    MovieDeleted {
+        movie_id: String,
+        poster_path: Option<String>,
+    },
 }
 
 impl EventPayload {
@@ -36,6 +40,7 @@ impl EventPayload {
             EventPayload::ReviewLogged { .. } => "ReviewLogged",
             EventPayload::ReviewUpdated { .. } => "ReviewUpdated",
             EventPayload::MovieDiscovered { .. } => "MovieDiscovered",
+            EventPayload::MovieDeleted { .. } => "MovieDeleted",
         }
     }
 }
@@ -78,6 +83,10 @@ impl From<&DomainEvent> for EventPayload {
                     external_metadata_id: external_metadata_id.value().to_owned(),
                 }
             }
+            DomainEvent::MovieDeleted { movie_id, poster_path } => EventPayload::MovieDeleted {
+                movie_id: movie_id.value().to_string(),
+                poster_path: poster_path.as_ref().map(|p| p.value().to_string()),
+            },
         }
     }
 }
@@ -109,6 +118,14 @@ impl TryFrom<EventPayload> for DomainEvent {
                     movie_id: MovieId::from_uuid(parse_uuid(&movie_id, "movie_id")?),
                     external_metadata_id: ExternalMetadataId::new(external_metadata_id)?,
                 })
+            }
+            EventPayload::MovieDeleted { movie_id, poster_path } => {
+                let movie_id = MovieId::from_uuid(parse_uuid(&movie_id, "movie_id")?);
+                let poster_path = poster_path
+                    .map(|p| PosterPath::new(p))
+                    .transpose()
+                    .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+                Ok(DomainEvent::MovieDeleted { movie_id, poster_path })
             }
         }
     }

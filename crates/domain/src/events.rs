@@ -3,7 +3,7 @@ use chrono::NaiveDateTime;
 
 use crate::{
     errors::DomainError,
-    value_objects::{ExternalMetadataId, MovieId, Rating, ReviewId, UserId},
+    value_objects::{ExternalMetadataId, MovieId, PosterPath, Rating, ReviewId, UserId},
 };
 
 #[derive(Clone, Debug)]
@@ -25,6 +25,10 @@ pub enum DomainEvent {
     MovieDiscovered {
         movie_id: MovieId,
         external_metadata_id: ExternalMetadataId,
+    },
+    MovieDeleted {
+        movie_id: MovieId,
+        poster_path: Option<PosterPath>,
     },
 }
 

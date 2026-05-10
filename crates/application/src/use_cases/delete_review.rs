@@ -1,6 +1,7 @@
 use crate::{commands::DeleteReviewCommand, context::AppContext};
 use domain::{
     errors::DomainError,
+    events::DomainEvent,
     value_objects::{ReviewId, UserId},
 };
 
@@ -23,7 +24,15 @@ pub async fn execute(ctx: &AppContext, cmd: DeleteReviewCommand) -> Result<(), D
 
     let history = ctx.diary_repository.get_review_history(&movie_id).await?;
     if history.viewings().is_empty() {
+        let poster_path = history.movie().poster_path().cloned();
         ctx.movie_repository.delete_movie(&movie_id).await?;
+        // best-effort: movie is already deleted, so publish failure is non-fatal
+        if let Err(e) = ctx.event_publisher
+            .publish(&DomainEvent::MovieDeleted { movie_id, poster_path })
+            .await
+        {
+            tracing::warn!("failed to publish MovieDeleted event: {e}");
+        }
     }
 
     Ok(())

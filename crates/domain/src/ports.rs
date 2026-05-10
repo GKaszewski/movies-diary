@@ -158,6 +158,8 @@ pub trait PosterStorage: Send + Sync {
     ) -> Result<PosterPath, DomainError>;
 
     async fn get_poster(&self, poster_path: &PosterPath) -> Result<Vec<u8>, DomainError>;
+
+    async fn delete_poster(&self, path: &PosterPath) -> Result<(), DomainError>;
 }
 
 pub struct GeneratedToken {
