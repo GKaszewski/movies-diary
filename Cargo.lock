@@ -6234,6 +6234,7 @@ dependencies = [
 name = "worker"
 version = "0.1.0"
 dependencies = [
+ "activitypub",
  "anyhow",
  "application",
  "async-trait",
@@ -6250,10 +6251,12 @@ dependencies = [
  "poster-storage",
  "postgres",
  "postgres-event-queue",
+ "postgres-federation",
  "serde",
  "serde_json",
  "sqlite",
  "sqlite-event-queue",
+ "sqlite-federation",
  "sqlx",
  "thiserror 2.0.18",
  "tokio",

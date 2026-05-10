@@ -16,8 +16,18 @@ use sqlite::{SqliteMovieRepository, SqliteUserRepository};
 #[cfg(feature = "postgres")]
 use postgres::{PostgresRepository, PostgresUserRepository};
 
+#[cfg(feature = "sqlite-federation")]
+use sqlite_federation::SqliteFederationRepository;
+#[cfg(feature = "postgres-federation")]
+use postgres_federation::PostgresFederationRepository;
+
+#[cfg(feature = "federation")]
+use activitypub::{
+    ActivityPubEventHandler, ActivityPubService, DomainUserRepoAdapter, ReviewObjectHandler,
+};
+
 use domain::ports::{
-    AuthService, DiaryExporter, DiaryRepository, MetadataClient, MovieRepository,
+    AuthService, DiaryExporter, DiaryRepository, EventHandler, MetadataClient, MovieRepository,
     PasswordHasher, PosterFetcherClient, PosterStorage, ReviewRepository, StatsRepository,
     UserRepository,
 };
@@ -73,11 +83,11 @@ async fn main() -> anyhow::Result<()> {
     ) = match EventBusBackend::from_env()? {
         EventBusBackend::Db => {
             tracing::info!("event bus: DB queue");
-            match db_pool {
+            match &db_pool {
                 #[cfg(feature = "postgres")]
-                DbPool::Postgres(pool) => postgres_event_queue::PostgresEventQueue::create_channel(pool).await?,
+                DbPool::Postgres(pool) => postgres_event_queue::PostgresEventQueue::create_channel(pool.clone()).await?,
                 #[cfg(feature = "sqlite")]
-                DbPool::Sqlite(pool) => sqlite_event_queue::SqliteEventQueue::create_channel(pool).await?,
+                DbPool::Sqlite(pool) => sqlite_event_queue::SqliteEventQueue::create_channel(pool.clone()).await?,
             }
         }
         #[cfg(feature = "nats")]
@@ -88,6 +98,16 @@ async fn main() -> anyhow::Result<()> {
             nats::create_channel(cfg).await?
         }
     };
+
+    // Clone what federation handler needs before ctx and app_config are consumed.
+    #[cfg(feature = "federation")]
+    let (fed_movie_repo, fed_review_repo, fed_diary_repo, fed_user_repo, base_url) = (
+        Arc::clone(&movie_repository),
+        Arc::clone(&review_repository),
+        Arc::clone(&diary_repository),
+        Arc::clone(&user_repository),
+        app_config.base_url.clone(),
+    );
 
     let ctx = AppContext {
         movie_repository,
@@ -105,8 +125,52 @@ async fn main() -> anyhow::Result<()> {
         config: app_config,
     };
 
-    let poster_handler = Arc::new(PosterSyncHandler::new(ctx, 3));
-    let worker = WorkerService::new(consumer_arc, vec![poster_handler]);
+    let mut handlers: Vec<Arc<dyn EventHandler>> = vec![Arc::new(PosterSyncHandler::new(ctx, 3))];
+
+    #[cfg(feature = "federation")]
+    {
+        let (federation_repo, review_store): (
+            Arc<dyn activitypub::FederationRepository>,
+            Arc<dyn activitypub::RemoteReviewRepository>,
+        ) = match &db_pool {
+            #[cfg(feature = "sqlite-federation")]
+            DbPool::Sqlite(pool) => {
+                let fed = Arc::new(SqliteFederationRepository::new(pool.clone()));
+                (Arc::clone(&fed) as _, fed as _)
+            }
+            #[cfg(feature = "postgres-federation")]
+            DbPool::Postgres(pool) => {
+                let fed = Arc::new(PostgresFederationRepository::new(pool.clone()));
+                (Arc::clone(&fed) as _, fed as _)
+            }
+        };
+
+        let ap_service = Arc::new(
+            ActivityPubService::new(
+                federation_repo,
+                Arc::new(DomainUserRepoAdapter(fed_user_repo)),
+                Arc::new(ReviewObjectHandler {
+                    movie_repository: Arc::clone(&fed_movie_repo),
+                    diary_repository: fed_diary_repo,
+                    review_store,
+                    base_url: base_url.clone(),
+                }),
+                base_url.clone(),
+                cfg!(debug_assertions),
+            )
+            .await?,
+        );
+
+        handlers.push(Arc::new(ActivityPubEventHandler::new(
+            ap_service,
+            fed_movie_repo,
+            fed_review_repo,
+            base_url,
+        )));
+        tracing::info!("federation event handler registered");
+    }
+
+    let worker = WorkerService::new(consumer_arc, handlers);
 
     tracing::info!("worker started");
     worker.run().await;
