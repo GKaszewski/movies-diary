@@ -70,9 +70,22 @@ async fn main() -> anyhow::Result<()> {
             _ => anyhow::bail!("DATABASE_BACKEND={backend} is not supported by this build"),
         };
 
-    let (event_publisher_arc, consumer) = {
-        let (publisher, consumer) = create_event_channel(EventPublisherConfig::from_env());
-        (Arc::new(publisher) as Arc<dyn domain::ports::EventPublisher>, consumer)
+    let (event_publisher_arc, consumer_arc): (
+        Arc<dyn domain::ports::EventPublisher>,
+        Arc<dyn domain::ports::EventConsumer>,
+    ) = match nats::NatsConfig::from_env() {
+        Ok(cfg) => {
+            tracing::info!("event bus: NATS ({})", cfg.url);
+            nats::create_channel(cfg).await?
+        }
+        Err(_) => {
+            tracing::info!("event bus: in-memory channel (NATS_URL not set)");
+            let (publisher, consumer) = create_event_channel(EventPublisherConfig::from_env());
+            (
+                Arc::new(publisher) as Arc<dyn domain::ports::EventPublisher>,
+                Arc::new(consumer) as Arc<dyn domain::ports::EventConsumer>,
+            )
+        }
     };
 
     let ctx = AppContext {
@@ -92,7 +105,7 @@ async fn main() -> anyhow::Result<()> {
     };
 
     let poster_handler = Arc::new(PosterSyncHandler::new(ctx, 3));
-    let worker = WorkerService::new(Arc::new(consumer), vec![poster_handler]);
+    let worker = WorkerService::new(consumer_arc, vec![poster_handler]);
 
     tracing::info!("worker started");
     worker.run().await;
@@ -102,9 +115,10 @@ async fn main() -> anyhow::Result<()> {
 }
 
 fn init_tracing() {
+    let filter = std::env::var("RUST_LOG")
+        .unwrap_or_else(|_| "worker=info,application=info".to_string());
     tracing_subscriber::registry()
-        .with(tracing_subscriber::EnvFilter::try_from_default_env()
-            .unwrap_or_else(|_| "info".into()))
+        .with(tracing_subscriber::EnvFilter::new(filter))
         .with(tracing_subscriber::fmt::layer())
         .init();
 }

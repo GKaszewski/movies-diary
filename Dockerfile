@@ -11,6 +11,7 @@ COPY crates/adapters/activitypub/Cargo.toml       crates/adapters/activitypub/Ca
 COPY crates/adapters/activitypub-base/Cargo.toml  crates/adapters/activitypub-base/Cargo.toml
 COPY crates/adapters/auth/Cargo.toml              crates/adapters/auth/Cargo.toml
 COPY crates/adapters/event-publisher/Cargo.toml   crates/adapters/event-publisher/Cargo.toml
+COPY crates/adapters/nats/Cargo.toml              crates/adapters/nats/Cargo.toml
 COPY crates/adapters/metadata/Cargo.toml          crates/adapters/metadata/Cargo.toml
 COPY crates/adapters/poster-fetcher/Cargo.toml    crates/adapters/poster-fetcher/Cargo.toml
 COPY crates/adapters/poster-storage/Cargo.toml    crates/adapters/poster-storage/Cargo.toml

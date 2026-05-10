@@ -20,7 +20,10 @@ impl WorkerService {
         let mut stream = self.consumer.consume();
         while let Some(result) = stream.next().await {
             match result {
-                Ok(envelope) => self.dispatch(envelope).await,
+                Ok(envelope) => {
+                    tracing::info!(event = ?envelope.event, "received event");
+                    self.dispatch(envelope).await;
+                }
                 Err(e) => tracing::error!("event consumer error: {e}"),
             }
         }

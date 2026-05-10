@@ -10,10 +10,13 @@ members = [
     "crates/adapters/postgres",
     "crates/adapters/sqlite-federation",
     "crates/adapters/postgres-federation",
+    "crates/adapters/sqlite-event-queue",
+    "crates/adapters/postgres-event-queue",
     "crates/adapters/template-askama",
     "crates/adapters/activitypub",
     "crates/adapters/activitypub-base",
     "crates/adapters/export",
+    "crates/adapters/nats",
     "crates/application",
     "crates/domain",
     "crates/presentation",
@@ -64,3 +67,6 @@ template-askama = { path = "crates/adapters/template-askama" }
 activitypub = { path = "crates/adapters/activitypub" }
 activitypub-base = { path = "crates/adapters/activitypub-base" }
 doc = { path = "crates/doc" }
+nats = { path = "crates/adapters/nats" }
+sqlite-event-queue = { path = "crates/adapters/sqlite-event-queue" }
+postgres-event-queue = { path = "crates/adapters/postgres-event-queue" }

@@ -9,8 +9,18 @@ sqlite = ["dep:sqlite"]
 postgres = ["dep:postgres"]
 # Meta-feature: true when any federation adapter is active — keeps all #[cfg(feature = "federation")] gates working
 federation = []
-sqlite-federation = ["sqlite", "dep:sqlite-federation", "dep:activitypub", "federation"]
-postgres-federation = ["postgres", "dep:postgres-federation", "dep:activitypub", "federation"]
+sqlite-federation = [
+    "sqlite",
+    "dep:sqlite-federation",
+    "dep:activitypub",
+    "federation",
+]
+postgres-federation = [
+    "postgres",
+    "dep:postgres-federation",
+    "dep:activitypub",
+    "federation",
+]
 
 [dependencies]
 tower-http = { version = "0.6.8", features = ["fs", "trace", "tracing"] }
@@ -39,6 +49,7 @@ poster-fetcher = { workspace = true }
 poster-storage = { workspace = true }
 template-askama = { workspace = true }
 event-publisher = { workspace = true }
+nats = { workspace = true }
 rss = { workspace = true }
 export = { workspace = true }
 doc = { workspace = true }
@@ -46,12 +57,12 @@ sqlx = { workspace = true }
 utoipa = { version = "5.5.0", features = ["axum_extras", "uuid"] }
 
 # Optional — database backends
-sqlite              = { workspace = true, optional = true }
-postgres            = { workspace = true, optional = true }
+sqlite = { workspace = true, optional = true }
+postgres = { workspace = true, optional = true }
 
 # Optional — federation
-activitypub         = { workspace = true, optional = true }
-sqlite-federation   = { workspace = true, optional = true }
+activitypub = { workspace = true, optional = true }
+sqlite-federation = { workspace = true, optional = true }
 postgres-federation = { workspace = true, optional = true }
 
 [dev-dependencies]

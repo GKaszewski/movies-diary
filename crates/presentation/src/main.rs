@@ -38,9 +38,9 @@ use presentation::{openapi::ApiDoc, routes, state::AppState};
 use utoipa::OpenApi as _;
 
 use domain::ports::{
-    AuthService, DiaryExporter, DiaryRepository, MetadataClient, MovieRepository,
-    PasswordHasher, PosterFetcherClient, PosterStorage, ReviewRepository, StatsRepository,
-    UserRepository,
+    AuthService, DiaryExporter, DiaryRepository, EventHandler, EventPublisher, MetadataClient,
+    MovieRepository, PasswordHasher, PosterFetcherClient, PosterStorage, ReviewRepository,
+    StatsRepository, UserRepository,
 };
 
 #[cfg(not(any(feature = "sqlite", feature = "postgres")))]
@@ -184,26 +184,18 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
         );
         let ap_service_arc: Arc<dyn ActivityPubPort> = concrete_ap_service;
 
-        let poster_handler = Arc::new(PosterSyncHandler::new(handler_ctx, 3));
-        let (event_publisher, consumer) = create_event_channel(EventPublisherConfig::from_env());
-        let worker = WorkerService::new(
-            Arc::new(consumer),
-            vec![poster_handler, Arc::new(ap_event_handler)],
-        );
-        tokio::spawn(worker.run());
-
-        let ep: Arc<dyn domain::ports::EventPublisher> = Arc::new(event_publisher);
+        let ep = build_event_publisher(
+            handler_ctx,
+            vec![Arc::new(ap_event_handler) as Arc<dyn EventHandler>],
+        ).await?;
         (ep, ap_router, ap_service_arc, social_query_arc)
     };
 
     #[cfg(not(feature = "federation"))]
-    let (event_publisher_arc, ap_router): (Arc<dyn domain::ports::EventPublisher>, axum::Router) = {
-        let poster_handler = Arc::new(PosterSyncHandler::new(handler_ctx, 3));
-        let (event_publisher, consumer) = create_event_channel(EventPublisherConfig::from_env());
-        let worker = WorkerService::new(Arc::new(consumer), vec![poster_handler]);
-        tokio::spawn(worker.run());
-        (Arc::new(event_publisher), axum::Router::new())
-    };
+    let (event_publisher_arc, ap_router): (Arc<dyn EventPublisher>, axum::Router) = (
+        build_event_publisher(handler_ctx, vec![]).await?,
+        axum::Router::new(),
+    );
 
     let app_ctx = AppContext {
         movie_repository,
@@ -300,6 +292,23 @@ async fn wire_postgres(database_url: &str) -> anyhow::Result<(
         Arc::new(PostgresUserRepository::new(pool.clone()));
 
     Ok((pool, movie_repository, review_repository, diary_repository, stats_repository, user_repository))
+}
+
+async fn build_event_publisher(
+    handler_ctx: AppContext,
+    extra_handlers: Vec<Arc<dyn EventHandler>>,
+) -> anyhow::Result<Arc<dyn EventPublisher>> {
+    if let Ok(cfg) = nats::NatsConfig::from_env() {
+        tracing::info!("event bus: NATS ({})", cfg.url);
+        return nats::create_publisher(cfg).await;
+    }
+    tracing::info!("event bus: in-memory");
+    let poster_handler = Arc::new(PosterSyncHandler::new(handler_ctx, 3));
+    let mut handlers: Vec<Arc<dyn EventHandler>> = vec![poster_handler];
+    handlers.extend(extra_handlers);
+    let (publisher, consumer) = create_event_channel(EventPublisherConfig::from_env());
+    tokio::spawn(WorkerService::new(Arc::new(consumer), handlers).run());
+    Ok(Arc::new(publisher))
 }
 
 fn init_tracing() {

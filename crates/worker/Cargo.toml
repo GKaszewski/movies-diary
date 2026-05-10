@@ -29,8 +29,9 @@ metadata = { workspace = true }
 poster-fetcher = { workspace = true }
 poster-storage = { workspace = true }
 export = { workspace = true }
+nats = { workspace = true }
 sqlx = { workspace = true }
 
 # Optional — database backends
-sqlite   = { workspace = true, optional = true }
+sqlite = { workspace = true, optional = true }
 postgres = { workspace = true, optional = true }
