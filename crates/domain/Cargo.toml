@@ -9,5 +9,6 @@ chrono = { workspace = true }
 async-trait = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
+futures = { workspace = true }
 
 email_address = "0.2.9"

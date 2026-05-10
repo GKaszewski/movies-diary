@@ -173,11 +173,10 @@ pub trait EventPublisher: Send + Sync {
     async fn publish(&self, event: &DomainEvent) -> Result<(), DomainError>;
 }
 
-#[async_trait]
 pub trait EventConsumer: Send + Sync {
-    /// Returns the next available event, or `None` if the stream has ended.
-    /// Implementations decide whether this blocks (push) or polls (DB queue).
-    async fn next_event(&self) -> Result<Option<DomainEvent>, DomainError>;
+    /// Returns a stream of domain events. Implementations decide whether this
+    /// is push-based (NATS) or poll-based (DB queue) — callers don't care.
+    fn consume(&self) -> futures::stream::BoxStream<'_, Result<DomainEvent, DomainError>>;
 }
 
 #[async_trait]
