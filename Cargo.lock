@@ -1352,6 +1352,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "email_address",
+ "futures",
  "thiserror 2.0.18",
  "uuid",
 ]
