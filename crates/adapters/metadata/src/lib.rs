@@ -7,6 +7,7 @@ use domain::{
 };
 
 mod omdb;
+mod tmdb;
 
 pub(crate) struct ProviderMovie {
     pub imdb_id: ExternalMetadataId,
@@ -29,6 +30,12 @@ impl MetadataClientImpl {
     pub fn new_omdb(api_key: String) -> Self {
         Self {
             provider: Box::new(omdb::OmdbProvider::new(api_key)),
+        }
+    }
+
+    pub fn new_tmdb(api_key: String) -> Self {
+        Self {
+            provider: Box::new(tmdb::TmdbProvider::new(api_key)),
         }
     }
 }

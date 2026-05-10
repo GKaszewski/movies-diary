@@ -71,13 +71,17 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
     let auth_config = AuthConfig::from_env()?;
     let storage_config = StorageConfig::from_env()?;
     let app_config = AppConfig::from_env();
-    let omdb_api_key = std::env::var("OMDB_API_KEY").context("OMDB_API_KEY must be set")?;
-
     let database_url = std::env::var("DATABASE_URL").context("DATABASE_URL must be set")?;
     let backend = std::env::var("DATABASE_BACKEND").unwrap_or_else(|_| "sqlite".to_string());
 
     let metadata_client: Arc<dyn MetadataClient> =
-        Arc::new(MetadataClientImpl::new_omdb(omdb_api_key));
+        if let Ok(tmdb_key) = std::env::var("TMDB_API_KEY") {
+            Arc::new(MetadataClientImpl::new_tmdb(tmdb_key))
+        } else {
+            let omdb_key = std::env::var("OMDB_API_KEY")
+                .context("Either TMDB_API_KEY or OMDB_API_KEY must be set")?;
+            Arc::new(MetadataClientImpl::new_omdb(omdb_key))
+        };
     let poster_fetcher: Arc<dyn PosterFetcherClient> =
         Arc::new(ReqwestPosterFetcher::new(PosterFetcherConfig::from_env())?);
     let poster_storage: Arc<dyn PosterStorage> =
