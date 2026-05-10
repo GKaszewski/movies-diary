@@ -79,12 +79,8 @@ async fn main() -> anyhow::Result<()> {
     let (event_publisher_arc, consumer_arc): (
         Arc<dyn domain::ports::EventPublisher>,
         Arc<dyn domain::ports::EventConsumer>,
-    ) = match nats::NatsConfig::from_env() {
-        Ok(cfg) => {
-            tracing::info!("event bus: NATS ({})", cfg.url);
-            nats::create_channel(cfg).await?
-        }
-        Err(_) => {
+    ) = match EventBusBackend::from_env()? {
+        EventBusBackend::Db => {
             tracing::info!("event bus: DB queue");
             match backend.as_str() {
                 #[cfg(feature = "postgres")]
@@ -96,8 +92,15 @@ async fn main() -> anyhow::Result<()> {
                     sqlite_pool.unwrap()
                 ).await?,
                 #[cfg(not(feature = "sqlite"))]
-                _ => anyhow::bail!("no event bus: NATS_URL not set and sqlite feature not enabled"),
+                _ => anyhow::bail!("EVENT_BUS_BACKEND=db has no adapter for DATABASE_BACKEND={backend}; enable the sqlite or postgres feature"),
             }
+        }
+        #[cfg(feature = "nats")]
+        EventBusBackend::Nats => {
+            let cfg = nats::NatsConfig::from_env()
+                .context("EVENT_BUS_BACKEND=nats requires NATS_URL to be set")?;
+            tracing::info!("event bus: NATS ({})", cfg.url);
+            nats::create_channel(cfg).await?
         }
     };
 
@@ -125,6 +128,29 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("worker stopped");
 
     Ok(())
+}
+
+#[derive(Clone, Copy)]
+enum EventBusBackend {
+    Db,
+    #[cfg(feature = "nats")]
+    Nats,
+}
+
+impl EventBusBackend {
+    fn from_env() -> anyhow::Result<Self> {
+        match std::env::var("EVENT_BUS_BACKEND")
+            .unwrap_or_else(|_| "db".to_string())
+            .as_str()
+        {
+            "db" => Ok(Self::Db),
+            #[cfg(feature = "nats")]
+            "nats" => Ok(Self::Nats),
+            #[cfg(not(feature = "nats"))]
+            "nats" => anyhow::bail!("EVENT_BUS_BACKEND=nats requires the nats feature to be compiled in"),
+            other => anyhow::bail!("unknown EVENT_BUS_BACKEND={other}, expected 'db' or 'nats'"),
+        }
+    }
 }
 
 fn init_tracing() {

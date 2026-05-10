@@ -7,6 +7,7 @@ edition = "2024"
 default = ["sqlite"]
 sqlite = ["dep:sqlite", "dep:sqlite-event-queue"]
 postgres = ["dep:postgres", "dep:postgres-event-queue"]
+nats = ["dep:nats"]
 
 [dependencies]
 domain = { workspace = true }
@@ -29,7 +30,7 @@ metadata = { workspace = true }
 poster-fetcher = { workspace = true }
 poster-storage = { workspace = true }
 export = { workspace = true }
-nats = { workspace = true }
+nats = { workspace = true, optional = true }
 sqlx = { workspace = true }
 
 # Optional — database backends

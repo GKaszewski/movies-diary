@@ -91,10 +91,9 @@ ALLOW_REGISTRATION=true # set to false to disable new sign-ups
 SECURE_COOKIES=true     # set when serving over HTTPS
 RUST_LOG=presentation=info,tower_http=info,worker=info,application=info
 
-# Event bus — background poster sync runs in the worker binary.
-# Default: DB queue (uses the same database, no extra infrastructure).
-# Set NATS_URL to use NATS instead (JetStream recommended for at-least-once delivery).
-# NATS_URL=nats://localhost:4222
+# Event bus — "db" (default, uses same database) or "nats"
+EVENT_BUS_BACKEND=db
+# NATS_URL=nats://localhost:4222   # required when EVENT_BUS_BACKEND=nats
 ```
 
 The `worker` binary must run alongside `presentation` to process events:

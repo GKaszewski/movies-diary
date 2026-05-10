@@ -114,6 +114,8 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
         };
 
     // Wire up event channel, federation service, and ap_router
+    let event_bus = EventBusBackend::from_env()?;
+
     #[cfg(feature = "federation")]
     let (event_publisher_arc, ap_router, ap_service, social_query) = {
         let (federation_repo, social_query_arc, review_store): (
@@ -157,10 +159,36 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
         let ap_router = concrete_ap_service.router();
         let ap_service_arc: Arc<dyn ActivityPubPort> = concrete_ap_service;
 
-        let ep: Arc<dyn EventPublisher> = if let Ok(cfg) = nats::NatsConfig::from_env() {
-            tracing::info!("event bus: NATS ({})", cfg.url);
-            nats::create_publisher(cfg).await?
-        } else {
+        let ep: Arc<dyn EventPublisher> = match event_bus {
+            EventBusBackend::Db => {
+                tracing::info!("event bus: DB queue");
+                match backend.as_str() {
+                    #[cfg(feature = "postgres")]
+                    "postgres" => postgres_event_queue::PostgresEventQueue::create_publisher(
+                        pg_pool.as_ref().unwrap().clone()
+                    ).await?,
+                    #[cfg(feature = "sqlite")]
+                    _ => sqlite_event_queue::SqliteEventQueue::create_publisher(
+                        sqlite_pool.as_ref().unwrap().clone()
+                    ).await?,
+                    #[cfg(not(feature = "sqlite"))]
+                    _ => anyhow::bail!("EVENT_BUS_BACKEND=db has no adapter for DATABASE_BACKEND={backend}; enable the sqlite or postgres feature"),
+                }
+            }
+            #[cfg(feature = "nats")]
+            EventBusBackend::Nats => {
+                let cfg = nats::NatsConfig::from_env()
+                    .context("EVENT_BUS_BACKEND=nats requires NATS_URL to be set")?;
+                tracing::info!("event bus: NATS ({})", cfg.url);
+                nats::create_publisher(cfg).await?
+            }
+        };
+        (ep, ap_router, ap_service_arc, social_query_arc)
+    };
+
+    #[cfg(not(feature = "federation"))]
+    let event_publisher_arc: Arc<dyn EventPublisher> = match event_bus {
+        EventBusBackend::Db => {
             tracing::info!("event bus: DB queue");
             match backend.as_str() {
                 #[cfg(feature = "postgres")]
@@ -172,29 +200,15 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
                     sqlite_pool.as_ref().unwrap().clone()
                 ).await?,
                 #[cfg(not(feature = "sqlite"))]
-                _ => anyhow::bail!("no event bus: NATS_URL not set and sqlite feature not enabled"),
+                _ => anyhow::bail!("EVENT_BUS_BACKEND=db has no adapter for DATABASE_BACKEND={backend}; enable the sqlite or postgres feature"),
             }
-        };
-        (ep, ap_router, ap_service_arc, social_query_arc)
-    };
-
-    #[cfg(not(feature = "federation"))]
-    let event_publisher_arc: Arc<dyn EventPublisher> = if let Ok(cfg) = nats::NatsConfig::from_env() {
-        tracing::info!("event bus: NATS ({})", cfg.url);
-        nats::create_publisher(cfg).await?
-    } else {
-        tracing::info!("event bus: DB queue");
-        match backend.as_str() {
-            #[cfg(feature = "postgres")]
-            "postgres" => postgres_event_queue::PostgresEventQueue::create_publisher(
-                pg_pool.as_ref().unwrap().clone()
-            ).await?,
-            #[cfg(feature = "sqlite")]
-            _ => sqlite_event_queue::SqliteEventQueue::create_publisher(
-                sqlite_pool.as_ref().unwrap().clone()
-            ).await?,
-            #[cfg(not(feature = "sqlite"))]
-            _ => anyhow::bail!("no event bus: NATS_URL not set and sqlite feature not enabled"),
+        }
+        #[cfg(feature = "nats")]
+        EventBusBackend::Nats => {
+            let cfg = nats::NatsConfig::from_env()
+                .context("EVENT_BUS_BACKEND=nats requires NATS_URL to be set")?;
+            tracing::info!("event bus: NATS ({})", cfg.url);
+            nats::create_publisher(cfg).await?
         }
     };
     #[cfg(not(feature = "federation"))]
@@ -295,6 +309,29 @@ async fn wire_postgres(database_url: &str) -> anyhow::Result<(
         Arc::new(PostgresUserRepository::new(pool.clone()));
 
     Ok((pool, movie_repository, review_repository, diary_repository, stats_repository, user_repository))
+}
+
+#[derive(Clone, Copy)]
+enum EventBusBackend {
+    Db,
+    #[cfg(feature = "nats")]
+    Nats,
+}
+
+impl EventBusBackend {
+    fn from_env() -> anyhow::Result<Self> {
+        match std::env::var("EVENT_BUS_BACKEND")
+            .unwrap_or_else(|_| "db".to_string())
+            .as_str()
+        {
+            "db" => Ok(Self::Db),
+            #[cfg(feature = "nats")]
+            "nats" => Ok(Self::Nats),
+            #[cfg(not(feature = "nats"))]
+            "nats" => anyhow::bail!("EVENT_BUS_BACKEND=nats requires the nats feature to be compiled in"),
+            other => anyhow::bail!("unknown EVENT_BUS_BACKEND={other}, expected 'db' or 'nats'"),
+        }
+    }
 }
 
 fn init_tracing() {

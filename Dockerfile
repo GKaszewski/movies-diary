@@ -45,6 +45,8 @@ COPY crates ./crates
 #
 # To build with PostgreSQL backend instead:
 #   --build-arg FEATURES=postgres,postgres-federation
+# To add NATS support (EVENT_BUS_BACKEND=nats):
+#   --build-arg FEATURES=sqlite,sqlite-federation,nats
 ARG FEATURES=sqlite,sqlite-federation
 RUN cargo build --release -p presentation -p worker --no-default-features --features "${FEATURES}"
 

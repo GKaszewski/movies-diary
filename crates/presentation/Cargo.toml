@@ -7,6 +7,7 @@ edition = "2024"
 default = ["sqlite", "sqlite-federation"]
 sqlite = ["dep:sqlite", "dep:sqlite-event-queue"]
 postgres = ["dep:postgres", "dep:postgres-event-queue"]
+nats = ["dep:nats"]
 # Meta-feature: true when any federation adapter is active — keeps all #[cfg(feature = "federation")] gates working
 federation = []
 sqlite-federation = [
@@ -49,7 +50,7 @@ poster-fetcher = { workspace = true }
 poster-storage = { workspace = true }
 template-askama = { workspace = true }
 event-publisher = { workspace = true }
-nats = { workspace = true }
+nats = { workspace = true, optional = true }
 rss = { workspace = true }
 export = { workspace = true }
 doc = { workspace = true }
