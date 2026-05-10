@@ -3,10 +3,10 @@ use std::sync::Arc;
 use anyhow::Context;
 use application::{config::AppConfig, context::AppContext, worker::WorkerService};
 use export::ExportAdapter;
+use importer::ImporterDocumentParser;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-
-use domain::ports::{DiaryExporter, EventHandler};
+use domain::ports::{DiaryExporter, DocumentParser, EventHandler};
 
 #[cfg(not(any(feature = "sqlite", feature = "postgres")))]
 compile_error!("At least one database backend must be enabled. Use --features sqlite or --features postgres");
@@ -78,6 +78,7 @@ async fn main() -> anyhow::Result<()> {
         review_repository,
         diary_repository,
         diary_exporter: Arc::new(ExportAdapter) as Arc<dyn DiaryExporter>,
+        document_parser: Arc::new(ImporterDocumentParser) as Arc<dyn DocumentParser>,
         stats_repository,
         metadata_client,
         poster_fetcher,

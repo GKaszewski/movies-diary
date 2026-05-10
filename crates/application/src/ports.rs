@@ -1,7 +1,7 @@
 use uuid::Uuid;
 
 use domain::models::{
-    DiaryEntry, FeedEntry, MonthActivity, UserStats, UserSummary, UserTrends,
+    DiaryEntry, FeedEntry, MonthActivity, Movie, MovieStats, UserStats, UserSummary, UserTrends,
     collections::Paginated,
 };
 
@@ -95,6 +95,17 @@ pub struct FollowersPageData {
     pub error: Option<String>,
 }
 
+pub struct MovieDetailPageData {
+    pub ctx: HtmlPageContext,
+    pub movie: Movie,
+    pub stats: MovieStats,
+    pub reviews: Paginated<FeedEntry>,
+    pub current_offset: u32,
+    pub has_more: bool,
+    pub limit: u32,
+    pub histogram_max: u64,
+}
+
 pub struct ImportUploadPageData {
     pub ctx: HtmlPageContext,
     pub profiles: Vec<ImportProfileView>,
@@ -148,6 +159,7 @@ pub trait HtmlRenderer: Send + Sync {
     fn render_profile_page(&self, data: ProfilePageData) -> Result<String, String>;
     fn render_following_page(&self, data: FollowingPageData) -> Result<String, String>;
     fn render_followers_page(&self, data: FollowersPageData) -> Result<String, String>;
+    fn render_movie_detail_page(&self, data: MovieDetailPageData) -> Result<String, String>;
     fn render_import_upload_page(&self, data: ImportUploadPageData) -> Result<String, String>;
     fn render_import_mapping_page(&self, data: ImportMappingPageData) -> Result<String, String>;
     fn render_import_preview_page(&self, data: ImportPreviewPageData) -> Result<String, String>;

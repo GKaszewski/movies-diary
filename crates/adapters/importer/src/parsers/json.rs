@@ -1,5 +1,5 @@
+use domain::models::{ImportError, ParsedFile};
 use serde_json::Value;
-use crate::{ImportError, types::ParsedFile};
 
 pub fn parse_json(bytes: &[u8]) -> Result<ParsedFile, ImportError> {
     let value: Value = serde_json::from_slice(bytes)

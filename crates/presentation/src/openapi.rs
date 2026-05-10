@@ -6,9 +6,9 @@ use utoipa::{
 use crate::dtos::{
     ActivityFeedResponse, DiaryEntryDto, DiaryResponse,
     DirectorStatDto, FeedEntryDto, LoginRequest, LoginResponse, LogReviewRequest,
-    MonthActivityDto, MonthlyRatingDto, MovieDto, RegisterRequest, ReviewDto,
-    ReviewHistoryResponse, UserProfileResponse, UserStatsDto, UserSummaryDto, UserTrendsDto,
-    UsersResponse,
+    MonthActivityDto, MonthlyRatingDto, MovieDetailResponse, MovieDto, MovieStatsDto,
+    RegisterRequest, ReviewDto, ReviewHistoryResponse, SocialFeedResponse, SocialReviewDto,
+    UserProfileResponse, UserStatsDto, UserSummaryDto, UserTrendsDto, UsersResponse,
 };
 use crate::handlers::import::{
     ApiFieldMapping, ApplyMappingRequest, ConfirmRequest, SaveProfileRequest,
@@ -40,6 +40,7 @@ impl Modify for SecurityAddon {
     paths(
         crate::handlers::api::get_diary,
         crate::handlers::api::get_review_history,
+        crate::handlers::api::get_movie_detail,
         crate::handlers::api::post_review,
         crate::handlers::api::delete_review,
         crate::handlers::api::sync_poster,
@@ -67,6 +68,10 @@ impl Modify for SecurityAddon {
         LoginResponse,
         RegisterRequest,
         ReviewHistoryResponse,
+        MovieDetailResponse,
+        MovieStatsDto,
+        SocialFeedResponse,
+        SocialReviewDto,
         ActivityFeedResponse,
         FeedEntryDto,
         UsersResponse,
@@ -99,6 +104,7 @@ pub struct ApiDoc;
     paths(
         crate::handlers::api::get_diary,
         crate::handlers::api::get_review_history,
+        crate::handlers::api::get_movie_detail,
         crate::handlers::api::post_review,
         crate::handlers::api::delete_review,
         crate::handlers::api::sync_poster,
@@ -134,6 +140,10 @@ pub struct ApiDoc;
         LoginResponse,
         RegisterRequest,
         ReviewHistoryResponse,
+        MovieDetailResponse,
+        MovieStatsDto,
+        SocialFeedResponse,
+        SocialReviewDto,
         ActorListResponse,
         RemoteActorDto,
         FollowRequest,

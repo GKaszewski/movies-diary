@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use application::{
     commands::{
         ApplyImportMappingCommand, CreateImportSessionCommand, DeleteImportProfileCommand,
-        ExecuteImportCommand, FileFormat, SaveImportProfileCommand,
+        ExecuteImportCommand, SaveImportProfileCommand,
     },
     ports::{
         ImportMappingPageData, ImportPreviewPageData, ImportPreviewRow, ImportProfileView,
@@ -21,8 +21,8 @@ use application::{
         list_import_profiles, save_import_profile,
     },
 };
+use domain::models::{AnnotatedRow, FieldMapping, FileFormat, import::{DomainField, RowResult, Transform}};
 use domain::value_objects::ImportSessionId;
-use importer::{AnnotatedRow, DomainField, FieldMapping, RowResult, Transform};
 
 use crate::{
     csrf::CsrfToken,
@@ -220,7 +220,7 @@ pub async fn get_mapping_page(
     else {
         return Redirect::to("/import").into_response();
     };
-    let Ok(parsed) = serde_json::from_str::<importer::ParsedFile>(&session.parsed_data) else {
+    let Some(parsed) = session.parsed_file else {
         return Redirect::to("/import").into_response();
     };
 
@@ -318,13 +318,8 @@ pub async fn get_preview_page(
         return Redirect::to(&format!("/import/{}/mapping", session_id_str)).into_response();
     }
 
-    let parsed =
-        serde_json::from_str::<importer::ParsedFile>(&session.parsed_data).unwrap_or_default();
-    let annotated: Vec<AnnotatedRow> = session
-        .row_results
-        .as_deref()
-        .and_then(|s| serde_json::from_str(s).ok())
-        .unwrap_or_default();
+    let parsed = session.parsed_file.unwrap_or_default();
+    let annotated: Vec<AnnotatedRow> = session.row_results.unwrap_or_default();
 
     let rows: Vec<ImportPreviewRow> = annotated
         .iter()
@@ -589,8 +584,7 @@ pub async fn api_get_session(
         .await
     {
         Ok(Some(session)) => {
-            let parsed = serde_json::from_str::<importer::ParsedFile>(&session.parsed_data)
-                .unwrap_or_default();
+            let parsed = session.parsed_file.unwrap_or_default();
             let row_count = parsed.rows.len();
             axum::Json(SessionStateResponse {
                 session_id: session_id_str,

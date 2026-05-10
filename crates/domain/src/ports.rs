@@ -5,7 +5,8 @@ use crate::{
     errors::DomainError,
     events::{DomainEvent, EventEnvelope},
     models::{
-        DiaryEntry, DiaryFilter, ExportFormat, FeedEntry, ImportProfile, ImportSession, Movie,
+        AnnotatedRow, DiaryEntry, DiaryFilter, ExportFormat, FeedEntry, FieldMapping,
+        FileFormat, ImportError, ImportProfile, ImportSession, Movie, MovieStats, ParsedFile,
         Review, ReviewHistory, User, UserStats, UserSummary, UserTrends,
         collections::{PageParams, Paginated},
     },
@@ -14,6 +15,11 @@ use crate::{
         PasswordHash, PosterPath, PosterUrl, ReleaseYear, ReviewId, UserId, Username,
     },
 };
+
+pub trait DocumentParser: Send + Sync {
+    fn parse(&self, bytes: &[u8], format: FileFormat) -> Result<ParsedFile, ImportError>;
+    fn apply_mapping(&self, file: &ParsedFile, mappings: &[FieldMapping]) -> Vec<AnnotatedRow>;
+}
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub enum FeedSortBy {
@@ -104,6 +110,12 @@ pub trait DiaryRepository: Send + Sync {
     ) -> Result<Paginated<FeedEntry>, DomainError>;
     async fn get_review_history(&self, movie_id: &MovieId) -> Result<ReviewHistory, DomainError>;
     async fn get_user_history(&self, user_id: &UserId) -> Result<Vec<DiaryEntry>, DomainError>;
+    async fn get_movie_stats(&self, movie_id: &MovieId) -> Result<MovieStats, DomainError>;
+    async fn get_movie_social_feed(
+        &self,
+        movie_id: &MovieId,
+        page: &PageParams,
+    ) -> Result<Paginated<FeedEntry>, DomainError>;
 }
 
 #[async_trait]

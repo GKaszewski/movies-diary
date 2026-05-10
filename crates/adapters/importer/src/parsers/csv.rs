@@ -1,4 +1,4 @@
-use crate::{ImportError, types::ParsedFile};
+use domain::models::{ImportError, ParsedFile};
 
 pub fn parse_csv(bytes: &[u8]) -> Result<ParsedFile, ImportError> {
     if bytes.is_empty() {

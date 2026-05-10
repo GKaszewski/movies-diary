@@ -1,8 +1,8 @@
 use domain::{
     errors::DomainError,
+    models::{AnnotatedRow, import::RowResult},
     value_objects::{ExternalMetadataId, ImportSessionId, MovieTitle, ReleaseYear, UserId},
 };
-use importer::{AnnotatedRow, ParsedFile, apply_mapping};
 
 use crate::{commands::ApplyImportMappingCommand, context::AppContext};
 
@@ -15,32 +15,27 @@ pub async fn execute(ctx: &AppContext, cmd: ApplyImportMappingCommand) -> Result
         .await?
         .ok_or_else(|| DomainError::NotFound("import session".into()))?;
 
-    let parsed: ParsedFile = serde_json::from_str(&session.parsed_data)
-        .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+    // clone to avoid borrow conflict when mutating session fields below
+    let parsed = session.parsed_file.clone()
+        .ok_or_else(|| DomainError::ValidationError("session has no parsed file".into()))?;
 
-    let mut annotated = apply_mapping(&parsed, &mappings);
+    let mut annotated = ctx.document_parser.apply_mapping(&parsed, &mappings);
 
     for row in annotated.iter_mut() {
-        if let importer::RowResult::Valid(ref import_row) = row.result {
+        if let RowResult::Valid(ref import_row) = row.result {
             row.is_duplicate = check_duplicate(ctx, import_row).await?;
         }
     }
 
-    session.field_mappings = Some(
-        serde_json::to_string(&mappings)
-            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?
-    );
-    session.row_results = Some(
-        serde_json::to_string(&annotated)
-            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?
-    );
+    session.field_mappings = Some(mappings);
+    session.row_results = Some(annotated.clone());
 
     ctx.import_session_repository.update(&session).await?;
 
     Ok(annotated)
 }
 
-async fn check_duplicate(ctx: &AppContext, row: &importer::ImportRow) -> Result<bool, DomainError> {
+async fn check_duplicate(ctx: &AppContext, row: &domain::models::ImportRow) -> Result<bool, DomainError> {
     if let Some(ext_id) = &row.external_metadata_id {
         if let Ok(eid) = ExternalMetadataId::new(ext_id.clone()) {
             if ctx.movie_repository.get_movie_by_external_id(&eid).await?.is_some() {

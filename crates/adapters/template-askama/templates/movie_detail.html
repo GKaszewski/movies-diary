@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="movie-detail">
+
+  <article class="entry" style="margin-bottom:1.5rem">
+    {% if let Some(poster) = movie.poster_path() %}
+    <div class="poster"><img src="/posters/{{ poster.value() }}" alt=""></div>
+    {% endif %}
+    <div class="entry-body">
+      <div class="entry-title">
+        {{ movie.title().value() }}
+        <span class="year">({{ movie.release_year().value() }})</span>
+      </div>
+      {% if let Some(dir) = movie.director() %}
+      <div class="director">{{ dir }}</div>
+      {% endif %}
+      <div style="margin-top:0.75rem">
+        <a href="/reviews/new" class="btn-small">+ Log a review</a>
+      </div>
+    </div>
+  </article>
+
+  <div class="stats-bar">
+    {% if let Some(avg) = stats.avg_rating %}
+    <div class="stat-box">
+      <div class="stat-value">{{ format!("{:.1}", avg) }}★</div>
+      <div class="stat-label">avg rating</div>
+    </div>
+    {% endif %}
+    <div class="stat-box">
+      <div class="stat-value">{{ stats.total_count }}</div>
+      <div class="stat-label">reviews</div>
+    </div>
+    {% if stats.federated_count > 0 %}
+    <div class="stat-box">
+      <div class="stat-value">{{ stats.federated_count }}</div>
+      <div class="stat-label">federated</div>
+    </div>
+    {% endif %}
+    <div class="stat-box histogram">
+      <div class="stat-label">distribution</div>
+      <div class="histogram-row"><span class="hist-label">5★</span><div class="hist-bar-wrap"><div class="hist-bar" style="width:{% if histogram_max > 0 %}{{ stats.rating_histogram[4] * 100 / histogram_max }}{% else %}0{% endif %}%"></div></div><span class="hist-count">{{ stats.rating_histogram[4] }}</span></div>
+      <div class="histogram-row"><span class="hist-label">4★</span><div class="hist-bar-wrap"><div class="hist-bar" style="width:{% if histogram_max > 0 %}{{ stats.rating_histogram[3] * 100 / histogram_max }}{% else %}0{% endif %}%"></div></div><span class="hist-count">{{ stats.rating_histogram[3] }}</span></div>
+      <div class="histogram-row"><span class="hist-label">3★</span><div class="hist-bar-wrap"><div class="hist-bar" style="width:{% if histogram_max > 0 %}{{ stats.rating_histogram[2] * 100 / histogram_max }}{% else %}0{% endif %}%"></div></div><span class="hist-count">{{ stats.rating_histogram[2] }}</span></div>
+      <div class="histogram-row"><span class="hist-label">2★</span><div class="hist-bar-wrap"><div class="hist-bar" style="width:{% if histogram_max > 0 %}{{ stats.rating_histogram[1] * 100 / histogram_max }}{% else %}0{% endif %}%"></div></div><span class="hist-count">{{ stats.rating_histogram[1] }}</span></div>
+      <div class="histogram-row"><span class="hist-label">1★</span><div class="hist-bar-wrap"><div class="hist-bar" style="width:{% if histogram_max > 0 %}{{ stats.rating_histogram[0] * 100 / histogram_max }}{% else %}0{% endif %}%"></div></div><span class="hist-count">{{ stats.rating_histogram[0] }}</span></div>
+    </div>
+  </div>
+
+  <div class="feed-section-label">REVIEWS</div>
+  <div class="diary">
+    {% for entry in reviews %}
+    <article class="entry review-card {% if ctx.is_current_user(entry.review().user_id().value()) %}review-own{% endif %} {% if entry.review().is_remote() %}review-federated{% endif %}">
+      <div class="entry-body">
+        <div class="rating">
+          {% for filled in entry.review().stars() %}
+          <span class="star {% if filled %}filled{% else %}empty{% endif %}">★</span>
+          {% endfor %}
+        </div>
+        {% if let Some(comment) = entry.review().comment() %}
+        <div class="comment">{{ comment.value() }}</div>
+        {% endif %}
+        <div class="feed-meta">
+          {% match entry.review().source() %}
+          {% when ReviewSource::Remote with { actor_url } %}
+          <a href="{{ actor_url }}" class="feed-user" target="_blank" rel="noopener noreferrer">{{ entry.user_display_name() }}</a>
+          <span class="feed-time">{{ entry.review().watched_at().format("%b %-d, %Y") }}</span>
+          <span class="remote-badge">&#8599; federated</span>
+          {% when ReviewSource::Local %}
+          {% if ctx.is_current_user(entry.review().user_id().value()) %}
+          <span class="feed-user">you</span>
+          {% else %}
+          <a href="/users/{{ entry.review().user_id().value() }}" class="feed-user">{{ entry.user_display_name() }}</a>
+          {% endif %}
+          <span class="feed-time">{{ entry.review().watched_at().format("%b %-d, %Y") }}</span>
+          {% endmatch %}
+        </div>
+        {% if ctx.is_current_user(entry.review().user_id().value()) %}
+        <form method="post" action="/reviews/{{ entry.review().id().value() }}/delete" class="delete-form">
+          <input type="hidden" name="redirect_after" value="/movies/{{ movie.id().value() }}">
+          <input type="hidden" name="_csrf" value="{{ ctx.csrf_token }}">
+          <button type="submit">Delete</button>
+        </form>
+        {% endif %}
+      </div>
+    </article>
+    {% else %}
+    <p class="empty">No reviews yet.</p>
+    {% endfor %}
+  </div>
+
+  <nav class="pagination">
+    {% if current_offset >= limit %}
+    <a href="/movies/{{ movie.id().value() }}?offset={{ current_offset - limit }}&limit={{ limit }}" class="page-nav">&larr; Prev</a>
+    {% endif %}
+    {% if has_more %}
+    <a href="/movies/{{ movie.id().value() }}?offset={{ current_offset + limit }}&limit={{ limit }}" class="page-nav">Next &rarr;</a>
+    {% endif %}
+  </nav>
+
+</div>
+{% endblock %}

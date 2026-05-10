@@ -109,7 +109,7 @@
         <div class="poster"><img src="/posters/{{ poster.value() }}" alt=""></div>
         {% endif %}
         <div class="entry-body">
-          <div class="entry-title">{{ entry.movie().title().value() }} <span class="year">({{ entry.movie().release_year().value() }})</span></div>
+          <div class="entry-title"><a href="/movies/{{ entry.movie().id().value() }}" class="movie-title-link">{{ entry.movie().title().value() }}</a> <span class="year">({{ entry.movie().release_year().value() }})</span></div>
           {% if let Some(dir) = entry.movie().director() %}<div class="director">{{ dir }}</div>{% endif %}
           <div class="rating">
             {% for filled in entry.review().stars() %}
@@ -179,7 +179,7 @@
       {% endif %}
       <div class="entry-body">
         <div class="entry-title">
-          {{ entry.movie().title().value() }}
+          <a href="/movies/{{ entry.movie().id().value() }}" class="movie-title-link">{{ entry.movie().title().value() }}</a>
           <span class="year">({{ entry.movie().release_year().value() }})</span>
         </div>
         {% if let Some(dir) = entry.movie().director() %}

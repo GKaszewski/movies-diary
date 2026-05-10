@@ -33,6 +33,7 @@ poster-fetcher = { workspace = true }
 poster-storage = { workspace = true }
 poster-sync = { workspace = true }
 export = { workspace = true }
+importer = { workspace = true }
 nats = { workspace = true, optional = true }
 sqlx = { workspace = true }
 

@@ -12,6 +12,8 @@ sqlx = { version = "0.8.6", features = [
 ] }
 
 domain = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
 anyhow = { workspace = true }
 uuid = { workspace = true }
 chrono = { workspace = true }

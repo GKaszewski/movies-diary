@@ -1,12 +1,28 @@
-pub mod error;
-pub mod mapper;
-pub mod parsers;
-pub mod types;
+mod mapper;
+mod parsers;
 
-pub use error::ImportError;
-pub use mapper::apply_mapping;
-pub use parsers::{parse_csv, parse_json};
-pub use types::{AnnotatedRow, DomainField, FieldMapping, ImportRow, ParsedFile, RowResult, Transform};
+use domain::{
+    models::{AnnotatedRow, FieldMapping, FileFormat, ImportError, ParsedFile},
+    ports::DocumentParser,
+};
 
-#[cfg(feature = "xlsx")]
-pub use parsers::parse_xlsx;
+pub struct ImporterDocumentParser;
+
+impl DocumentParser for ImporterDocumentParser {
+    fn parse(&self, bytes: &[u8], format: FileFormat) -> Result<ParsedFile, ImportError> {
+        match format {
+            FileFormat::Csv => parsers::parse_csv(bytes),
+            FileFormat::Json => parsers::parse_json(bytes),
+            FileFormat::Xlsx => {
+                #[cfg(feature = "xlsx")]
+                { parsers::parse_xlsx(bytes) }
+                #[cfg(not(feature = "xlsx"))]
+                { Err(ImportError::Xlsx("XLSX support not compiled in".into())) }
+            }
+        }
+    }
+
+    fn apply_mapping(&self, file: &ParsedFile, mappings: &[FieldMapping]) -> Vec<AnnotatedRow> {
+        mapper::apply_mapping(file, mappings)
+    }
+}

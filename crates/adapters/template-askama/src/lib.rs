@@ -1,8 +1,8 @@
 use application::ports::{
     ActivityFeedPageData, FollowersPageData, FollowingPageData, HtmlPageContext, HtmlRenderer,
     ImportMappingPageData, ImportPreviewPageData, ImportPreviewRow, ImportProfileView,
-    ImportRowStatus, ImportUploadPageData, LoginPageData, NewReviewPageData, ProfilePageData,
-    RegisterPageData, UsersPageData,
+    ImportRowStatus, ImportUploadPageData, LoginPageData, MovieDetailPageData, NewReviewPageData,
+    ProfilePageData, RegisterPageData, UsersPageData,
 };
 use askama::Template;
 use chrono::Datelike;
@@ -92,6 +92,19 @@ struct ActivityFeedTemplate<'a> {
     pub filter: String,
     pub sort_by: String,
     pub search: String,
+}
+
+#[derive(Template)]
+#[template(path = "movie_detail.html")]
+struct MovieDetailTemplate<'a> {
+    ctx: &'a HtmlPageContext,
+    movie: &'a domain::models::Movie,
+    stats: &'a domain::models::MovieStats,
+    reviews: &'a [domain::models::FeedEntry],
+    current_offset: u32,
+    has_more: bool,
+    limit: u32,
+    histogram_max: u64,
 }
 
 impl<'a> ActivityFeedTemplate<'a> {
@@ -545,6 +558,21 @@ impl HtmlRenderer for AskamaHtmlRenderer {
                 .collect(),
             sort_by: data.sort_by.clone(),
             search: data.search.clone(),
+        }
+        .render()
+        .map_err(|e| e.to_string())
+    }
+
+    fn render_movie_detail_page(&self, data: MovieDetailPageData) -> Result<String, String> {
+        MovieDetailTemplate {
+            ctx: &data.ctx,
+            movie: &data.movie,
+            stats: &data.stats,
+            reviews: &data.reviews.items,
+            current_offset: data.current_offset,
+            has_more: data.has_more,
+            limit: data.limit,
+            histogram_max: data.histogram_max,
         }
         .render()
         .map_err(|e| e.to_string())

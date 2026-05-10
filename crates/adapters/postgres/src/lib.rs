@@ -3,7 +3,7 @@ use domain::{
     errors::DomainError,
     events::DomainEvent,
     models::{
-        DiaryEntry, DiaryFilter, DirectorStat, FeedEntry, MonthlyRating, Movie, Review,
+        DiaryEntry, DiaryFilter, DirectorStat, FeedEntry, MonthlyRating, Movie, MovieStats, Review,
         ReviewHistory, ReviewSource, SortDirection, UserStats, UserTrends,
         collections::{PageParams, Paginated},
     },
@@ -18,8 +18,8 @@ mod models;
 mod users;
 
 use models::{
-    DiaryRow, DirectorCountRow, FeedRow, MonthlyRatingRow, MovieRow, ReviewRow, UserTotalsRow,
-    datetime_to_str,
+    DiaryRow, DirectorCountRow, FeedRow, MonthlyRatingRow, MovieRow, MovieStatsRow, ReviewRow,
+    UserTotalsRow, datetime_to_str,
 };
 
 pub use import_profile::PostgresImportProfileRepository;
@@ -691,6 +691,80 @@ impl DiaryRepository for PostgresRepository {
         .map_err(Self::map_err)?;
 
         rows.into_iter().map(DiaryRow::to_domain).collect()
+    }
+
+    async fn get_movie_stats(&self, movie_id: &MovieId) -> Result<MovieStats, DomainError> {
+        let id_str = movie_id.value().to_string();
+        sqlx::query_as::<_, MovieStatsRow>(
+            "SELECT
+                COUNT(*) AS total_count,
+                AVG(CAST(rating AS FLOAT)) AS avg_rating,
+                COUNT(CASE WHEN remote_actor_url IS NOT NULL THEN 1 END) AS federated_count,
+                COUNT(CASE WHEN rating = 1 THEN 1 END) AS rating_1,
+                COUNT(CASE WHEN rating = 2 THEN 1 END) AS rating_2,
+                COUNT(CASE WHEN rating = 3 THEN 1 END) AS rating_3,
+                COUNT(CASE WHEN rating = 4 THEN 1 END) AS rating_4,
+                COUNT(CASE WHEN rating = 5 THEN 1 END) AS rating_5
+             FROM reviews WHERE movie_id = $1",
+        )
+        .bind(id_str)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(Self::map_err)
+        .map(MovieStatsRow::to_domain)
+    }
+
+    async fn get_movie_social_feed(
+        &self,
+        movie_id: &MovieId,
+        page: &PageParams,
+    ) -> Result<Paginated<FeedEntry>, DomainError> {
+        let id_str = movie_id.value().to_string();
+        let limit = page.limit as i64;
+        let offset = page.offset as i64;
+
+        let total: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM reviews WHERE movie_id = $1",
+        )
+        .bind(&id_str)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(Self::map_err)?;
+
+        let rows = sqlx::query_as::<_, FeedRow>(
+            "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
+                    r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment,
+                    to_char(r.watched_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS watched_at,
+                    to_char(r.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS created_at,
+                    r.remote_actor_url,
+                    CASE WHEN r.remote_actor_url IS NOT NULL THEN r.remote_actor_url
+                         WHEN u.email IS NOT NULL THEN u.email
+                         ELSE r.user_id END AS user_email
+             FROM reviews r
+             INNER JOIN movies m ON m.id = r.movie_id
+             LEFT JOIN users u ON u.id = r.user_id
+             WHERE r.movie_id = $1
+             ORDER BY r.watched_at DESC
+             LIMIT $2 OFFSET $3",
+        )
+        .bind(&id_str)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(Self::map_err)?;
+
+        let items = rows
+            .into_iter()
+            .map(FeedRow::to_domain)
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(Paginated {
+            items,
+            total_count: total as u64,
+            limit: page.limit,
+            offset: page.offset,
+        })
     }
 }
 

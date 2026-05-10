@@ -1,6 +1,9 @@
 use chrono::NaiveDateTime;
-use domain::{errors::DomainError, value_objects::{ImportSessionId, UserId}};
-use importer::{AnnotatedRow, ImportRow, RowResult};
+use domain::{
+    errors::DomainError,
+    models::{ImportRow, import::RowResult},
+    value_objects::{ImportSessionId, UserId},
+};
 use uuid::Uuid;
 
 use crate::{commands::{ExecuteImportCommand, LogReviewCommand}, context::AppContext, use_cases::log_review};
@@ -20,11 +23,7 @@ pub async fn execute(ctx: &AppContext, cmd: ExecuteImportCommand) -> Result<Impo
         .await?
         .ok_or_else(|| DomainError::NotFound("import session".into()))?;
 
-    let row_results: Vec<AnnotatedRow> = session.row_results
-        .as_deref()
-        .and_then(|s| serde_json::from_str(s).ok())
-        .unwrap_or_default();
-
+    let row_results = session.row_results.unwrap_or_default();
     let confirmed_set: std::collections::HashSet<usize> = confirmed_indices.into_iter().collect();
 
     let mut imported = 0;

@@ -1,6 +1,5 @@
 use chrono::NaiveDateTime;
-use domain::models::{ExportFormat, UserRole};
-use importer::FieldMapping;
+use domain::models::{ExportFormat, FieldMapping, FileFormat, UserRole};
 use uuid::Uuid;
 
 pub struct LogReviewCommand {
@@ -44,11 +43,7 @@ pub struct ExportCommand {
     pub format: ExportFormat,
 }
 
-pub enum FileFormat {
-    Csv,
-    Json,
-    Xlsx,
-}
+// FileFormat is now in domain::models — no longer defined here
 
 pub struct CreateImportSessionCommand {
     pub user_id: Uuid,

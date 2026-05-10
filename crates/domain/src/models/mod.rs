@@ -9,9 +9,14 @@ use crate::{
     },
 };
 pub mod collections;
+pub mod import;
 pub mod import_session;
 pub mod import_profile;
 
+pub use import::{
+    AnnotatedRow, DomainField, FieldMapping, FileFormat, ImportError,
+    ImportRow, ParsedFile, RowResult, Transform,
+};
 pub use import_session::ImportSession;
 pub use import_profile::ImportProfile;
 
@@ -216,6 +221,10 @@ impl Review {
         let r = self.rating.value();
         [r >= 1, r >= 2, r >= 3, r >= 4, r >= 5]
     }
+
+    pub fn is_remote(&self) -> bool {
+        matches!(self.source, ReviewSource::Remote { .. })
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -257,6 +266,14 @@ impl ReviewHistory {
     pub fn sort_by_date(&mut self) {
         self.viewings.sort_by_key(|r| *r.watched_at());
     }
+}
+
+#[derive(Clone, Debug)]
+pub struct MovieStats {
+    pub total_count: u64,
+    pub avg_rating: Option<f64>,
+    pub federated_count: u64,
+    pub rating_histogram: [u64; 5], // index 0 = 1★, index 4 = 5★
 }
 
 #[derive(Clone, Debug, Default)]

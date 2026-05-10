@@ -427,6 +427,44 @@ fn default_export_format() -> String {
     "csv".to_string()
 }
 
+#[derive(serde::Deserialize, Default)]
+pub struct PaginationQueryParams {
+    pub limit: Option<u32>,
+    pub offset: Option<u32>,
+}
+
+#[derive(serde::Serialize, utoipa::ToSchema)]
+pub struct MovieStatsDto {
+    pub total_count: u64,
+    pub avg_rating: Option<f64>,
+    pub federated_count: u64,
+    pub rating_histogram: [u64; 5],
+}
+
+#[derive(serde::Serialize, utoipa::ToSchema)]
+pub struct SocialReviewDto {
+    pub user_display: String,
+    pub rating: u8,
+    pub comment: Option<String>,
+    pub watched_at: String,
+    pub is_federated: bool,
+}
+
+#[derive(serde::Serialize, utoipa::ToSchema)]
+pub struct SocialFeedResponse {
+    pub items: Vec<SocialReviewDto>,
+    pub total_count: u64,
+    pub limit: u32,
+    pub offset: u32,
+}
+
+#[derive(serde::Serialize, utoipa::ToSchema)]
+pub struct MovieDetailResponse {
+    pub movie: MovieDto,
+    pub stats: MovieStatsDto,
+    pub reviews: SocialFeedResponse,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

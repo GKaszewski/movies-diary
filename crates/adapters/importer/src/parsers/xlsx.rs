@@ -1,6 +1,6 @@
 use calamine::{Reader, open_workbook_from_rs, Xlsx, Data};
 use std::io::Cursor;
-use crate::{ImportError, types::ParsedFile};
+use domain::models::{ImportError, ParsedFile};
 
 pub fn parse_xlsx(bytes: &[u8]) -> Result<ParsedFile, ImportError> {
     let cursor = Cursor::new(bytes);

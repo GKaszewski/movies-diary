@@ -3,7 +3,7 @@ use domain::{
     errors::DomainError,
     events::DomainEvent,
     models::{
-        DiaryEntry, DiaryFilter, DirectorStat, FeedEntry, MonthlyRating, Movie, Review,
+        DiaryEntry, DiaryFilter, DirectorStat, FeedEntry, MonthlyRating, Movie, MovieStats, Review,
         ReviewHistory, ReviewSource, SortDirection, UserStats, UserTrends,
         collections::{PageParams, Paginated},
     },
@@ -19,8 +19,8 @@ mod models;
 mod users;
 
 use models::{
-    DiaryRow, DirectorCountRow, FeedRow, MonthlyRatingRow, MovieRow, ReviewRow, UserTotalsRow,
-    datetime_to_str,
+    DiaryRow, DirectorCountRow, FeedRow, MonthlyRatingRow, MovieRow, MovieStatsRow, ReviewRow,
+    UserTotalsRow, datetime_to_str,
 };
 
 pub use import_profile::SqliteImportProfileRepository;
@@ -680,6 +680,78 @@ impl DiaryRepository for SqliteMovieRepository {
 
         rows.into_iter().map(DiaryRow::to_domain).collect()
     }
+
+    async fn get_movie_stats(&self, movie_id: &MovieId) -> Result<MovieStats, DomainError> {
+        let id_str = movie_id.value().to_string();
+        sqlx::query_as::<_, MovieStatsRow>(
+            "SELECT
+                COUNT(*) AS total_count,
+                AVG(CAST(rating AS REAL)) AS avg_rating,
+                COUNT(CASE WHEN remote_actor_url IS NOT NULL THEN 1 END) AS federated_count,
+                COUNT(CASE WHEN rating = 1 THEN 1 END) AS rating_1,
+                COUNT(CASE WHEN rating = 2 THEN 1 END) AS rating_2,
+                COUNT(CASE WHEN rating = 3 THEN 1 END) AS rating_3,
+                COUNT(CASE WHEN rating = 4 THEN 1 END) AS rating_4,
+                COUNT(CASE WHEN rating = 5 THEN 1 END) AS rating_5
+             FROM reviews WHERE movie_id = ?",
+        )
+        .bind(id_str)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(Self::map_err)
+        .map(MovieStatsRow::to_domain)
+    }
+
+    async fn get_movie_social_feed(
+        &self,
+        movie_id: &MovieId,
+        page: &PageParams,
+    ) -> Result<Paginated<FeedEntry>, DomainError> {
+        let id_str = movie_id.value().to_string();
+        let limit = page.limit as i64;
+        let offset = page.offset as i64;
+
+        let total = sqlx::query_scalar!(
+            "SELECT COUNT(*) FROM reviews WHERE movie_id = ?",
+            id_str
+        )
+        .fetch_one(&self.pool)
+        .await
+        .map_err(Self::map_err)?;
+
+        let rows = sqlx::query_as::<_, FeedRow>(
+            "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
+                    r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment,
+                    r.watched_at, r.created_at, r.remote_actor_url,
+                    CASE WHEN r.remote_actor_url IS NOT NULL THEN r.remote_actor_url
+                         WHEN u.email IS NOT NULL THEN u.email
+                         ELSE r.user_id END AS user_email
+             FROM reviews r
+             INNER JOIN movies m ON m.id = r.movie_id
+             LEFT JOIN users u ON u.id = r.user_id
+             WHERE r.movie_id = ?
+             ORDER BY r.watched_at DESC
+             LIMIT ? OFFSET ?",
+        )
+        .bind(&id_str)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(Self::map_err)?;
+
+        let items = rows
+            .into_iter()
+            .map(FeedRow::to_domain)
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(Paginated {
+            items,
+            total_count: total as u64,
+            limit: page.limit,
+            offset: page.offset,
+        })
+    }
 }
 
 #[async_trait]
@@ -914,5 +986,97 @@ mod feed_filter_tests {
             .collect();
         assert!(titles.contains(&"Inception".to_string()));
         assert!(titles.contains(&"Dune".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_get_movie_stats_local() {
+        let pool = SqlitePool::connect(":memory:").await.unwrap();
+        setup(&pool).await;
+        let repo = SqliteMovieRepository::new(pool);
+
+        // Inception: 1 local review, rating=5, no federated
+        let movie_id = domain::value_objects::MovieId::from_uuid(
+            uuid::Uuid::parse_str("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa").unwrap(),
+        );
+        let stats = repo.get_movie_stats(&movie_id).await.unwrap();
+
+        assert_eq!(stats.total_count, 1);
+        assert_eq!(stats.federated_count, 0);
+        assert!((stats.avg_rating.unwrap() - 5.0).abs() < 0.001);
+        assert_eq!(stats.rating_histogram[4], 1); // 5★ bucket
+        assert_eq!(stats.rating_histogram[0], 0); // 1★ bucket
+    }
+
+    #[tokio::test]
+    async fn test_get_movie_social_feed_returns_reviews_for_movie() {
+        let pool = SqlitePool::connect(":memory:").await.unwrap();
+        setup(&pool).await;
+        let repo = SqliteMovieRepository::new(pool);
+
+        let movie_id = domain::value_objects::MovieId::from_uuid(
+            uuid::Uuid::parse_str("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa").unwrap(),
+        );
+        let page = PageParams::new(Some(10), Some(0)).unwrap();
+        let result = repo.get_movie_social_feed(&movie_id, &page).await.unwrap();
+
+        assert_eq!(result.total_count, 1);
+        assert_eq!(result.items.len(), 1);
+        assert_eq!(result.items[0].movie().title().value(), "Inception");
+        assert_eq!(result.items[0].review().rating().value(), 5);
+        assert_eq!(result.items[0].user_display_name(), "alice");
+        assert!(!result.items[0].review().is_remote());
+    }
+
+    #[tokio::test]
+    async fn test_get_movie_social_feed_federated_review() {
+        let pool = SqlitePool::connect(":memory:").await.unwrap();
+        setup(&pool).await;
+        let repo = SqliteMovieRepository::new(pool);
+
+        let movie_id = domain::value_objects::MovieId::from_uuid(
+            uuid::Uuid::parse_str("cccccccc-cccc-cccc-cccc-cccccccccccc").unwrap(),
+        );
+        let page = PageParams::new(Some(10), Some(0)).unwrap();
+        let result = repo.get_movie_social_feed(&movie_id, &page).await.unwrap();
+
+        assert_eq!(result.total_count, 1);
+        assert_eq!(result.items.len(), 1);
+        assert!(result.items[0].review().is_remote());
+        assert_eq!(result.items[0].user_email(), "https://remote.social/users/carol");
+    }
+
+    #[tokio::test]
+    async fn test_get_movie_social_feed_pagination() {
+        let pool = SqlitePool::connect(":memory:").await.unwrap();
+        setup(&pool).await;
+        let repo = SqliteMovieRepository::new(pool);
+
+        let movie_id = domain::value_objects::MovieId::from_uuid(
+            uuid::Uuid::parse_str("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa").unwrap(),
+        );
+        // offset beyond results: total_count still correct, items empty
+        let page = PageParams::new(Some(10), Some(5)).unwrap();
+        let result = repo.get_movie_social_feed(&movie_id, &page).await.unwrap();
+
+        assert_eq!(result.total_count, 1);
+        assert_eq!(result.items.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_get_movie_stats_federated() {
+        let pool = SqlitePool::connect(":memory:").await.unwrap();
+        setup(&pool).await;
+        let repo = SqliteMovieRepository::new(pool);
+
+        // Dune: 1 federated review, rating=4
+        let movie_id = domain::value_objects::MovieId::from_uuid(
+            uuid::Uuid::parse_str("cccccccc-cccc-cccc-cccc-cccccccccccc").unwrap(),
+        );
+        let stats = repo.get_movie_stats(&movie_id).await.unwrap();
+
+        assert_eq!(stats.total_count, 1);
+        assert_eq!(stats.federated_count, 1);
+        assert_eq!(stats.rating_histogram[3], 1); // 4★ bucket
+        assert_eq!(stats.rating_histogram[4], 0); // 5★ bucket
     }
 }

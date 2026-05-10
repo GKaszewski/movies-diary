@@ -13,12 +13,14 @@ use application::{
         DeleteReviewCommand, ExportCommand, LoginCommand, RegisterCommand, SyncPosterCommand,
     },
     queries::{
-        GetActivityFeedQuery, GetReviewHistoryQuery, GetUserProfileQuery, GetUsersQuery,
+        GetActivityFeedQuery, GetMovieSocialPageQuery, GetReviewHistoryQuery, GetUserProfileQuery,
+        GetUsersQuery,
     },
     use_cases::{
         delete_review, export_diary as export_diary_uc, get_activity_feed as get_feed_uc,
-        get_diary, get_review_history, get_user_profile as get_user_profile_uc, get_users,
-        log_review, login as login_uc, register as register_uc, sync_poster,
+        get_diary, get_movie_social_page, get_review_history,
+        get_user_profile as get_user_profile_uc, get_users, log_review, login as login_uc,
+        register as register_uc, sync_poster,
     },
 };
 use domain::{
@@ -35,8 +37,10 @@ use crate::{
         ActivityFeedQueryParams, ActivityFeedResponse, DiaryEntryDto, DiaryQueryParams,
         DiaryResponse, DirectorStatDto, ExportQueryParams, FeedEntryDto, LogReviewData,
         LogReviewRequest, LoginRequest, LoginResponse, MonthActivityDto, MonthlyRatingDto,
-        MovieDto, RegisterRequest, ReviewDto, ReviewHistoryResponse, UserProfileQueryParams,
-        UserProfileResponse, UserStatsDto, UserSummaryDto, UserTrendsDto, UsersResponse,
+        MovieDetailResponse, MovieDto, MovieStatsDto, PaginationQueryParams, RegisterRequest,
+        ReviewDto, ReviewHistoryResponse, SocialFeedResponse, SocialReviewDto,
+        UserProfileQueryParams, UserProfileResponse, UserStatsDto, UserSummaryDto, UserTrendsDto,
+        UsersResponse,
     },
     errors::ApiError,
     extractors::AuthenticatedUser,
@@ -239,6 +243,51 @@ pub async fn delete_review(
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
     }
+}
+
+#[utoipa::path(
+    get, path = "/api/v1/movies/{movie_id}",
+    params(("movie_id" = Uuid, Path, description = "Movie ID")),
+    responses(
+        (status = 200, body = MovieDetailResponse),
+        (status = 404, description = "Movie not found"),
+    )
+)]
+pub async fn get_movie_detail(
+    State(state): State<AppState>,
+    Path(movie_id): Path<Uuid>,
+    Query(params): Query<PaginationQueryParams>,
+) -> Result<Json<MovieDetailResponse>, ApiError> {
+    let limit = params.limit.unwrap_or(20);
+    let offset = params.offset.unwrap_or(0);
+
+    let result = get_movie_social_page::execute(
+        &state.app_ctx,
+        GetMovieSocialPageQuery { movie_id, limit, offset },
+    )
+    .await?;
+
+    Ok(Json(MovieDetailResponse {
+        movie: movie_to_dto(&result.movie),
+        stats: MovieStatsDto {
+            total_count: result.stats.total_count,
+            avg_rating: result.stats.avg_rating,
+            federated_count: result.stats.federated_count,
+            rating_histogram: result.stats.rating_histogram,
+        },
+        reviews: SocialFeedResponse {
+            items: result.reviews.items.iter().map(|e| SocialReviewDto {
+                user_display: e.user_display_name().to_string(),
+                rating: e.review().rating().value(),
+                comment: e.review().comment().map(|c| c.value().to_string()),
+                watched_at: e.review().watched_at().to_string(),
+                is_federated: e.review().is_remote(),
+            }).collect(),
+            total_count: result.reviews.total_count,
+            limit: result.reviews.limit,
+            offset: result.reviews.offset,
+        },
+    }))
 }
 
 fn movie_to_dto(movie: &Movie) -> MovieDto {

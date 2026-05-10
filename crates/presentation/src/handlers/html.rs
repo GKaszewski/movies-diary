@@ -14,11 +14,13 @@ use application::ports::{FollowersPageData, FollowingPageData};
 use application::{
     commands::{DeleteReviewCommand, ExportCommand, LoginCommand, RegisterCommand},
     ports::{
-        HtmlPageContext, LoginPageData, NewReviewPageData, RegisterPageData, RemoteActorView,
+        HtmlPageContext, LoginPageData, MovieDetailPageData, NewReviewPageData, RegisterPageData,
+        RemoteActorView,
     },
+    queries::GetMovieSocialPageQuery,
     use_cases::{
-        delete_review, export_diary as export_diary_uc, log_review, login as login_uc,
-        register as register_uc,
+        delete_review, export_diary as export_diary_uc, get_movie_social_page, log_review,
+        login as login_uc, register as register_uc,
     },
 };
 use domain::models::ExportFormat;
@@ -913,6 +915,54 @@ pub async fn remove_follower(
                 profile_user_uuid, msg
             ))
             .into_response()
+        }
+    }
+}
+
+pub async fn get_movie_detail(
+    OptionalCookieUser(user_id): OptionalCookieUser,
+    State(state): State<AppState>,
+    Path(movie_id): Path<uuid::Uuid>,
+    Query(params): Query<crate::dtos::PaginationQueryParams>,
+    Extension(csrf): Extension<CsrfToken>,
+) -> impl IntoResponse {
+    let ctx = build_page_context(&state, user_id, csrf.0).await;
+    let limit = params.limit.unwrap_or(20);
+    let offset = params.offset.unwrap_or(0);
+
+    match get_movie_social_page::execute(
+        &state.app_ctx,
+        GetMovieSocialPageQuery { movie_id, limit, offset },
+    )
+    .await
+    {
+        Err(DomainError::NotFound(_)) => StatusCode::NOT_FOUND.into_response(),
+        Err(DomainError::ValidationError(_)) => StatusCode::BAD_REQUEST.into_response(),
+        Err(e) => {
+            tracing::error!("movie detail error: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+        Ok(result) => {
+            let histogram_max = result.stats.rating_histogram.iter().copied().max().unwrap_or(1);
+            let has_more = result.reviews.offset + result.reviews.limit
+                < result.reviews.total_count as u32;
+            let data = MovieDetailPageData {
+                ctx,
+                movie: result.movie,
+                stats: result.stats,
+                current_offset: result.reviews.offset,
+                has_more,
+                limit: result.reviews.limit,
+                reviews: result.reviews,
+                histogram_max,
+            };
+            match state.html_renderer.render_movie_detail_page(data) {
+                Ok(html) => Html(html).into_response(),
+                Err(e) => {
+                    tracing::error!("template error: {}", e);
+                    StatusCode::INTERNAL_SERVER_ERROR.into_response()
+                }
+            }
         }
     }
 }

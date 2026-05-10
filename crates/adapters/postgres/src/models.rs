@@ -158,6 +158,35 @@ impl FeedRow {
 }
 
 #[derive(sqlx::FromRow)]
+pub(crate) struct MovieStatsRow {
+    pub total_count: i64,
+    pub avg_rating: Option<f64>,
+    pub federated_count: i64,
+    pub rating_1: i64,
+    pub rating_2: i64,
+    pub rating_3: i64,
+    pub rating_4: i64,
+    pub rating_5: i64,
+}
+
+impl MovieStatsRow {
+    pub fn to_domain(self) -> domain::models::MovieStats {
+        domain::models::MovieStats {
+            total_count: self.total_count as u64,
+            avg_rating: self.avg_rating,
+            federated_count: self.federated_count as u64,
+            rating_histogram: [
+                self.rating_1 as u64,
+                self.rating_2 as u64,
+                self.rating_3 as u64,
+                self.rating_4 as u64,
+                self.rating_5 as u64,
+            ],
+        }
+    }
+}
+
+#[derive(sqlx::FromRow)]
 pub(crate) struct UserSummaryRow {
     pub id: String,
     pub email: String,

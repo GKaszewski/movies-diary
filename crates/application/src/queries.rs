@@ -64,3 +64,9 @@ pub struct GetUserProfileQuery {
     pub sort_by: domain::ports::FeedSortBy,
     pub search: Option<String>,
 }
+
+pub struct GetMovieSocialPageQuery {
+    pub movie_id: uuid::Uuid,
+    pub limit: u32,
+    pub offset: u32,
+}

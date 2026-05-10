@@ -136,6 +136,16 @@ impl domain::ports::ImportSessionRepository for PanicImportSession {
     async fn delete_expired_for_user(&self, _: &UserId) -> Result<(), DomainError> { panic!() }
 }
 
+struct PanicDocumentParser;
+impl domain::ports::DocumentParser for PanicDocumentParser {
+    fn parse(&self, _: &[u8], _: domain::models::FileFormat) -> Result<domain::models::ParsedFile, domain::models::ImportError> {
+        panic!("DocumentParser not wired in tests")
+    }
+    fn apply_mapping(&self, _: &domain::models::ParsedFile, _: &[domain::models::FieldMapping]) -> Vec<domain::models::AnnotatedRow> {
+        panic!("DocumentParser not wired in tests")
+    }
+}
+
 struct PanicImportProfile;
 #[async_trait]
 impl domain::ports::ImportProfileRepository for PanicImportProfile {
@@ -177,6 +187,7 @@ async fn test_app() -> Router {
             review_repository: Arc::clone(&repo) as _,
             diary_repository: Arc::clone(&repo) as _,
             diary_exporter: Arc::new(PanicExporter),
+            document_parser: Arc::new(PanicDocumentParser),
             stats_repository: Arc::clone(&repo) as _,
             metadata_client: Arc::new(PanicMeta),
             poster_fetcher: Arc::new(PanicFetcher),
@@ -273,4 +284,36 @@ async fn post_api_auth_login_unknown_user_returns_401() {
         .unwrap();
 
     assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn get_api_movie_detail_returns_404_for_unknown_id() {
+    let app = test_app().await;
+    let response = app
+        .oneshot(with_ip(
+            Request::builder()
+                .uri("/api/v1/movies/00000000-0000-0000-0000-000000000000")
+                .body(Body::empty())
+                .unwrap(),
+        ))
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn get_movie_detail_html_returns_404_for_unknown_id() {
+    let app = test_app().await;
+    let response = app
+        .oneshot(with_ip(
+            Request::builder()
+                .uri("/movies/00000000-0000-0000-0000-000000000000")
+                .body(Body::empty())
+                .unwrap(),
+        ))
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
 }

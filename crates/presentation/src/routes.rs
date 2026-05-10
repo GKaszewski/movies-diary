@@ -50,6 +50,10 @@ fn html_routes(rate_limit: u64) -> Router<AppState> {
             "/users/{id}",
             routing::get(handlers::html::get_user_profile),
         )
+        .route(
+            "/movies/{movie_id}",
+            routing::get(handlers::html::get_movie_detail),
+        )
         .merge(auth)
         .route(
             "/reviews/new",
@@ -130,6 +134,10 @@ fn api_routes(rate_limit: u64) -> Router<AppState> {
         .route(
             "/movies/{id}/history",
             routing::get(handlers::api::get_review_history),
+        )
+        .route(
+            "/movies/{id}",
+            routing::get(handlers::api::get_movie_detail),
         )
         .route("/reviews", routing::post(handlers::api::post_review))
         .route(

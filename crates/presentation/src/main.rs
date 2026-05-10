@@ -7,6 +7,7 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use application::{config::AppConfig, context::AppContext};
 use export::ExportAdapter;
+use importer::ImporterDocumentParser;
 use rss::RssAdapter;
 use template_askama::AskamaHtmlRenderer;
 
@@ -14,7 +15,7 @@ use doc::ApiDocExt;
 use presentation::{openapi::ApiDoc, routes, state::AppState};
 use utoipa::OpenApi as _;
 
-use domain::ports::{DiaryExporter, EventPublisher, ImportProfileRepository, ImportSessionRepository};
+use domain::ports::{DiaryExporter, DocumentParser, EventPublisher, ImportProfileRepository, ImportSessionRepository};
 
 #[cfg(not(any(feature = "sqlite", feature = "postgres")))]
 compile_error!("At least one database backend must be enabled. Use --features sqlite or --features postgres");
@@ -150,6 +151,7 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
         review_repository,
         diary_repository,
         diary_exporter: Arc::new(ExportAdapter) as Arc<dyn DiaryExporter>,
+        document_parser: Arc::new(ImporterDocumentParser) as Arc<dyn DocumentParser>,
         stats_repository,
         metadata_client,
         poster_fetcher,

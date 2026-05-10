@@ -1,12 +1,12 @@
-use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct ParsedFile {
     pub columns: Vec<String>,
     pub rows: Vec<Vec<String>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DomainField {
     Title,
     ReleaseYear,
@@ -17,21 +17,21 @@ pub enum DomainField {
     ExternalMetadataId,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub enum Transform {
     RatingScale(f64),
     DateFormat(String),
     Identity,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct FieldMapping {
     pub source_column: String,
     pub domain_field: DomainField,
     pub transform: Transform,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct ImportRow {
     pub title: Option<String>,
     pub release_year: Option<String>,
@@ -42,16 +42,34 @@ pub struct ImportRow {
     pub external_metadata_id: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub enum RowResult {
     Valid(ImportRow),
     Invalid { errors: Vec<String>, raw: Vec<(String, String)> },
 }
 
-/// Wraps a RowResult with a duplicate flag so this information persists when
-/// serialised as JSON into the import_sessions.row_results DB column.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct AnnotatedRow {
     pub result: RowResult,
     pub is_duplicate: bool,
+}
+
+#[derive(Debug, Error)]
+pub enum ImportError {
+    #[error("CSV parse error: {0}")]
+    Csv(String),
+    #[error("JSON parse error: {0}")]
+    Json(String),
+    #[error("XLSX parse error: {0}")]
+    Xlsx(String),
+    #[error("Empty file")]
+    Empty,
+    #[error("Missing header row")]
+    NoHeader,
+}
+
+pub enum FileFormat {
+    Csv,
+    Json,
+    Xlsx,
 }

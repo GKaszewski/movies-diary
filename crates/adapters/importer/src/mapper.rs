@@ -1,4 +1,6 @@
-use crate::types::{AnnotatedRow, DomainField, FieldMapping, ImportRow, ParsedFile, RowResult, Transform};
+use domain::models::{
+    AnnotatedRow, DomainField, FieldMapping, ImportRow, ParsedFile, RowResult, Transform,
+};
 
 pub fn apply_mapping(file: &ParsedFile, mappings: &[FieldMapping]) -> Vec<AnnotatedRow> {
     file.rows.iter().map(|row| {
@@ -76,7 +78,7 @@ fn set_field(row: &mut ImportRow, field: &DomainField, value: String) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{DomainField, FieldMapping, ParsedFile, RowResult, Transform};
+    use domain::models::{DomainField, FieldMapping, ParsedFile, RowResult, Transform};
 
     fn sample_file() -> ParsedFile {
         ParsedFile {

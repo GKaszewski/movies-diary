@@ -219,6 +219,19 @@ mod tests {
         async fn get_user_history(&self, _: &UserId) -> Result<Vec<DiaryEntry>, DomainError> {
             panic!()
         }
+        async fn get_movie_stats(
+            &self,
+            _: &MovieId,
+        ) -> Result<domain::models::MovieStats, DomainError> {
+            panic!()
+        }
+        async fn get_movie_social_feed(
+            &self,
+            _: &MovieId,
+            _: &PageParams,
+        ) -> Result<Paginated<FeedEntry>, DomainError> {
+            panic!()
+        }
     }
     #[cfg(feature = "federation")]
     #[async_trait::async_trait]
@@ -352,6 +365,15 @@ mod tests {
         }
     }
 
+    impl domain::ports::DocumentParser for Panic {
+        fn parse(&self, _: &[u8], _: domain::models::FileFormat) -> Result<domain::models::ParsedFile, domain::models::ImportError> {
+            panic!()
+        }
+        fn apply_mapping(&self, _: &domain::models::ParsedFile, _: &[domain::models::FieldMapping]) -> Vec<domain::models::AnnotatedRow> {
+            panic!()
+        }
+    }
+
     impl crate::ports::HtmlRenderer for Panic {
         fn render_diary_page(
             &self,
@@ -408,6 +430,12 @@ mod tests {
         ) -> Result<String, String> {
             panic!()
         }
+        fn render_movie_detail_page(
+            &self,
+            _: application::ports::MovieDetailPageData,
+        ) -> Result<String, String> {
+            panic!()
+        }
         fn render_import_upload_page(&self, _: application::ports::ImportUploadPageData) -> Result<String, String> { panic!() }
         fn render_import_mapping_page(&self, _: application::ports::ImportMappingPageData) -> Result<String, String> { panic!() }
         fn render_import_preview_page(&self, _: application::ports::ImportPreviewPageData) -> Result<String, String> { panic!() }
@@ -439,6 +467,7 @@ mod tests {
                 review_repository: Arc::clone(&repo) as _,
                 diary_repository: Arc::clone(&repo) as _,
                 diary_exporter: Arc::clone(&repo) as _,
+                document_parser: Arc::clone(&repo) as _,
                 stats_repository: Arc::clone(&repo) as _,
                 metadata_client: Arc::clone(&repo) as _,
                 poster_fetcher: Arc::clone(&repo) as _,
