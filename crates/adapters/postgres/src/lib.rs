@@ -767,3 +767,33 @@ impl StatsRepository for PostgresRepository {
         })
     }
 }
+
+pub async fn wire(database_url: &str) -> anyhow::Result<(
+    sqlx::PgPool,
+    std::sync::Arc<dyn domain::ports::MovieRepository>,
+    std::sync::Arc<dyn domain::ports::ReviewRepository>,
+    std::sync::Arc<dyn domain::ports::DiaryRepository>,
+    std::sync::Arc<dyn domain::ports::StatsRepository>,
+    std::sync::Arc<dyn domain::ports::UserRepository>,
+)> {
+    use anyhow::Context;
+
+    let pool = sqlx::PgPool::connect(database_url)
+        .await
+        .context("Failed to connect to PostgreSQL database")?;
+
+    let repo = std::sync::Arc::new(PostgresRepository::new(pool.clone()));
+    repo.migrate()
+        .await
+        .map_err(|e| anyhow::anyhow!("{e}"))
+        .context("Database migration failed")?;
+
+    Ok((
+        pool.clone(),
+        std::sync::Arc::clone(&repo) as _,
+        std::sync::Arc::clone(&repo) as _,
+        std::sync::Arc::clone(&repo) as _,
+        std::sync::Arc::clone(&repo) as _,
+        std::sync::Arc::new(PostgresUserRepository::new(pool)) as _,
+    ))
+}

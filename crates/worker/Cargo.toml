@@ -15,7 +15,6 @@ postgres-federation = ["postgres", "dep:postgres-federation", "dep:activitypub",
 [dependencies]
 domain = { workspace = true }
 application = { workspace = true }
-event-publisher = { workspace = true }
 tokio = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }

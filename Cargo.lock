@@ -1626,6 +1626,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "event-payload"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "domain",
+ "serde",
+ "uuid",
+]
+
+[[package]]
 name = "event-publisher"
 version = "0.1.0"
 dependencies = [
@@ -2829,6 +2840,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "domain",
+ "event-payload",
  "futures",
  "serde",
  "serde_json",
@@ -3373,6 +3385,7 @@ dependencies = [
 name = "postgres"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "async-trait",
  "chrono",
  "domain",
@@ -3390,6 +3403,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "domain",
+ "event-payload",
  "futures",
  "serde",
  "serde_json",
@@ -3454,7 +3468,6 @@ dependencies = [
  "doc",
  "domain",
  "dotenvy",
- "event-publisher",
  "export",
  "http-body-util",
  "infer",
@@ -4532,6 +4545,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "domain",
+ "event-payload",
  "futures",
  "serde",
  "serde_json",
@@ -6242,7 +6256,6 @@ dependencies = [
  "chrono",
  "domain",
  "dotenvy",
- "event-publisher",
  "export",
  "futures",
  "metadata",

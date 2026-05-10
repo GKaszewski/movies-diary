@@ -759,6 +759,43 @@ impl StatsRepository for SqliteMovieRepository {
     }
 }
 
+pub async fn wire(database_url: &str) -> anyhow::Result<(
+    sqlx::SqlitePool,
+    std::sync::Arc<dyn domain::ports::MovieRepository>,
+    std::sync::Arc<dyn domain::ports::ReviewRepository>,
+    std::sync::Arc<dyn domain::ports::DiaryRepository>,
+    std::sync::Arc<dyn domain::ports::StatsRepository>,
+    std::sync::Arc<dyn domain::ports::UserRepository>,
+)> {
+    use std::str::FromStr;
+    use anyhow::Context;
+    use sqlx::sqlite::SqliteConnectOptions;
+
+    let opts = SqliteConnectOptions::from_str(database_url)
+        .context("Invalid DATABASE_URL")?
+        .create_if_missing(true)
+        .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal)
+        .busy_timeout(std::time::Duration::from_secs(5));
+    let pool = sqlx::SqlitePool::connect_with(opts)
+        .await
+        .context("Failed to connect to SQLite database")?;
+
+    let repo = std::sync::Arc::new(SqliteMovieRepository::new(pool.clone()));
+    repo.migrate()
+        .await
+        .map_err(|e| anyhow::anyhow!("{e}"))
+        .context("Database migration failed")?;
+
+    Ok((
+        pool.clone(),
+        std::sync::Arc::clone(&repo) as _,
+        std::sync::Arc::clone(&repo) as _,
+        std::sync::Arc::clone(&repo) as _,
+        std::sync::Arc::clone(&repo) as _,
+        std::sync::Arc::new(SqliteUserRepository::new(pool)) as _,
+    ))
+}
+
 #[cfg(test)]
 mod feed_filter_tests {
     use super::*;

@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 sqlx        = { version = "0.8.6", features = ["runtime-tokio-rustls", "sqlite", "macros", "chrono"] }
 domain      = { workspace = true }
+event-payload = { workspace = true }
 anyhow      = { workspace = true }
 async-trait = { workspace = true }
 serde       = { workspace = true }

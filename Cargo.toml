@@ -16,6 +16,7 @@ members = [
     "crates/adapters/activitypub",
     "crates/adapters/activitypub-base",
     "crates/adapters/export",
+    "crates/adapters/event-payload",
     "crates/adapters/nats",
     "crates/application",
     "crates/domain",
@@ -67,6 +68,7 @@ template-askama = { path = "crates/adapters/template-askama" }
 activitypub = { path = "crates/adapters/activitypub" }
 activitypub-base = { path = "crates/adapters/activitypub-base" }
 doc = { path = "crates/doc" }
+event-payload = { path = "crates/adapters/event-payload" }
 nats = { path = "crates/adapters/nats" }
 sqlite-event-queue = { path = "crates/adapters/sqlite-event-queue" }
 postgres-event-queue = { path = "crates/adapters/postgres-event-queue" }

@@ -49,7 +49,6 @@ metadata = { workspace = true }
 poster-fetcher = { workspace = true }
 poster-storage = { workspace = true }
 template-askama = { workspace = true }
-event-publisher = { workspace = true }
 nats = { workspace = true, optional = true }
 rss = { workspace = true }
 export = { workspace = true }

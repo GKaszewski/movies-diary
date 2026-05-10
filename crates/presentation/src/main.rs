@@ -1,18 +1,12 @@
 use std::sync::Arc;
 
 use anyhow::Context;
-use std::str::FromStr;
 
 use tokio::net::TcpListener;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-#[cfg(feature = "sqlite")]
-use sqlite::{SqliteMovieRepository, SqliteUserRepository};
 #[cfg(feature = "sqlite-federation")]
 use sqlite_federation::SqliteFederationRepository;
-
-#[cfg(feature = "postgres")]
-use postgres::{PostgresRepository, PostgresUserRepository};
 #[cfg(feature = "postgres-federation")]
 use postgres_federation::PostgresFederationRepository;
 
@@ -36,9 +30,8 @@ use presentation::{openapi::ApiDoc, routes, state::AppState};
 use utoipa::OpenApi as _;
 
 use domain::ports::{
-    AuthService, DiaryExporter, DiaryRepository, EventPublisher, MetadataClient,
-    MovieRepository, PasswordHasher, PosterFetcherClient, PosterStorage, ReviewRepository,
-    StatsRepository, UserRepository,
+    AuthService, DiaryExporter, EventPublisher, MetadataClient,
+    PasswordHasher, PosterFetcherClient, PosterStorage,
 };
 
 #[cfg(not(any(feature = "sqlite", feature = "postgres")))]
@@ -91,12 +84,12 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
         match backend.as_str() {
             #[cfg(feature = "postgres")]
             "postgres" => {
-                let (pool, m, r, d, s, u) = wire_postgres(&database_url).await?;
+                let (pool, m, r, d, s, u) = postgres::wire(&database_url).await?;
                 (m, r, d, s, u, DbPool::Postgres(pool))
             }
             #[cfg(feature = "sqlite")]
             _ => {
-                let (pool, m, r, d, s, u) = wire_sqlite(&database_url).await?;
+                let (pool, m, r, d, s, u) = sqlite::wire(&database_url).await?;
                 (m, r, d, s, u, DbPool::Sqlite(pool))
             }
             #[cfg(not(feature = "sqlite"))]
@@ -228,73 +221,6 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
         social_query,
     };
     Ok((state, ap_router))
-}
-
-#[cfg(feature = "sqlite")]
-async fn wire_sqlite(database_url: &str) -> anyhow::Result<(
-    sqlx::SqlitePool,
-    Arc<dyn MovieRepository>,
-    Arc<dyn ReviewRepository>,
-    Arc<dyn DiaryRepository>,
-    Arc<dyn StatsRepository>,
-    Arc<dyn UserRepository>,
-)> {
-    use sqlx::sqlite::SqliteConnectOptions;
-
-    let opts = SqliteConnectOptions::from_str(database_url)
-        .context("Invalid DATABASE_URL")?
-        .create_if_missing(true)
-        .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal)
-        .busy_timeout(std::time::Duration::from_secs(5));
-    let pool = sqlx::SqlitePool::connect_with(opts)
-        .await
-        .context("Failed to connect to SQLite database")?;
-
-    let sqlite_repo = Arc::new(SqliteMovieRepository::new(pool.clone()));
-    sqlite_repo
-        .migrate()
-        .await
-        .map_err(|e| anyhow::anyhow!("{}", e))
-        .context("Database migration failed")?;
-
-    let movie_repository: Arc<dyn MovieRepository> = Arc::clone(&sqlite_repo) as _;
-    let review_repository: Arc<dyn ReviewRepository> = Arc::clone(&sqlite_repo) as _;
-    let diary_repository: Arc<dyn DiaryRepository> = Arc::clone(&sqlite_repo) as _;
-    let stats_repository: Arc<dyn StatsRepository> = Arc::clone(&sqlite_repo) as _;
-    let user_repository: Arc<dyn UserRepository> =
-        Arc::new(SqliteUserRepository::new(pool.clone()));
-
-    Ok((pool, movie_repository, review_repository, diary_repository, stats_repository, user_repository))
-}
-
-#[cfg(feature = "postgres")]
-async fn wire_postgres(database_url: &str) -> anyhow::Result<(
-    sqlx::PgPool,
-    Arc<dyn MovieRepository>,
-    Arc<dyn ReviewRepository>,
-    Arc<dyn DiaryRepository>,
-    Arc<dyn StatsRepository>,
-    Arc<dyn UserRepository>,
-)> {
-    let pool = sqlx::PgPool::connect(database_url)
-        .await
-        .context("Failed to connect to PostgreSQL database")?;
-
-    let pg_repo = Arc::new(PostgresRepository::new(pool.clone()));
-    pg_repo
-        .migrate()
-        .await
-        .map_err(|e| anyhow::anyhow!("{}", e))
-        .context("Database migration failed")?;
-
-    let movie_repository: Arc<dyn MovieRepository> = Arc::clone(&pg_repo) as _;
-    let review_repository: Arc<dyn ReviewRepository> = Arc::clone(&pg_repo) as _;
-    let diary_repository: Arc<dyn DiaryRepository> = Arc::clone(&pg_repo) as _;
-    let stats_repository: Arc<dyn StatsRepository> = Arc::clone(&pg_repo) as _;
-    let user_repository: Arc<dyn UserRepository> =
-        Arc::new(PostgresUserRepository::new(pool.clone()));
-
-    Ok((pool, movie_repository, review_repository, diary_repository, stats_repository, user_repository))
 }
 
 enum DbPool {
