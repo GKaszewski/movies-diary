@@ -51,26 +51,17 @@ async fn main() -> anyhow::Result<()> {
     let auth_service: Arc<dyn AuthService> = Arc::new(JwtAuthService::new(auth_config));
     let password_hasher: Arc<dyn PasswordHasher> = Arc::new(Argon2PasswordHasher);
 
-    #[cfg(feature = "sqlite")]
-    let mut sqlite_pool: Option<sqlx::SqlitePool> = None;
-    #[cfg(feature = "postgres")]
-    let mut pg_pool: Option<sqlx::PgPool> = None;
-
-    let (movie_repository, review_repository, diary_repository, stats_repository, user_repository):
-        (Arc<dyn MovieRepository>, Arc<dyn ReviewRepository>, Arc<dyn DiaryRepository>,
-         Arc<dyn StatsRepository>, Arc<dyn UserRepository>) =
+    let (movie_repository, review_repository, diary_repository, stats_repository, user_repository, db_pool) =
         match backend.as_str() {
             #[cfg(feature = "postgres")]
             "postgres" => {
                 let (pool, m, r, d, s, u) = wire_postgres(&database_url).await?;
-                pg_pool = Some(pool);
-                (m, r, d, s, u)
+                (m, r, d, s, u, DbPool::Postgres(pool))
             }
             #[cfg(feature = "sqlite")]
             _ => {
                 let (pool, m, r, d, s, u) = wire_sqlite(&database_url).await?;
-                sqlite_pool = Some(pool);
-                (m, r, d, s, u)
+                (m, r, d, s, u, DbPool::Sqlite(pool))
             }
             #[cfg(not(feature = "sqlite"))]
             _ => anyhow::bail!("DATABASE_BACKEND={backend} is not supported by this build"),
@@ -82,17 +73,11 @@ async fn main() -> anyhow::Result<()> {
     ) = match EventBusBackend::from_env()? {
         EventBusBackend::Db => {
             tracing::info!("event bus: DB queue");
-            match backend.as_str() {
+            match db_pool {
                 #[cfg(feature = "postgres")]
-                "postgres" => postgres_event_queue::PostgresEventQueue::create_channel(
-                    pg_pool.unwrap()
-                ).await?,
+                DbPool::Postgres(pool) => postgres_event_queue::PostgresEventQueue::create_channel(pool).await?,
                 #[cfg(feature = "sqlite")]
-                _ => sqlite_event_queue::SqliteEventQueue::create_channel(
-                    sqlite_pool.unwrap()
-                ).await?,
-                #[cfg(not(feature = "sqlite"))]
-                _ => anyhow::bail!("EVENT_BUS_BACKEND=db has no adapter for DATABASE_BACKEND={backend}; enable the sqlite or postgres feature"),
+                DbPool::Sqlite(pool) => sqlite_event_queue::SqliteEventQueue::create_channel(pool).await?,
             }
         }
         #[cfg(feature = "nats")]
@@ -128,6 +113,13 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("worker stopped");
 
     Ok(())
+}
+
+enum DbPool {
+    #[cfg(feature = "sqlite")]
+    Sqlite(sqlx::SqlitePool),
+    #[cfg(feature = "postgres")]
+    Postgres(sqlx::PgPool),
 }
 
 #[derive(Clone, Copy)]
