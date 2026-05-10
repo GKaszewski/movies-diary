@@ -53,6 +53,7 @@ nats = { workspace = true, optional = true }
 rss = { workspace = true }
 export = { workspace = true }
 doc = { workspace = true }
+importer = { workspace = true }
 sqlx = { workspace = true }
 utoipa = { version = "5.5.0", features = ["axum_extras", "uuid"] }
 

@@ -9,6 +9,11 @@ use crate::{
     },
 };
 pub mod collections;
+pub mod import_session;
+pub mod import_profile;
+
+pub use import_session::ImportSession;
+pub use import_profile::ImportProfile;
 
 #[derive(Clone, Debug, Default)]
 pub enum SortDirection {

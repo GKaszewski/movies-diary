@@ -326,6 +326,22 @@ mod tests {
         }
     }
     #[async_trait::async_trait]
+    impl domain::ports::ImportSessionRepository for Panic {
+        async fn create(&self, _: &domain::models::ImportSession) -> Result<(), DomainError> { panic!() }
+        async fn get(&self, _: &domain::value_objects::ImportSessionId, _: &UserId) -> Result<Option<domain::models::ImportSession>, DomainError> { panic!() }
+        async fn update(&self, _: &domain::models::ImportSession) -> Result<(), DomainError> { panic!() }
+        async fn delete(&self, _: &domain::value_objects::ImportSessionId) -> Result<(), DomainError> { panic!() }
+        async fn delete_expired(&self) -> Result<u64, DomainError> { panic!() }
+        async fn delete_expired_for_user(&self, _: &UserId) -> Result<(), DomainError> { panic!() }
+    }
+    #[async_trait::async_trait]
+    impl domain::ports::ImportProfileRepository for Panic {
+        async fn save(&self, _: &domain::models::ImportProfile) -> Result<(), DomainError> { panic!() }
+        async fn list_for_user(&self, _: &UserId) -> Result<Vec<domain::models::ImportProfile>, DomainError> { panic!() }
+        async fn get(&self, _: &domain::value_objects::ImportProfileId, _: &UserId) -> Result<Option<domain::models::ImportProfile>, DomainError> { panic!() }
+        async fn delete(&self, _: &domain::value_objects::ImportProfileId) -> Result<(), DomainError> { panic!() }
+    }
+    #[async_trait::async_trait]
     impl domain::ports::DiaryExporter for Panic {
         async fn serialize_entries(
             &self,
@@ -392,6 +408,9 @@ mod tests {
         ) -> Result<String, String> {
             panic!()
         }
+        fn render_import_upload_page(&self, _: application::ports::ImportUploadPageData) -> Result<String, String> { panic!() }
+        fn render_import_mapping_page(&self, _: application::ports::ImportMappingPageData) -> Result<String, String> { panic!() }
+        fn render_import_preview_page(&self, _: application::ports::ImportPreviewPageData) -> Result<String, String> { panic!() }
     }
     impl crate::ports::RssFeedRenderer for Panic {
         fn render_feed(&self, _: &[DiaryEntry], _: &str) -> Result<String, String> {
@@ -427,6 +446,8 @@ mod tests {
                 event_publisher: Arc::clone(&repo) as _,
                 password_hasher: Arc::clone(&repo) as _,
                 user_repository: Arc::clone(&repo) as _,
+                import_session_repository: Arc::clone(&repo) as _,
+                import_profile_repository: Arc::clone(&repo) as _,
                 auth_service,
                 config: AppConfig {
                     allow_registration: false,

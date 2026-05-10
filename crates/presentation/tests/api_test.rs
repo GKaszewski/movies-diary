@@ -125,6 +125,26 @@ impl domain::ports::DiaryExporter for PanicExporter {
     }
 }
 
+struct PanicImportSession;
+#[async_trait]
+impl domain::ports::ImportSessionRepository for PanicImportSession {
+    async fn create(&self, _: &domain::models::ImportSession) -> Result<(), DomainError> { panic!() }
+    async fn get(&self, _: &domain::value_objects::ImportSessionId, _: &UserId) -> Result<Option<domain::models::ImportSession>, DomainError> { panic!() }
+    async fn update(&self, _: &domain::models::ImportSession) -> Result<(), DomainError> { panic!() }
+    async fn delete(&self, _: &domain::value_objects::ImportSessionId) -> Result<(), DomainError> { panic!() }
+    async fn delete_expired(&self) -> Result<u64, DomainError> { panic!() }
+    async fn delete_expired_for_user(&self, _: &UserId) -> Result<(), DomainError> { panic!() }
+}
+
+struct PanicImportProfile;
+#[async_trait]
+impl domain::ports::ImportProfileRepository for PanicImportProfile {
+    async fn save(&self, _: &domain::models::ImportProfile) -> Result<(), DomainError> { panic!() }
+    async fn list_for_user(&self, _: &UserId) -> Result<Vec<domain::models::ImportProfile>, DomainError> { panic!() }
+    async fn get(&self, _: &domain::value_objects::ImportProfileId, _: &UserId) -> Result<Option<domain::models::ImportProfile>, DomainError> { panic!() }
+    async fn delete(&self, _: &domain::value_objects::ImportProfileId) -> Result<(), DomainError> { panic!() }
+}
+
 #[cfg(feature = "federation")]
 struct PanicSocialQuery;
 #[cfg(feature = "federation")]
@@ -165,6 +185,8 @@ async fn test_app() -> Router {
             auth_service: Arc::new(PanicAuth),
             password_hasher: Arc::new(PanicHasher),
             user_repository: Arc::new(NobodyUserRepo),
+            import_session_repository: Arc::new(PanicImportSession),
+            import_profile_repository: Arc::new(PanicImportProfile),
             config: AppConfig {
                 allow_registration: false,
                 base_url: "http://localhost:3000".to_string(),

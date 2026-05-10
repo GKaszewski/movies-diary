@@ -1,0 +1,10 @@
+[package]
+name = "poster-sync"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+domain = { workspace = true }
+async-trait = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true }

@@ -5,13 +5,13 @@ use crate::{
     errors::DomainError,
     events::{DomainEvent, EventEnvelope},
     models::{
-        DiaryEntry, DiaryFilter, ExportFormat, FeedEntry, Movie, Review, ReviewHistory, User,
-        UserStats, UserSummary, UserTrends,
+        DiaryEntry, DiaryFilter, ExportFormat, FeedEntry, ImportProfile, ImportSession, Movie,
+        Review, ReviewHistory, User, UserStats, UserSummary, UserTrends,
         collections::{PageParams, Paginated},
     },
     value_objects::{
-        Email, ExternalMetadataId, MovieId, MovieTitle, PasswordHash, PosterPath, PosterUrl,
-        ReleaseYear, ReviewId, UserId, Username,
+        Email, ExternalMetadataId, ImportProfileId, ImportSessionId, MovieId, MovieTitle,
+        PasswordHash, PosterPath, PosterUrl, ReleaseYear, ReviewId, UserId, Username,
     },
 };
 
@@ -199,4 +199,22 @@ pub trait DiaryExporter: Send + Sync {
 #[async_trait]
 pub trait EventHandler: Send + Sync {
     async fn handle(&self, event: &DomainEvent) -> Result<(), DomainError>;
+}
+
+#[async_trait]
+pub trait ImportSessionRepository: Send + Sync {
+    async fn create(&self, session: &ImportSession) -> Result<(), DomainError>;
+    async fn get(&self, id: &ImportSessionId, user_id: &UserId) -> Result<Option<ImportSession>, DomainError>;
+    async fn update(&self, session: &ImportSession) -> Result<(), DomainError>;
+    async fn delete(&self, id: &ImportSessionId) -> Result<(), DomainError>;
+    async fn delete_expired(&self) -> Result<u64, DomainError>;
+    async fn delete_expired_for_user(&self, user_id: &UserId) -> Result<(), DomainError>;
+}
+
+#[async_trait]
+pub trait ImportProfileRepository: Send + Sync {
+    async fn save(&self, profile: &ImportProfile) -> Result<(), DomainError>;
+    async fn list_for_user(&self, user_id: &UserId) -> Result<Vec<ImportProfile>, DomainError>;
+    async fn get(&self, id: &ImportProfileId, user_id: &UserId) -> Result<Option<ImportProfile>, DomainError>;
+    async fn delete(&self, id: &ImportProfileId) -> Result<(), DomainError>;
 }

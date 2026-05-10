@@ -95,6 +95,45 @@ pub struct FollowersPageData {
     pub error: Option<String>,
 }
 
+pub struct ImportUploadPageData {
+    pub ctx: HtmlPageContext,
+    pub profiles: Vec<ImportProfileView>,
+    pub error: Option<String>,
+}
+
+pub struct ImportProfileView {
+    pub id: String,
+    pub name: String,
+}
+
+pub struct ImportMappingPageData {
+    pub ctx: HtmlPageContext,
+    pub session_id: String,
+    pub columns: Vec<String>,
+    pub sample_rows: Vec<Vec<String>>,
+    pub domain_fields: Vec<(&'static str, &'static str)>,
+    pub error: Option<String>,
+}
+
+pub struct ImportPreviewRow {
+    pub index: usize,
+    pub status: ImportRowStatus,
+    pub cells: Vec<String>,
+}
+
+pub enum ImportRowStatus {
+    Valid,
+    Duplicate,
+    Invalid(String),
+}
+
+pub struct ImportPreviewPageData {
+    pub ctx: HtmlPageContext,
+    pub session_id: String,
+    pub columns: Vec<String>,
+    pub rows: Vec<ImportPreviewRow>,
+}
+
 pub trait HtmlRenderer: Send + Sync {
     fn render_diary_page(
         &self,
@@ -109,6 +148,9 @@ pub trait HtmlRenderer: Send + Sync {
     fn render_profile_page(&self, data: ProfilePageData) -> Result<String, String>;
     fn render_following_page(&self, data: FollowingPageData) -> Result<String, String>;
     fn render_followers_page(&self, data: FollowersPageData) -> Result<String, String>;
+    fn render_import_upload_page(&self, data: ImportUploadPageData) -> Result<String, String>;
+    fn render_import_mapping_page(&self, data: ImportMappingPageData) -> Result<String, String>;
+    fn render_import_preview_page(&self, data: ImportPreviewPageData) -> Result<String, String>;
 }
 
 pub trait RssFeedRenderer: Send + Sync {

@@ -23,6 +23,8 @@ macro_rules! uuid_id {
 uuid_id!(MovieId);
 uuid_id!(ReviewId);
 uuid_id!(UserId);
+uuid_id!(ImportSessionId);
+uuid_id!(ImportProfileId);
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ExternalMetadataId(String);

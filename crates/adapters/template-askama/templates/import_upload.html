@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Import Reviews</h1>
+{% if let Some(err) = error %}
+<p class="error">{{ err }}</p>
+{% endif %}
+
+{% if !profiles.is_empty() %}
+<section>
+  <h2>Saved Profiles</h2>
+  <ul>
+    {% for p in profiles %}
+    <li>
+      {{ p.name }}
+      <form method="POST" action="/import/profiles/{{ p.id }}/delete" style="display:inline">
+        <input type="hidden" name="_csrf" value="{{ ctx.csrf_token }}">
+        <button type="submit">Delete</button>
+      </form>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+<h2>Upload File</h2>
+<form method="POST" action="/import/upload" enctype="multipart/form-data">
+  <label>
+    File (CSV, TSV, JSON, XLSX)<br>
+    <input type="file" name="file" accept=".csv,.tsv,.json,.xlsx" required>
+  </label>
+  <label>
+    Format<br>
+    <select name="format">
+      <option value="csv">CSV / TSV</option>
+      <option value="json">JSON</option>
+      <option value="xlsx">XLSX</option>
+    </select>
+  </label>
+  <input type="hidden" name="_csrf" value="{{ ctx.csrf_token }}">
+  <button type="submit">Upload</button>
+</form>
+{% endblock %}

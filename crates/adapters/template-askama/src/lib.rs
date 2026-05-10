@@ -1,6 +1,8 @@
 use application::ports::{
     ActivityFeedPageData, FollowersPageData, FollowingPageData, HtmlPageContext, HtmlRenderer,
-    LoginPageData, NewReviewPageData, ProfilePageData, RegisterPageData, UsersPageData,
+    ImportMappingPageData, ImportPreviewPageData, ImportPreviewRow, ImportProfileView,
+    ImportRowStatus, ImportUploadPageData, LoginPageData, NewReviewPageData, ProfilePageData,
+    RegisterPageData, UsersPageData,
 };
 use askama::Template;
 use chrono::Datelike;
@@ -290,6 +292,34 @@ fn bar_height_px(avg_rating: f64) -> i64 {
     (avg_rating / 5.0 * 60.0) as i64
 }
 
+#[derive(Template)]
+#[template(path = "import_upload.html")]
+struct ImportUploadTemplate<'a> {
+    ctx: &'a HtmlPageContext,
+    profiles: &'a [ImportProfileView],
+    error: Option<&'a str>,
+}
+
+#[derive(Template)]
+#[template(path = "import_mapping.html")]
+struct ImportMappingTemplate<'a> {
+    ctx: &'a HtmlPageContext,
+    session_id: &'a str,
+    columns: &'a [String],
+    sample_rows: &'a [Vec<String>],
+    domain_fields: &'a [(&'static str, &'static str)],
+    error: Option<&'a str>,
+}
+
+#[derive(Template)]
+#[template(path = "import_preview.html")]
+struct ImportPreviewTemplate<'a> {
+    ctx: &'a HtmlPageContext,
+    session_id: &'a str,
+    columns: &'a [String],
+    rows: &'a [ImportPreviewRow],
+}
+
 pub struct AskamaHtmlRenderer;
 
 impl AskamaHtmlRenderer {
@@ -553,6 +583,40 @@ impl HtmlRenderer for AskamaHtmlRenderer {
                 })
                 .collect(),
             error: data.error,
+        }
+        .render()
+        .map_err(|e| e.to_string())
+    }
+
+    fn render_import_upload_page(&self, data: ImportUploadPageData) -> Result<String, String> {
+        ImportUploadTemplate {
+            ctx: &data.ctx,
+            profiles: &data.profiles,
+            error: data.error.as_deref(),
+        }
+        .render()
+        .map_err(|e| e.to_string())
+    }
+
+    fn render_import_mapping_page(&self, data: ImportMappingPageData) -> Result<String, String> {
+        ImportMappingTemplate {
+            ctx: &data.ctx,
+            session_id: &data.session_id,
+            columns: &data.columns,
+            sample_rows: &data.sample_rows,
+            domain_fields: &data.domain_fields,
+            error: data.error.as_deref(),
+        }
+        .render()
+        .map_err(|e| e.to_string())
+    }
+
+    fn render_import_preview_page(&self, data: ImportPreviewPageData) -> Result<String, String> {
+        ImportPreviewTemplate {
+            ctx: &data.ctx,
+            session_id: &data.session_id,
+            columns: &data.columns,
+            rows: &data.rows,
         }
         .render()
         .map_err(|e| e.to_string())

@@ -5,6 +5,7 @@ members = [
     "crates/adapters/metadata",
     "crates/adapters/poster-fetcher",
     "crates/adapters/poster-storage",
+    "crates/adapters/poster-sync",
     "crates/adapters/rss",
     "crates/adapters/sqlite",
     "crates/adapters/postgres",
@@ -24,6 +25,7 @@ members = [
     "crates/tui",
     "crates/doc",
     "crates/worker",
+    "crates/adapters/importer",
 ]
 resolver = "2"
 
@@ -48,7 +50,8 @@ sqlx = { version = "0.8.6", features = [
 ] }
 reqwest = { version = "0.13", features = ["json", "query"] }
 object_store = { version = "0.11", features = ["aws"] }
-axum = { version = "0.8.8", features = ["macros"] }
+axum = { version = "0.8.8", features = ["macros", "multipart"] }
+csv = "1"
 
 domain = { path = "crates/domain" }
 application = { path = "crates/application" }
@@ -57,6 +60,7 @@ auth = { path = "crates/adapters/auth" }
 metadata = { path = "crates/adapters/metadata" }
 poster-fetcher = { path = "crates/adapters/poster-fetcher" }
 poster-storage = { path = "crates/adapters/poster-storage" }
+poster-sync = { path = "crates/adapters/poster-sync" }
 event-publisher = { path = "crates/adapters/event-publisher" }
 rss = { path = "crates/adapters/rss" }
 export = { path = "crates/adapters/export" }
@@ -72,3 +76,4 @@ event-payload = { path = "crates/adapters/event-payload" }
 nats = { path = "crates/adapters/nats" }
 sqlite-event-queue = { path = "crates/adapters/sqlite-event-queue" }
 postgres-event-queue = { path = "crates/adapters/postgres-event-queue" }
+importer = { path = "crates/adapters/importer" }

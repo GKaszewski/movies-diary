@@ -10,7 +10,8 @@ A self-hosted, server-side rendered movie logging system with a full REST API. B
 - RSS/Atom feed for public subscription (global and per-user)
 - JWT authentication via cookie (HTML) or Bearer token (REST API)
 - ActivityPub federation — follow/unfollow remote users on any compatible server, accept/reject/remove followers, pending follow request management
-- CSV and JSON diary export (full round-trip: exported files can be re-imported via the TUI bulk import)
+- CSV and JSON diary export
+- File importer: upload CSV, TSV, JSON, or XLSX from any source (Letterboxd, IMDb, etc.), map columns to domain fields via a step-by-step wizard or REST API, save mapping profiles for repeat imports
 - REST API v1 (`/api/v1/`) with full feature parity with the HTML interface
 - OpenAPI documentation at `/docs` (Swagger UI) and `/scalar` (Scalar)
 - CSRF protection on all HTML form routes (double-submit cookie, defense-in-depth on top of `SameSite=Strict`)
@@ -33,9 +34,11 @@ adapters/
   metadata             — TMDB / OMDb HTTP client
   poster-fetcher       — downloads poster images
   poster-storage       — stores posters on local filesystem or S3-compatible storage
+  poster-sync          — event handler: triggers poster fetch+store on MovieDiscovered
   template-askama      — Askama HTML rendering
   rss                  — RSS/Atom feed generation
   export               — CSV and JSON diary serialization
+  importer             — CSV/TSV/JSON/XLSX parser and column mapper for bulk import
   event-payload        — shared event serialization DTOs (used by all event bus adapters)
   sqlite-event-queue   — durable polling event queue backed by SQLite
   postgres-event-queue — durable polling event queue backed by PostgreSQL

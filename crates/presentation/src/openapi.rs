@@ -10,6 +10,10 @@ use crate::dtos::{
     ReviewHistoryResponse, UserProfileResponse, UserStatsDto, UserSummaryDto, UserTrendsDto,
     UsersResponse,
 };
+use crate::handlers::import::{
+    ApiFieldMapping, ApplyMappingRequest, ConfirmRequest, SaveProfileRequest,
+    SessionCreatedResponse, SessionStateResponse,
+};
 #[cfg(feature = "federation")]
 use crate::dtos::{ActorListResponse, ActorUrlRequest, FollowRequest, RemoteActorDto};
 
@@ -45,6 +49,13 @@ impl Modify for SecurityAddon {
         crate::handlers::api::get_activity_feed,
         crate::handlers::api::list_users,
         crate::handlers::api::get_user_profile,
+        crate::handlers::import::api_post_session,
+        crate::handlers::import::api_get_session,
+        crate::handlers::import::api_put_mapping,
+        crate::handlers::import::api_post_confirm,
+        crate::handlers::import::api_get_profiles,
+        crate::handlers::import::api_post_profile,
+        crate::handlers::import::api_delete_profile,
     ),
     components(schemas(
         DiaryResponse,
@@ -66,6 +77,12 @@ impl Modify for SecurityAddon {
         MonthlyRatingDto,
         DirectorStatDto,
         UserTrendsDto,
+        SessionCreatedResponse,
+        SessionStateResponse,
+        ApiFieldMapping,
+        ApplyMappingRequest,
+        ConfirmRequest,
+        SaveProfileRequest,
     )),
     modifiers(&SecurityAddon),
 )]
@@ -99,6 +116,13 @@ pub struct ApiDoc;
         crate::handlers::api::accept_follower,
         crate::handlers::api::reject_follower,
         crate::handlers::api::remove_follower,
+        crate::handlers::import::api_post_session,
+        crate::handlers::import::api_get_session,
+        crate::handlers::import::api_put_mapping,
+        crate::handlers::import::api_post_confirm,
+        crate::handlers::import::api_get_profiles,
+        crate::handlers::import::api_post_profile,
+        crate::handlers::import::api_delete_profile,
     ),
     components(schemas(
         DiaryResponse,
@@ -124,6 +148,12 @@ pub struct ApiDoc;
         MonthlyRatingDto,
         DirectorStatDto,
         UserTrendsDto,
+        SessionCreatedResponse,
+        SessionStateResponse,
+        ApiFieldMapping,
+        ApplyMappingRequest,
+        ConfirmRequest,
+        SaveProfileRequest,
     )),
     modifiers(&SecurityAddon),
 )]

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE import_sessions SET field_mappings = ?, row_results = ? WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "759b45ac8426d93d4668e208003d52957f2f52d8a021cc6f117cb6f241689a07"
+}

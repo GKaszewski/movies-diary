@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Map Columns</h1>
+{% if let Some(err) = error %}
+<p class="error">{{ err }}</p>
+{% endif %}
+
+<p>Showing up to 5 sample rows. Map each column to a diary field.</p>
+
+<form method="POST" action="/import/{{ session_id }}/mapping">
+  <table>
+    <thead>
+      <tr>
+        {% for col in columns %}<th>{{ col }}</th>{% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in sample_rows %}
+      <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% for col in columns %}
+  <fieldset>
+    <legend>{{ col }}</legend>
+    <label>Maps to
+      <select name="mapping_{{ loop.index0 }}_field">
+        <option value="">— skip —</option>
+        {% for (val, label) in domain_fields %}
+        <option value="{{ val }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Rating scale
+      <select name="mapping_{{ loop.index0 }}_scale">
+        <option value="1.0">Same (0–5)</option>
+        <option value="0.5">10-point (/2)</option>
+        <option value="0.05">Percentage (/20)</option>
+      </select>
+    </label>
+    <label>Date format
+      <input type="text" name="mapping_{{ loop.index0 }}_datefmt" placeholder="%Y-%m-%d">
+    </label>
+    <input type="hidden" name="mapping_{{ loop.index0 }}_col" value="{{ col }}">
+  </fieldset>
+  {% endfor %}
+
+  <input type="hidden" name="_csrf" value="{{ ctx.csrf_token }}">
+  <button type="submit">Preview Import</button>
+</form>
+{% endblock %}

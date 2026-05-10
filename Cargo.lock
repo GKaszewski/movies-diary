@@ -307,6 +307,8 @@ dependencies = [
  "chrono",
  "domain",
  "futures",
+ "importer",
+ "serde_json",
  "tokio",
  "tracing",
  "uuid",
@@ -572,7 +574,7 @@ dependencies = [
  "derive_builder",
  "diligent-date-parser",
  "never",
- "quick-xml",
+ "quick-xml 0.37.5",
 ]
 
 [[package]]
@@ -653,6 +655,7 @@ dependencies = [
  "matchit",
  "memchr",
  "mime",
+ "multer",
  "percent-encoding",
  "pin-project-lite",
  "serde_core",
@@ -845,6 +848,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "calamine"
+version = "0.26.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "138646b9af2c5d7f1804ea4bf93afc597737d2bd4f7341d67c48b03316976eb1"
+dependencies = [
+ "byteorder",
+ "codepage",
+ "encoding_rs",
+ "log",
+ "quick-xml 0.31.0",
+ "serde",
+ "zip 2.4.2",
+]
+
+[[package]]
 name = "castaway"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -939,6 +957,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c0f78a02292a74a88ac736019ab962ece0bc380e3f977bf72e376c5d78ff0678"
 dependencies = [
  "cc",
+]
+
+[[package]]
+name = "codepage"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "48f68d061bc2828ae826206326e61251aca94c1e4a5305cf52d9138639c918b4"
+dependencies = [
+ "encoding_rs",
 ]
 
 [[package]]
@@ -1634,6 +1661,7 @@ dependencies = [
  "chrono",
  "domain",
  "serde",
+ "serde_json",
  "uuid",
 ]
 
@@ -1717,6 +1745,7 @@ version = "1.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "843fba2746e448b37e26a819579957415c8cef339bf08564fe8b7ddbd959573c"
 dependencies = [
+ "crc32fast",
  "miniz_oxide",
  "zlib-rs",
 ]
@@ -2379,6 +2408,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e8a5a9a0ff0086c7a148acb942baaabeadf9504d10400b5a05645853729b9cd2"
 
 [[package]]
+name = "importer"
+version = "0.1.0"
+dependencies = [
+ "calamine",
+ "csv",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+]
+
+[[package]]
 name = "indexmap"
 version = "2.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2834,6 +2874,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "multer"
+version = "3.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "83e87776546dc87511aa5ee218730c92b666d7264ab6ed41f9d215af9cd5224b"
+dependencies = [
+ "bytes",
+ "encoding_rs",
+ "futures-util",
+ "http 1.4.0",
+ "httparse",
+ "memchr",
+ "mime",
+ "spin",
+ "version_check",
+]
+
+[[package]]
 name = "nats"
 version = "0.1.0"
 dependencies = [
@@ -3059,7 +3116,7 @@ dependencies = [
  "md-5",
  "parking_lot",
  "percent-encoding",
- "quick-xml",
+ "quick-xml 0.37.5",
  "rand 0.8.6",
  "reqwest 0.12.28",
  "ring",
@@ -3384,6 +3441,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "poster-sync"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "domain",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "postgres"
 version = "0.1.0"
 dependencies = [
@@ -3472,6 +3539,7 @@ dependencies = [
  "dotenvy",
  "export",
  "http-body-util",
+ "importer",
  "infer",
  "metadata",
  "nats",
@@ -3525,6 +3593,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8fd00f0bb2e90d81d1044c2b32617f68fcb9fa3bb7640c23e9c748e53fb30934"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "quick-xml"
+version = "0.31.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1004a344b30a54e2ee58d66a71b32d2db2feb0a31f9a2d302bf0536f15de2a33"
+dependencies = [
+ "encoding_rs",
+ "memchr",
 ]
 
 [[package]]
@@ -3993,7 +4071,7 @@ dependencies = [
  "atom_syndication",
  "derive_builder",
  "never",
- "quick-xml",
+ "quick-xml 0.37.5",
 ]
 
 [[package]]
@@ -5529,7 +5607,7 @@ dependencies = [
  "url",
  "utoipa",
  "utoipa-swagger-ui-vendored",
- "zip",
+ "zip 3.0.0",
 ]
 
 [[package]]
@@ -6264,6 +6342,7 @@ dependencies = [
  "nats",
  "poster-fetcher",
  "poster-storage",
+ "poster-sync",
  "postgres",
  "postgres-event-queue",
  "postgres-federation",
@@ -6460,6 +6539,23 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.117",
+]
+
+[[package]]
+name = "zip"
+version = "2.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fabe6324e908f85a1c52063ce7aa26b68dcb7eb6dbc83a2d148403c9bc3eba50"
+dependencies = [
+ "arbitrary",
+ "crc32fast",
+ "crossbeam-utils",
+ "displaydoc",
+ "flate2",
+ "indexmap",
+ "memchr",
+ "thiserror 2.0.18",
+ "zopfli",
 ]
 
 [[package]]

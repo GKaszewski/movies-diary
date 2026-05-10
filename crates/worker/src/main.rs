@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::Context;
-use application::{config::AppConfig, context::AppContext, event_handlers::PosterSyncHandler, worker::WorkerService};
+use application::{config::AppConfig, context::AppContext, worker::WorkerService};
 use export::ExportAdapter;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -25,17 +25,17 @@ async fn main() -> anyhow::Result<()> {
     let poster_fetcher = poster_fetcher::create()?;
     let poster_storage = poster_storage::create()?;
 
-    let (movie_repository, review_repository, diary_repository, stats_repository, user_repository, db_pool) =
+    let (movie_repository, review_repository, diary_repository, stats_repository, user_repository, import_session_repository, import_profile_repository, db_pool) =
         match backend.as_str() {
             #[cfg(feature = "postgres")]
             "postgres" => {
-                let (pool, m, r, d, s, u) = postgres::wire(&database_url).await?;
-                (m, r, d, s, u, DbPool::Postgres(pool))
+                let (pool, m, r, d, s, u, is, ip) = postgres::wire(&database_url).await?;
+                (m, r, d, s, u, is, ip, DbPool::Postgres(pool))
             }
             #[cfg(feature = "sqlite")]
             _ => {
-                let (pool, m, r, d, s, u) = sqlite::wire(&database_url).await?;
-                (m, r, d, s, u, DbPool::Sqlite(pool))
+                let (pool, m, r, d, s, u, is, ip) = sqlite::wire(&database_url).await?;
+                (m, r, d, s, u, is, ip, DbPool::Sqlite(pool))
             }
             #[cfg(not(feature = "sqlite"))]
             _ => anyhow::bail!("DATABASE_BACKEND={backend} is not supported by this build"),
@@ -86,11 +86,34 @@ async fn main() -> anyhow::Result<()> {
         auth_service,
         password_hasher,
         user_repository,
+        import_session_repository,
+        import_profile_repository,
         config: app_config,
     };
 
+    // Spawn periodic import session cleanup (hourly)
+    {
+        let cleanup_ctx = ctx.clone();
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(std::time::Duration::from_secs(3600));
+            loop {
+                interval.tick().await;
+                match application::use_cases::cleanup_expired_import_sessions::execute(&cleanup_ctx).await {
+                    Ok(n) => tracing::info!("import session cleanup: removed {} expired sessions", n),
+                    Err(e) => tracing::error!("import session cleanup failed: {:?}", e),
+                }
+            }
+        });
+    }
+
     let handlers: Vec<Arc<dyn EventHandler>> = {
-        let poster = Arc::new(PosterSyncHandler::new(ctx, 3)) as Arc<dyn EventHandler>;
+        let poster = Arc::new(poster_sync::PosterSyncHandler::new(
+            Arc::clone(&ctx.movie_repository),
+            Arc::clone(&ctx.metadata_client),
+            Arc::clone(&ctx.poster_fetcher),
+            Arc::clone(&ctx.poster_storage),
+            3,
+        )) as Arc<dyn EventHandler>;
 
         #[cfg(not(feature = "federation"))]
         { vec![poster] }

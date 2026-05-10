@@ -1,0 +1,721 @@
+use axum::{
+    Json,
+    extract::{Path, Query, State},
+    http::StatusCode,
+    response::IntoResponse,
+};
+use uuid::Uuid;
+
+use std::str::FromStr;
+
+use application::{
+    commands::{
+        DeleteReviewCommand, ExportCommand, LoginCommand, RegisterCommand, SyncPosterCommand,
+    },
+    queries::{
+        GetActivityFeedQuery, GetReviewHistoryQuery, GetUserProfileQuery, GetUsersQuery,
+    },
+    use_cases::{
+        delete_review, export_diary as export_diary_uc, get_activity_feed as get_feed_uc,
+        get_diary, get_review_history, get_user_profile as get_user_profile_uc, get_users,
+        log_review, login as login_uc, register as register_uc, sync_poster,
+    },
+};
+use domain::{
+    errors::DomainError,
+    models::{DiaryEntry, ExportFormat, Movie, Review},
+    services::review_history::Trend,
+    value_objects::{MovieId, UserId},
+};
+
+#[cfg(feature = "federation")]
+use crate::dtos::{ActorListResponse, ActorUrlRequest, FollowRequest, RemoteActorDto};
+use crate::{
+    dtos::{
+        ActivityFeedQueryParams, ActivityFeedResponse, DiaryEntryDto, DiaryQueryParams,
+        DiaryResponse, DirectorStatDto, ExportQueryParams, FeedEntryDto, LogReviewData,
+        LogReviewRequest, LoginRequest, LoginResponse, MonthActivityDto, MonthlyRatingDto,
+        MovieDto, RegisterRequest, ReviewDto, ReviewHistoryResponse, UserProfileQueryParams,
+        UserProfileResponse, UserStatsDto, UserSummaryDto, UserTrendsDto, UsersResponse,
+    },
+    errors::ApiError,
+    extractors::AuthenticatedUser,
+    state::AppState,
+};
+
+#[utoipa::path(
+    get, path = "/api/v1/diary",
+    params(DiaryQueryParams),
+    responses(
+        (status = 200, body = DiaryResponse),
+        (status = 401, description = "Unauthorized"),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn get_diary(
+    State(state): State<AppState>,
+    Query(params): Query<DiaryQueryParams>,
+) -> Result<Json<DiaryResponse>, ApiError> {
+    let page = get_diary::execute(&state.app_ctx, params.into()).await?;
+
+    Ok(Json(DiaryResponse {
+        items: page.items.iter().map(entry_to_dto).collect(),
+        total_count: page.total_count,
+        limit: page.limit,
+        offset: page.offset,
+    }))
+}
+
+#[utoipa::path(
+    get, path = "/api/v1/movies/{id}/history",
+    params(("id" = Uuid, Path, description = "Movie ID")),
+    responses(
+        (status = 200, body = ReviewHistoryResponse),
+        (status = 404, description = "Movie not found"),
+    )
+)]
+pub async fn get_review_history(
+    State(state): State<AppState>,
+    Path(movie_id): Path<Uuid>,
+) -> Result<Json<ReviewHistoryResponse>, ApiError> {
+    let (history, trend) =
+        get_review_history::execute(&state.app_ctx, GetReviewHistoryQuery { movie_id }).await?;
+
+    Ok(Json(ReviewHistoryResponse {
+        movie: movie_to_dto(history.movie()),
+        viewings: history.viewings().iter().map(review_to_dto).collect(),
+        trend: match trend {
+            Trend::Improved => "improved",
+            Trend::Declined => "declined",
+            Trend::Neutral => "neutral",
+        }
+        .to_string(),
+    }))
+}
+
+#[utoipa::path(
+    post, path = "/api/v1/reviews",
+    request_body = LogReviewRequest,
+    responses(
+        (status = 201, description = "Review created"),
+        (status = 400, description = "Invalid input"),
+        (status = 401, description = "Unauthorized"),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn post_review(
+    State(state): State<AppState>,
+    user: AuthenticatedUser,
+    Json(req): Json<LogReviewRequest>,
+) -> Result<impl IntoResponse, ApiError> {
+    let data = LogReviewData::try_from(req).map_err(ApiError)?;
+    log_review::execute(&state.app_ctx, data.into_command(user.0.value())).await?;
+    Ok(StatusCode::CREATED)
+}
+
+#[utoipa::path(
+    post, path = "/api/v1/movies/{id}/sync-poster",
+    params(("id" = Uuid, Path, description = "Movie ID")),
+    responses(
+        (status = 204, description = "Poster synced"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Movie not found"),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn sync_poster(
+    State(state): State<AppState>,
+    _user: AuthenticatedUser,
+    Path(movie_id): Path<Uuid>,
+) -> Result<impl IntoResponse, ApiError> {
+    let movie = state
+        .app_ctx
+        .movie_repository
+        .get_movie_by_id(&MovieId::from_uuid(movie_id))
+        .await?
+        .ok_or_else(|| ApiError(DomainError::NotFound(format!("Movie {movie_id}"))))?;
+
+    let external_id = movie
+        .external_metadata_id()
+        .ok_or_else(|| {
+            ApiError(DomainError::ValidationError(
+                "Movie has no external metadata ID, cannot sync poster".into(),
+            ))
+        })?
+        .value()
+        .to_string();
+
+    sync_poster::execute(
+        &state.app_ctx,
+        SyncPosterCommand {
+            movie_id,
+            external_metadata_id: external_id,
+        },
+    )
+    .await?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+#[utoipa::path(
+    post, path = "/api/v1/auth/login",
+    request_body = LoginRequest,
+    responses(
+        (status = 200, body = LoginResponse),
+        (status = 401, description = "Invalid credentials"),
+    )
+)]
+pub async fn login(
+    State(state): State<AppState>,
+    Json(req): Json<LoginRequest>,
+) -> Result<Json<LoginResponse>, ApiError> {
+    let result = login_uc::execute(
+        &state.app_ctx,
+        LoginCommand {
+            email: req.email,
+            password: req.password,
+        },
+    )
+    .await?;
+    Ok(Json(LoginResponse {
+        token: result.token,
+        user_id: result.user_id,
+        email: result.email,
+        expires_at: result.expires_at.to_rfc3339(),
+    }))
+}
+
+#[utoipa::path(
+    post, path = "/api/v1/auth/register",
+    request_body = RegisterRequest,
+    responses(
+        (status = 201, description = "User registered"),
+        (status = 400, description = "Invalid input"),
+    )
+)]
+pub async fn register(
+    State(state): State<AppState>,
+    Json(req): Json<RegisterRequest>,
+) -> Result<StatusCode, ApiError> {
+    register_uc::execute(
+        &state.app_ctx,
+        RegisterCommand {
+            email: req.email,
+            username: req.username,
+            password: req.password,
+            role: domain::models::UserRole::Standard,
+        },
+    )
+    .await?;
+    Ok(StatusCode::CREATED)
+}
+
+#[utoipa::path(
+    delete, path = "/api/v1/reviews/{id}",
+    params(("id" = Uuid, Path, description = "Review ID")),
+    responses(
+        (status = 204, description = "Review deleted"),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden"),
+        (status = 404, description = "Review not found"),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn delete_review(
+    State(state): State<AppState>,
+    AuthenticatedUser(user_id): AuthenticatedUser,
+    Path(review_id): Path<Uuid>,
+) -> impl IntoResponse {
+    let cmd = DeleteReviewCommand {
+        review_id,
+        requesting_user_id: user_id.value(),
+    };
+    match delete_review::execute(&state.app_ctx, cmd).await {
+        Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Err(DomainError::NotFound(_)) => StatusCode::NOT_FOUND.into_response(),
+        Err(DomainError::Unauthorized(_)) => StatusCode::FORBIDDEN.into_response(),
+        Err(e) => {
+            tracing::error!("delete_review error: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+fn movie_to_dto(movie: &Movie) -> MovieDto {
+    MovieDto {
+        id: movie.id().value(),
+        title: movie.title().value().to_string(),
+        release_year: movie.release_year().value(),
+        director: movie.director().map(|d| d.to_string()),
+        poster_path: movie.poster_path().map(|p| p.value().to_string()),
+    }
+}
+
+fn review_to_dto(review: &Review) -> ReviewDto {
+    ReviewDto {
+        id: review.id().value(),
+        rating: review.rating().value(),
+        comment: review.comment().map(|c| c.value().to_string()),
+        watched_at: review.watched_at().to_string(),
+    }
+}
+
+fn entry_to_dto(entry: &DiaryEntry) -> DiaryEntryDto {
+    DiaryEntryDto {
+        movie: movie_to_dto(entry.movie()),
+        review: review_to_dto(entry.review()),
+    }
+}
+
+#[cfg(feature = "federation")]
+fn ap_err(e: anyhow::Error) -> impl IntoResponse {
+    tracing::error!("ActivityPub error: {:?}", e);
+    StatusCode::INTERNAL_SERVER_ERROR
+}
+
+#[cfg(feature = "federation")]
+#[utoipa::path(
+    get, path = "/api/v1/social/following",
+    responses(
+        (status = 200, body = ActorListResponse),
+        (status = 401, description = "Unauthorized"),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn get_following(
+    State(state): State<AppState>,
+    user: AuthenticatedUser,
+) -> impl IntoResponse {
+    match state.ap_service.get_following(user.0.value()).await {
+        Ok(actors) => Json(ActorListResponse {
+            actors: actors
+                .into_iter()
+                .map(|a| RemoteActorDto {
+                    handle: a.handle,
+                    display_name: a.display_name,
+                    url: a.url,
+                })
+                .collect(),
+        })
+        .into_response(),
+        Err(e) => ap_err(e).into_response(),
+    }
+}
+
+#[cfg(feature = "federation")]
+#[utoipa::path(
+    get, path = "/api/v1/social/followers",
+    responses(
+        (status = 200, body = ActorListResponse),
+        (status = 401, description = "Unauthorized"),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn get_followers(
+    State(state): State<AppState>,
+    user: AuthenticatedUser,
+) -> impl IntoResponse {
+    match state
+        .ap_service
+        .get_accepted_followers(user.0.value())
+        .await
+    {
+        Ok(actors) => Json(ActorListResponse {
+            actors: actors
+                .into_iter()
+                .map(|a| RemoteActorDto {
+                    handle: a.handle,
+                    display_name: a.display_name,
+                    url: a.url,
+                })
+                .collect(),
+        })
+        .into_response(),
+        Err(e) => ap_err(e).into_response(),
+    }
+}
+
+#[cfg(feature = "federation")]
+#[utoipa::path(
+    post, path = "/api/v1/social/follow",
+    request_body = FollowRequest,
+    responses(
+        (status = 200, description = "Follow request sent"),
+        (status = 401, description = "Unauthorized"),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn follow(
+    State(state): State<AppState>,
+    user: AuthenticatedUser,
+    Json(body): Json<FollowRequest>,
+) -> impl IntoResponse {
+    match state.ap_service.follow(user.0.value(), &body.handle).await {
+        Ok(()) => StatusCode::OK.into_response(),
+        Err(e) => ap_err(e).into_response(),
+    }
+}
+
+#[cfg(feature = "federation")]
+#[utoipa::path(
+    post, path = "/api/v1/social/unfollow",
+    request_body = ActorUrlRequest,
+    responses(
+        (status = 200, description = "Unfollowed"),
+        (status = 401, description = "Unauthorized"),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn unfollow(
+    State(state): State<AppState>,
+    user: AuthenticatedUser,
+    Json(body): Json<ActorUrlRequest>,
+) -> impl IntoResponse {
+    match state
+        .ap_service
+        .unfollow(user.0.value(), &body.actor_url)
+        .await
+    {
+        Ok(()) => StatusCode::OK.into_response(),
+        Err(e) => ap_err(e).into_response(),
+    }
+}
+
+#[cfg(feature = "federation")]
+#[utoipa::path(
+    post, path = "/api/v1/social/followers/accept",
+    request_body = ActorUrlRequest,
+    responses(
+        (status = 200, description = "Follower accepted"),
+        (status = 401, description = "Unauthorized"),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn accept_follower(
+    State(state): State<AppState>,
+    user: AuthenticatedUser,
+    Json(body): Json<ActorUrlRequest>,
+) -> impl IntoResponse {
+    match state
+        .ap_service
+        .accept_follower(user.0.value(), &body.actor_url)
+        .await
+    {
+        Ok(()) => StatusCode::OK.into_response(),
+        Err(e) => ap_err(e).into_response(),
+    }
+}
+
+#[cfg(feature = "federation")]
+#[utoipa::path(
+    post, path = "/api/v1/social/followers/reject",
+    request_body = ActorUrlRequest,
+    responses(
+        (status = 200, description = "Follower rejected"),
+        (status = 401, description = "Unauthorized"),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn reject_follower(
+    State(state): State<AppState>,
+    user: AuthenticatedUser,
+    Json(body): Json<ActorUrlRequest>,
+) -> impl IntoResponse {
+    match state
+        .ap_service
+        .reject_follower(user.0.value(), &body.actor_url)
+        .await
+    {
+        Ok(()) => StatusCode::OK.into_response(),
+        Err(e) => ap_err(e).into_response(),
+    }
+}
+
+#[cfg(feature = "federation")]
+#[utoipa::path(
+    post, path = "/api/v1/social/followers/remove",
+    request_body = ActorUrlRequest,
+    responses(
+        (status = 200, description = "Follower removed"),
+        (status = 401, description = "Unauthorized"),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn remove_follower(
+    State(state): State<AppState>,
+    user: AuthenticatedUser,
+    Json(body): Json<ActorUrlRequest>,
+) -> impl IntoResponse {
+    match state
+        .ap_service
+        .remove_follower(user.0.value(), &body.actor_url)
+        .await
+    {
+        Ok(()) => StatusCode::OK.into_response(),
+        Err(e) => ap_err(e).into_response(),
+    }
+}
+
+#[cfg(feature = "federation")]
+#[utoipa::path(
+    get, path = "/api/v1/social/followers/pending",
+    responses(
+        (status = 200, body = ActorListResponse),
+        (status = 401, description = "Unauthorized"),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn get_pending_followers(
+    State(state): State<AppState>,
+    user: AuthenticatedUser,
+) -> impl IntoResponse {
+    match state.ap_service.get_pending_followers(user.0.value()).await {
+        Ok(actors) => Json(ActorListResponse {
+            actors: actors
+                .into_iter()
+                .map(|a| RemoteActorDto {
+                    handle: a.handle,
+                    display_name: a.display_name,
+                    url: a.url,
+                })
+                .collect(),
+        })
+        .into_response(),
+        Err(e) => ap_err(e).into_response(),
+    }
+}
+
+#[utoipa::path(
+    get, path = "/api/v1/activity-feed",
+    params(ActivityFeedQueryParams),
+    responses((status = 200, body = ActivityFeedResponse)),
+)]
+pub async fn get_activity_feed(
+    State(state): State<AppState>,
+    Query(params): Query<ActivityFeedQueryParams>,
+) -> Result<Json<ActivityFeedResponse>, ApiError> {
+    let page = get_feed_uc::execute(
+        &state.app_ctx,
+        GetActivityFeedQuery {
+            limit: params.limit.unwrap_or(20),
+            offset: params.offset.unwrap_or(0),
+            sort_by: domain::ports::FeedSortBy::Date,
+            search: None,
+            following: None,
+        },
+    )
+    .await?;
+    Ok(Json(ActivityFeedResponse {
+        items: page
+            .items
+            .iter()
+            .map(|e| FeedEntryDto {
+                movie: movie_to_dto(e.movie()),
+                review: review_to_dto(e.review()),
+                user_email: e.user_email().to_string(),
+                user_display_name: e.user_display_name().to_string(),
+            })
+            .collect(),
+        total_count: page.total_count,
+        limit: page.limit,
+        offset: page.offset,
+    }))
+}
+
+#[utoipa::path(
+    get, path = "/api/v1/users",
+    responses((status = 200, body = UsersResponse)),
+)]
+pub async fn list_users(
+    State(state): State<AppState>,
+) -> Result<Json<UsersResponse>, ApiError> {
+    let users = get_users::execute(&state.app_ctx, GetUsersQuery).await?;
+    Ok(Json(UsersResponse {
+        users: users
+            .iter()
+            .map(|u| UserSummaryDto {
+                id: u.user_id.value(),
+                email: u.email().to_string(),
+                total_movies: u.total_movies,
+                avg_rating: u.avg_rating,
+            })
+            .collect(),
+    }))
+}
+
+#[utoipa::path(
+    get, path = "/api/v1/users/{id}",
+    params(
+        ("id" = Uuid, Path, description = "User ID"),
+        UserProfileQueryParams,
+    ),
+    responses(
+        (status = 200, body = UserProfileResponse),
+        (status = 404, description = "User not found"),
+    )
+)]
+pub async fn get_user_profile(
+    State(state): State<AppState>,
+    Path(user_id): Path<Uuid>,
+    Query(params): Query<UserProfileQueryParams>,
+) -> impl IntoResponse {
+    let view_str = params.view.as_deref().unwrap_or("recent");
+    let profile_view = match application::queries::ProfileView::from_str(view_str) {
+        Ok(v) => v,
+        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+    };
+
+    let user = match state
+        .app_ctx
+        .user_repository
+        .find_by_id(&UserId::from_uuid(user_id))
+        .await
+    {
+        Ok(Some(u)) => u,
+        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+        Err(e) => {
+            tracing::error!("user lookup: {:?}", e);
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    let profile = match get_user_profile_uc::execute(
+        &state.app_ctx,
+        GetUserProfileQuery {
+            user_id,
+            view: profile_view,
+            limit: params.limit,
+            offset: params.offset,
+            sort_by: domain::ports::FeedSortBy::Date,
+            search: None,
+        },
+    )
+    .await
+    {
+        Ok(p) => p,
+        Err(e) => {
+            tracing::error!("profile: {:?}", e);
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    #[cfg(feature = "federation")]
+    let following_count = state.ap_service.count_following(user_id).await.unwrap_or(0);
+    #[cfg(not(feature = "federation"))]
+    let following_count = 0usize;
+
+    #[cfg(feature = "federation")]
+    let followers_count = state
+        .ap_service
+        .count_accepted_followers(user_id)
+        .await
+        .unwrap_or(0);
+    #[cfg(not(feature = "federation"))]
+    let followers_count = 0usize;
+
+    let entries = profile.entries.map(|p| DiaryResponse {
+        items: p.items.iter().map(entry_to_dto).collect(),
+        total_count: p.total_count,
+        limit: p.limit,
+        offset: p.offset,
+    });
+
+    let history = profile.history.map(|months| {
+        months
+            .into_iter()
+            .map(|m| MonthActivityDto {
+                year_month: m.year_month,
+                month_label: m.month_label,
+                count: m.count,
+                entries: m.entries.iter().map(entry_to_dto).collect(),
+            })
+            .collect()
+    });
+
+    let trends = profile.trends.map(|t| UserTrendsDto {
+        monthly_ratings: t
+            .monthly_ratings
+            .into_iter()
+            .map(|r| MonthlyRatingDto {
+                year_month: r.year_month,
+                month_label: r.month_label,
+                avg_rating: r.avg_rating,
+                count: r.count,
+            })
+            .collect(),
+        top_directors: t
+            .top_directors
+            .into_iter()
+            .map(|d| DirectorStatDto {
+                director: d.director,
+                count: d.count,
+            })
+            .collect(),
+        max_director_count: t.max_director_count,
+    });
+
+    Json(UserProfileResponse {
+        user_id,
+        username: user.username().value().to_string(),
+        stats: UserStatsDto {
+            total_movies: profile.stats.total_movies,
+            avg_rating: profile.stats.avg_rating,
+            favorite_director: profile.stats.favorite_director,
+            most_active_month: profile.stats.most_active_month,
+        },
+        following_count,
+        followers_count,
+        entries,
+        history,
+        trends,
+    })
+    .into_response()
+}
+
+#[utoipa::path(
+    get, path = "/api/v1/diary/export",
+    params(ExportQueryParams),
+    responses(
+        (status = 200, description = "Diary file download", content_type = "text/csv"),
+        (status = 400, description = "Invalid format parameter"),
+        (status = 401, description = "Unauthorized"),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn export_diary(
+    State(state): State<AppState>,
+    user: AuthenticatedUser,
+    Query(params): Query<ExportQueryParams>,
+) -> impl IntoResponse {
+    let format = match params.format.as_str() {
+        "csv" => ExportFormat::Csv,
+        "json" => ExportFormat::Json,
+        _ => return StatusCode::BAD_REQUEST.into_response(),
+    };
+    let (content_type, filename) = match &format {
+        ExportFormat::Csv => ("text/csv; charset=utf-8", "diary.csv"),
+        ExportFormat::Json => ("application/json", "diary.json"),
+    };
+    let cmd = ExportCommand {
+        user_id: user.0.value(),
+        format,
+    };
+    match export_diary_uc::execute(&state.app_ctx, cmd).await {
+        Ok(bytes) => (
+            StatusCode::OK,
+            [
+                (axum::http::header::CONTENT_TYPE, content_type.to_string()),
+                (
+                    axum::http::header::CONTENT_DISPOSITION,
+                    format!("attachment; filename=\"{}\"", filename),
+                ),
+            ],
+            bytes,
+        )
+            .into_response(),
+        Err(e) => {
+            tracing::error!("export error: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}

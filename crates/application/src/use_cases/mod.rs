@@ -1,4 +1,12 @@
+pub mod apply_import_mapping;
+pub mod apply_import_profile;
+pub mod cleanup_expired_import_sessions;
+pub mod create_import_session;
+pub mod delete_import_profile;
 pub mod delete_review;
+pub mod execute_import;
+pub mod list_import_profiles;
+pub mod save_import_profile;
 pub mod export_diary;
 pub mod get_activity_feed;
 pub mod get_diary;

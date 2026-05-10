@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Preview Import</h1>
+
+<form method="POST" action="/import/{{ session_id }}/confirm">
+  <table>
+    <thead>
+      <tr>
+        <th>Include?</th>
+        {% for col in columns %}<th>{{ col }}</th>{% endfor %}
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td>
+          {% match row.status %}
+          {% when ImportRowStatus::Invalid with (_e) %}
+          <input type="checkbox" disabled>
+          {% when _ %}
+          <input type="checkbox" name="confirmed" value="{{ row.index }}" checked>
+          {% endmatch %}
+        </td>
+        {% for cell in row.cells %}<td>{{ cell }}</td>{% endfor %}
+        <td>
+          {% match row.status %}
+          {% when ImportRowStatus::Valid %}&#10003;
+          {% when ImportRowStatus::Duplicate %}&#9888; duplicate
+          {% when ImportRowStatus::Invalid with (e) %}&#10007; {{ e }}
+          {% endmatch %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <label>Save this mapping as a profile?
+    <input type="text" name="profile_name" placeholder="e.g. Letterboxd">
+  </label>
+
+  <input type="hidden" name="_csrf" value="{{ ctx.csrf_token }}">
+  <button type="submit">Import Selected</button>
+</form>
+{% endblock %}

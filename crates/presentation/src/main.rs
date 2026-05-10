@@ -14,7 +14,7 @@ use doc::ApiDocExt;
 use presentation::{openapi::ApiDoc, routes, state::AppState};
 use utoipa::OpenApi as _;
 
-use domain::ports::{DiaryExporter, EventPublisher};
+use domain::ports::{DiaryExporter, EventPublisher, ImportProfileRepository, ImportSessionRepository};
 
 #[cfg(not(any(feature = "sqlite", feature = "postgres")))]
 compile_error!("At least one database backend must be enabled. Use --features sqlite or --features postgres");
@@ -50,17 +50,17 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
     let poster_fetcher = poster_fetcher::create()?;
     let poster_storage = poster_storage::create()?;
 
-    let (movie_repository, review_repository, diary_repository, stats_repository, user_repository, db_pool) =
+    let (movie_repository, review_repository, diary_repository, stats_repository, user_repository, import_session_repository, import_profile_repository, db_pool) =
         match backend.as_str() {
             #[cfg(feature = "postgres")]
             "postgres" => {
-                let (pool, m, r, d, s, u) = postgres::wire(&database_url).await?;
-                (m, r, d, s, u, DbPool::Postgres(pool))
+                let (pool, m, r, d, s, u, is, ip) = postgres::wire(&database_url).await?;
+                (m, r, d, s, u, is, ip, DbPool::Postgres(pool))
             }
             #[cfg(feature = "sqlite")]
             _ => {
-                let (pool, m, r, d, s, u) = sqlite::wire(&database_url).await?;
-                (m, r, d, s, u, DbPool::Sqlite(pool))
+                let (pool, m, r, d, s, u, is, ip) = sqlite::wire(&database_url).await?;
+                (m, r, d, s, u, is, ip, DbPool::Sqlite(pool))
             }
             #[cfg(not(feature = "sqlite"))]
             _ => anyhow::bail!("DATABASE_BACKEND={backend} is not supported by this build (sqlite feature is not enabled)"),
@@ -158,6 +158,8 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
         auth_service,
         password_hasher,
         user_repository,
+        import_session_repository: import_session_repository as Arc<dyn ImportSessionRepository>,
+        import_profile_repository: import_profile_repository as Arc<dyn ImportProfileRepository>,
         config: app_config,
     };
 

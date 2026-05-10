@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT OR REPLACE INTO import_profiles (id, user_id, name, field_mappings, created_at)\n             VALUES (?, ?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": []
+  },
+  "hash": "6638569b8759b965f8919f4998a8665b15c14fc0b4f6018e548b76474254073e"
+}

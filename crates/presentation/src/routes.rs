@@ -65,17 +65,23 @@ fn html_routes(rate_limit: u64) -> Router<AppState> {
             routing::get(handlers::posters::get_poster),
         )
         .route("/diary/export", routing::get(handlers::html::get_export))
+        .route("/import", routing::get(handlers::import::get_import_page))
+        .route("/import/upload", routing::post(handlers::import::post_upload))
+        .route("/import/{id}/mapping", routing::get(handlers::import::get_mapping_page).post(handlers::import::post_mapping))
+        .route("/import/{id}/preview", routing::get(handlers::import::get_preview_page))
+        .route("/import/{id}/confirm", routing::post(handlers::import::post_confirm))
+        .route("/import/done", routing::get(handlers::import::get_import_done))
+        .route("/import/profiles/{profile_id}/delete", routing::post(handlers::import::post_delete_profile))
         .route("/feed.rss", routing::get(handlers::rss::get_feed))
         .route(
             "/users/{id}/feed.rss",
             routing::get(handlers::rss::get_user_feed),
-        )
-        .layer(axum::middleware::from_fn(crate::csrf::csrf_middleware));
+        );
 
     #[cfg(feature = "federation")]
     let base = base.merge(federation_html_routes());
 
-    base
+    base.layer(axum::middleware::from_fn(crate::csrf::csrf_middleware))
 }
 
 #[cfg(feature = "federation")]
@@ -142,7 +148,13 @@ fn api_routes(rate_limit: u64) -> Router<AppState> {
             routing::get(handlers::api::get_activity_feed),
         )
         .route("/users", routing::get(handlers::api::list_users))
-        .route("/users/{id}", routing::get(handlers::api::get_user_profile));
+        .route("/users/{id}", routing::get(handlers::api::get_user_profile))
+        .route("/import/sessions", routing::post(handlers::import::api_post_session))
+        .route("/import/sessions/{id}", routing::get(handlers::import::api_get_session))
+        .route("/import/sessions/{id}/mapping", routing::put(handlers::import::api_put_mapping))
+        .route("/import/sessions/{id}/confirm", routing::post(handlers::import::api_post_confirm))
+        .route("/import/profiles", routing::get(handlers::import::api_get_profiles).post(handlers::import::api_post_profile))
+        .route("/import/profiles/{id}", routing::delete(handlers::import::api_delete_profile));
 
     #[cfg(feature = "federation")]
     let base = base.merge(federation_api_routes());

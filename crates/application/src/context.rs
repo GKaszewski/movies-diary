@@ -1,9 +1,10 @@
 use std::sync::Arc;
 
 use domain::ports::{
-    AuthService, DiaryExporter, DiaryRepository, EventPublisher, MetadataClient, MovieRepository,
-    PasswordHasher, PosterFetcherClient, PosterStorage, ReviewRepository, StatsRepository,
-    UserRepository,
+    AuthService, DiaryExporter, DiaryRepository, EventPublisher,
+    ImportProfileRepository, ImportSessionRepository,
+    MetadataClient, MovieRepository, PasswordHasher, PosterFetcherClient,
+    PosterStorage, ReviewRepository, StatsRepository, UserRepository,
 };
 
 use crate::config::AppConfig;
@@ -22,5 +23,7 @@ pub struct AppContext {
     pub auth_service: Arc<dyn AuthService>,
     pub password_hasher: Arc<dyn PasswordHasher>,
     pub user_repository: Arc<dyn UserRepository>,
+    pub import_session_repository: Arc<dyn ImportSessionRepository>,
+    pub import_profile_repository: Arc<dyn ImportProfileRepository>,
     pub config: AppConfig,
 }
