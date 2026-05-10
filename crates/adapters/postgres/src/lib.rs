@@ -57,6 +57,7 @@ impl PostgresRepository {
 
     pub async fn migrate(&self) -> Result<(), DomainError> {
         sqlx::migrate!("./migrations")
+            .set_ignore_missing(true)
             .run(&self.pool)
             .await
             .map_err(|e| DomainError::InfrastructureError(format!("Migration failed: {}", e)))

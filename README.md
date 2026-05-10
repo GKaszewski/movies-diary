@@ -34,10 +34,14 @@ adapters/
   template-askama   — Askama HTML rendering
   rss               — RSS/Atom feed generation
   export            — CSV and JSON diary serialization
-  event-publisher   — async event channel for background poster sync
-  activitypub       — ActivityPub federation (follow, inbox/outbox, actor)
-  activitypub-base  — core ActivityPub types and repository traits
+  sqlite-event-queue   — polling event queue backed by SQLite (DB-queue mode)
+  postgres-event-queue — polling event queue backed by PostgreSQL (DB-queue mode)
+  nats                 — NATS Core / JetStream event publisher and consumer
+  event-publisher      — in-memory event channel (used in tests)
+  activitypub          — ActivityPub federation (follow, inbox/outbox, actor)
+  activitypub-base     — core ActivityPub types and repository traits
 doc                 — OpenAPI spec assembly and Swagger UI / Scalar serving
+worker              — standalone worker binary (polls the event queue, syncs posters)
 tui                 — terminal UI client (ratatui)
 ```
 
@@ -85,16 +89,28 @@ PORT=3000
 RATE_LIMIT=60           # requests per minute per IP (default: 60)
 ALLOW_REGISTRATION=true # set to false to disable new sign-ups
 SECURE_COOKIES=true     # set when serving over HTTPS
-RUST_LOG=presentation=info,tower_http=info
+RUST_LOG=presentation=info,tower_http=info,worker=info,application=info
+
+# Event bus — background poster sync runs in the worker binary.
+# Default: DB queue (uses the same database, no extra infrastructure).
+# Set NATS_URL to use NATS instead (JetStream recommended for at-least-once delivery).
+# NATS_URL=nats://localhost:4222
+```
+
+The `worker` binary must run alongside `presentation` to process events:
+
+```bash
+cargo run -p worker
 ```
 
 ## Run
 
 ```bash
-cargo run -p presentation
+cargo run -p presentation   # HTTP server (0.0.0.0:3000)
+cargo run -p worker         # event worker (poster sync, in a separate terminal)
 ```
 
-Server listens on `0.0.0.0:3000` by default.
+The worker polls the event queue and must run alongside the presentation to process background tasks like poster fetching. Both processes share the same database.
 
 ## API
 
