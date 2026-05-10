@@ -174,6 +174,13 @@ pub trait EventPublisher: Send + Sync {
 }
 
 #[async_trait]
+pub trait EventConsumer: Send + Sync {
+    /// Returns the next available event, or `None` if the stream has ended.
+    /// Implementations decide whether this blocks (push) or polls (DB queue).
+    async fn next_event(&self) -> Result<Option<DomainEvent>, DomainError>;
+}
+
+#[async_trait]
 pub trait PasswordHasher: Send + Sync {
     async fn hash(&self, plain_password: &str) -> Result<PasswordHash, DomainError>;
 
