@@ -4,7 +4,6 @@ use std::str::FromStr;
 use anyhow::Context;
 use application::{config::AppConfig, context::AppContext, event_handlers::PosterSyncHandler, worker::WorkerService};
 use auth::{Argon2PasswordHasher, AuthConfig, JwtAuthService};
-use event_publisher::{EventPublisherConfig, create_event_channel};
 use export::ExportAdapter;
 use metadata::MetadataClientImpl;
 use poster_fetcher::{PosterFetcherConfig, ReqwestPosterFetcher};
@@ -52,18 +51,25 @@ async fn main() -> anyhow::Result<()> {
     let auth_service: Arc<dyn AuthService> = Arc::new(JwtAuthService::new(auth_config));
     let password_hasher: Arc<dyn PasswordHasher> = Arc::new(Argon2PasswordHasher);
 
+    #[cfg(feature = "sqlite")]
+    let mut sqlite_pool: Option<sqlx::SqlitePool> = None;
+    #[cfg(feature = "postgres")]
+    let mut pg_pool: Option<sqlx::PgPool> = None;
+
     let (movie_repository, review_repository, diary_repository, stats_repository, user_repository):
         (Arc<dyn MovieRepository>, Arc<dyn ReviewRepository>, Arc<dyn DiaryRepository>,
          Arc<dyn StatsRepository>, Arc<dyn UserRepository>) =
         match backend.as_str() {
             #[cfg(feature = "postgres")]
             "postgres" => {
-                let (_, m, r, d, s, u) = wire_postgres(&database_url).await?;
+                let (pool, m, r, d, s, u) = wire_postgres(&database_url).await?;
+                pg_pool = Some(pool);
                 (m, r, d, s, u)
             }
             #[cfg(feature = "sqlite")]
             _ => {
-                let (_, m, r, d, s, u) = wire_sqlite(&database_url).await?;
+                let (pool, m, r, d, s, u) = wire_sqlite(&database_url).await?;
+                sqlite_pool = Some(pool);
                 (m, r, d, s, u)
             }
             #[cfg(not(feature = "sqlite"))]
@@ -79,12 +85,19 @@ async fn main() -> anyhow::Result<()> {
             nats::create_channel(cfg).await?
         }
         Err(_) => {
-            tracing::info!("event bus: in-memory channel (NATS_URL not set)");
-            let (publisher, consumer) = create_event_channel(EventPublisherConfig::from_env());
-            (
-                Arc::new(publisher) as Arc<dyn domain::ports::EventPublisher>,
-                Arc::new(consumer) as Arc<dyn domain::ports::EventConsumer>,
-            )
+            tracing::info!("event bus: DB queue");
+            match backend.as_str() {
+                #[cfg(feature = "postgres")]
+                "postgres" => postgres_event_queue::PostgresEventQueue::create_channel(
+                    pg_pool.unwrap()
+                ).await?,
+                #[cfg(feature = "sqlite")]
+                _ => sqlite_event_queue::SqliteEventQueue::create_channel(
+                    sqlite_pool.unwrap()
+                ).await?,
+                #[cfg(not(feature = "sqlite"))]
+                _ => anyhow::bail!("no event bus: NATS_URL not set and sqlite feature not enabled"),
+            }
         }
     };
 

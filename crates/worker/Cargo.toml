@@ -5,8 +5,8 @@ edition = "2024"
 
 [features]
 default = ["sqlite"]
-sqlite = ["dep:sqlite"]
-postgres = ["dep:postgres"]
+sqlite = ["dep:sqlite", "dep:sqlite-event-queue"]
+postgres = ["dep:postgres", "dep:postgres-event-queue"]
 
 [dependencies]
 domain = { workspace = true }
@@ -35,3 +35,5 @@ sqlx = { workspace = true }
 # Optional — database backends
 sqlite = { workspace = true, optional = true }
 postgres = { workspace = true, optional = true }
+sqlite-event-queue   = { workspace = true, optional = true }
+postgres-event-queue = { workspace = true, optional = true }

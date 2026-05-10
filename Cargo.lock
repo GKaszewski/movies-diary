@@ -3385,6 +3385,19 @@ dependencies = [
 [[package]]
 name = "postgres-event-queue"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "domain",
+ "futures",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tokio",
+ "tracing",
+ "uuid",
+]
 
 [[package]]
 name = "postgres-federation"
@@ -3451,11 +3464,13 @@ dependencies = [
  "poster-fetcher",
  "poster-storage",
  "postgres",
+ "postgres-event-queue",
  "postgres-federation",
  "rss 0.1.0",
  "serde",
  "serde_json",
  "sqlite",
+ "sqlite-event-queue",
  "sqlite-federation",
  "sqlx",
  "template-askama",
@@ -4512,6 +4527,19 @@ dependencies = [
 [[package]]
 name = "sqlite-event-queue"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "domain",
+ "futures",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tokio",
+ "tracing",
+ "uuid",
+]
 
 [[package]]
 name = "sqlite-federation"
@@ -6221,9 +6249,11 @@ dependencies = [
  "poster-fetcher",
  "poster-storage",
  "postgres",
+ "postgres-event-queue",
  "serde",
  "serde_json",
  "sqlite",
+ "sqlite-event-queue",
  "sqlx",
  "thiserror 2.0.18",
  "tokio",

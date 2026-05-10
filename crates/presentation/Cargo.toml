@@ -5,8 +5,8 @@ edition = "2024"
 
 [features]
 default = ["sqlite", "sqlite-federation"]
-sqlite = ["dep:sqlite"]
-postgres = ["dep:postgres"]
+sqlite = ["dep:sqlite", "dep:sqlite-event-queue"]
+postgres = ["dep:postgres", "dep:postgres-event-queue"]
 # Meta-feature: true when any federation adapter is active — keeps all #[cfg(feature = "federation")] gates working
 federation = []
 sqlite-federation = [
@@ -59,6 +59,8 @@ utoipa = { version = "5.5.0", features = ["axum_extras", "uuid"] }
 # Optional — database backends
 sqlite = { workspace = true, optional = true }
 postgres = { workspace = true, optional = true }
+sqlite-event-queue   = { workspace = true, optional = true }
+postgres-event-queue = { workspace = true, optional = true }
 
 # Optional — federation
 activitypub = { workspace = true, optional = true }

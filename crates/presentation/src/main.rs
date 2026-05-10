@@ -1,8 +1,6 @@
 use std::sync::Arc;
 
 use anyhow::Context;
-use event_publisher::{EventPublisherConfig, NoopEventPublisher, create_event_channel};
-use application::event_handlers::PosterSyncHandler;
 use std::str::FromStr;
 
 use tokio::net::TcpListener;
@@ -20,11 +18,11 @@ use postgres_federation::PostgresFederationRepository;
 
 #[cfg(feature = "federation")]
 use activitypub::{
-    ActivityPubEventHandler, ActivityPubPort, ActivityPubService, DomainUserRepoAdapter,
+    ActivityPubPort, ActivityPubService, DomainUserRepoAdapter,
     ReviewObjectHandler,
 };
 
-use application::{config::AppConfig, context::AppContext, worker::WorkerService};
+use application::{config::AppConfig, context::AppContext};
 use auth::{Argon2PasswordHasher, AuthConfig, JwtAuthService};
 use export::ExportAdapter;
 use metadata::MetadataClientImpl;
@@ -38,7 +36,7 @@ use presentation::{openapi::ApiDoc, routes, state::AppState};
 use utoipa::OpenApi as _;
 
 use domain::ports::{
-    AuthService, DiaryExporter, DiaryRepository, EventHandler, EventPublisher, MetadataClient,
+    AuthService, DiaryExporter, DiaryRepository, EventPublisher, MetadataClient,
     MovieRepository, PasswordHasher, PosterFetcherClient, PosterStorage, ReviewRepository,
     StatsRepository, UserRepository,
 };
@@ -89,10 +87,10 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
     let auth_service: Arc<dyn AuthService> = Arc::new(JwtAuthService::new(auth_config));
     let password_hasher: Arc<dyn PasswordHasher> = Arc::new(Argon2PasswordHasher);
 
-    // Only track pools when the federation feature for that backend needs them
-    #[cfg(feature = "sqlite-federation")]
+    // Track pools — needed for federation and DB event queue
+    #[cfg(feature = "sqlite")]
     let mut sqlite_pool: Option<sqlx::SqlitePool> = None;
-    #[cfg(feature = "postgres-federation")]
+    #[cfg(feature = "postgres")]
     let mut pg_pool: Option<sqlx::PgPool> = None;
 
     let (movie_repository, review_repository, diary_repository, stats_repository, user_repository):
@@ -101,38 +99,19 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
         match backend.as_str() {
             #[cfg(feature = "postgres")]
             "postgres" => {
-                let (_pool, m, r, d, s, u) = wire_postgres(&database_url).await?;
-                #[cfg(feature = "postgres-federation")]
-                { pg_pool = Some(_pool); }
+                let (pool, m, r, d, s, u) = wire_postgres(&database_url).await?;
+                pg_pool = Some(pool);
                 (m, r, d, s, u)
             }
             #[cfg(feature = "sqlite")]
             _ => {
-                let (_pool, m, r, d, s, u) = wire_sqlite(&database_url).await?;
-                #[cfg(feature = "sqlite-federation")]
-                { sqlite_pool = Some(_pool); }
+                let (pool, m, r, d, s, u) = wire_sqlite(&database_url).await?;
+                sqlite_pool = Some(pool);
                 (m, r, d, s, u)
             }
             #[cfg(not(feature = "sqlite"))]
             _ => anyhow::bail!("DATABASE_BACKEND={backend} is not supported by this build (sqlite feature is not enabled)"),
         };
-
-    // Build handler context (used for poster sync handler)
-    let handler_ctx = AppContext {
-        movie_repository: Arc::clone(&movie_repository),
-        review_repository: Arc::clone(&review_repository),
-        diary_repository: Arc::clone(&diary_repository),
-        diary_exporter: Arc::new(ExportAdapter) as Arc<dyn DiaryExporter>,
-        stats_repository: Arc::clone(&stats_repository),
-        metadata_client: Arc::clone(&metadata_client),
-        poster_fetcher: Arc::clone(&poster_fetcher),
-        poster_storage: Arc::clone(&poster_storage),
-        event_publisher: Arc::new(NoopEventPublisher),
-        auth_service: Arc::clone(&auth_service),
-        password_hasher: Arc::clone(&password_hasher),
-        user_repository: Arc::clone(&user_repository),
-        config: app_config.clone(),
-    };
 
     // Wire up event channel, federation service, and ap_router
     #[cfg(feature = "federation")]
@@ -176,26 +155,50 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
             .await?,
         );
         let ap_router = concrete_ap_service.router();
-        let ap_event_handler = ActivityPubEventHandler::new(
-            Arc::clone(&concrete_ap_service),
-            Arc::clone(&movie_repository),
-            Arc::clone(&review_repository),
-            app_config.base_url.clone(),
-        );
         let ap_service_arc: Arc<dyn ActivityPubPort> = concrete_ap_service;
 
-        let ep = build_event_publisher(
-            handler_ctx,
-            vec![Arc::new(ap_event_handler) as Arc<dyn EventHandler>],
-        ).await?;
+        let ep: Arc<dyn EventPublisher> = if let Ok(cfg) = nats::NatsConfig::from_env() {
+            tracing::info!("event bus: NATS ({})", cfg.url);
+            nats::create_publisher(cfg).await?
+        } else {
+            tracing::info!("event bus: DB queue");
+            match backend.as_str() {
+                #[cfg(feature = "postgres")]
+                "postgres" => postgres_event_queue::PostgresEventQueue::create_publisher(
+                    pg_pool.as_ref().unwrap().clone()
+                ).await?,
+                #[cfg(feature = "sqlite")]
+                _ => sqlite_event_queue::SqliteEventQueue::create_publisher(
+                    sqlite_pool.as_ref().unwrap().clone()
+                ).await?,
+                #[cfg(not(feature = "sqlite"))]
+                _ => anyhow::bail!("no event bus: NATS_URL not set and sqlite feature not enabled"),
+            }
+        };
         (ep, ap_router, ap_service_arc, social_query_arc)
     };
 
     #[cfg(not(feature = "federation"))]
-    let (event_publisher_arc, ap_router): (Arc<dyn EventPublisher>, axum::Router) = (
-        build_event_publisher(handler_ctx, vec![]).await?,
-        axum::Router::new(),
-    );
+    let event_publisher_arc: Arc<dyn EventPublisher> = if let Ok(cfg) = nats::NatsConfig::from_env() {
+        tracing::info!("event bus: NATS ({})", cfg.url);
+        nats::create_publisher(cfg).await?
+    } else {
+        tracing::info!("event bus: DB queue");
+        match backend.as_str() {
+            #[cfg(feature = "postgres")]
+            "postgres" => postgres_event_queue::PostgresEventQueue::create_publisher(
+                pg_pool.as_ref().unwrap().clone()
+            ).await?,
+            #[cfg(feature = "sqlite")]
+            _ => sqlite_event_queue::SqliteEventQueue::create_publisher(
+                sqlite_pool.as_ref().unwrap().clone()
+            ).await?,
+            #[cfg(not(feature = "sqlite"))]
+            _ => anyhow::bail!("no event bus: NATS_URL not set and sqlite feature not enabled"),
+        }
+    };
+    #[cfg(not(feature = "federation"))]
+    let ap_router = axum::Router::new();
 
     let app_ctx = AppContext {
         movie_repository,
@@ -292,23 +295,6 @@ async fn wire_postgres(database_url: &str) -> anyhow::Result<(
         Arc::new(PostgresUserRepository::new(pool.clone()));
 
     Ok((pool, movie_repository, review_repository, diary_repository, stats_repository, user_repository))
-}
-
-async fn build_event_publisher(
-    handler_ctx: AppContext,
-    extra_handlers: Vec<Arc<dyn EventHandler>>,
-) -> anyhow::Result<Arc<dyn EventPublisher>> {
-    if let Ok(cfg) = nats::NatsConfig::from_env() {
-        tracing::info!("event bus: NATS ({})", cfg.url);
-        return nats::create_publisher(cfg).await;
-    }
-    tracing::info!("event bus: in-memory");
-    let poster_handler = Arc::new(PosterSyncHandler::new(handler_ctx, 3));
-    let mut handlers: Vec<Arc<dyn EventHandler>> = vec![poster_handler];
-    handlers.extend(extra_handlers);
-    let (publisher, consumer) = create_event_channel(EventPublisherConfig::from_env());
-    tokio::spawn(WorkerService::new(Arc::new(consumer), handlers).run());
-    Ok(Arc::new(publisher))
 }
 
 fn init_tracing() {
