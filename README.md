@@ -24,24 +24,28 @@ Hexagonal (Ports & Adapters) with Domain-Driven Design:
 ```
 domain              — pure types and trait definitions, no external deps
 application         — use cases / business logic orchestration
-presentation        — Axum HTTP router, wires all adapters together
+presentation        — Axum HTTP router, composition root for the HTTP process
+worker              — standalone worker binary (event consumer, poster sync, federation)
 adapters/
-  auth              — JWT issuance and validation (Argon2 passwords)
-  sqlite            — SQLite repository via sqlx
-  metadata          — OMDb HTTP client
-  poster-fetcher    — downloads poster images
-  poster-storage    — uploads posters to local filesystem or S3-compatible storage
-  template-askama   — Askama HTML rendering
-  rss               — RSS/Atom feed generation
-  export            — CSV and JSON diary serialization
-  sqlite-event-queue   — polling event queue backed by SQLite (DB-queue mode)
-  postgres-event-queue — polling event queue backed by PostgreSQL (DB-queue mode)
+  auth                 — JWT issuance and validation (Argon2 passwords)
+  sqlite               — SQLite repository + connection factory
+  postgres             — PostgreSQL repository + connection factory
+  metadata             — TMDB / OMDb HTTP client
+  poster-fetcher       — downloads poster images
+  poster-storage       — stores posters on local filesystem or S3-compatible storage
+  template-askama      — Askama HTML rendering
+  rss                  — RSS/Atom feed generation
+  export               — CSV and JSON diary serialization
+  event-payload        — shared event serialization DTOs (used by all event bus adapters)
+  sqlite-event-queue   — durable polling event queue backed by SQLite
+  postgres-event-queue — durable polling event queue backed by PostgreSQL
   nats                 — NATS Core / JetStream event publisher and consumer
-  event-publisher      — in-memory event channel (used in tests)
-  activitypub          — ActivityPub federation (follow, inbox/outbox, actor)
-  activitypub-base     — core ActivityPub types and repository traits
+  event-publisher      — in-memory event channel (tests only)
+  activitypub          — ActivityPub federation wiring (follow, inbox/outbox, actor)
+  activitypub-base     — core ActivityPub protocol types and service
+  sqlite-federation    — SQLite-backed federation repository
+  postgres-federation  — PostgreSQL-backed federation repository
 doc                 — OpenAPI spec assembly and Swagger UI / Scalar serving
-worker              — standalone worker binary (polls the event queue, syncs posters)
 tui                 — terminal UI client (ratatui)
 ```
 
@@ -136,16 +140,38 @@ cargo test
 
 ## Docker
 
+The image contains both `presentation` (HTTP server) and `worker` (event processor). Run them as separate containers sharing the same data volume:
+
 ```bash
-docker build -t movies-diary .
+# Build (SQLite + federation + NATS support)
+docker build -t movies-diary \
+  --build-arg FEATURES=sqlite,sqlite-federation,nats .
+
+# HTTP server
 docker run -p 3000:3000 \
   -e DATABASE_URL=sqlite:///data/movies.db \
   -e JWT_SECRET=change-me \
   -e OMDB_API_KEY=your-key \
   -e BASE_URL=https://yourdomain.example.com \
+  -e EVENT_BUS_BACKEND=nats \
+  -e NATS_URL=nats://nats:4222 \
   -v $(pwd)/data:/data \
   movies-diary
+
+# Event worker (separate container, same image)
+docker run \
+  -e DATABASE_URL=sqlite:///data/movies.db \
+  -e JWT_SECRET=change-me \
+  -e OMDB_API_KEY=your-key \
+  -e BASE_URL=https://yourdomain.example.com \
+  -e EVENT_BUS_BACKEND=nats \
+  -e NATS_URL=nats://nats:4222 \
+  -v $(pwd)/data:/data \
+  --entrypoint ./worker \
+  movies-diary
 ```
+
+To build for PostgreSQL: `--build-arg FEATURES=postgres,postgres-federation,nats`
 
 ## License
 
