@@ -25,18 +25,19 @@ pub struct ActivityPubWire {
 }
 
 pub async fn wire(
-    federation_repo: std::sync::Arc<dyn FederationRepository>,
-    review_store:    std::sync::Arc<dyn RemoteReviewRepository>,
-    user_repo:       std::sync::Arc<dyn domain::ports::UserRepository>,
-    movie_repo:      std::sync::Arc<dyn domain::ports::MovieRepository>,
-    review_repo:     std::sync::Arc<dyn domain::ports::ReviewRepository>,
-    diary_repo:      std::sync::Arc<dyn domain::ports::DiaryRepository>,
-    base_url:        String,
+    federation_repo:    std::sync::Arc<dyn FederationRepository>,
+    review_store:       std::sync::Arc<dyn RemoteReviewRepository>,
+    user_repo:          std::sync::Arc<dyn domain::ports::UserRepository>,
+    movie_repo:         std::sync::Arc<dyn domain::ports::MovieRepository>,
+    review_repo:        std::sync::Arc<dyn domain::ports::ReviewRepository>,
+    diary_repo:         std::sync::Arc<dyn domain::ports::DiaryRepository>,
+    base_url:           String,
+    allow_registration: bool,
 ) -> anyhow::Result<ActivityPubWire> {
     let concrete = std::sync::Arc::new(
         ActivityPubService::new(
             federation_repo,
-            std::sync::Arc::new(DomainUserRepoAdapter(user_repo)),
+            std::sync::Arc::new(DomainUserRepoAdapter::new(user_repo, base_url.clone())),
             std::sync::Arc::new(ReviewObjectHandler {
                 movie_repository: std::sync::Arc::clone(&movie_repo),
                 diary_repository: diary_repo,
@@ -44,6 +45,8 @@ pub async fn wire(
                 base_url: base_url.clone(),
             }),
             base_url.clone(),
+            allow_registration,
+            "movies-diary".to_string(),
             cfg!(debug_assertions),
         )
         .await?,

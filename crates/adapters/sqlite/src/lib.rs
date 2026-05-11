@@ -752,6 +752,16 @@ impl DiaryRepository for SqliteMovieRepository {
             offset: page.offset,
         })
     }
+
+    async fn count_local_posts(&self) -> Result<u64, DomainError> {
+        let count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM reviews WHERE remote_actor_url IS NULL"
+        )
+        .fetch_one(&self.pool)
+        .await
+        .map_err(Self::map_err)?;
+        Ok(count as u64)
+    }
 }
 
 #[async_trait]
@@ -1078,5 +1088,50 @@ mod feed_filter_tests {
         assert_eq!(stats.federated_count, 1);
         assert_eq!(stats.rating_histogram[3], 1); // 4★ bucket
         assert_eq!(stats.rating_histogram[4], 0); // 5★ bucket
+    }
+}
+
+#[cfg(test)]
+mod diary_count_tests {
+    use super::*;
+    use sqlx::SqlitePool;
+
+    async fn test_pool() -> SqlitePool {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        sqlx::migrate!("./migrations").run(&pool).await.unwrap();
+        pool
+    }
+
+    #[tokio::test]
+    async fn count_local_posts_excludes_remote_reviews() {
+        use domain::ports::DiaryRepository;
+        let pool = test_pool().await;
+        let repo = SqliteMovieRepository::new(pool.clone());
+
+        let user_id = uuid::Uuid::new_v4().to_string();
+        let movie_id = uuid::Uuid::new_v4().to_string();
+        sqlx::query("INSERT INTO users (id, email, password_hash, created_at, username) VALUES (?, ?, ?, ?, ?)")
+            .bind(&user_id).bind("a@b.com").bind("hash").bind("2024-01-01 00:00:00").bind("alice")
+            .execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO movies (id, title, release_year) VALUES (?, ?, ?)")
+            .bind(&movie_id).bind("Test Movie").bind(2024i32)
+            .execute(&pool).await.unwrap();
+
+        // Local review (remote_actor_url IS NULL)
+        let r1 = uuid::Uuid::new_v4().to_string();
+        sqlx::query("INSERT INTO reviews (id, movie_id, user_id, rating, watched_at, created_at) VALUES (?, ?, ?, ?, ?, ?)")
+            .bind(&r1).bind(&movie_id).bind(&user_id).bind(4i32)
+            .bind("2024-01-01 00:00:00").bind("2024-01-01 00:00:00")
+            .execute(&pool).await.unwrap();
+
+        // Remote review (remote_actor_url IS NOT NULL)
+        let r2 = uuid::Uuid::new_v4().to_string();
+        sqlx::query("INSERT INTO reviews (id, movie_id, user_id, rating, watched_at, created_at, remote_actor_url) VALUES (?, ?, ?, ?, ?, ?, ?)")
+            .bind(&r2).bind(&movie_id).bind(&user_id).bind(3i32)
+            .bind("2024-01-01 00:00:00").bind("2024-01-01 00:00:00").bind("https://remote/user")
+            .execute(&pool).await.unwrap();
+
+        let count = repo.count_local_posts().await.unwrap();
+        assert_eq!(count, 1);
     }
 }

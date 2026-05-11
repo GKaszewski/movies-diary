@@ -766,6 +766,16 @@ impl DiaryRepository for PostgresRepository {
             offset: page.offset,
         })
     }
+
+    async fn count_local_posts(&self) -> Result<u64, DomainError> {
+        let count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM reviews WHERE remote_actor_url IS NULL"
+        )
+        .fetch_one(&self.pool)
+        .await
+        .map_err(Self::map_err)?;
+        Ok(count as u64)
+    }
 }
 
 #[async_trait]

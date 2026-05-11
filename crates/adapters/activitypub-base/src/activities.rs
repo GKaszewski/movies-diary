@@ -63,8 +63,21 @@ impl Activity for FollowActivity {
     }
 
     async fn receive(self, data: &Data<Self::DataType>) -> Result<(), Self::Error> {
+        let domain = self.actor().host_str().unwrap_or("");
+        if data.federation_repo.is_domain_blocked(domain).await? {
+            tracing::info!(actor = %self.actor(), "ignoring activity from blocked domain");
+            return Ok(());
+        }
         let _follower = self.actor.dereference(data).await?;
         let local_actor = self.object.dereference(data).await?;
+
+        if data.federation_repo
+            .is_actor_blocked(local_actor.user_id, self.actor.inner().as_str())
+            .await?
+        {
+            tracing::info!(actor = %self.actor.inner(), "ignoring follow from blocked actor");
+            return Ok(());
+        }
 
         data.federation_repo
             .add_follower(
@@ -114,6 +127,11 @@ impl Activity for AcceptActivity {
     }
 
     async fn receive(self, data: &Data<Self::DataType>) -> Result<(), Self::Error> {
+        let domain = self.actor().host_str().unwrap_or("");
+        if data.federation_repo.is_domain_blocked(domain).await? {
+            tracing::info!(actor = %self.actor(), "ignoring activity from blocked domain");
+            return Ok(());
+        }
         let local_user_id = crate::urls::extract_user_id_from_url(self.object.actor.inner())
             .ok_or_else(|| Error::bad_request(anyhow::anyhow!("invalid actor URL in Follow")))?;
         data.federation_repo
@@ -158,6 +176,11 @@ impl Activity for RejectActivity {
     }
 
     async fn receive(self, data: &Data<Self::DataType>) -> Result<(), Self::Error> {
+        let domain = self.actor().host_str().unwrap_or("");
+        if data.federation_repo.is_domain_blocked(domain).await? {
+            tracing::info!(actor = %self.actor(), "ignoring activity from blocked domain");
+            return Ok(());
+        }
         if let Some(user_id) = crate::urls::extract_user_id_from_url(self.object.actor.inner()) {
             data.federation_repo
                 .remove_following(user_id, self.actor.inner().as_str())
@@ -198,6 +221,11 @@ impl Activity for UndoActivity {
     }
 
     async fn receive(self, data: &Data<Self::DataType>) -> Result<(), Self::Error> {
+        let domain = self.actor().host_str().unwrap_or("");
+        if data.federation_repo.is_domain_blocked(domain).await? {
+            tracing::info!(actor = %self.actor(), "ignoring activity from blocked domain");
+            return Ok(());
+        }
         if let Some(user_id) = crate::urls::extract_user_id_from_url(self.object.object.inner()) {
             data.federation_repo
                 .remove_follower(user_id, self.actor.inner().as_str())
@@ -242,6 +270,11 @@ impl Activity for CreateActivity {
     }
 
     async fn receive(self, data: &Data<Self::DataType>) -> Result<(), Self::Error> {
+        let domain = self.actor().host_str().unwrap_or("");
+        if data.federation_repo.is_domain_blocked(domain).await? {
+            tracing::info!(actor = %self.actor(), "ignoring activity from blocked domain");
+            return Ok(());
+        }
         let ap_id = self.id.clone();
         let actor_url = self.actor.inner().clone();
         data.object_handler
@@ -283,6 +316,11 @@ impl Activity for DeleteActivity {
     }
 
     async fn receive(self, data: &Data<Self::DataType>) -> Result<(), Self::Error> {
+        let domain = self.actor().host_str().unwrap_or("");
+        if data.federation_repo.is_domain_blocked(domain).await? {
+            tracing::info!(actor = %self.actor(), "ignoring activity from blocked domain");
+            return Ok(());
+        }
         let actor_url = self.actor.inner().clone();
         data.object_handler
             .on_delete(&self.object, &actor_url)
@@ -323,6 +361,11 @@ impl Activity for UpdateActivity {
     }
 
     async fn receive(self, data: &Data<Self::DataType>) -> Result<(), Self::Error> {
+        let domain = self.actor().host_str().unwrap_or("");
+        if data.federation_repo.is_domain_blocked(domain).await? {
+            tracing::info!(actor = %self.actor(), "ignoring activity from blocked domain");
+            return Ok(());
+        }
         let ap_id = self.id.clone();
         let actor_url = self.actor.inner().clone();
         data.object_handler
@@ -365,6 +408,11 @@ impl Activity for AnnounceActivity {
     }
 
     async fn receive(self, data: &Data<Self::DataType>) -> Result<(), Self::Error> {
+        let domain = self.actor().host_str().unwrap_or("");
+        if data.federation_repo.is_domain_blocked(domain).await? {
+            tracing::info!(actor = %self.actor(), "ignoring activity from blocked domain");
+            return Ok(());
+        }
         let object_domain = self.object.host_str().unwrap_or("");
         if object_domain != data.domain {
             return Ok(());
@@ -378,6 +426,57 @@ impl Activity for AnnounceActivity {
             )
             .await?;
         tracing::info!(actor = %self.actor.inner(), object = %self.object, "received announce");
+        Ok(())
+    }
+}
+
+// --- Block ---
+
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[serde(rename = "Block")]
+pub struct BlockType;
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BlockActivity {
+    pub(crate) id: Url,
+    #[serde(rename = "type", default)]
+    pub(crate) kind: BlockType,
+    pub(crate) actor: ObjectId<DbActor>,
+    pub(crate) object: Url,
+}
+
+#[async_trait::async_trait]
+impl Activity for BlockActivity {
+    type DataType = FederationData;
+    type Error = Error;
+
+    fn id(&self) -> &Url {
+        &self.id
+    }
+
+    fn actor(&self) -> &Url {
+        self.actor.inner()
+    }
+
+    async fn verify(&self, _data: &Data<Self::DataType>) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    async fn receive(self, data: &Data<Self::DataType>) -> Result<(), Self::Error> {
+        let domain = self.actor().host_str().unwrap_or("");
+        if data.federation_repo.is_domain_blocked(domain).await? {
+            tracing::info!(actor = %self.actor(), "ignoring activity from blocked domain");
+            return Ok(());
+        }
+        // They blocked us — remove them from our following list
+        if let Some(local_user_id) = crate::urls::extract_user_id_from_url(&self.object) {
+            let _ = data
+                .federation_repo
+                .remove_following(local_user_id, self.actor.inner().as_str())
+                .await;
+        }
+        tracing::info!(actor = %self.actor.inner(), "received block");
         Ok(())
     }
 }
@@ -404,4 +503,6 @@ pub enum InboxActivities {
     Update(UpdateActivity),
     #[serde(rename = "Announce")]
     Announce(AnnounceActivity),
+    #[serde(rename = "Block")]
+    Block(BlockActivity),
 }

@@ -41,4 +41,7 @@ pub trait ApObjectHandler: Send + Sync {
 
     /// Actor unfollowed/was removed — clean up all their remote content.
     async fn on_actor_removed(&self, actor_url: &Url) -> anyhow::Result<()>;
+
+    /// Total number of locally-authored posts across all users.
+    async fn count_local_posts(&self) -> anyhow::Result<u64>;
 }

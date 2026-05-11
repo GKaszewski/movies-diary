@@ -100,7 +100,8 @@ fn html_routes(rate_limit: u64) -> Router<AppState> {
             "/settings/profile",
             routing::get(handlers::html::get_profile_settings)
                 .post(handlers::html::post_profile_settings),
-        );
+        )
+        .route("/tags/{tag}", routing::get(handlers::html::get_tag));
 
     #[cfg(feature = "federation")]
     let base = base.merge(federation_html_routes());
@@ -139,6 +140,21 @@ fn federation_html_routes() -> Router<AppState> {
             "/users/{id}/followers/remove",
             routing::post(handlers::html::remove_follower),
         )
+        .route(
+            "/admin/blocked-domains",
+            routing::get(handlers::html::get_blocked_domains_page)
+                .post(handlers::html::post_blocked_domain),
+        )
+        .route(
+            "/admin/blocked-domains/remove",
+            routing::post(handlers::html::post_remove_blocked_domain),
+        )
+        .route(
+            "/social/blocked",
+            routing::get(handlers::html::get_blocked_actors_page),
+        )
+        .route("/social/block", routing::post(handlers::html::post_block_actor_html))
+        .route("/social/unblock", routing::post(handlers::html::post_unblock_actor))
 }
 
 fn api_routes(rate_limit: u64) -> Router<AppState> {
@@ -220,4 +236,16 @@ fn federation_api_routes() -> Router<AppState> {
             "/social/followers/remove",
             routing::post(handlers::api::remove_follower),
         )
+        .route(
+            "/admin/blocked-domains",
+            routing::get(handlers::api::get_blocked_domains_admin)
+                .post(handlers::api::add_blocked_domain_admin),
+        )
+        .route(
+            "/admin/blocked-domains/{domain}",
+            routing::delete(handlers::api::remove_blocked_domain_admin),
+        )
+        .route("/social/block", routing::post(handlers::api::block_actor_api))
+        .route("/social/unblock", routing::post(handlers::api::unblock_actor_api))
+        .route("/social/blocked", routing::get(handlers::api::get_blocked_actors_api))
 }

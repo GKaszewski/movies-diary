@@ -27,7 +27,8 @@ pub struct DbActor {
     pub ap_id: Url,
     pub last_refreshed_at: DateTime<Utc>,
     pub bio: Option<String>,
-    pub avatar_path: Option<String>,
+    pub avatar_url: Option<Url>,
+    pub profile_url: Option<Url>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -105,7 +106,8 @@ pub async fn get_local_actor(
         ap_id,
         last_refreshed_at: Utc::now(),
         bio: user.bio,
-        avatar_path: user.avatar_path,
+        avatar_url: user.avatar_url,
+        profile_url: user.profile_url,
     })
 }
 
@@ -164,7 +166,8 @@ impl Object for DbActor {
             ap_id,
             last_refreshed_at: Utc::now(),
             bio: None,
-            avatar_path: None,
+            avatar_url: None,
+            profile_url: None,
         }))
     }
 
@@ -175,14 +178,11 @@ impl Object for DbActor {
             public_key_pem: self.public_key_pem.clone(),
         };
 
-        let icon = self.avatar_path.as_ref().map(|p| ApImageObject {
+        let icon = self.avatar_url.map(|url| ApImageObject {
             kind: "Image".to_string(),
-            url: Url::parse(&format!("{}/images/{}", data.base_url, p))
-                .expect("valid avatar url"),
+            url,
         });
-        let profile_url =
-            Url::parse(&format!("{}/u/{}", data.base_url, self.username))
-                .expect("valid profile url");
+        let profile_url = self.profile_url;
 
         Ok(Person {
             kind: Default::default(),
@@ -196,7 +196,7 @@ impl Object for DbActor {
             name: Some(self.username.clone()),
             summary: self.bio.clone(),
             icon,
-            url: Some(profile_url),
+            url: profile_url,
             discoverable: Some(true),
             manually_approves_followers: false,
         })
@@ -242,7 +242,8 @@ impl Object for DbActor {
             ap_id,
             last_refreshed_at: Utc::now(),
             bio: None,
-            avatar_path: None,
+            avatar_url: None,
+            profile_url: None,
         })
     }
 }

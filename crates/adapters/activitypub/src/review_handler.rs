@@ -59,7 +59,7 @@ impl ApObjectHandler for ReviewObjectHandler {
             let poster_url = movie
                 .as_ref()
                 .and_then(|m| m.poster_path())
-                .map(|p| format!("{}/posters/{}", self.base_url, p.value()));
+                .map(|p| format!("{}/images/{}", self.base_url, p.value()));
 
             let obj = review_to_ap_object(
                 review,
@@ -68,6 +68,7 @@ impl ApObjectHandler for ReviewObjectHandler {
                 movie_title,
                 release_year,
                 poster_url,
+                &self.base_url,
             );
             let json = serde_json::to_value(obj)?;
             results.push((ap_id, json));
@@ -122,7 +123,7 @@ impl ApObjectHandler for ReviewObjectHandler {
             let poster_url = movie
                 .as_ref()
                 .and_then(|m| m.poster_path())
-                .map(|p| format!("{}/posters/{}", self.base_url, p.value()));
+                .map(|p| format!("{}/images/{}", self.base_url, p.value()));
 
             let obj = review_to_ap_object(
                 review,
@@ -131,6 +132,7 @@ impl ApObjectHandler for ReviewObjectHandler {
                 movie_title,
                 release_year,
                 poster_url,
+                &self.base_url,
             );
             let json = serde_json::to_value(obj)?;
             results.push((ap_id, json, published));
@@ -234,5 +236,12 @@ impl ApObjectHandler for ReviewObjectHandler {
 
     async fn on_actor_removed(&self, actor_url: &Url) -> anyhow::Result<()> {
         self.review_store.delete_by_actor(actor_url.as_str()).await
+    }
+
+    async fn count_local_posts(&self) -> anyhow::Result<u64> {
+        self.diary_repository
+            .count_local_posts()
+            .await
+            .map_err(|e| anyhow::anyhow!(e.to_string()))
     }
 }

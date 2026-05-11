@@ -10,7 +10,10 @@ use chrono::Utc;
 use uuid::Uuid;
 
 #[cfg(feature = "federation")]
-use application::ports::{FollowersPageData, FollowingPageData};
+use application::ports::{
+    BlockedActorEntry, BlockedActorsPageData, BlockedDomainEntry, BlockedDomainsPageData,
+    FollowersPageData, FollowingPageData,
+};
 use application::{
     commands::{DeleteReviewCommand, ExportCommand, LoginCommand, RegisterCommand},
     ports::{
@@ -27,13 +30,13 @@ use domain::models::ExportFormat;
 use domain::{errors::DomainError, value_objects::UserId};
 
 #[cfg(feature = "federation")]
-use crate::dtos::{FollowForm, FollowerActionForm, UnfollowForm};
+use crate::dtos::{ActorUrlForm, BlockDomainForm, FollowForm, FollowerActionForm, RemoveDomainForm, UnfollowForm};
 use crate::{
     csrf::CsrfToken,
     dtos::{
         ErrorQuery, FeedQueryParams, LogReviewData, LogReviewForm, LoginForm, RegisterForm,
     },
-    extractors::{OptionalCookieUser, RequiredCookieUser},
+    extractors::{AdminUser, OptionalCookieUser, RequiredCookieUser},
     state::AppState,
 };
 
@@ -1015,6 +1018,160 @@ pub async fn get_profile_settings(
         Err(e) => {
             tracing::error!("profile_settings template error: {}", e);
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+pub async fn get_tag(Path(tag): Path<String>) -> impl IntoResponse {
+    if tag.eq_ignore_ascii_case("moviesdiary") {
+        Redirect::temporary("/")
+    } else {
+        Redirect::temporary(&format!("/?search={}", tag))
+    }
+}
+
+#[cfg(feature = "federation")]
+pub async fn get_blocked_domains_page(
+    AdminUser(user_id): AdminUser,
+    State(state): State<AppState>,
+    Extension(csrf): Extension<CsrfToken>,
+) -> impl IntoResponse {
+    let mut ctx = build_page_context(&state, Some(user_id), csrf.0).await;
+    ctx.page_title = "Blocked Domains — Movies Diary".to_string();
+    ctx.canonical_url = format!("{}/admin/blocked-domains", state.app_ctx.config.base_url);
+    match state.ap_service.get_blocked_domains().await {
+        Ok(domains) => {
+            let data = BlockedDomainsPageData {
+                ctx,
+                domains: domains
+                    .into_iter()
+                    .map(|d| BlockedDomainEntry {
+                        domain: d.domain,
+                        reason: d.reason,
+                        blocked_at: d.blocked_at,
+                    })
+                    .collect(),
+            };
+            match state.html_renderer.render_blocked_domains_page(data) {
+                Ok(html) => Html(html).into_response(),
+                Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
+            }
+        }
+        Err(e) => {
+            tracing::error!("get_blocked_domains error: {:?}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to load blocked domains").into_response()
+        }
+    }
+}
+
+#[cfg(feature = "federation")]
+pub async fn post_blocked_domain(
+    AdminUser(_): AdminUser,
+    State(state): State<AppState>,
+    Extension(csrf): Extension<CsrfToken>,
+    Form(form): Form<BlockDomainForm>,
+) -> impl IntoResponse {
+    if crate::csrf::mismatch(&csrf, &form.csrf_token) {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+    let reason = form.reason.as_deref().filter(|s| !s.trim().is_empty());
+    match state.ap_service.add_blocked_domain(&form.domain, reason).await {
+        Ok(()) => Redirect::to("/admin/blocked-domains").into_response(),
+        Err(e) => {
+            tracing::error!("add_blocked_domain error: {:?}", e);
+            Redirect::to("/admin/blocked-domains").into_response()
+        }
+    }
+}
+
+#[cfg(feature = "federation")]
+pub async fn post_remove_blocked_domain(
+    AdminUser(_): AdminUser,
+    State(state): State<AppState>,
+    Extension(csrf): Extension<CsrfToken>,
+    Form(form): Form<RemoveDomainForm>,
+) -> impl IntoResponse {
+    if crate::csrf::mismatch(&csrf, &form.csrf_token) {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+    match state.ap_service.remove_blocked_domain(&form.domain).await {
+        Ok(()) => Redirect::to("/admin/blocked-domains").into_response(),
+        Err(e) => {
+            tracing::error!("remove_blocked_domain error: {:?}", e);
+            Redirect::to("/admin/blocked-domains").into_response()
+        }
+    }
+}
+
+#[cfg(feature = "federation")]
+pub async fn get_blocked_actors_page(
+    RequiredCookieUser(user_id): RequiredCookieUser,
+    State(state): State<AppState>,
+    Extension(csrf): Extension<CsrfToken>,
+) -> impl IntoResponse {
+    let mut ctx = build_page_context(&state, Some(user_id.clone()), csrf.0).await;
+    ctx.page_title = "Blocked Users — Movies Diary".to_string();
+    ctx.canonical_url = format!("{}/social/blocked", state.app_ctx.config.base_url);
+    match state.ap_service.get_blocked_actors(user_id.value()).await {
+        Ok(actors) => {
+            let data = BlockedActorsPageData {
+                ctx,
+                actors: actors
+                    .into_iter()
+                    .map(|a| BlockedActorEntry {
+                        url: a.url,
+                        handle: a.handle,
+                        display_name: a.display_name,
+                        avatar_url: a.avatar_url,
+                    })
+                    .collect(),
+            };
+            match state.html_renderer.render_blocked_actors_page(data) {
+                Ok(html) => Html(html).into_response(),
+                Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
+            }
+        }
+        Err(e) => {
+            tracing::error!("get_blocked_actors error: {:?}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to load blocked users").into_response()
+        }
+    }
+}
+
+#[cfg(feature = "federation")]
+pub async fn post_block_actor_html(
+    RequiredCookieUser(user_id): RequiredCookieUser,
+    State(state): State<AppState>,
+    Extension(csrf): Extension<CsrfToken>,
+    Form(form): Form<ActorUrlForm>,
+) -> impl IntoResponse {
+    if crate::csrf::mismatch(&csrf, &form.csrf_token) {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+    match state.ap_service.block_actor(user_id.value(), &form.actor_url).await {
+        Ok(()) => Redirect::to("/social/blocked").into_response(),
+        Err(e) => {
+            tracing::error!("block_actor html error: {:?}", e);
+            Redirect::to("/social/blocked").into_response()
+        }
+    }
+}
+
+#[cfg(feature = "federation")]
+pub async fn post_unblock_actor(
+    RequiredCookieUser(user_id): RequiredCookieUser,
+    State(state): State<AppState>,
+    Extension(csrf): Extension<CsrfToken>,
+    Form(form): Form<ActorUrlForm>,
+) -> impl IntoResponse {
+    if crate::csrf::mismatch(&csrf, &form.csrf_token) {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+    match state.ap_service.unblock_actor(user_id.value(), &form.actor_url).await {
+        Ok(()) => Redirect::to("/social/blocked").into_response(),
+        Err(e) => {
+            tracing::error!("unblock_actor error: {:?}", e);
+            Redirect::to("/social/blocked").into_response()
         }
     }
 }

@@ -92,6 +92,7 @@ impl ActivityPubEventHandler {
             movie_title,
             release_year,
             poster_url,
+            &self.base_url,
         );
         let json = serde_json::to_value(obj)?;
 

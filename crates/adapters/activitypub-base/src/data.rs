@@ -11,6 +11,8 @@ pub struct FederationData {
     pub(crate) object_handler: Arc<dyn ApObjectHandler>,
     pub(crate) base_url: String,
     pub(crate) domain: String,
+    pub(crate) allow_registration: bool,
+    pub(crate) software_name: String,
 }
 
 impl FederationData {
@@ -19,6 +21,8 @@ impl FederationData {
         user_repo: Arc<dyn ApUserRepository>,
         object_handler: Arc<dyn ApObjectHandler>,
         base_url: String,
+        allow_registration: bool,
+        software_name: String,
     ) -> Self {
         let domain = base_url
             .trim_start_matches("https://")
@@ -33,6 +37,8 @@ impl FederationData {
             object_handler,
             base_url,
             domain,
+            allow_registration,
+            software_name,
         }
     }
 }

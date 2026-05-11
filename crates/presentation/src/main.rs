@@ -89,6 +89,7 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
             Arc::clone(&review_repository),
             Arc::clone(&diary_repository),
             app_config.base_url.clone(),
+            app_config.allow_registration,
         ).await?;
         let ap_router = ap.router;
         let ap_service_arc = ap.service;

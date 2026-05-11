@@ -9,7 +9,8 @@ A self-hosted, server-side rendered movie logging system with a full REST API. B
 - Background poster fetching and storage (local filesystem or S3-compatible)
 - RSS/Atom feed for public subscription (global and per-user)
 - JWT authentication via cookie (HTML) or Bearer token (REST API)
-- ActivityPub federation — follow/unfollow remote users on any compatible server, accept/reject/remove followers, pending follow request management
+- ActivityPub federation — follow/unfollow remote users, accept/reject/remove followers, federated reviews broadcast as `Note` objects with `#MoviesDiary` + `#MovieTitle` hashtags, paginated outbox, boost/Announce tracking, NodeInfo discovery endpoint, shared inbox delivery, actor profile sync (bio, avatar, discoverable)
+- Federation moderation — instance-level domain blocking (admin-managed), per-user actor blocking with `Block` activity, delivery filter excludes blocked actors and blocked-domain inboxes
 - CSV and JSON diary export
 - File importer: upload CSV, TSV, JSON, or XLSX from any source (Letterboxd, IMDb, etc.), map columns to domain fields via a step-by-step wizard or REST API, save mapping profiles for repeat imports
 - REST API v1 (`/api/v1/`) with full feature parity with the HTML interface
@@ -33,7 +34,7 @@ adapters/
   postgres             — PostgreSQL repository + connection factory
   metadata             — TMDB / OMDb HTTP client
   poster-fetcher       — downloads poster images
-  poster-storage       — stores posters on local filesystem or S3-compatible storage
+  image-storage        — stores images (posters + user avatars) on local filesystem or S3-compatible storage
   poster-sync          — event handler: triggers poster fetch+store on MovieDiscovered
   template-askama      — Askama HTML rendering
   rss                  — RSS/Atom feed generation

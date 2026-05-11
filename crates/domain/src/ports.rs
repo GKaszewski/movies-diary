@@ -116,6 +116,7 @@ pub trait DiaryRepository: Send + Sync {
         movie_id: &MovieId,
         page: &PageParams,
     ) -> Result<Paginated<FeedEntry>, DomainError>;
+    async fn count_local_posts(&self) -> Result<u64, DomainError>;
 }
 
 #[async_trait]

@@ -5,7 +5,7 @@ use sqlx::{Row, SqlitePool};
 
 use activitypub::RemoteReviewRepository;
 use activitypub_base::{
-    FederationRepository, Follower, FollowerStatus, FollowingStatus, RemoteActor,
+    BlockedDomain, FederationRepository, Follower, FollowerStatus, FollowingStatus, RemoteActor,
 };
 use domain::models::{Review, ReviewSource};
 
@@ -428,6 +428,105 @@ impl FederationRepository for SqliteFederationRepository {
             .await?;
         Ok(row.get::<i64, _>("cnt") as usize)
     }
+
+    async fn add_blocked_domain(&self, domain: &str, reason: Option<&str>) -> Result<()> {
+        let now = Utc::now().naive_utc();
+        let ts = datetime_to_str(&now);
+        sqlx::query(
+            "INSERT INTO blocked_domains (domain, reason, blocked_at) VALUES (?1, ?2, ?3)
+             ON CONFLICT(domain) DO UPDATE SET reason = excluded.reason",
+        )
+        .bind(domain)
+        .bind(reason)
+        .bind(&ts)
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    async fn remove_blocked_domain(&self, domain: &str) -> Result<()> {
+        sqlx::query("DELETE FROM blocked_domains WHERE domain = ?1")
+            .bind(domain)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    async fn get_blocked_domains(&self) -> Result<Vec<BlockedDomain>> {
+        let rows = sqlx::query(
+            "SELECT domain, reason, blocked_at FROM blocked_domains ORDER BY blocked_at DESC",
+        )
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows
+            .iter()
+            .map(|r| BlockedDomain {
+                domain: r.get("domain"),
+                reason: r.get("reason"),
+                blocked_at: r.get("blocked_at"),
+            })
+            .collect())
+    }
+
+    async fn is_domain_blocked(&self, domain: &str) -> Result<bool> {
+        let count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM blocked_domains WHERE domain = ?1",
+        )
+        .bind(domain)
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(count > 0)
+    }
+
+    async fn add_blocked_actor(&self, local_user_id: uuid::Uuid, actor_url: &str) -> Result<()> {
+        let uid = local_user_id.to_string();
+        let ts = datetime_to_str(&Utc::now().naive_utc());
+        sqlx::query(
+            "INSERT OR IGNORE INTO blocked_actors (local_user_id, remote_actor_url, blocked_at)
+             VALUES (?1, ?2, ?3)",
+        )
+        .bind(&uid)
+        .bind(actor_url)
+        .bind(&ts)
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    async fn remove_blocked_actor(&self, local_user_id: uuid::Uuid, actor_url: &str) -> Result<()> {
+        let uid = local_user_id.to_string();
+        sqlx::query(
+            "DELETE FROM blocked_actors WHERE local_user_id = ?1 AND remote_actor_url = ?2",
+        )
+        .bind(&uid)
+        .bind(actor_url)
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    async fn get_blocked_actors(&self, local_user_id: uuid::Uuid) -> Result<Vec<String>> {
+        let uid = local_user_id.to_string();
+        let rows = sqlx::query(
+            "SELECT remote_actor_url FROM blocked_actors WHERE local_user_id = ?1 ORDER BY blocked_at DESC",
+        )
+        .bind(&uid)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows.iter().map(|r| r.get::<String, _>("remote_actor_url")).collect())
+    }
+
+    async fn is_actor_blocked(&self, local_user_id: uuid::Uuid, actor_url: &str) -> Result<bool> {
+        let uid = local_user_id.to_string();
+        let count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM blocked_actors WHERE local_user_id = ?1 AND remote_actor_url = ?2",
+        )
+        .bind(&uid)
+        .bind(actor_url)
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(count > 0)
+    }
 }
 
 // --- Content-specific repository (movies-diary) ---
@@ -584,6 +683,84 @@ pub fn wire(pool: sqlx::SqlitePool) -> (
         std::sync::Arc::clone(&fed) as _,
         fed as _,
     )
+}
+
+#[cfg(test)]
+mod actor_block_tests {
+    use super::*;
+    use sqlx::SqlitePool;
+
+    async fn test_pool() -> SqlitePool {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE users (id TEXT PRIMARY KEY, email TEXT, password_hash TEXT, created_at TEXT)")
+            .execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE blocked_actors (local_user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, remote_actor_url TEXT NOT NULL, blocked_at TEXT NOT NULL, PRIMARY KEY (local_user_id, remote_actor_url))")
+            .execute(&pool).await.unwrap();
+        let uid = uuid::Uuid::new_v4().to_string();
+        sqlx::query("INSERT INTO users (id, email, password_hash, created_at) VALUES (?, ?, ?, ?)")
+            .bind(&uid).bind("a@b.com").bind("hash").bind("2024-01-01")
+            .execute(&pool).await.unwrap();
+        pool
+    }
+
+    #[tokio::test]
+    async fn block_and_check_actor() {
+        let pool = test_pool().await;
+        let user_id = uuid::Uuid::parse_str(
+            &sqlx::query_scalar::<_, String>("SELECT id FROM users LIMIT 1")
+                .fetch_one(&pool).await.unwrap()
+        ).unwrap();
+        let repo = SqliteFederationRepository::new(pool);
+        let actor_url = "https://mastodon.social/users/alice";
+        assert!(!repo.is_actor_blocked(user_id, actor_url).await.unwrap());
+        repo.add_blocked_actor(user_id, actor_url).await.unwrap();
+        assert!(repo.is_actor_blocked(user_id, actor_url).await.unwrap());
+        let list = repo.get_blocked_actors(user_id).await.unwrap();
+        assert_eq!(list, vec![actor_url.to_string()]);
+        repo.remove_blocked_actor(user_id, actor_url).await.unwrap();
+        assert!(!repo.is_actor_blocked(user_id, actor_url).await.unwrap());
+    }
+}
+
+#[cfg(test)]
+mod domain_block_tests {
+    use super::*;
+    use sqlx::SqlitePool;
+
+    async fn test_pool() -> SqlitePool {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE blocked_domains (domain TEXT PRIMARY KEY, reason TEXT, blocked_at TEXT NOT NULL)")
+            .execute(&pool).await.unwrap();
+        pool
+    }
+
+    #[tokio::test]
+    async fn blocked_domain_is_detected() {
+        let pool = test_pool().await;
+        let repo = SqliteFederationRepository::new(pool);
+        assert!(!repo.is_domain_blocked("mastodon.social").await.unwrap());
+        repo.add_blocked_domain("mastodon.social", Some("spam")).await.unwrap();
+        assert!(repo.is_domain_blocked("mastodon.social").await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn remove_unblocks_domain() {
+        let pool = test_pool().await;
+        let repo = SqliteFederationRepository::new(pool);
+        repo.add_blocked_domain("spam.xyz", None).await.unwrap();
+        repo.remove_blocked_domain("spam.xyz").await.unwrap();
+        assert!(!repo.is_domain_blocked("spam.xyz").await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn get_blocked_domains_returns_all() {
+        let pool = test_pool().await;
+        let repo = SqliteFederationRepository::new(pool);
+        repo.add_blocked_domain("a.com", Some("reason a")).await.unwrap();
+        repo.add_blocked_domain("b.com", None).await.unwrap();
+        let domains = repo.get_blocked_domains().await.unwrap();
+        assert_eq!(domains.len(), 2);
+    }
 }
 
 #[cfg(test)]

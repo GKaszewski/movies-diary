@@ -232,6 +232,9 @@ mod tests {
         ) -> Result<Paginated<FeedEntry>, DomainError> {
             panic!()
         }
+        async fn count_local_posts(&self) -> Result<u64, DomainError> {
+            panic!()
+        }
     }
     #[cfg(feature = "federation")]
     #[async_trait::async_trait]
@@ -440,6 +443,8 @@ mod tests {
         fn render_import_mapping_page(&self, _: application::ports::ImportMappingPageData) -> Result<String, String> { panic!() }
         fn render_import_preview_page(&self, _: application::ports::ImportPreviewPageData) -> Result<String, String> { panic!() }
         fn render_profile_settings_page(&self, _: application::ports::ProfileSettingsPageData) -> Result<String, String> { panic!() }
+        fn render_blocked_domains_page(&self, _: application::ports::BlockedDomainsPageData) -> Result<String, String> { panic!() }
+        fn render_blocked_actors_page(&self, _: application::ports::BlockedActorsPageData) -> Result<String, String> { panic!() }
     }
     impl crate::ports::RssFeedRenderer for Panic {
         fn render_feed(&self, _: &[DiaryEntry], _: &str) -> Result<String, String> {

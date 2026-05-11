@@ -278,6 +278,29 @@ pub struct FollowerActionForm {
     pub csrf_token: String,
 }
 
+#[derive(Deserialize)]
+pub struct BlockDomainForm {
+    pub domain: String,
+    #[serde(default)]
+    pub reason: Option<String>,
+    #[serde(rename = "_csrf", default)]
+    pub csrf_token: String,
+}
+
+#[derive(Deserialize)]
+pub struct RemoveDomainForm {
+    pub domain: String,
+    #[serde(rename = "_csrf", default)]
+    pub csrf_token: String,
+}
+
+#[derive(Deserialize)]
+pub struct ActorUrlForm {
+    pub actor_url: String,
+    #[serde(rename = "_csrf", default)]
+    pub csrf_token: String,
+}
+
 #[derive(serde::Deserialize, Default)]
 pub struct ProfileQueryParams {
     pub view: Option<String>,
@@ -470,6 +493,27 @@ pub struct MovieDetailResponse {
     pub movie: MovieDto,
     pub stats: MovieStatsDto,
     pub reviews: SocialFeedResponse,
+}
+
+#[derive(serde::Serialize)]
+pub struct BlockedDomainResponse {
+    pub domain: String,
+    pub reason: Option<String>,
+    pub blocked_at: String,
+}
+
+#[derive(serde::Deserialize)]
+pub struct AddBlockedDomainRequest {
+    pub domain: String,
+    pub reason: Option<String>,
+}
+
+#[derive(serde::Serialize)]
+pub struct BlockedActorResponse {
+    pub url: String,
+    pub handle: String,
+    pub display_name: Option<String>,
+    pub avatar_url: Option<String>,
 }
 
 #[cfg(test)]

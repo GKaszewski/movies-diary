@@ -412,6 +412,97 @@ fn entry_to_dto(entry: &DiaryEntry) -> DiaryEntryDto {
 }
 
 #[cfg(feature = "federation")]
+pub async fn get_blocked_domains_admin(
+    State(state): State<AppState>,
+    _admin: crate::extractors::AdminUser,
+) -> impl IntoResponse {
+    match state.ap_service.get_blocked_domains().await {
+        Ok(domains) => {
+            let response: Vec<crate::dtos::BlockedDomainResponse> = domains
+                .into_iter()
+                .map(|d| crate::dtos::BlockedDomainResponse {
+                    domain: d.domain,
+                    reason: d.reason,
+                    blocked_at: d.blocked_at,
+                })
+                .collect();
+            axum::Json(response).into_response()
+        }
+        Err(e) => ap_err(e).into_response(),
+    }
+}
+
+#[cfg(feature = "federation")]
+pub async fn add_blocked_domain_admin(
+    State(state): State<AppState>,
+    _admin: crate::extractors::AdminUser,
+    axum::Json(body): axum::Json<crate::dtos::AddBlockedDomainRequest>,
+) -> impl IntoResponse {
+    match state.ap_service.add_blocked_domain(&body.domain, body.reason.as_deref()).await {
+        Ok(()) => StatusCode::CREATED.into_response(),
+        Err(e) => ap_err(e).into_response(),
+    }
+}
+
+#[cfg(feature = "federation")]
+pub async fn remove_blocked_domain_admin(
+    State(state): State<AppState>,
+    _admin: crate::extractors::AdminUser,
+    axum::extract::Path(domain): axum::extract::Path<String>,
+) -> impl IntoResponse {
+    match state.ap_service.remove_blocked_domain(&domain).await {
+        Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Err(e) => ap_err(e).into_response(),
+    }
+}
+
+#[cfg(feature = "federation")]
+pub async fn block_actor_api(
+    State(state): State<AppState>,
+    user: AuthenticatedUser,
+    axum::Json(body): axum::Json<ActorUrlRequest>,
+) -> impl IntoResponse {
+    match state.ap_service.block_actor(user.0.value(), &body.actor_url).await {
+        Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Err(e) => ap_err(e).into_response(),
+    }
+}
+
+#[cfg(feature = "federation")]
+pub async fn unblock_actor_api(
+    State(state): State<AppState>,
+    user: AuthenticatedUser,
+    axum::Json(body): axum::Json<ActorUrlRequest>,
+) -> impl IntoResponse {
+    match state.ap_service.unblock_actor(user.0.value(), &body.actor_url).await {
+        Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Err(e) => ap_err(e).into_response(),
+    }
+}
+
+#[cfg(feature = "federation")]
+pub async fn get_blocked_actors_api(
+    State(state): State<AppState>,
+    user: AuthenticatedUser,
+) -> impl IntoResponse {
+    match state.ap_service.get_blocked_actors(user.0.value()).await {
+        Ok(actors) => {
+            let response: Vec<crate::dtos::BlockedActorResponse> = actors
+                .into_iter()
+                .map(|a| crate::dtos::BlockedActorResponse {
+                    url: a.url,
+                    handle: a.handle,
+                    display_name: a.display_name,
+                    avatar_url: a.avatar_url,
+                })
+                .collect();
+            axum::Json(response).into_response()
+        }
+        Err(e) => ap_err(e).into_response(),
+    }
+}
+
+#[cfg(feature = "federation")]
 fn ap_err(e: anyhow::Error) -> impl IntoResponse {
     tracing::error!("ActivityPub error: {:?}", e);
     StatusCode::INTERNAL_SERVER_ERROR

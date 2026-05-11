@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use uuid::Uuid;
 
-use activitypub_base::{ActivityPubService, RemoteActor};
+use activitypub_base::{ActivityPubService, BlockedDomain, RemoteActor};
 
 #[async_trait]
 pub trait ActivityPubPort: Send + Sync {
@@ -25,6 +25,12 @@ pub trait ActivityPubPort: Send + Sync {
     async fn get_accepted_followers(&self, local_user_id: Uuid)
     -> anyhow::Result<Vec<RemoteActor>>;
     async fn remove_follower(&self, local_user_id: Uuid, actor_url: &str) -> anyhow::Result<()>;
+    async fn block_actor(&self, local_user_id: Uuid, actor_url: &str) -> anyhow::Result<()>;
+    async fn unblock_actor(&self, local_user_id: Uuid, actor_url: &str) -> anyhow::Result<()>;
+    async fn get_blocked_actors(&self, local_user_id: Uuid) -> anyhow::Result<Vec<RemoteActor>>;
+    async fn add_blocked_domain(&self, domain: &str, reason: Option<&str>) -> anyhow::Result<()>;
+    async fn remove_blocked_domain(&self, domain: &str) -> anyhow::Result<()>;
+    async fn get_blocked_domains(&self) -> anyhow::Result<Vec<BlockedDomain>>;
 }
 
 #[async_trait]
@@ -73,6 +79,24 @@ impl ActivityPubPort for ActivityPubService {
     async fn remove_follower(&self, local_user_id: Uuid, actor_url: &str) -> anyhow::Result<()> {
         self.remove_follower(local_user_id, actor_url).await
     }
+    async fn block_actor(&self, local_user_id: Uuid, actor_url: &str) -> anyhow::Result<()> {
+        self.block_actor(local_user_id, actor_url).await
+    }
+    async fn unblock_actor(&self, local_user_id: Uuid, actor_url: &str) -> anyhow::Result<()> {
+        self.unblock_actor(local_user_id, actor_url).await
+    }
+    async fn get_blocked_actors(&self, local_user_id: Uuid) -> anyhow::Result<Vec<RemoteActor>> {
+        self.get_blocked_actors(local_user_id).await
+    }
+    async fn add_blocked_domain(&self, domain: &str, reason: Option<&str>) -> anyhow::Result<()> {
+        self.add_blocked_domain(domain, reason).await
+    }
+    async fn remove_blocked_domain(&self, domain: &str) -> anyhow::Result<()> {
+        self.remove_blocked_domain(domain).await
+    }
+    async fn get_blocked_domains(&self) -> anyhow::Result<Vec<BlockedDomain>> {
+        self.get_blocked_domains().await
+    }
 }
 
 pub struct NoopActivityPubService;
@@ -111,5 +135,23 @@ impl ActivityPubPort for NoopActivityPubService {
     }
     async fn remove_follower(&self, _: Uuid, _: &str) -> anyhow::Result<()> {
         Ok(())
+    }
+    async fn block_actor(&self, _: Uuid, _: &str) -> anyhow::Result<()> {
+        Ok(())
+    }
+    async fn unblock_actor(&self, _: Uuid, _: &str) -> anyhow::Result<()> {
+        Ok(())
+    }
+    async fn get_blocked_actors(&self, _: Uuid) -> anyhow::Result<Vec<RemoteActor>> {
+        Ok(vec![])
+    }
+    async fn add_blocked_domain(&self, _: &str, _: Option<&str>) -> anyhow::Result<()> {
+        Ok(())
+    }
+    async fn remove_blocked_domain(&self, _: &str) -> anyhow::Result<()> {
+        Ok(())
+    }
+    async fn get_blocked_domains(&self) -> anyhow::Result<Vec<BlockedDomain>> {
+        Ok(vec![])
     }
 }

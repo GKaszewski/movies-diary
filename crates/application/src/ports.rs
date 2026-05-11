@@ -152,6 +152,29 @@ pub struct ProfileSettingsPageData {
     pub saved: bool,
 }
 
+pub struct BlockedDomainEntry {
+    pub domain: String,
+    pub reason: Option<String>,
+    pub blocked_at: String,
+}
+
+pub struct BlockedDomainsPageData {
+    pub ctx: HtmlPageContext,
+    pub domains: Vec<BlockedDomainEntry>,
+}
+
+pub struct BlockedActorEntry {
+    pub url: String,
+    pub handle: String,
+    pub display_name: Option<String>,
+    pub avatar_url: Option<String>,
+}
+
+pub struct BlockedActorsPageData {
+    pub ctx: HtmlPageContext,
+    pub actors: Vec<BlockedActorEntry>,
+}
+
 pub trait HtmlRenderer: Send + Sync {
     fn render_diary_page(
         &self,
@@ -174,6 +197,8 @@ pub trait HtmlRenderer: Send + Sync {
         &self,
         data: ProfileSettingsPageData,
     ) -> Result<String, String>;
+    fn render_blocked_domains_page(&self, data: BlockedDomainsPageData) -> Result<String, String>;
+    fn render_blocked_actors_page(&self, data: BlockedActorsPageData) -> Result<String, String>;
 }
 
 pub trait RssFeedRenderer: Send + Sync {

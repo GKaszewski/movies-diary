@@ -303,6 +303,38 @@ async fn get_api_movie_detail_returns_404_for_unknown_id() {
 }
 
 #[tokio::test]
+async fn tags_moviesdiary_redirects_to_home() {
+    let app = test_app().await;
+    let response = app
+        .oneshot(with_ip(
+            Request::builder()
+                .uri("/tags/moviesdiary")
+                .body(Body::empty())
+                .unwrap(),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::TEMPORARY_REDIRECT);
+    assert_eq!(response.headers().get("location").unwrap(), "/");
+}
+
+#[tokio::test]
+async fn tags_other_redirects_to_search() {
+    let app = test_app().await;
+    let response = app
+        .oneshot(with_ip(
+            Request::builder()
+                .uri("/tags/batman")
+                .body(Body::empty())
+                .unwrap(),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::TEMPORARY_REDIRECT);
+    assert_eq!(response.headers().get("location").unwrap(), "/?search=batman");
+}
+
+#[tokio::test]
 async fn get_movie_detail_html_returns_404_for_unknown_id() {
     let app = test_app().await;
     let response = app

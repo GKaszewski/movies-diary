@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Blocked Users</h2>
+
+{% if actors.is_empty() %}
+<p>No users blocked.</p>
+{% else %}
+<ul class="following-list">
+  {% for a in actors %}
+  <li class="following-item">
+    {% if let Some(avatar) = a.avatar_url %}
+    <img src="{{ avatar }}" alt="avatar" style="width:32px;height:32px;border-radius:50%" />
+    {% endif %}
+    <strong>{{ a.handle }}</strong>{% if let Some(name) = a.display_name %} ({{ name }}){% endif %}
+    <form method="POST" action="/social/unblock" style="display:inline">
+      <input type="hidden" name="_csrf" value="{{ ctx.csrf_token }}" />
+      <input type="hidden" name="actor_url" value="{{ a.url }}" />
+      <button type="submit">Unblock</button>
+    </form>
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}
+{% endblock %}

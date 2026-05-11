@@ -7,6 +7,7 @@ pub mod error;
 pub mod federation;
 pub mod followers_handler;
 pub mod inbox;
+pub mod nodeinfo;
 pub mod outbox;
 pub mod repository;
 pub mod service;
@@ -19,7 +20,7 @@ pub use data::FederationData;
 pub use error::Error;
 pub use federation::ApFederationConfig;
 pub use repository::{
-    FederationRepository, Follower, FollowerStatus, FollowingStatus, RemoteActor,
+    BlockedDomain, FederationRepository, Follower, FollowerStatus, FollowingStatus, RemoteActor,
 };
 pub use service::ActivityPubService;
 pub use user::{ApUser, ApUserRepository};

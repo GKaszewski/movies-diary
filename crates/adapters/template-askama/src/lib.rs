@@ -1,5 +1,6 @@
 use application::ports::{
-    ActivityFeedPageData, FollowersPageData, FollowingPageData, HtmlPageContext, HtmlRenderer,
+    ActivityFeedPageData, BlockedActorEntry, BlockedActorsPageData, BlockedDomainEntry,
+    BlockedDomainsPageData, FollowersPageData, FollowingPageData, HtmlPageContext, HtmlRenderer,
     ImportMappingPageData, ImportPreviewPageData, ImportPreviewRow, ImportProfileView,
     ImportRowStatus, ImportUploadPageData, LoginPageData, MovieDetailPageData, NewReviewPageData,
     ProfilePageData, ProfileSettingsPageData, RegisterPageData, UsersPageData,
@@ -222,6 +223,20 @@ struct FollowersTemplate {
     user_id: uuid::Uuid,
     actors: Vec<RemoteActorData>,
     error: Option<String>,
+}
+
+#[derive(Template)]
+#[template(path = "blocked_domains.html")]
+struct BlockedDomainsTemplate<'a> {
+    ctx: &'a HtmlPageContext,
+    domains: &'a [BlockedDomainEntry],
+}
+
+#[derive(Template)]
+#[template(path = "blocked_actors.html")]
+struct BlockedActorsTemplate<'a> {
+    ctx: &'a HtmlPageContext,
+    actors: &'a [BlockedActorEntry],
 }
 
 struct HeatmapCell {
@@ -668,6 +683,24 @@ impl HtmlRenderer for AskamaHtmlRenderer {
             bio: data.bio.as_deref(),
             avatar_url: data.avatar_url.as_deref(),
             saved: data.saved,
+        }
+        .render()
+        .map_err(|e| e.to_string())
+    }
+
+    fn render_blocked_domains_page(&self, data: BlockedDomainsPageData) -> Result<String, String> {
+        BlockedDomainsTemplate {
+            ctx: &data.ctx,
+            domains: &data.domains,
+        }
+        .render()
+        .map_err(|e| e.to_string())
+    }
+
+    fn render_blocked_actors_page(&self, data: BlockedActorsPageData) -> Result<String, String> {
+        BlockedActorsTemplate {
+            ctx: &data.ctx,
+            actors: &data.actors,
         }
         .render()
         .map_err(|e| e.to_string())

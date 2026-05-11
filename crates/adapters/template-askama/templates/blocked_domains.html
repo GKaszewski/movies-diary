@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Blocked Domains</h2>
+
+<form method="POST" action="/admin/blocked-domains">
+  <input type="hidden" name="_csrf" value="{{ ctx.csrf_token }}" />
+  <div>
+    <label for="domain">Domain</label>
+    <input id="domain" type="text" name="domain" placeholder="spam.example.com" required />
+  </div>
+  <div>
+    <label for="reason">Reason (optional)</label>
+    <input id="reason" type="text" name="reason" />
+  </div>
+  <button type="submit">Block Domain</button>
+</form>
+
+{% if domains.is_empty() %}
+<p>No domains blocked.</p>
+{% else %}
+<ul>
+  {% for d in domains %}
+  <li>
+    <strong>{{ d.domain }}</strong>{% if let Some(r) = d.reason %} — {{ r }}{% endif %}
+    ({{ d.blocked_at }})
+    <form method="POST" action="/admin/blocked-domains/remove" style="display:inline">
+      <input type="hidden" name="_csrf" value="{{ ctx.csrf_token }}" />
+      <input type="hidden" name="domain" value="{{ d.domain }}" />
+      <button type="submit">Unblock</button>
+    </form>
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}
+{% endblock %}

@@ -18,9 +18,10 @@ use crate::{
     followers_handler::{followers_handler, following_handler},
     inbox::inbox_handler,
     outbox::outbox_handler,
-    repository::{FederationRepository, FollowerStatus, FollowingStatus, RemoteActor},
+    repository::{BlockedDomain, FederationRepository, FollowerStatus, FollowingStatus, RemoteActor},
     urls::activity_url,
     user::ApUserRepository,
+    nodeinfo::{nodeinfo_handler, nodeinfo_well_known_handler},
     webfinger::webfinger_handler,
 };
 
@@ -78,9 +79,11 @@ impl ActivityPubService {
         user_repo: Arc<dyn ApUserRepository>,
         object_handler: Arc<dyn ApObjectHandler>,
         base_url: String,
+        allow_registration: bool,
+        software_name: String,
         debug: bool,
     ) -> anyhow::Result<Self> {
-        let data = FederationData::new(repo, user_repo, object_handler, base_url.clone());
+        let data = FederationData::new(repo, user_repo, object_handler, base_url.clone(), allow_registration, software_name);
         let federation_config = ApFederationConfig::new(data, debug).await?;
         Ok(Self {
             federation_config,
@@ -112,6 +115,8 @@ impl ActivityPubService {
 
     pub fn router(&self) -> Router {
         Router::new()
+            .route("/.well-known/nodeinfo", get(nodeinfo_well_known_handler))
+            .route("/nodeinfo/2.0", get(nodeinfo_handler))
             .route("/.well-known/webfinger", get(webfinger_handler))
             .route("/users/{id}/inbox", post(inbox_handler))
             .route("/users/{id}/outbox", get(outbox_handler))
@@ -443,9 +448,30 @@ impl ActivityPubService {
             .map_err(|e| anyhow::anyhow!("{e}"))?;
 
         let followers = data.federation_repo.get_followers(local_user_id).await?;
+        let blocked = data
+            .federation_repo
+            .get_blocked_actors(local_user_id)
+            .await
+            .unwrap_or_default();
+        let blocked_set: std::collections::HashSet<String> = blocked.into_iter().collect();
+        let blocked_domains = data
+            .federation_repo
+            .get_blocked_domains()
+            .await
+            .unwrap_or_default();
+        let blocked_domain_set: std::collections::HashSet<String> =
+            blocked_domains.into_iter().map(|d| d.domain).collect();
         let accepted: Vec<_> = followers
             .into_iter()
             .filter(|f| f.status == FollowerStatus::Accepted)
+            .filter(|f| !blocked_set.contains(&f.actor.url))
+            .filter(|f| {
+                let domain = url::Url::parse(&f.actor.inbox_url)
+                    .ok()
+                    .and_then(|u| u.host_str().map(|s| s.to_string()))
+                    .unwrap_or_default();
+                !blocked_domain_set.contains(&domain)
+            })
             .collect();
 
         if accepted.is_empty() {
@@ -524,6 +550,88 @@ impl ActivityPubService {
             tracing::warn!(count = failures.len(), "actor update delivery failures");
         }
         Ok(())
+    }
+
+    pub async fn block_actor(&self, local_user_id: uuid::Uuid, actor_url: &str) -> anyhow::Result<()> {
+        let data = self.federation_config.to_request_data();
+
+        data.federation_repo
+            .add_blocked_actor(local_user_id, actor_url)
+            .await?;
+        let _ = data.federation_repo.remove_follower(local_user_id, actor_url).await;
+        let _ = data.federation_repo.remove_following(local_user_id, actor_url).await;
+
+        let local_actor = get_local_actor(local_user_id, &data)
+            .await
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
+
+        if let Ok(Some(remote_actor)) = data.federation_repo.get_remote_actor(actor_url).await {
+            let block_id = crate::urls::activity_url(&self.base_url)
+                .map_err(|e| anyhow::anyhow!("{e}"))?;
+            let block = crate::activities::BlockActivity {
+                id: block_id,
+                kind: Default::default(),
+                actor: ObjectId::from(local_actor.ap_id.clone()),
+                object: Url::parse(actor_url)?,
+            };
+            let inbox = Url::parse(&remote_actor.inbox_url)?;
+            let sends = SendActivityTask::prepare(
+                &WithContext::new_default(block),
+                &local_actor,
+                vec![inbox],
+                &data,
+            )
+            .await?;
+            let failures = send_with_retry(sends, &data).await;
+            if !failures.is_empty() {
+                tracing::warn!(actor = %actor_url, "failed to deliver Block activity");
+            }
+        }
+
+        Ok(())
+    }
+
+    pub async fn unblock_actor(&self, local_user_id: uuid::Uuid, actor_url: &str) -> anyhow::Result<()> {
+        let data = self.federation_config.to_request_data();
+        data.federation_repo
+            .remove_blocked_actor(local_user_id, actor_url)
+            .await
+    }
+
+    pub async fn get_blocked_actors(&self, local_user_id: uuid::Uuid) -> anyhow::Result<Vec<RemoteActor>> {
+        let data = self.federation_config.to_request_data();
+        let actor_urls = data.federation_repo.get_blocked_actors(local_user_id).await?;
+        let mut actors = Vec::new();
+        for url in actor_urls {
+            let actor = match data.federation_repo.get_remote_actor(&url).await {
+                Ok(Some(a)) => a,
+                _ => RemoteActor {
+                    url: url.clone(),
+                    handle: url.clone(),
+                    inbox_url: url.clone(),
+                    shared_inbox_url: None,
+                    display_name: None,
+                    avatar_url: None,
+                },
+            };
+            actors.push(actor);
+        }
+        Ok(actors)
+    }
+
+    pub async fn add_blocked_domain(&self, domain: &str, reason: Option<&str>) -> anyhow::Result<()> {
+        let data = self.federation_config.to_request_data();
+        data.federation_repo.add_blocked_domain(domain, reason).await
+    }
+
+    pub async fn remove_blocked_domain(&self, domain: &str) -> anyhow::Result<()> {
+        let data = self.federation_config.to_request_data();
+        data.federation_repo.remove_blocked_domain(domain).await
+    }
+
+    pub async fn get_blocked_domains(&self) -> anyhow::Result<Vec<BlockedDomain>> {
+        let data = self.federation_config.to_request_data();
+        data.federation_repo.get_blocked_domains().await
     }
 
     async fn follow_local(

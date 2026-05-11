@@ -20,6 +20,11 @@
     <input type="hidden" name="_csrf" value="{{ ctx.csrf_token }}">
     <button type="submit">Unfollow</button>
   </form>
+  <form method="POST" action="/social/block" style="display:inline">
+    <input type="hidden" name="actor_url" value="{{ actor.url }}">
+    <input type="hidden" name="_csrf" value="{{ ctx.csrf_token }}">
+    <button type="submit">Block</button>
+  </form>
 </li>
 {% endfor %}
 </ul>
