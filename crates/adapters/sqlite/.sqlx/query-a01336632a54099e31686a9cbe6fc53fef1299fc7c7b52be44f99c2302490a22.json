@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT COUNT(DISTINCT movie_id) AS \"total!: i64\",\n                      AVG(CAST(rating AS REAL)) AS avg_rating\n               FROM reviews WHERE user_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "total!: i64",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "avg_rating",
+        "ordinal": 1,
+        "type_info": "Float"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      true
+    ]
+  },
+  "hash": "a01336632a54099e31686a9cbe6fc53fef1299fc7c7b52be44f99c2302490a22"
+}

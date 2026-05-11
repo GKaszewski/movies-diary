@@ -6,8 +6,8 @@ pub struct StorageConfig(Arc<dyn ObjectStore>);
 
 impl StorageConfig {
     pub fn from_env() -> anyhow::Result<Self> {
-        let backend = std::env::var("POSTER_STORAGE_BACKEND")
-            .context("POSTER_STORAGE_BACKEND required (valid values: s3, local)")?;
+        let backend = std::env::var("IMAGE_STORAGE_BACKEND")
+            .context("IMAGE_STORAGE_BACKEND required (valid values: s3, local)")?;
 
         let store: Arc<dyn ObjectStore> = match backend.as_str() {
             "s3" => build_s3_store(
@@ -19,11 +19,11 @@ impl StorageConfig {
                 &std::env::var("MINIO_REGION").unwrap_or_else(|_| "minio".to_string()),
             )?,
             "local" => build_local_store(
-                &std::env::var("POSTER_STORAGE_PATH")
-                    .context("POSTER_STORAGE_PATH required when POSTER_STORAGE_BACKEND=local")?,
+                &std::env::var("IMAGE_STORAGE_PATH")
+                    .context("IMAGE_STORAGE_PATH required when IMAGE_STORAGE_BACKEND=local")?,
             )?,
             other => {
-                anyhow::bail!("Unknown POSTER_STORAGE_BACKEND: {other:?}. Valid values: s3, local")
+                anyhow::bail!("Unknown IMAGE_STORAGE_BACKEND: {other:?}. Valid values: s3, local")
             }
         };
 
@@ -55,7 +55,7 @@ fn build_s3_store(
 }
 
 fn build_local_store(path: &str) -> anyhow::Result<Arc<dyn ObjectStore>> {
-    std::fs::create_dir_all(path).context("Failed to create poster storage directory")?;
+    std::fs::create_dir_all(path).context("Failed to create image storage directory")?;
     let store = LocalFileSystem::new_with_prefix(path)
         .context("Failed to initialise local file system store")?;
     Ok(Arc::new(store))
@@ -67,7 +67,7 @@ mod tests {
 
     #[test]
     fn local_store_creates_dir_and_succeeds() {
-        let dir = std::env::temp_dir().join(format!("poster_test_{}", uuid::Uuid::new_v4()));
+        let dir = std::env::temp_dir().join(format!("image_test_{}", uuid::Uuid::new_v4()));
         let result = build_local_store(dir.to_str().unwrap());
         assert!(result.is_ok(), "expected Ok, got: {:?}", result.err());
         assert!(dir.exists(), "directory should have been created");
@@ -75,7 +75,7 @@ mod tests {
 
     #[test]
     fn local_store_succeeds_if_dir_already_exists() {
-        let dir = std::env::temp_dir().join(format!("poster_test_{}", uuid::Uuid::new_v4()));
+        let dir = std::env::temp_dir().join(format!("image_test_{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&dir).unwrap();
         let result = build_local_store(dir.to_str().unwrap());
         assert!(result.is_ok());

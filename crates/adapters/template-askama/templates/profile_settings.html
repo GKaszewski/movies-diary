@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Profile Settings</h1>
+{% if saved %}
+<p class="success">Saved.</p>
+{% endif %}
+<form method="post" action="/settings/profile" enctype="multipart/form-data">
+  <input type="hidden" name="_csrf" value="{{ ctx.csrf_token }}">
+  <label>
+    Bio<br>
+    <textarea name="bio">{% if let Some(b) = bio %}{{ b }}{% endif %}</textarea>
+  </label>
+  {% if let Some(url) = avatar_url %}
+  <div>
+    <p>Current avatar:</p>
+    <img src="{{ url }}" alt="Current avatar" style="max-width:128px;max-height:128px;">
+  </div>
+  {% endif %}
+  <label>
+    Avatar image<br>
+    <input type="file" name="avatar" accept="image/jpeg,image/png,image/webp">
+  </label>
+  <button type="submit">Save</button>
+</form>
+{% endblock %}

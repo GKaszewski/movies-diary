@@ -49,7 +49,7 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
     let (auth_service, password_hasher) = auth::create()?;
     let metadata_client = metadata::create()?;
     let poster_fetcher = poster_fetcher::create()?;
-    let poster_storage = poster_storage::create()?;
+    let image_storage = image_storage::create()?;
 
     let (movie_repository, review_repository, diary_repository, stats_repository, user_repository, import_session_repository, import_profile_repository, db_pool) =
         match backend.as_str() {
@@ -155,7 +155,7 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
         stats_repository,
         metadata_client,
         poster_fetcher,
-        poster_storage,
+        image_storage,
         event_publisher: event_publisher_arc,
         auth_service,
         password_hasher,

@@ -2400,6 +2400,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "image-storage"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "domain",
+ "infer",
+ "object_store",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "impl-more"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3425,20 +3439,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "poster-storage"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "domain",
- "infer",
- "object_store",
- "tokio",
- "tracing",
- "uuid",
-]
-
-[[package]]
 name = "poster-sync"
 version = "0.1.0"
 dependencies = [
@@ -3539,13 +3539,13 @@ dependencies = [
  "dotenvy",
  "export",
  "http-body-util",
+ "image-storage",
  "importer",
  "infer",
  "metadata",
  "nats",
  "percent-encoding",
  "poster-fetcher",
- "poster-storage",
  "postgres",
  "postgres-event-queue",
  "postgres-federation",
@@ -6340,11 +6340,11 @@ dependencies = [
  "dotenvy",
  "export",
  "futures",
+ "image-storage",
  "importer",
  "metadata",
  "nats",
  "poster-fetcher",
- "poster-storage",
  "poster-sync",
  "postgres",
  "postgres-event-queue",

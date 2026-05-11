@@ -2,7 +2,7 @@ use application::ports::{
     ActivityFeedPageData, FollowersPageData, FollowingPageData, HtmlPageContext, HtmlRenderer,
     ImportMappingPageData, ImportPreviewPageData, ImportPreviewRow, ImportProfileView,
     ImportRowStatus, ImportUploadPageData, LoginPageData, MovieDetailPageData, NewReviewPageData,
-    ProfilePageData, RegisterPageData, UsersPageData,
+    ProfilePageData, ProfileSettingsPageData, RegisterPageData, UsersPageData,
 };
 use askama::Template;
 use chrono::Datelike;
@@ -303,6 +303,15 @@ fn build_heatmap(history: &[MonthActivity]) -> Vec<HeatmapCell> {
 
 fn bar_height_px(avg_rating: f64) -> i64 {
     (avg_rating / 5.0 * 60.0) as i64
+}
+
+#[derive(Template)]
+#[template(path = "profile_settings.html")]
+struct ProfileSettingsTemplate<'a> {
+    ctx: &'a HtmlPageContext,
+    bio: Option<&'a str>,
+    avatar_url: Option<&'a str>,
+    saved: bool,
 }
 
 #[derive(Template)]
@@ -645,6 +654,20 @@ impl HtmlRenderer for AskamaHtmlRenderer {
             session_id: &data.session_id,
             columns: &data.columns,
             rows: &data.rows,
+        }
+        .render()
+        .map_err(|e| e.to_string())
+    }
+
+    fn render_profile_settings_page(
+        &self,
+        data: ProfileSettingsPageData,
+    ) -> Result<String, String> {
+        ProfileSettingsTemplate {
+            ctx: &data.ctx,
+            bio: data.bio.as_deref(),
+            avatar_url: data.avatar_url.as_deref(),
+            saved: data.saved,
         }
         .render()
         .map_err(|e| e.to_string())

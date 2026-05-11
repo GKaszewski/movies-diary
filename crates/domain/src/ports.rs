@@ -12,7 +12,7 @@ use crate::{
     },
     value_objects::{
         Email, ExternalMetadataId, ImportProfileId, ImportSessionId, MovieId, MovieTitle,
-        PasswordHash, PosterPath, PosterUrl, ReleaseYear, ReviewId, UserId, Username,
+        PasswordHash, PosterUrl, ReleaseYear, ReviewId, UserId, Username,
     },
 };
 
@@ -150,16 +150,11 @@ pub trait PosterFetcherClient: Send + Sync {
 }
 
 #[async_trait]
-pub trait PosterStorage: Send + Sync {
-    async fn store_poster(
-        &self,
-        movie_id: &MovieId,
-        image_bytes: &[u8],
-    ) -> Result<PosterPath, DomainError>;
-
-    async fn get_poster(&self, poster_path: &PosterPath) -> Result<Vec<u8>, DomainError>;
-
-    async fn delete_poster(&self, path: &PosterPath) -> Result<(), DomainError>;
+pub trait ImageStorage: Send + Sync {
+    /// Stores `image_bytes` at `key` and returns the stored key.
+    async fn store(&self, key: &str, image_bytes: &[u8]) -> Result<String, DomainError>;
+    async fn get(&self, key: &str) -> Result<Vec<u8>, DomainError>;
+    async fn delete(&self, key: &str) -> Result<(), DomainError>;
 }
 
 pub struct GeneratedToken {
@@ -180,6 +175,12 @@ pub trait UserRepository: Send + Sync {
     async fn save(&self, user: &User) -> Result<(), DomainError>;
     async fn find_by_id(&self, id: &UserId) -> Result<Option<User>, DomainError>;
     async fn list_with_stats(&self) -> Result<Vec<UserSummary>, DomainError>;
+    async fn update_profile(
+        &self,
+        user_id: &UserId,
+        bio: Option<String>,
+        avatar_path: Option<String>,
+    ) -> Result<(), DomainError>;
 }
 
 #[async_trait]

@@ -9,6 +9,10 @@ use activitypub_federation::{
 use serde::{Deserialize, Serialize};
 use url::Url;
 
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[serde(rename = "Announce")]
+pub struct AnnounceType;
+
 use crate::actors::DbActor;
 use crate::data::FederationData;
 use crate::error::Error;
@@ -330,6 +334,54 @@ impl Activity for UpdateActivity {
     }
 }
 
+// --- Announce ---
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AnnounceActivity {
+    pub(crate) id: Url,
+    #[serde(rename = "type", default)]
+    pub(crate) kind: AnnounceType,
+    pub(crate) actor: ObjectId<DbActor>,
+    pub(crate) object: Url,
+    pub(crate) published: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+#[async_trait::async_trait]
+impl Activity for AnnounceActivity {
+    type DataType = FederationData;
+    type Error = Error;
+
+    fn id(&self) -> &Url {
+        &self.id
+    }
+
+    fn actor(&self) -> &Url {
+        self.actor.inner()
+    }
+
+    async fn verify(&self, _data: &Data<Self::DataType>) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    async fn receive(self, data: &Data<Self::DataType>) -> Result<(), Self::Error> {
+        let object_domain = self.object.host_str().unwrap_or("");
+        if object_domain != data.domain {
+            return Ok(());
+        }
+        data.federation_repo
+            .add_announce(
+                self.id.as_str(),
+                self.object.as_str(),
+                self.actor.inner().as_str(),
+                self.published.unwrap_or_else(chrono::Utc::now),
+            )
+            .await?;
+        tracing::info!(actor = %self.actor.inner(), object = %self.object, "received announce");
+        Ok(())
+    }
+}
+
 // --- Inbox dispatch enum ---
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -350,4 +402,6 @@ pub enum InboxActivities {
     Delete(DeleteActivity),
     #[serde(rename = "Update")]
     Update(UpdateActivity),
+    #[serde(rename = "Announce")]
+    Announce(AnnounceActivity),
 }

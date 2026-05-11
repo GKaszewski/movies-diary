@@ -4,7 +4,7 @@ members = [
     "crates/adapters/event-publisher",
     "crates/adapters/metadata",
     "crates/adapters/poster-fetcher",
-    "crates/adapters/poster-storage",
+    "crates/adapters/image-storage",
     "crates/adapters/poster-sync",
     "crates/adapters/rss",
     "crates/adapters/sqlite",
@@ -59,7 +59,7 @@ presentation = { path = "crates/presentation" }
 auth = { path = "crates/adapters/auth" }
 metadata = { path = "crates/adapters/metadata" }
 poster-fetcher = { path = "crates/adapters/poster-fetcher" }
-poster-storage = { path = "crates/adapters/poster-storage" }
+image-storage = { path = "crates/adapters/image-storage" }
 poster-sync = { path = "crates/adapters/poster-sync" }
 event-publisher = { path = "crates/adapters/event-publisher" }
 rss = { path = "crates/adapters/rss" }

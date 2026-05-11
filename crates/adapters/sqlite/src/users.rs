@@ -37,6 +37,8 @@ impl SqliteUserRepository {
         username_str: String,
         hash_str: String,
         role: UserRole,
+        bio: Option<String>,
+        avatar_path: Option<String>,
     ) -> Result<User, DomainError> {
         let id = uuid::Uuid::parse_str(&id_str)
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
@@ -52,6 +54,8 @@ impl SqliteUserRepository {
             username,
             hash,
             role,
+            bio,
+            avatar_path,
         ))
     }
 }
@@ -61,7 +65,7 @@ impl UserRepository for SqliteUserRepository {
     async fn find_by_email(&self, email: &Email) -> Result<Option<User>, DomainError> {
         let email_str = email.value();
         let row = sqlx::query!(
-            "SELECT id, email, username, password_hash, role FROM users WHERE email = ?",
+            "SELECT id, email, username, password_hash, role, bio, avatar_path FROM users WHERE email = ?",
             email_str
         )
         .fetch_optional(&self.pool)
@@ -75,6 +79,8 @@ impl UserRepository for SqliteUserRepository {
                 r.username,
                 r.password_hash,
                 Self::parse_role(&r.role),
+                r.bio,
+                r.avatar_path,
             )
         })
         .transpose()
@@ -83,7 +89,7 @@ impl UserRepository for SqliteUserRepository {
     async fn find_by_username(&self, username: &Username) -> Result<Option<User>, DomainError> {
         let username_str = username.value();
         let row = sqlx::query!(
-            "SELECT id, email, username, password_hash, role FROM users WHERE username = ?",
+            "SELECT id, email, username, password_hash, role, bio, avatar_path FROM users WHERE username = ?",
             username_str
         )
         .fetch_optional(&self.pool)
@@ -97,6 +103,8 @@ impl UserRepository for SqliteUserRepository {
                 r.username,
                 r.password_hash,
                 Self::parse_role(&r.role),
+                r.bio,
+                r.avatar_path,
             )
         })
         .transpose()
@@ -140,7 +148,7 @@ impl UserRepository for SqliteUserRepository {
     async fn find_by_id(&self, id: &UserId) -> Result<Option<User>, DomainError> {
         let id_str = id.value().to_string();
         let row = sqlx::query!(
-            "SELECT id, email, username, password_hash, role FROM users WHERE id = ?",
+            "SELECT id, email, username, password_hash, role, bio, avatar_path FROM users WHERE id = ?",
             id_str
         )
         .fetch_optional(&self.pool)
@@ -154,9 +162,28 @@ impl UserRepository for SqliteUserRepository {
                 r.username,
                 r.password_hash,
                 Self::parse_role(&r.role),
+                r.bio,
+                r.avatar_path,
             )
         })
         .transpose()
+    }
+
+    async fn update_profile(
+        &self,
+        user_id: &UserId,
+        bio: Option<String>,
+        avatar_path: Option<String>,
+    ) -> Result<(), DomainError> {
+        let id_str = user_id.value().to_string();
+        sqlx::query("UPDATE users SET bio = ?, avatar_path = ? WHERE id = ?")
+            .bind(&bio)
+            .bind(&avatar_path)
+            .bind(&id_str)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(())
     }
 
     async fn list_with_stats(&self) -> Result<Vec<domain::models::UserSummary>, DomainError> {
@@ -183,12 +210,14 @@ impl UserRepository for SqliteUserRepository {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use domain::models::UserRole;
+    use domain::value_objects::{Email, PasswordHash, Username};
     use sqlx::SqlitePool;
 
     async fn setup() -> (SqlitePool, SqliteUserRepository) {
         let pool = SqlitePool::connect(":memory:").await.unwrap();
         sqlx::query(
-            "CREATE TABLE users (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, username TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, created_at TEXT NOT NULL, role TEXT NOT NULL DEFAULT 'standard')"
+            "CREATE TABLE users (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, username TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, created_at TEXT NOT NULL, role TEXT NOT NULL DEFAULT 'standard', bio TEXT, avatar_path TEXT)"
         )
         .execute(&pool)
         .await
@@ -226,5 +255,49 @@ mod tests {
         let result = repo.find_by_id(&UserId::from_uuid(id)).await.unwrap();
         assert!(result.is_some());
         assert_eq!(result.unwrap().email().value(), "test@example.com");
+    }
+
+    #[tokio::test]
+    async fn update_profile_persists_bio_and_avatar() {
+        let (_, repo) = setup().await;
+        let user = domain::models::User::new(
+            Email::new("test@example.com".to_string()).unwrap(),
+            Username::new("testuser".to_string()).unwrap(),
+            PasswordHash::new("hash".to_string()).unwrap(),
+            UserRole::Standard,
+        );
+        repo.save(&user).await.unwrap();
+
+        repo.update_profile(
+            user.id(),
+            Some("My biography".to_string()),
+            Some("avatars/user1".to_string()),
+        )
+        .await
+        .unwrap();
+
+        let found = repo.find_by_id(user.id()).await.unwrap().unwrap();
+        assert_eq!(found.bio(), Some("My biography"));
+        assert_eq!(found.avatar_path(), Some("avatars/user1"));
+    }
+
+    #[tokio::test]
+    async fn update_profile_clears_fields_with_none() {
+        let (_, repo) = setup().await;
+        let user = domain::models::User::new(
+            Email::new("test2@example.com".to_string()).unwrap(),
+            Username::new("testuser2".to_string()).unwrap(),
+            PasswordHash::new("hash".to_string()).unwrap(),
+            UserRole::Standard,
+        );
+        repo.save(&user).await.unwrap();
+        repo.update_profile(user.id(), Some("bio".to_string()), Some("path".to_string()))
+            .await
+            .unwrap();
+        repo.update_profile(user.id(), None, None).await.unwrap();
+
+        let found = repo.find_by_id(user.id()).await.unwrap().unwrap();
+        assert_eq!(found.bio(), None);
+        assert_eq!(found.avatar_path(), None);
     }
 }

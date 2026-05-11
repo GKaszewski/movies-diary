@@ -46,6 +46,11 @@ impl EventHandler for ActivityPubEventHandler {
                 .on_review_logged(user_id, review_id)
                 .await
                 .map_err(|e| DomainError::InfrastructureError(e.to_string())),
+            DomainEvent::UserUpdated { user_id } => self
+                .ap_service
+                .broadcast_actor_update(user_id.value())
+                .await
+                .map_err(|e| DomainError::InfrastructureError(e.to_string())),
             _ => Ok(()),
         }
     }
@@ -78,7 +83,7 @@ impl ActivityPubEventHandler {
         let poster_url = movie
             .as_ref()
             .and_then(|m| m.poster_path())
-            .map(|p| format!("{}/posters/{}", self.base_url, p.value()));
+            .map(|p| format!("{}/images/{}", self.base_url, p.value()));
 
         let obj = review_to_ap_object(
             &review,

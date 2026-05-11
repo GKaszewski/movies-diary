@@ -26,6 +26,15 @@ pub struct DbActor {
     pub following_url: Url,
     pub ap_id: Url,
     pub last_refreshed_at: DateTime<Utc>,
+    pub bio: Option<String>,
+    pub avatar_path: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct ApImageObject {
+    #[serde(rename = "type")]
+    pub kind: String,
+    pub url: Url,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -41,6 +50,15 @@ pub struct Person {
     following: Url,
     public_key: PublicKey,
     name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    summary: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    icon: Option<ApImageObject>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    url: Option<Url>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    discoverable: Option<bool>,
+    manually_approves_followers: bool,
 }
 
 pub async fn get_local_actor(
@@ -86,6 +104,8 @@ pub async fn get_local_actor(
         following_url,
         ap_id,
         last_refreshed_at: Utc::now(),
+        bio: user.bio,
+        avatar_path: user.avatar_path,
     })
 }
 
@@ -143,15 +163,26 @@ impl Object for DbActor {
             following_url,
             ap_id,
             last_refreshed_at: Utc::now(),
+            bio: None,
+            avatar_path: None,
         }))
     }
 
-    async fn into_json(self, _data: &Data<Self::DataType>) -> Result<Self::Kind, Self::Error> {
+    async fn into_json(self, data: &Data<Self::DataType>) -> Result<Self::Kind, Self::Error> {
         let public_key = PublicKey {
             id: format!("{}#main-key", &self.ap_id),
             owner: self.ap_id.clone(),
             public_key_pem: self.public_key_pem.clone(),
         };
+
+        let icon = self.avatar_path.as_ref().map(|p| ApImageObject {
+            kind: "Image".to_string(),
+            url: Url::parse(&format!("{}/images/{}", data.base_url, p))
+                .expect("valid avatar url"),
+        });
+        let profile_url =
+            Url::parse(&format!("{}/u/{}", data.base_url, self.username))
+                .expect("valid profile url");
 
         Ok(Person {
             kind: Default::default(),
@@ -163,6 +194,11 @@ impl Object for DbActor {
             following: self.following_url.clone(),
             public_key,
             name: Some(self.username.clone()),
+            summary: self.bio.clone(),
+            icon,
+            url: Some(profile_url),
+            discoverable: Some(true),
+            manually_approves_followers: false,
         })
     }
 
@@ -182,6 +218,7 @@ impl Object for DbActor {
             inbox_url: json.inbox.to_string(),
             shared_inbox_url: None,
             display_name: json.name.clone(),
+            avatar_url: json.icon.as_ref().map(|i| i.url.to_string()),
         };
         data.federation_repo.upsert_remote_actor(actor).await?;
 
@@ -204,6 +241,8 @@ impl Object for DbActor {
             following_url,
             ap_id,
             last_refreshed_at: Utc::now(),
+            bio: None,
+            avatar_path: None,
         })
     }
 }
@@ -219,5 +258,42 @@ impl Actor for DbActor {
 
     fn inbox(&self) -> Url {
         self.inbox_url.clone()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn person_serializes_with_enriched_fields() {
+        let person = Person {
+            kind: Default::default(),
+            id: "https://example.com/users/1".parse::<url::Url>().unwrap().into(),
+            preferred_username: "alice".to_string(),
+            inbox: "https://example.com/users/1/inbox".parse().unwrap(),
+            outbox: "https://example.com/users/1/outbox".parse().unwrap(),
+            followers: "https://example.com/users/1/followers".parse().unwrap(),
+            following: "https://example.com/users/1/following".parse().unwrap(),
+            public_key: PublicKey {
+                id: "https://example.com/users/1#main-key".to_string(),
+                owner: "https://example.com/users/1".parse().unwrap(),
+                public_key_pem: "pem".to_string(),
+            },
+            name: Some("Alice".to_string()),
+            summary: Some("Bio text".to_string()),
+            icon: Some(ApImageObject {
+                kind: "Image".to_string(),
+                url: "https://example.com/images/avatars/1".parse().unwrap(),
+            }),
+            url: Some("https://example.com/u/alice".parse().unwrap()),
+            discoverable: Some(true),
+            manually_approves_followers: false,
+        };
+        let json = serde_json::to_value(&person).unwrap();
+        assert_eq!(json["discoverable"], true);
+        assert_eq!(json["summary"], "Bio text");
+        assert_eq!(json["icon"]["type"], "Image");
+        assert!(json.get("manuallyApprovesFollowers").is_some());
     }
 }

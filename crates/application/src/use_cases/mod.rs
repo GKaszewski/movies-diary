@@ -18,3 +18,4 @@ pub mod log_review;
 pub mod login;
 pub mod register;
 pub mod sync_poster;
+pub mod update_profile;

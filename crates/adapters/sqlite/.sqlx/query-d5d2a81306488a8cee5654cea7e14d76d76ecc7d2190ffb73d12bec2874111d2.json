@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT m.director\n             FROM reviews r\n             INNER JOIN movies m ON m.id = r.movie_id\n             WHERE r.user_id = ? AND m.director IS NOT NULL\n             GROUP BY m.director\n             ORDER BY COUNT(*) DESC\n             LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "name": "director",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "d5d2a81306488a8cee5654cea7e14d76d76ecc7d2190ffb73d12bec2874111d2"
+}

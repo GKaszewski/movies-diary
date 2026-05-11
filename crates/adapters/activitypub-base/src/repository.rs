@@ -21,6 +21,7 @@ pub struct RemoteActor {
     pub inbox_url: String,
     pub shared_inbox_url: Option<String>,
     pub display_name: Option<String>,
+    pub avatar_url: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -88,4 +89,12 @@ pub trait FederationRepository: Send + Sync {
         remote_actor_url: &str,
         status: FollowingStatus,
     ) -> Result<()>;
+    async fn add_announce(
+        &self,
+        activity_id: &str,
+        object_url: &str,
+        actor_url: &str,
+        announced_at: chrono::DateTime<chrono::Utc>,
+    ) -> Result<()>;
+    async fn count_announces(&self, object_url: &str) -> Result<usize>;
 }

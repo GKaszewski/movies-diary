@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use url::Url;
 
 #[async_trait]
@@ -9,6 +10,15 @@ pub trait ApObjectHandler: Send + Sync {
         &self,
         user_id: uuid::Uuid,
     ) -> anyhow::Result<Vec<(Url, serde_json::Value)>>;
+
+    /// Returns up to `limit` objects ordered newest-first, published before `before`.
+    /// Returns (ap_id, object_json, published_at).
+    async fn get_local_objects_page(
+        &self,
+        user_id: uuid::Uuid,
+        before: Option<DateTime<Utc>>,
+        limit: usize,
+    ) -> anyhow::Result<Vec<(Url, serde_json::Value, DateTime<Utc>)>>;
 
     /// Incoming Create activity — persist remote content.
     async fn on_create(

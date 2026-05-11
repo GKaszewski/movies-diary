@@ -76,14 +76,14 @@ OMDB_API_KEY=your-key
 # Public base URL (used for ActivityPub actor URLs and canonical links)
 BASE_URL=https://yourdomain.example.com
 
-# Poster storage — pick one backend:
+# Image storage — pick one backend:
 
 # Option A: local filesystem (zero deps)
-POSTER_STORAGE_BACKEND=local
-POSTER_STORAGE_PATH=./posters
+IMAGE_STORAGE_BACKEND=local
+IMAGE_STORAGE_PATH=./images
 
 # Option B: S3-compatible (MinIO, AWS S3, etc.)
-# POSTER_STORAGE_BACKEND=s3
+# IMAGE_STORAGE_BACKEND=s3
 # MINIO_ENDPOINT=http://localhost:9000
 # MINIO_BUCKET=posters
 # MINIO_REGION=minio

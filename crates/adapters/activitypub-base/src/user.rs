@@ -4,6 +4,8 @@ use async_trait::async_trait;
 pub struct ApUser {
     pub id: uuid::Uuid,
     pub username: String,
+    pub bio: Option<String>,
+    pub avatar_path: Option<String>,
 }
 
 #[async_trait]

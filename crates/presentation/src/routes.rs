@@ -74,8 +74,14 @@ fn html_routes(rate_limit: u64) -> Router<AppState> {
             routing::post(handlers::html::post_delete_review),
         )
         .route(
-            "/posters/{*path}",
-            routing::get(handlers::posters::get_poster),
+            "/images/{*key}",
+            routing::get(handlers::images::get_image),
+        )
+        .route(
+            "/posters/{path}",
+            routing::get(|axum::extract::Path(p): axum::extract::Path<String>| async move {
+                axum::response::Redirect::permanent(&format!("/images/{}", p))
+            }),
         )
         .route("/diary/export", routing::get(handlers::html::get_export))
         .route("/import", routing::get(handlers::import::get_import_page))
@@ -89,6 +95,11 @@ fn html_routes(rate_limit: u64) -> Router<AppState> {
         .route(
             "/users/{id}/feed.rss",
             routing::get(handlers::rss::get_user_feed),
+        )
+        .route(
+            "/settings/profile",
+            routing::get(handlers::html::get_profile_settings)
+                .post(handlers::html::post_profile_settings),
         );
 
     #[cfg(feature = "federation")]
@@ -171,7 +182,8 @@ fn api_routes(rate_limit: u64) -> Router<AppState> {
         .route("/import/sessions/{id}/mapping", routing::put(handlers::import::api_put_mapping))
         .route("/import/sessions/{id}/confirm", routing::post(handlers::import::api_post_confirm))
         .route("/import/profiles", routing::get(handlers::import::api_get_profiles).post(handlers::import::api_post_profile))
-        .route("/import/profiles/{id}", routing::delete(handlers::import::api_delete_profile));
+        .route("/import/profiles/{id}", routing::delete(handlers::import::api_delete_profile))
+        .route("/profile", routing::get(handlers::api::get_profile).put(handlers::api::update_profile_handler));
 
     #[cfg(feature = "federation")]
     let base = base.merge(federation_api_routes());

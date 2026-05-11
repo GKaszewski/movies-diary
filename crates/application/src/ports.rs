@@ -145,6 +145,13 @@ pub struct ImportPreviewPageData {
     pub rows: Vec<ImportPreviewRow>,
 }
 
+pub struct ProfileSettingsPageData {
+    pub ctx: HtmlPageContext,
+    pub bio: Option<String>,
+    pub avatar_url: Option<String>,
+    pub saved: bool,
+}
+
 pub trait HtmlRenderer: Send + Sync {
     fn render_diary_page(
         &self,
@@ -163,6 +170,10 @@ pub trait HtmlRenderer: Send + Sync {
     fn render_import_upload_page(&self, data: ImportUploadPageData) -> Result<String, String>;
     fn render_import_mapping_page(&self, data: ImportMappingPageData) -> Result<String, String>;
     fn render_import_preview_page(&self, data: ImportPreviewPageData) -> Result<String, String>;
+    fn render_profile_settings_page(
+        &self,
+        data: ProfileSettingsPageData,
+    ) -> Result<String, String>;
 }
 
 pub trait RssFeedRenderer: Send + Sync {

@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use axum::{
     Form,
-    extract::{Extension, Path, Query, State},
+    extract::{Extension, Multipart, Path, Query, State},
     http::{HeaderValue, StatusCode, header::SET_COOKIE},
     response::{Html, IntoResponse, Redirect},
 };
@@ -14,13 +14,13 @@ use application::ports::{FollowersPageData, FollowingPageData};
 use application::{
     commands::{DeleteReviewCommand, ExportCommand, LoginCommand, RegisterCommand},
     ports::{
-        HtmlPageContext, LoginPageData, MovieDetailPageData, NewReviewPageData, RegisterPageData,
-        RemoteActorView,
+        HtmlPageContext, LoginPageData, MovieDetailPageData, NewReviewPageData,
+        ProfileSettingsPageData, RegisterPageData, RemoteActorView,
     },
     queries::GetMovieSocialPageQuery,
     use_cases::{
         delete_review, export_diary as export_diary_uc, get_movie_social_page, log_review,
-        login as login_uc, register as register_uc,
+        login as login_uc, register as register_uc, update_profile,
     },
 };
 use domain::models::ExportFormat;
@@ -965,4 +965,98 @@ pub async fn get_movie_detail(
             }
         }
     }
+}
+
+#[derive(serde::Deserialize, Default)]
+pub struct SavedQuery {
+    pub saved: Option<String>,
+}
+
+pub async fn get_profile_settings(
+    RequiredCookieUser(user_id): RequiredCookieUser,
+    State(state): State<AppState>,
+    Query(params): Query<SavedQuery>,
+    Extension(csrf): Extension<CsrfToken>,
+) -> impl IntoResponse {
+    let mut ctx = build_page_context(&state, Some(user_id.clone()), csrf.0).await;
+    ctx.page_title = "Profile Settings — Movies Diary".to_string();
+    ctx.canonical_url = format!("{}/settings/profile", state.app_ctx.config.base_url);
+
+    let user = match state
+        .app_ctx
+        .user_repository
+        .find_by_id(&user_id)
+        .await
+    {
+        Ok(Some(u)) => u,
+        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+        Err(e) => {
+            tracing::error!("get_profile_settings user lookup: {:?}", e);
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    let base_url = &state.app_ctx.config.base_url;
+    let avatar_url = user
+        .avatar_path()
+        .map(|path| format!("{}/images/{}", base_url, path));
+
+    let saved = params.saved.as_deref() == Some("1");
+
+    let data = ProfileSettingsPageData {
+        ctx,
+        bio: user.bio().map(|s| s.to_string()),
+        avatar_url,
+        saved,
+    };
+
+    match state.html_renderer.render_profile_settings_page(data) {
+        Ok(html) => Html(html).into_response(),
+        Err(e) => {
+            tracing::error!("profile_settings template error: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+pub async fn post_profile_settings(
+    RequiredCookieUser(user_id): RequiredCookieUser,
+    State(state): State<AppState>,
+    mut multipart: Multipart,
+) -> impl IntoResponse {
+    let mut bio: Option<String> = None;
+    let mut avatar_bytes: Option<Vec<u8>> = None;
+    let mut avatar_content_type: Option<String> = None;
+
+    while let Ok(Some(field)) = multipart.next_field().await {
+        let name = field.name().unwrap_or("").to_string();
+        match name.as_str() {
+            "bio" => {
+                if let Ok(text) = field.text().await {
+                    bio = Some(text);
+                }
+            }
+            "avatar" => {
+                let content_type = field.content_type().map(|s| s.to_string());
+                if let Ok(bytes) = field.bytes().await {
+                    if !bytes.is_empty() {
+                        avatar_bytes = Some(bytes.to_vec());
+                        avatar_content_type = content_type;
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    let cmd = update_profile::UpdateProfileCommand {
+        user_id: user_id.value(),
+        bio,
+        avatar_bytes,
+        avatar_content_type,
+    };
+
+    let _ = update_profile::execute(&state.app_ctx, cmd).await;
+
+    Redirect::to("/settings/profile?saved=1").into_response()
 }

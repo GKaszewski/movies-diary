@@ -1,5 +1,5 @@
 pub mod html;
-pub mod posters;
+pub mod images;
 pub mod rss;
 pub mod api;
 pub mod import;

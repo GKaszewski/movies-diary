@@ -4,15 +4,15 @@ use async_trait::async_trait;
 use domain::{
     errors::DomainError,
     events::DomainEvent,
-    ports::{EventHandler, MetadataClient, MovieRepository, PosterFetcherClient, PosterStorage},
-    value_objects::{ExternalMetadataId, MovieId},
+    ports::{EventHandler, ImageStorage, MetadataClient, MovieRepository, PosterFetcherClient},
+    value_objects::{ExternalMetadataId, MovieId, PosterPath},
 };
 
 pub struct PosterSyncHandler {
     movie_repository: Arc<dyn MovieRepository>,
     metadata_client: Arc<dyn MetadataClient>,
     poster_fetcher: Arc<dyn PosterFetcherClient>,
-    poster_storage: Arc<dyn PosterStorage>,
+    image_storage: Arc<dyn ImageStorage>,
     max_retries: u32,
 }
 
@@ -21,10 +21,10 @@ impl PosterSyncHandler {
         movie_repository: Arc<dyn MovieRepository>,
         metadata_client: Arc<dyn MetadataClient>,
         poster_fetcher: Arc<dyn PosterFetcherClient>,
-        poster_storage: Arc<dyn PosterStorage>,
+        image_storage: Arc<dyn ImageStorage>,
         max_retries: u32,
     ) -> Self {
-        Self { movie_repository, metadata_client, poster_fetcher, poster_storage, max_retries }
+        Self { movie_repository, metadata_client, poster_fetcher, image_storage, max_retries }
     }
 
     async fn sync(&self, movie_id: MovieId, external_metadata_id: ExternalMetadataId) -> Result<(), DomainError> {
@@ -46,9 +46,10 @@ impl PosterSyncHandler {
         };
 
         let image_bytes = self.poster_fetcher.fetch_poster_bytes(&poster_url).await?;
-        let stored_path = self.poster_storage.store_poster(&movie_id, &image_bytes).await?;
+        let stored_path = self.image_storage.store(&movie_id.value().to_string(), &image_bytes).await?;
+        let poster_path = PosterPath::new(stored_path)?;
 
-        movie.update_poster(stored_path);
+        movie.update_poster(poster_path);
         self.movie_repository.upsert_movie(&movie).await
     }
 }

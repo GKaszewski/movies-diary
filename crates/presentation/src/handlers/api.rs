@@ -1,6 +1,6 @@
 use axum::{
     Json,
-    extract::{Path, Query, State},
+    extract::{Multipart, Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
 };
@@ -20,7 +20,7 @@ use application::{
         delete_review, export_diary as export_diary_uc, get_activity_feed as get_feed_uc,
         get_diary, get_movie_social_page, get_review_history,
         get_user_profile as get_user_profile_uc, get_users, log_review, login as login_uc,
-        register as register_uc, sync_poster,
+        register as register_uc, sync_poster, update_profile,
     },
 };
 use domain::{
@@ -37,8 +37,8 @@ use crate::{
         ActivityFeedQueryParams, ActivityFeedResponse, DiaryEntryDto, DiaryQueryParams,
         DiaryResponse, DirectorStatDto, ExportQueryParams, FeedEntryDto, LogReviewData,
         LogReviewRequest, LoginRequest, LoginResponse, MonthActivityDto, MonthlyRatingDto,
-        MovieDetailResponse, MovieDto, MovieStatsDto, PaginationQueryParams, RegisterRequest,
-        ReviewDto, ReviewHistoryResponse, SocialFeedResponse, SocialReviewDto,
+        MovieDetailResponse, MovieDto, MovieStatsDto, PaginationQueryParams, ProfileResponse,
+        RegisterRequest, ReviewDto, ReviewHistoryResponse, SocialFeedResponse, SocialReviewDto,
         UserProfileQueryParams, UserProfileResponse, UserStatsDto, UserSummaryDto, UserTrendsDto,
         UsersResponse,
     },
@@ -288,6 +288,101 @@ pub async fn get_movie_detail(
             offset: result.reviews.offset,
         },
     }))
+}
+
+#[utoipa::path(
+    get, path = "/api/v1/profile",
+    responses(
+        (status = 200, body = ProfileResponse),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "User not found"),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn get_profile(
+    State(state): State<AppState>,
+    AuthenticatedUser(user_id): AuthenticatedUser,
+) -> impl IntoResponse {
+    let user = match state.app_ctx.user_repository.find_by_id(&user_id).await {
+        Ok(Some(u)) => u,
+        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+        Err(e) => {
+            tracing::error!("get_profile user lookup: {:?}", e);
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    let base_url = &state.app_ctx.config.base_url;
+    let avatar_url = user
+        .avatar_path()
+        .map(|path| format!("{}/images/{}", base_url, path));
+
+    Json(ProfileResponse {
+        username: user.username().value().to_string(),
+        bio: user.bio().map(|s| s.to_string()),
+        avatar_url,
+    })
+    .into_response()
+}
+
+#[utoipa::path(
+    put, path = "/api/v1/profile",
+    responses(
+        (status = 204, description = "Profile updated"),
+        (status = 400, description = "Invalid input"),
+        (status = 401, description = "Unauthorized"),
+        (status = 500, description = "Internal server error"),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn update_profile_handler(
+    State(state): State<AppState>,
+    AuthenticatedUser(user_id): AuthenticatedUser,
+    mut multipart: Multipart,
+) -> impl IntoResponse {
+    let mut bio: Option<String> = None;
+    let mut avatar_bytes: Option<Vec<u8>> = None;
+    let mut avatar_content_type: Option<String> = None;
+
+    while let Ok(Some(field)) = multipart.next_field().await {
+        let name = field.name().unwrap_or("").to_string();
+        match name.as_str() {
+            "bio" => {
+                if let Ok(text) = field.text().await {
+                    bio = Some(text);
+                }
+            }
+            "avatar" => {
+                let content_type = field.content_type().map(|s| s.to_string());
+                if let Ok(bytes) = field.bytes().await {
+                    if !bytes.is_empty() {
+                        avatar_bytes = Some(bytes.to_vec());
+                        avatar_content_type = content_type;
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    let cmd = update_profile::UpdateProfileCommand {
+        user_id: user_id.value(),
+        bio,
+        avatar_bytes,
+        avatar_content_type,
+    };
+
+    match update_profile::execute(&state.app_ctx, cmd).await {
+        Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Err(domain::errors::DomainError::ValidationError(msg)) => {
+            tracing::warn!("update_profile validation: {}", msg);
+            StatusCode::BAD_REQUEST.into_response()
+        }
+        Err(e) => {
+            tracing::error!("update_profile error: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
 }
 
 fn movie_to_dto(movie: &Movie) -> MovieDto {

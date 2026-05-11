@@ -47,7 +47,7 @@ application = { workspace = true }
 auth = { workspace = true }
 metadata = { workspace = true }
 poster-fetcher = { workspace = true }
-poster-storage = { workspace = true }
+image-storage = { workspace = true }
 template-askama = { workspace = true }
 nats = { workspace = true, optional = true }
 rss = { workspace = true }

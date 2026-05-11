@@ -106,7 +106,7 @@ impl FederationRepository for SqliteFederationRepository {
 
         let rows = sqlx::query(
             "SELECT f.remote_actor_url, f.status,
-                    a.handle, a.inbox_url, a.shared_inbox_url, a.display_name
+                    a.handle, a.inbox_url, a.shared_inbox_url, a.display_name, a.avatar_url
              FROM ap_followers f
              LEFT JOIN ap_remote_actors a ON a.url = f.remote_actor_url
              WHERE f.local_user_id = ?",
@@ -125,6 +125,7 @@ impl FederationRepository for SqliteFederationRepository {
                 let shared_inbox_url: Option<String> =
                     row.try_get("shared_inbox_url").ok().flatten();
                 let display_name: Option<String> = row.try_get("display_name").ok().flatten();
+                let avatar_url: Option<String> = row.try_get("avatar_url").ok().flatten();
 
                 Follower {
                     actor: RemoteActor {
@@ -133,6 +134,7 @@ impl FederationRepository for SqliteFederationRepository {
                         inbox_url,
                         shared_inbox_url,
                         display_name,
+                        avatar_url,
                     },
                     status: str_to_status(&status_str),
                 }
@@ -223,7 +225,7 @@ impl FederationRepository for SqliteFederationRepository {
         let uid = local_user_id.to_string();
 
         let rows = sqlx::query(
-            "SELECT a.url, a.handle, a.inbox_url, a.shared_inbox_url, a.display_name
+            "SELECT a.url, a.handle, a.inbox_url, a.shared_inbox_url, a.display_name, a.avatar_url
              FROM ap_following f
              INNER JOIN ap_remote_actors a ON a.url = f.remote_actor_url
              WHERE f.local_user_id = ? AND f.status = 'accepted'",
@@ -240,6 +242,7 @@ impl FederationRepository for SqliteFederationRepository {
                 inbox_url: row.get("inbox_url"),
                 shared_inbox_url: row.try_get("shared_inbox_url").ok().flatten(),
                 display_name: row.try_get("display_name").ok().flatten(),
+                avatar_url: row.try_get("avatar_url").ok().flatten(),
             })
             .collect())
     }
@@ -260,13 +263,14 @@ impl FederationRepository for SqliteFederationRepository {
         let fetched_at = datetime_to_str(&now);
 
         sqlx::query(
-            "INSERT INTO ap_remote_actors (url, handle, inbox_url, shared_inbox_url, display_name, fetched_at)
-             VALUES (?, ?, ?, ?, ?, ?)
+            "INSERT INTO ap_remote_actors (url, handle, inbox_url, shared_inbox_url, display_name, avatar_url, fetched_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?)
              ON CONFLICT(url) DO UPDATE SET
                  handle           = excluded.handle,
                  inbox_url        = excluded.inbox_url,
                  shared_inbox_url = excluded.shared_inbox_url,
                  display_name     = excluded.display_name,
+                 avatar_url       = excluded.avatar_url,
                  fetched_at       = excluded.fetched_at",
         )
         .bind(&actor.url)
@@ -274,6 +278,7 @@ impl FederationRepository for SqliteFederationRepository {
         .bind(&actor.inbox_url)
         .bind(&actor.shared_inbox_url)
         .bind(&actor.display_name)
+        .bind(&actor.avatar_url)
         .bind(&fetched_at)
         .execute(&self.pool)
         .await?;
@@ -283,7 +288,7 @@ impl FederationRepository for SqliteFederationRepository {
 
     async fn get_remote_actor(&self, actor_url: &str) -> Result<Option<RemoteActor>> {
         let row = sqlx::query(
-            "SELECT url, handle, inbox_url, shared_inbox_url, display_name
+            "SELECT url, handle, inbox_url, shared_inbox_url, display_name, avatar_url
              FROM ap_remote_actors WHERE url = ?",
         )
         .bind(actor_url)
@@ -296,6 +301,7 @@ impl FederationRepository for SqliteFederationRepository {
             inbox_url: row.get("inbox_url"),
             shared_inbox_url: row.try_get("shared_inbox_url").ok().flatten(),
             display_name: row.try_get("display_name").ok().flatten(),
+            avatar_url: row.try_get("avatar_url").ok().flatten(),
         }))
     }
 
@@ -344,7 +350,7 @@ impl FederationRepository for SqliteFederationRepository {
 
         let rows = sqlx::query(
             "SELECT f.remote_actor_url,
-                    a.handle, a.inbox_url, a.shared_inbox_url, a.display_name
+                    a.handle, a.inbox_url, a.shared_inbox_url, a.display_name, a.avatar_url
              FROM ap_followers f
              LEFT JOIN ap_remote_actors a ON a.url = f.remote_actor_url
              WHERE f.local_user_id = ? AND f.status = 'pending'",
@@ -361,6 +367,7 @@ impl FederationRepository for SqliteFederationRepository {
                 inbox_url: row.try_get("inbox_url").unwrap_or_default(),
                 shared_inbox_url: row.try_get("shared_inbox_url").ok().flatten(),
                 display_name: row.try_get("display_name").ok().flatten(),
+                avatar_url: row.try_get("avatar_url").ok().flatten(),
             })
             .collect())
     }
@@ -391,6 +398,35 @@ impl FederationRepository for SqliteFederationRepository {
         }
 
         Ok(())
+    }
+
+    async fn add_announce(
+        &self,
+        activity_id: &str,
+        object_url: &str,
+        actor_url: &str,
+        announced_at: chrono::DateTime<chrono::Utc>,
+    ) -> Result<()> {
+        let ts = announced_at.format("%Y-%m-%d %H:%M:%S").to_string();
+        sqlx::query(
+            "INSERT OR IGNORE INTO ap_announces (id, object_url, actor_url, announced_at)
+             VALUES (?1, ?2, ?3, ?4)",
+        )
+        .bind(activity_id)
+        .bind(object_url)
+        .bind(actor_url)
+        .bind(&ts)
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    async fn count_announces(&self, object_url: &str) -> Result<usize> {
+        let row = sqlx::query("SELECT COUNT(*) as cnt FROM ap_announces WHERE object_url = ?1")
+            .bind(object_url)
+            .fetch_one(&self.pool)
+            .await?;
+        Ok(row.get::<i64, _>("cnt") as usize)
     }
 }
 
@@ -553,8 +589,33 @@ pub fn wire(pool: sqlx::SqlitePool) -> (
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::Utc;
     use domain::ports::SocialQueryPort;
     use sqlx::SqlitePool;
+
+    async fn test_pool() -> SqlitePool {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE ap_announces (id TEXT PRIMARY KEY, object_url TEXT NOT NULL, actor_url TEXT NOT NULL, announced_at TEXT NOT NULL)")
+            .execute(&pool).await.unwrap();
+        pool
+    }
+
+    #[tokio::test]
+    async fn add_announce_stores_and_counts() {
+        let pool = test_pool().await;
+        let repo = SqliteFederationRepository::new(pool);
+        repo.add_announce("https://remote/ann/1", "https://local/r/1", "https://remote/u/1", Utc::now()).await.unwrap();
+        assert_eq!(repo.count_announces("https://local/r/1").await.unwrap(), 1);
+    }
+
+    #[tokio::test]
+    async fn duplicate_announce_is_ignored() {
+        let pool = test_pool().await;
+        let repo = SqliteFederationRepository::new(pool);
+        repo.add_announce("https://remote/ann/1", "https://local/r/1", "https://remote/u/1", Utc::now()).await.unwrap();
+        repo.add_announce("https://remote/ann/1", "https://local/r/1", "https://remote/u/1", Utc::now()).await.unwrap();
+        assert_eq!(repo.count_announces("https://local/r/1").await.unwrap(), 1);
+    }
 
     async fn setup_db(pool: &SqlitePool) {
         sqlx::query(
@@ -564,6 +625,7 @@ mod tests {
                 inbox_url TEXT NOT NULL,
                 shared_inbox_url TEXT,
                 display_name TEXT,
+                avatar_url TEXT,
                 fetched_at TEXT NOT NULL
             )",
         )

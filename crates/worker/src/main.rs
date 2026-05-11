@@ -23,7 +23,7 @@ async fn main() -> anyhow::Result<()> {
     let (auth_service, password_hasher) = auth::create()?;
     let metadata_client = metadata::create()?;
     let poster_fetcher = poster_fetcher::create()?;
-    let poster_storage = poster_storage::create()?;
+    let image_storage = image_storage::create()?;
 
     let (movie_repository, review_repository, diary_repository, stats_repository, user_repository, import_session_repository, import_profile_repository, db_pool) =
         match backend.as_str() {
@@ -82,7 +82,7 @@ async fn main() -> anyhow::Result<()> {
         stats_repository,
         metadata_client,
         poster_fetcher,
-        poster_storage,
+        image_storage,
         event_publisher: event_publisher_arc,
         auth_service,
         password_hasher,
@@ -112,12 +112,12 @@ async fn main() -> anyhow::Result<()> {
             Arc::clone(&ctx.movie_repository),
             Arc::clone(&ctx.metadata_client),
             Arc::clone(&ctx.poster_fetcher),
-            Arc::clone(&ctx.poster_storage),
+            Arc::clone(&ctx.image_storage),
             3,
         )) as Arc<dyn EventHandler>;
 
-        let cleanup = Arc::new(poster_storage::PosterCleanupHandler::new(
-            Arc::clone(&ctx.poster_storage),
+        let cleanup = Arc::new(image_storage::ImageCleanupHandler::new(
+            Arc::clone(&ctx.image_storage),
         )) as Arc<dyn EventHandler>;
 
         #[cfg(not(feature = "federation"))]

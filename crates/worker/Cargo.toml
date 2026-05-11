@@ -30,7 +30,7 @@ async-trait = { workspace = true }
 auth = { workspace = true }
 metadata = { workspace = true }
 poster-fetcher = { workspace = true }
-poster-storage = { workspace = true }
+image-storage = { workspace = true }
 poster-sync = { workspace = true }
 export = { workspace = true }
 importer = { workspace = true }

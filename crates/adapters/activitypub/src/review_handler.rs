@@ -75,6 +75,73 @@ impl ApObjectHandler for ReviewObjectHandler {
         Ok(results)
     }
 
+    async fn get_local_objects_page(
+        &self,
+        user_id: uuid::Uuid,
+        before: Option<chrono::DateTime<chrono::Utc>>,
+        limit: usize,
+    ) -> anyhow::Result<Vec<(url::Url, serde_json::Value, chrono::DateTime<chrono::Utc>)>> {
+        use domain::value_objects::UserId;
+
+        let domain_user_id = UserId::from_uuid(user_id);
+        let history = self
+            .diary_repository
+            .get_user_history(&domain_user_id)
+            .await?;
+
+        let mut results = Vec::new();
+        for entry in history {
+            let review = entry.review();
+            if !matches!(review.source(), ReviewSource::Local) {
+                continue;
+            }
+
+            let published =
+                chrono::DateTime::from_naive_utc_and_offset(*review.watched_at(), chrono::Utc);
+
+            if let Some(cutoff) = before {
+                if published >= cutoff {
+                    continue;
+                }
+            }
+
+            let ap_id = review_url(&self.base_url, review.id());
+            let actor_url = actor_url(&self.base_url, user_id);
+
+            let movie = self
+                .movie_repository
+                .get_movie_by_id(review.movie_id())
+                .await
+                .ok()
+                .flatten();
+            let movie_title = movie
+                .as_ref()
+                .map(|m| m.title().value().to_string())
+                .unwrap_or_else(|| "Unknown".to_string());
+            let release_year = movie.as_ref().map(|m| m.release_year().value()).unwrap_or(0);
+            let poster_url = movie
+                .as_ref()
+                .and_then(|m| m.poster_path())
+                .map(|p| format!("{}/posters/{}", self.base_url, p.value()));
+
+            let obj = review_to_ap_object(
+                review,
+                ap_id.clone(),
+                actor_url,
+                movie_title,
+                release_year,
+                poster_url,
+            );
+            let json = serde_json::to_value(obj)?;
+            results.push((ap_id, json, published));
+
+            if results.len() >= limit {
+                break;
+            }
+        }
+        Ok(results)
+    }
+
     async fn on_create(
         &self,
         _ap_id: &Url,

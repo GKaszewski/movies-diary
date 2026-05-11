@@ -434,6 +434,13 @@ pub struct PaginationQueryParams {
 }
 
 #[derive(serde::Serialize, utoipa::ToSchema)]
+pub struct ProfileResponse {
+    pub username: String,
+    pub bio: Option<String>,
+    pub avatar_url: Option<String>,
+}
+
+#[derive(serde::Serialize, utoipa::ToSchema)]
 pub struct MovieStatsDto {
     pub total_count: u64,
     pub avg_rating: Option<f64>,

@@ -10,7 +10,7 @@ use axum::{Router, routing::get, routing::post};
 use url::Url;
 
 use crate::{
-    activities::{AcceptActivity, CreateActivity, FollowActivity, RejectActivity, UndoActivity},
+    activities::{AcceptActivity, CreateActivity, FollowActivity, RejectActivity, UndoActivity, UpdateActivity},
     actors::{DbActor, get_local_actor},
     content::ApObjectHandler,
     data::FederationData,
@@ -23,6 +23,24 @@ use crate::{
     user::ApUserRepository,
     webfinger::webfinger_handler,
 };
+
+fn collect_inboxes(followers: &[crate::repository::Follower]) -> Vec<Url> {
+    let mut seen = std::collections::HashSet::new();
+    let mut inboxes = Vec::new();
+    for f in followers {
+        let inbox_str = f
+            .actor
+            .shared_inbox_url
+            .as_deref()
+            .unwrap_or(&f.actor.inbox_url);
+        if seen.insert(inbox_str.to_string()) {
+            if let Ok(url) = Url::parse(inbox_str) {
+                inboxes.push(url);
+            }
+        }
+    }
+    inboxes
+}
 
 pub(crate) async fn send_with_retry(
     sends: Vec<SendActivityTask>,
@@ -150,6 +168,7 @@ impl ActivityPubService {
             inbox_url: remote_actor.inbox_url.to_string(),
             shared_inbox_url: None,
             display_name: Some(remote_actor.username.clone()),
+            avatar_url: None,
         };
         data.federation_repo
             .add_following(local_user_id, remote, &follow_id_str)
@@ -289,7 +308,11 @@ impl ActivityPubService {
             );
         }
 
-        self.spawn_backfill(local_user_id, remote_actor.inbox_url.clone());
+        let target_inbox = remote_actor
+            .shared_inbox_url
+            .clone()
+            .unwrap_or_else(|| remote_actor.inbox_url.clone());
+        self.spawn_backfill(local_user_id, target_inbox);
 
         Ok(())
     }
@@ -437,10 +460,7 @@ impl ActivityPubService {
         };
         let create_with_ctx = WithContext::new_default(create);
 
-        let inboxes: Vec<Url> = accepted
-            .iter()
-            .filter_map(|f| Url::parse(&f.actor.inbox_url).ok())
-            .collect();
+        let inboxes = collect_inboxes(&accepted);
 
         let sends =
             SendActivityTask::prepare(&create_with_ctx, &local_actor, inboxes, &data).await?;
@@ -452,6 +472,57 @@ impl ActivityPubService {
             );
         }
 
+        Ok(())
+    }
+
+    pub async fn broadcast_actor_update(&self, user_id: uuid::Uuid) -> anyhow::Result<()> {
+        use activitypub_federation::traits::Object;
+
+        let data = self.federation_config.to_request_data();
+        let local_actor = get_local_actor(user_id, &data)
+            .await
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
+
+        let person = local_actor.clone().into_json(&data).await
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
+        let person_json = serde_json::to_value(&person)?;
+
+        let update_id = Url::parse(&format!(
+            "{}/activities/update/{}",
+            self.base_url,
+            uuid::Uuid::new_v4()
+        ))?;
+
+        let update = UpdateActivity {
+            id: update_id,
+            kind: Default::default(),
+            actor: ObjectId::from(local_actor.ap_id.clone()),
+            object: person_json,
+        };
+
+        let followers = data.federation_repo.get_followers(user_id).await?;
+        let accepted: Vec<_> = followers
+            .into_iter()
+            .filter(|f| f.status == FollowerStatus::Accepted)
+            .collect();
+
+        if accepted.is_empty() {
+            return Ok(());
+        }
+
+        let inboxes = collect_inboxes(&accepted);
+        let sends = SendActivityTask::prepare(
+            &WithContext::new_default(update),
+            &local_actor,
+            inboxes,
+            &data,
+        )
+        .await?;
+
+        let failures = send_with_retry(sends, &data).await;
+        if !failures.is_empty() {
+            tracing::warn!(count = failures.len(), "actor update delivery failures");
+        }
         Ok(())
     }
 
@@ -493,6 +564,7 @@ impl ActivityPubService {
             inbox_url: target_inbox_url,
             shared_inbox_url: None,
             display_name: Some(target.username),
+            avatar_url: None,
         };
         data.federation_repo
             .add_following(local_user_id, target_as_remote, &follow_id)
@@ -616,5 +688,49 @@ impl ActivityPubService {
             "backfill complete"
         );
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::repository::{Follower, FollowerStatus, RemoteActor};
+
+    fn make_follower(inbox: &str, shared: Option<&str>) -> Follower {
+        Follower {
+            actor: RemoteActor {
+                url: format!("https://remote/{}", inbox),
+                handle: "user".to_string(),
+                inbox_url: inbox.to_string(),
+                shared_inbox_url: shared.map(|s| s.to_string()),
+                display_name: None,
+                avatar_url: None,
+            },
+            status: FollowerStatus::Accepted,
+        }
+    }
+
+    #[test]
+    fn collect_inboxes_deduplicates_shared() {
+        let followers = vec![
+            make_follower("https://mastodon.social/users/a/inbox", Some("https://mastodon.social/inbox")),
+            make_follower("https://mastodon.social/users/b/inbox", Some("https://mastodon.social/inbox")),
+            make_follower("https://other.instance/users/c/inbox", None),
+        ];
+        let inboxes = collect_inboxes(&followers);
+        assert_eq!(inboxes.len(), 2);
+        let strs: Vec<_> = inboxes.iter().map(|u| u.as_str()).collect();
+        assert!(strs.contains(&"https://mastodon.social/inbox"));
+        assert!(strs.contains(&"https://other.instance/users/c/inbox"));
+    }
+
+    #[test]
+    fn collect_inboxes_falls_back_to_individual_inbox() {
+        let followers = vec![
+            make_follower("https://example.com/users/x/inbox", None),
+        ];
+        let inboxes = collect_inboxes(&followers);
+        assert_eq!(inboxes.len(), 1);
+        assert_eq!(inboxes[0].as_str(), "https://example.com/users/x/inbox");
     }
 }

@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT strftime('%Y-%m', watched_at) AS \"month!\",\n                          AVG(CAST(rating AS REAL)) AS \"avg_rating!: f64\",\n                          COUNT(*) AS \"count!: i64\"\n                   FROM reviews\n                   WHERE user_id = ? AND watched_at >= datetime('now', '-12 months')\n                   GROUP BY \"month!\"\n                   ORDER BY \"month!\" ASC",
+  "describe": {
+    "columns": [
+      {
+        "name": "month!",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "avg_rating!: f64",
+        "ordinal": 1,
+        "type_info": "Float"
+      },
+      {
+        "name": "count!: i64",
+        "ordinal": 2,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "fdd5b522f26b5e0ce62f76c774fbb606fd9ee9884f4457831f693a0df3609317"
+}

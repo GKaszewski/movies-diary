@@ -32,6 +32,9 @@ pub enum EventPayload {
         movie_id: String,
         poster_path: Option<String>,
     },
+    UserUpdated {
+        user_id: String,
+    },
 }
 
 impl EventPayload {
@@ -41,6 +44,7 @@ impl EventPayload {
             EventPayload::ReviewUpdated { .. } => "ReviewUpdated",
             EventPayload::MovieDiscovered { .. } => "MovieDiscovered",
             EventPayload::MovieDeleted { .. } => "MovieDeleted",
+            EventPayload::UserUpdated { .. } => "UserUpdated",
         }
     }
 }
@@ -87,6 +91,9 @@ impl From<&DomainEvent> for EventPayload {
                 movie_id: movie_id.value().to_string(),
                 poster_path: poster_path.as_ref().map(|p| p.value().to_string()),
             },
+            DomainEvent::UserUpdated { user_id } => EventPayload::UserUpdated {
+                user_id: user_id.value().to_string(),
+            },
         }
     }
 }
@@ -126,6 +133,11 @@ impl TryFrom<EventPayload> for DomainEvent {
                     .transpose()
                     .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
                 Ok(DomainEvent::MovieDeleted { movie_id, poster_path })
+            }
+            EventPayload::UserUpdated { user_id } => {
+                Ok(DomainEvent::UserUpdated {
+                    user_id: UserId::from_uuid(parse_uuid(&user_id, "user_id")?),
+                })
             }
         }
     }

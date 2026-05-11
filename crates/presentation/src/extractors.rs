@@ -137,12 +137,12 @@ mod tests {
             collections::{PageParams, Paginated},
         },
         ports::{
-            AuthService, DiaryRepository, EventPublisher, GeneratedToken, MetadataClient,
-            MovieRepository, PasswordHasher, PosterFetcherClient, PosterStorage, ReviewRepository,
+            AuthService, DiaryRepository, EventPublisher, GeneratedToken, ImageStorage,
+            MetadataClient, MovieRepository, PasswordHasher, PosterFetcherClient, ReviewRepository,
             StatsRepository, UserRepository,
         },
         value_objects::{
-            Email, ExternalMetadataId, MovieId, MovieTitle, PasswordHash, PosterPath, PosterUrl,
+            Email, ExternalMetadataId, MovieId, MovieTitle, PasswordHash, PosterUrl,
             ReleaseYear, ReviewId, UserId,
         },
     };
@@ -279,16 +279,10 @@ mod tests {
         }
     }
     #[async_trait::async_trait]
-    impl PosterStorage for Panic {
-        async fn store_poster(&self, _: &MovieId, _: &[u8]) -> Result<PosterPath, DomainError> {
-            panic!()
-        }
-        async fn get_poster(&self, _: &PosterPath) -> Result<Vec<u8>, DomainError> {
-            panic!()
-        }
-        async fn delete_poster(&self, _: &PosterPath) -> Result<(), DomainError> {
-            panic!()
-        }
+    impl ImageStorage for Panic {
+        async fn store(&self, _: &str, _: &[u8]) -> Result<String, DomainError> { panic!() }
+        async fn get(&self, _: &str) -> Result<Vec<u8>, DomainError> { panic!() }
+        async fn delete(&self, _: &str) -> Result<(), DomainError> { panic!() }
     }
     #[async_trait::async_trait]
     impl AuthService for Panic {
@@ -332,6 +326,9 @@ mod tests {
             panic!()
         }
         async fn list_with_stats(&self) -> Result<Vec<domain::models::UserSummary>, DomainError> {
+            panic!()
+        }
+        async fn update_profile(&self, _: &UserId, _: Option<String>, _: Option<String>) -> Result<(), DomainError> {
             panic!()
         }
     }
@@ -442,6 +439,7 @@ mod tests {
         fn render_import_upload_page(&self, _: application::ports::ImportUploadPageData) -> Result<String, String> { panic!() }
         fn render_import_mapping_page(&self, _: application::ports::ImportMappingPageData) -> Result<String, String> { panic!() }
         fn render_import_preview_page(&self, _: application::ports::ImportPreviewPageData) -> Result<String, String> { panic!() }
+        fn render_profile_settings_page(&self, _: application::ports::ProfileSettingsPageData) -> Result<String, String> { panic!() }
     }
     impl crate::ports::RssFeedRenderer for Panic {
         fn render_feed(&self, _: &[DiaryEntry], _: &str) -> Result<String, String> {
@@ -474,7 +472,7 @@ mod tests {
                 stats_repository: Arc::clone(&repo) as _,
                 metadata_client: Arc::clone(&repo) as _,
                 poster_fetcher: Arc::clone(&repo) as _,
-                poster_storage: Arc::clone(&repo) as _,
+                image_storage: Arc::clone(&repo) as _,
                 event_publisher: Arc::clone(&repo) as _,
                 password_hasher: Arc::clone(&repo) as _,
                 user_repository: Arc::clone(&repo) as _,

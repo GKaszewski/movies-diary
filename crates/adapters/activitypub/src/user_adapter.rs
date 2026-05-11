@@ -13,6 +13,8 @@ impl ApUserRepository for DomainUserRepoAdapter {
         Ok(self.0.find_by_id(&user_id).await?.map(|u| ApUser {
             id: u.id().value(),
             username: u.username().value().to_string(),
+            bio: u.bio().map(|s| s.to_string()),
+            avatar_path: u.avatar_path().map(|s| s.to_string()),
         }))
     }
 
@@ -23,6 +25,8 @@ impl ApUserRepository for DomainUserRepoAdapter {
         Ok(self.0.find_by_username(&uname).await?.map(|u| ApUser {
             id: u.id().value(),
             username: u.username().value().to_string(),
+            bio: u.bio().map(|s| s.to_string()),
+            avatar_path: u.avatar_path().map(|s| s.to_string()),
         }))
     }
 }

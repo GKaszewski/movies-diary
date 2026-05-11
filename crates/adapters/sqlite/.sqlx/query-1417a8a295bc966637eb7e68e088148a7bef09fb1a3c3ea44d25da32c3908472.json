@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id, movie_id, user_id, rating, comment, watched_at, created_at\n             FROM reviews WHERE movie_id = ? ORDER BY watched_at ASC",
+  "query": "SELECT id, email, username, password_hash, role, bio, avatar_path FROM users WHERE username = ?",
   "describe": {
     "columns": [
       {
@@ -9,32 +9,32 @@
         "type_info": "Text"
       },
       {
-        "name": "movie_id",
+        "name": "email",
         "ordinal": 1,
         "type_info": "Text"
       },
       {
-        "name": "user_id",
+        "name": "username",
         "ordinal": 2,
         "type_info": "Text"
       },
       {
-        "name": "rating",
+        "name": "password_hash",
         "ordinal": 3,
-        "type_info": "Integer"
+        "type_info": "Text"
       },
       {
-        "name": "comment",
+        "name": "role",
         "ordinal": 4,
         "type_info": "Text"
       },
       {
-        "name": "watched_at",
+        "name": "bio",
         "ordinal": 5,
         "type_info": "Text"
       },
       {
-        "name": "created_at",
+        "name": "avatar_path",
         "ordinal": 6,
         "type_info": "Text"
       }
@@ -43,14 +43,14 @@
       "Right": 1
     },
     "nullable": [
+      true,
       false,
       false,
       false,
       false,
       true,
-      false,
-      false
+      true
     ]
   },
-  "hash": "af883f8b78f185077e2d3dcfaa0a6e62fbdfbf00c97c9b33b699dc631476181d"
+  "hash": "1417a8a295bc966637eb7e68e088148a7bef09fb1a3c3ea44d25da32c3908472"
 }

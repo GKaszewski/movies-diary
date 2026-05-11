@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,\n                        r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at\n                 FROM reviews r\n                 INNER JOIN movies m ON m.id = r.movie_id\n                 ORDER BY r.watched_at DESC\n                 LIMIT ? OFFSET ?",
+  "query": "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,\n                        r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url\n                 FROM reviews r\n                 INNER JOIN movies m ON m.id = r.movie_id\n                 ORDER BY r.watched_at ASC\n                 LIMIT ? OFFSET ?",
   "describe": {
     "columns": [
       {
@@ -67,6 +67,11 @@
         "name": "created_at",
         "ordinal": 12,
         "type_info": "Text"
+      },
+      {
+        "name": "remote_actor_url",
+        "ordinal": 13,
+        "type_info": "Text"
       }
     ],
     "parameters": {
@@ -85,8 +90,9 @@
       false,
       true,
       false,
-      false
+      false,
+      true
     ]
   },
-  "hash": "026e2afeb573707cb360fcdab8f6137aabfaf603b5ed57b98ac2888b4a0389ff"
+  "hash": "25fd01355c929a83daf2c802b8ae3adaa4ce73fc037e2bf2a87d60187aeb7361"
 }

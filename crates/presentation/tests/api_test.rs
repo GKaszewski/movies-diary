@@ -12,11 +12,11 @@ use domain::{
     events::DomainEvent,
     models::{Movie, User},
     ports::{
-        AuthService, EventPublisher, GeneratedToken, MetadataClient, MetadataSearchCriteria,
-        PasswordHasher, PosterFetcherClient, PosterStorage, UserRepository,
+        AuthService, EventPublisher, GeneratedToken, ImageStorage, MetadataClient, MetadataSearchCriteria,
+        PasswordHasher, PosterFetcherClient, UserRepository,
     },
     value_objects::{
-        Email, ExternalMetadataId, MovieId, PasswordHash, PosterPath, PosterUrl, UserId,
+        Email, ExternalMetadataId, PasswordHash, PosterUrl, UserId,
     },
 };
 use http_body_util::BodyExt;
@@ -57,18 +57,12 @@ impl PosterFetcherClient for PanicFetcher {
     }
 }
 
-struct PanicStorage;
+struct PanicImageStorage;
 #[async_trait]
-impl PosterStorage for PanicStorage {
-    async fn store_poster(&self, _: &MovieId, _: &[u8]) -> Result<PosterPath, DomainError> {
-        panic!()
-    }
-    async fn get_poster(&self, _: &PosterPath) -> Result<Vec<u8>, DomainError> {
-        panic!()
-    }
-    async fn delete_poster(&self, _: &PosterPath) -> Result<(), DomainError> {
-        panic!()
-    }
+impl ImageStorage for PanicImageStorage {
+    async fn store(&self, _: &str, _: &[u8]) -> Result<String, DomainError> { panic!() }
+    async fn get(&self, _: &str) -> Result<Vec<u8>, DomainError> { panic!() }
+    async fn delete(&self, _: &str) -> Result<(), DomainError> { panic!() }
 }
 
 struct PanicHasher;
@@ -113,6 +107,9 @@ impl UserRepository for NobodyUserRepo {
     }
     async fn list_with_stats(&self) -> Result<Vec<domain::models::UserSummary>, DomainError> {
         panic!()
+    }
+    async fn update_profile(&self, _: &UserId, _: Option<String>, _: Option<String>) -> Result<(), DomainError> {
+        Ok(())
     }
 }
 
@@ -194,7 +191,7 @@ async fn test_app() -> Router {
             stats_repository: Arc::clone(&repo) as _,
             metadata_client: Arc::new(PanicMeta),
             poster_fetcher: Arc::new(PanicFetcher),
-            poster_storage: Arc::new(PanicStorage),
+            image_storage: Arc::new(PanicImageStorage),
             event_publisher: Arc::new(NoopEventPublisher),
             auth_service: Arc::new(PanicAuth),
             password_hasher: Arc::new(PanicHasher),

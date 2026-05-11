@@ -1,6 +1,6 @@
 use domain::{
     errors::DomainError,
-    value_objects::{ExternalMetadataId, MovieId},
+    value_objects::{ExternalMetadataId, MovieId, PosterPath},
 };
 
 use crate::{commands::SyncPosterCommand, context::AppContext};
@@ -36,11 +36,12 @@ pub async fn execute(ctx: &AppContext, cmd: SyncPosterCommand) -> Result<(), Dom
     let image_bytes = ctx.poster_fetcher.fetch_poster_bytes(&poster_url).await?;
 
     let stored_path = ctx
-        .poster_storage
-        .store_poster(&movie_id, &image_bytes)
+        .image_storage
+        .store(&movie_id.value().to_string(), &image_bytes)
         .await?;
+    let poster_path = PosterPath::new(stored_path)?;
 
-    movie.update_poster(stored_path);
+    movie.update_poster(poster_path);
     ctx.movie_repository.upsert_movie(&movie).await?;
 
     Ok(())

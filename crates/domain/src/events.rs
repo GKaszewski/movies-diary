@@ -30,6 +30,9 @@ pub enum DomainEvent {
         movie_id: MovieId,
         poster_path: Option<PosterPath>,
     },
+    UserUpdated {
+        user_id: UserId,
+    },
 }
 
 #[async_trait]

@@ -38,6 +38,8 @@ impl PostgresUserRepository {
         username_str: String,
         hash_str: String,
         role: UserRole,
+        bio: Option<String>,
+        avatar_path: Option<String>,
     ) -> Result<User, DomainError> {
         let id = uuid::Uuid::parse_str(&id_str)
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
@@ -53,6 +55,8 @@ impl PostgresUserRepository {
             username,
             hash,
             role,
+            bio,
+            avatar_path,
         ))
     }
 }
@@ -68,9 +72,11 @@ impl UserRepository for PostgresUserRepository {
             username: String,
             password_hash: String,
             role: String,
+            bio: Option<String>,
+            avatar_path: Option<String>,
         }
         let row = sqlx::query_as::<_, Row>(
-            "SELECT id, email, username, password_hash, role FROM users WHERE email = $1",
+            "SELECT id, email, username, password_hash, role, bio, avatar_path FROM users WHERE email = $1",
         )
         .bind(email_str)
         .fetch_optional(&self.pool)
@@ -83,6 +89,8 @@ impl UserRepository for PostgresUserRepository {
                 r.username,
                 r.password_hash,
                 Self::parse_role(&r.role),
+                r.bio,
+                r.avatar_path,
             )
         })
         .transpose()
@@ -97,9 +105,11 @@ impl UserRepository for PostgresUserRepository {
             username: String,
             password_hash: String,
             role: String,
+            bio: Option<String>,
+            avatar_path: Option<String>,
         }
         let row = sqlx::query_as::<_, Row>(
-            "SELECT id, email, username, password_hash, role FROM users WHERE username = $1",
+            "SELECT id, email, username, password_hash, role, bio, avatar_path FROM users WHERE username = $1",
         )
         .bind(username_str)
         .fetch_optional(&self.pool)
@@ -112,6 +122,8 @@ impl UserRepository for PostgresUserRepository {
                 r.username,
                 r.password_hash,
                 Self::parse_role(&r.role),
+                r.bio,
+                r.avatar_path,
             )
         })
         .transpose()
@@ -164,9 +176,11 @@ impl UserRepository for PostgresUserRepository {
             username: String,
             password_hash: String,
             role: String,
+            bio: Option<String>,
+            avatar_path: Option<String>,
         }
         let row = sqlx::query_as::<_, Row>(
-            "SELECT id, email, username, password_hash, role FROM users WHERE id = $1",
+            "SELECT id, email, username, password_hash, role, bio, avatar_path FROM users WHERE id = $1",
         )
         .bind(&id_str)
         .fetch_optional(&self.pool)
@@ -179,9 +193,28 @@ impl UserRepository for PostgresUserRepository {
                 r.username,
                 r.password_hash,
                 Self::parse_role(&r.role),
+                r.bio,
+                r.avatar_path,
             )
         })
         .transpose()
+    }
+
+    async fn update_profile(
+        &self,
+        user_id: &UserId,
+        bio: Option<String>,
+        avatar_path: Option<String>,
+    ) -> Result<(), DomainError> {
+        let id_str = user_id.value().to_string();
+        sqlx::query("UPDATE users SET bio = $1, avatar_path = $2 WHERE id = $3")
+            .bind(&bio)
+            .bind(&avatar_path)
+            .bind(&id_str)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(())
     }
 
     async fn list_with_stats(&self) -> Result<Vec<domain::models::UserSummary>, DomainError> {
