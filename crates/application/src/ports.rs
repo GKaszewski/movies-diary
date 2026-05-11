@@ -14,6 +14,7 @@ pub struct RemoteActorView {
 pub struct HtmlPageContext {
     pub user_email: Option<String>,
     pub user_id: Option<Uuid>,
+    pub is_admin: bool,
     pub register_enabled: bool,
     pub rss_url: String,
     pub page_title: String,

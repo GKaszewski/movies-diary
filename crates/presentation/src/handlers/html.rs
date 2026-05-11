@@ -46,21 +46,24 @@ pub(crate) async fn build_page_context(
     csrf_token: String,
 ) -> HtmlPageContext {
     let uuid = user_id.as_ref().map(|u| u.value());
-    let user_email = if let Some(ref id) = user_id {
-        state
+    let (user_email, is_admin) = if let Some(ref id) = user_id {
+        let user = state
             .app_ctx
             .user_repository
             .find_by_id(id)
             .await
             .ok()
-            .flatten()
-            .map(|u| u.email().value().to_string())
+            .flatten();
+        let email = user.as_ref().map(|u| u.email().value().to_string());
+        let admin = user.as_ref().map(|u| matches!(u.role(), domain::models::UserRole::Admin)).unwrap_or(false);
+        (email, admin)
     } else {
-        None
+        (None, false)
     };
     HtmlPageContext {
         user_email,
         user_id: uuid,
+        is_admin,
         register_enabled: state.app_ctx.config.allow_registration,
         rss_url: "/feed.rss".to_string(),
         page_title: "Movies Diary".to_string(),
@@ -104,6 +107,7 @@ pub async fn get_login_page(
     let ctx = HtmlPageContext {
         user_email: None,
         user_id: None,
+        is_admin: false,
         register_enabled: state.app_ctx.config.allow_registration,
         rss_url: "/feed.rss".to_string(),
         page_title: "Login — Movies Diary".to_string(),
@@ -170,6 +174,7 @@ pub async fn get_register_page(
     let ctx = HtmlPageContext {
         user_email: None,
         user_id: None,
+        is_admin: false,
         register_enabled: true,
         rss_url: "/feed.rss".to_string(),
         page_title: "Register — Movies Diary".to_string(),
