@@ -34,11 +34,6 @@
         <a href="/users/{{ uid }}">Profile</a>
         <a href="/reviews/new">Add Review</a>
         <a href="/import">Import</a>
-        <a href="/social/blocked">Blocked</a>
-        <a href="/settings/profile">Settings</a>
-        {% if ctx.is_admin %}
-        <a href="/admin/blocked-domains">Admin</a>
-        {% endif %}
         <a href="/logout">Logout</a>
         {% else %}
         <a href="/login">Login</a>
