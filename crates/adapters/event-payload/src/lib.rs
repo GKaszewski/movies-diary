@@ -46,6 +46,23 @@ pub enum EventPayload {
     ImageStored {
         key: String,
     },
+    WatchlistEntryAdded {
+        user_id: String,
+        movie_id: String,
+        movie_title: String,
+        release_year: u16,
+        external_metadata_id: Option<String>,
+        added_at: i64,
+    },
+    WatchlistEntryRemoved {
+        user_id: String,
+        movie_id: String,
+    },
+    FollowAccepted {
+        local_user_id: String,
+        remote_actor_url: String,
+        outbox_url: String,
+    },
 }
 
 impl EventPayload {
@@ -59,6 +76,9 @@ impl EventPayload {
             EventPayload::ReviewDeleted { .. } => "ReviewDeleted",
             EventPayload::MovieEnrichmentRequested { .. } => "MovieEnrichmentRequested",
             EventPayload::ImageStored { .. } => "ImageStored",
+            EventPayload::WatchlistEntryAdded { .. } => "WatchlistEntryAdded",
+            EventPayload::WatchlistEntryRemoved { .. } => "WatchlistEntryRemoved",
+            EventPayload::FollowAccepted { .. } => "FollowAccepted",
         }
     }
 }
@@ -119,11 +139,28 @@ impl From<&DomainEvent> for EventPayload {
                 }
             }
             DomainEvent::ImageStored { key } => EventPayload::ImageStored { key: key.clone() },
-            DomainEvent::WatchlistEntryAdded { .. }
-            | DomainEvent::WatchlistEntryRemoved { .. }
-            | DomainEvent::FollowAccepted { .. } => {
-                // federation-only events; not serialized via EventPayload
-                unreachable!("federation events are handled by the AP event handler directly")
+            DomainEvent::WatchlistEntryAdded { user_id, movie_id, movie_title, release_year, external_metadata_id, added_at } => {
+                EventPayload::WatchlistEntryAdded {
+                    user_id: user_id.value().to_string(),
+                    movie_id: movie_id.value().to_string(),
+                    movie_title: movie_title.clone(),
+                    release_year: *release_year,
+                    external_metadata_id: external_metadata_id.clone(),
+                    added_at: added_at.and_utc().timestamp(),
+                }
+            }
+            DomainEvent::WatchlistEntryRemoved { user_id, movie_id } => {
+                EventPayload::WatchlistEntryRemoved {
+                    user_id: user_id.value().to_string(),
+                    movie_id: movie_id.value().to_string(),
+                }
+            }
+            DomainEvent::FollowAccepted { local_user_id, remote_actor_url, outbox_url } => {
+                EventPayload::FollowAccepted {
+                    local_user_id: local_user_id.value().to_string(),
+                    remote_actor_url: remote_actor_url.clone(),
+                    outbox_url: outbox_url.clone(),
+                }
             }
         }
     }
@@ -184,6 +221,29 @@ impl TryFrom<EventPayload> for DomainEvent {
             }
             EventPayload::ImageStored { key } => {
                 Ok(DomainEvent::ImageStored { key })
+            }
+            EventPayload::WatchlistEntryAdded { user_id, movie_id, movie_title, release_year, external_metadata_id, added_at } => {
+                Ok(DomainEvent::WatchlistEntryAdded {
+                    user_id: UserId::from_uuid(parse_uuid(&user_id, "user_id")?),
+                    movie_id: MovieId::from_uuid(parse_uuid(&movie_id, "movie_id")?),
+                    movie_title,
+                    release_year,
+                    external_metadata_id,
+                    added_at: parse_ts(added_at)?,
+                })
+            }
+            EventPayload::WatchlistEntryRemoved { user_id, movie_id } => {
+                Ok(DomainEvent::WatchlistEntryRemoved {
+                    user_id: UserId::from_uuid(parse_uuid(&user_id, "user_id")?),
+                    movie_id: MovieId::from_uuid(parse_uuid(&movie_id, "movie_id")?),
+                })
+            }
+            EventPayload::FollowAccepted { local_user_id, remote_actor_url, outbox_url } => {
+                Ok(DomainEvent::FollowAccepted {
+                    local_user_id: UserId::from_uuid(parse_uuid(&local_user_id, "local_user_id")?),
+                    remote_actor_url,
+                    outbox_url,
+                })
             }
         }
     }
