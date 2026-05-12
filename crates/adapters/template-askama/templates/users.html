@@ -2,6 +2,14 @@
 {% block content %}
 <div class="users-list">
   <h2 class="page-title">Members</h2>
+  {% if let Some(viewer_id) = ctx.user_id %}
+  <form method="POST" action="/users/{{ viewer_id }}/follow" class="follow-form">
+    <input type="hidden" name="_csrf" value="{{ ctx.csrf_token }}">
+    <input type="hidden" name="redirect_after" value="/users">
+    <input type="text" name="handle" placeholder="@user@instance.tld" required>
+    <button type="submit">Follow</button>
+  </form>
+  {% endif %}
   {% for user in users %}
   <div class="user-row">
     <div class="user-avatar">{{ user.initial }}</div>

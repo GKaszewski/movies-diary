@@ -4,6 +4,12 @@
 {% if let Some(err) = error %}
 <p class="error">{{ err }}</p>
 {% endif %}
+<form method="POST" action="/users/{{ user_id }}/follow" class="follow-form">
+  <input type="hidden" name="_csrf" value="{{ ctx.csrf_token }}">
+  <input type="hidden" name="redirect_after" value="/social/following">
+  <input type="text" name="handle" placeholder="@user@instance.tld" required>
+  <button type="submit">Follow</button>
+</form>
 {% if actors.is_empty() %}
 <p>Not following anyone yet. Follow remote users from your <a href="/users/{{ user_id }}">profile page</a>.</p>
 {% else %}

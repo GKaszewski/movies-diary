@@ -718,12 +718,20 @@ pub async fn follow_remote_user(
     if crate::csrf::mismatch(&csrf, &form.csrf_token) {
         return StatusCode::FORBIDDEN.into_response();
     }
+    let redirect_base = form
+        .redirect_after
+        .as_deref()
+        .filter(|u| u.starts_with('/') && !u.starts_with("//"))
+        .unwrap_or(&format!("/users/{}", profile_user_uuid))
+        .to_string();
+
     match state.ap_service.follow(user_id.value(), &form.handle).await {
-        Ok(()) => Redirect::to(&format!("/users/{}", profile_user_uuid)).into_response(),
+        Ok(()) => Redirect::to(&redirect_base).into_response(),
         Err(e) => {
             tracing::error!("follow error: {:?}", e);
             let msg = encode_error(&e.to_string());
-            Redirect::to(&format!("/users/{}?error={}", profile_user_uuid, msg)).into_response()
+            let sep = if redirect_base.contains('?') { '&' } else { '?' };
+            Redirect::to(&format!("{}{}error={}", redirect_base, sep, msg)).into_response()
         }
     }
 }

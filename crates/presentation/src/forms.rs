@@ -85,6 +85,8 @@ pub struct FollowForm {
     pub handle: String,
     #[serde(rename = "_csrf", default)]
     pub csrf_token: String,
+    #[serde(default)]
+    pub redirect_after: Option<String>,
 }
 
 #[derive(Deserialize)]
