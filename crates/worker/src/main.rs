@@ -63,28 +63,33 @@ async fn main() -> anyhow::Result<()> {
     };
 
     // ── Enrichment ────────────────────────────────────────────────────────────
+    // Both the event handler and the staleness job are gated on TMDB_API_KEY.
+    // Without a key, no MovieEnrichmentRequested events are produced or handled.
 
-    let enrichment_handler: Option<Arc<dyn EventHandler>> =
+    let (enrichment_handler, enrichment_job): (Option<Arc<dyn EventHandler>>, Option<Arc<dyn PeriodicJob>>) =
         match tmdb_enrichment::TmdbEnrichmentClient::from_env() {
             Ok(client) => {
                 tracing::info!("TMDb enrichment enabled");
-                Some(Arc::new(tmdb_enrichment::EnrichmentHandler {
+                let handler = Arc::new(tmdb_enrichment::EnrichmentHandler {
                     enrichment_client: Arc::new(client),
                     profile_repo: Arc::clone(&ctx.movie_profile_repository),
-                }))
+                }) as Arc<dyn EventHandler>;
+                let job = Arc::new(application::jobs::EnrichmentStalenessJob::new(ctx.clone()))
+                    as Arc<dyn PeriodicJob>;
+                (Some(handler), Some(job))
             }
             Err(e) => {
                 tracing::warn!("TMDb enrichment disabled: {e}");
-                None
+                (None, None)
             }
         };
 
     // ── Periodic jobs ─────────────────────────────────────────────────────────
 
-    let periodic_jobs: Vec<Arc<dyn PeriodicJob>> = vec![
+    let mut periodic_jobs: Vec<Arc<dyn PeriodicJob>> = vec![
         Arc::new(application::jobs::ImportSessionCleanupJob::new(ctx.clone())),
-        Arc::new(application::jobs::EnrichmentStalenessJob::new(ctx.clone())),
     ];
+    if let Some(job) = enrichment_job { periodic_jobs.push(job); }
 
     for job in periodic_jobs {
         tokio::spawn(async move {
