@@ -5,6 +5,7 @@ use domain::ports::{
     ImageStorage,
     ImportProfileRepository, ImportSessionRepository,
     MetadataClient, MovieProfileRepository, MovieRepository, PasswordHasher, PosterFetcherClient,
+    PersonCommand, PersonQuery, SearchCommand, SearchPort,
     ReviewRepository, StatsRepository, UserRepository,
 };
 
@@ -28,5 +29,9 @@ pub struct AppContext {
     pub import_session_repository: Arc<dyn ImportSessionRepository>,
     pub import_profile_repository: Arc<dyn ImportProfileRepository>,
     pub movie_profile_repository: Arc<dyn MovieProfileRepository>,
+    pub person_command: Arc<dyn PersonCommand>,
+    pub person_query: Arc<dyn PersonQuery>,
+    pub search_port: Arc<dyn SearchPort>,
+    pub search_command: Arc<dyn SearchCommand>,
     pub config: AppConfig,
 }

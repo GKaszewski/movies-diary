@@ -76,3 +76,8 @@ pub struct UpdateProfileCommand {
     pub avatar_bytes: Option<Vec<u8>>,
     pub avatar_content_type: Option<String>,
 }
+
+pub struct EnrichMovieCommand {
+    pub movie_id: domain::value_objects::MovieId,
+    pub profile: domain::models::MovieProfile,
+}

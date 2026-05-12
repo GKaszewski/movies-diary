@@ -13,11 +13,14 @@ use domain::{
         DiaryEntry, DiaryFilter, FeedEntry, Movie, Review, ReviewHistory, UserStats,
         UserTrends,
         collections::{PageParams, Paginated},
+        PersonId, EntityType, IndexableDocument, Person, PersonCredits,
+        SearchQuery, SearchResults,
     },
     ports::{
         AuthService, DiaryRepository, EventPublisher, GeneratedToken, ImageStorage,
         MetadataClient, MovieRepository, PasswordHasher, PosterFetcherClient, ReviewRepository,
         StatsRepository, UserRepository,
+        PersonCommand, PersonQuery, SearchPort, SearchCommand,
     },
     value_objects::{
         Email, ExternalMetadataId, MovieId, MovieTitle, PasswordHash, PosterUrl,
@@ -29,7 +32,7 @@ use tower::ServiceExt;
 
 // --- Panic stubs (defined once) ---
 
-struct Panic;
+pub struct Panic;
 
 #[async_trait::async_trait]
 impl MovieRepository for Panic {
@@ -350,9 +353,29 @@ impl AuthService for RejectingAuth {
     }
 }
 
+#[async_trait::async_trait]
+impl PersonCommand for Panic {
+    async fn upsert_batch(&self, _: &[Person]) -> Result<(), DomainError> { panic!() }
+}
+#[async_trait::async_trait]
+impl PersonQuery for Panic {
+    async fn get_by_id(&self, _: &PersonId) -> Result<Option<Person>, DomainError> { panic!() }
+    async fn get_by_external_id(&self, _: &domain::models::ExternalPersonId) -> Result<Option<Person>, DomainError> { panic!() }
+    async fn get_credits(&self, _: &PersonId) -> Result<PersonCredits, DomainError> { panic!() }
+}
+#[async_trait::async_trait]
+impl SearchPort for Panic {
+    async fn search(&self, _: &SearchQuery) -> Result<SearchResults, DomainError> { panic!() }
+}
+#[async_trait::async_trait]
+impl SearchCommand for Panic {
+    async fn index(&self, _: IndexableDocument) -> Result<(), DomainError> { panic!() }
+    async fn remove(&self, _: EntityType, _: &str) -> Result<(), DomainError> { panic!() }
+}
+
 // --- Single state factory — only auth_service varies ---
 
-fn make_test_state(auth_service: Arc<dyn AuthService>) -> crate::state::AppState {
+pub fn make_test_state(auth_service: Arc<dyn AuthService>) -> crate::state::AppState {
     let repo = Arc::new(Panic);
     crate::state::AppState {
         app_ctx: AppContext {
@@ -371,6 +394,10 @@ fn make_test_state(auth_service: Arc<dyn AuthService>) -> crate::state::AppState
             import_session_repository: Arc::clone(&repo) as _,
             import_profile_repository: Arc::clone(&repo) as _,
             movie_profile_repository: Arc::clone(&repo) as _,
+            person_command: Arc::clone(&repo) as _,
+            person_query: Arc::clone(&repo) as _,
+            search_port: Arc::clone(&repo) as _,
+            search_command: Arc::clone(&repo) as _,
             auth_service,
             config: AppConfig {
                 allow_registration: false,

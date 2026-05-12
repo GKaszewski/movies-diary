@@ -17,6 +17,7 @@ mod import_profile;
 mod import_session;
 mod migrations;
 mod models;
+mod persons;
 mod profile;
 mod users;
 
@@ -28,6 +29,7 @@ use models::{
 pub use image_ref::{SqliteImageRefAdapter, create_image_ref};
 pub use import_profile::SqliteImportProfileRepository;
 pub use import_session::SqliteImportSessionRepository;
+pub use persons::{SqlitePersonAdapter, create_person_adapter};
 pub use profile::SqliteMovieProfileRepository;
 pub use users::SqliteUserRepository;
 

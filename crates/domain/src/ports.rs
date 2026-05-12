@@ -8,6 +8,8 @@ use crate::{
         AnnotatedRow, DiaryEntry, DiaryFilter, ExportFormat, FeedEntry, FieldMapping,
         FileFormat, ImportError, ImportProfile, ImportSession, Movie, MovieProfile, MovieStats,
         ParsedFile, Review, ReviewHistory, User, UserStats, UserSummary, UserTrends,
+        EntityType, ExternalPersonId, IndexableDocument, Person, PersonCredits,
+        PersonId, SearchQuery, SearchResults,
         collections::{self, PageParams, Paginated},
     },
     value_objects::{
@@ -273,4 +275,35 @@ pub trait ImageRefCommand: Send + Sync {
 #[async_trait]
 pub trait ImageRefQuery: Send + Sync {
     async fn list_keys(&self) -> Result<Vec<String>, DomainError>;
+}
+
+/// Write port — mutates the persons table. No reads.
+#[async_trait]
+pub trait PersonCommand: Send + Sync {
+    /// Upsert a batch of persons. Uses INSERT OR REPLACE (SQLite) / ON CONFLICT DO UPDATE (Postgres).
+    async fn upsert_batch(&self, persons: &[Person]) -> Result<(), DomainError>;
+}
+
+/// Read port — queries persons and credits. No mutations.
+#[async_trait]
+pub trait PersonQuery: Send + Sync {
+    async fn get_by_id(&self, id: &PersonId) -> Result<Option<Person>, DomainError>;
+    async fn get_by_external_id(&self, id: &ExternalPersonId) -> Result<Option<Person>, DomainError>;
+    /// Returns the person's full cast and crew credit history across all indexed movies.
+    async fn get_credits(&self, id: &PersonId) -> Result<PersonCredits, DomainError>;
+}
+
+/// Read port — executes search queries. No mutations.
+#[async_trait]
+pub trait SearchPort: Send + Sync {
+    async fn search(&self, query: &SearchQuery) -> Result<SearchResults, DomainError>;
+}
+
+/// Write port — manages the search index. No reads.
+#[async_trait]
+pub trait SearchCommand: Send + Sync {
+    /// Add or replace a document in the search index.
+    async fn index(&self, doc: IndexableDocument) -> Result<(), DomainError>;
+    /// Remove a document from the search index by entity type and internal ID string.
+    async fn remove(&self, entity_type: EntityType, id: &str) -> Result<(), DomainError>;
 }

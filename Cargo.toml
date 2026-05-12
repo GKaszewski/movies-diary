@@ -28,6 +28,8 @@ members = [
     "crates/tui",
     "crates/worker",
     "crates/adapters/importer",
+    "crates/adapters/sqlite-search",
+    "crates/adapters/postgres-search",
 ]
 resolver = "2"
 
@@ -81,3 +83,5 @@ sqlite-event-queue = { path = "crates/adapters/sqlite-event-queue" }
 postgres-event-queue = { path = "crates/adapters/postgres-event-queue" }
 importer = { path = "crates/adapters/importer" }
 image-converter = { path = "crates/adapters/image-converter" }
+sqlite-search = { path = "crates/adapters/sqlite-search" }
+postgres-search = { path = "crates/adapters/postgres-search" }

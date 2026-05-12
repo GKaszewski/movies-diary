@@ -16,6 +16,7 @@ mod image_ref;
 mod import_profile;
 mod import_session;
 mod models;
+mod persons;
 mod profile;
 mod users;
 
@@ -27,6 +28,7 @@ use models::{
 pub use image_ref::{PostgresImageRefAdapter, create_image_ref};
 pub use import_profile::PostgresImportProfileRepository;
 pub use import_session::PostgresImportSessionRepository;
+pub use persons::{PostgresPersonAdapter, create_person_adapter};
 pub use profile::PostgresMovieProfileRepository;
 pub use users::PostgresUserRepository;
 

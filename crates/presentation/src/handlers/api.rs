@@ -21,11 +21,12 @@ use application::{
         get_diary, get_movie_social_page, get_movies, get_review_history,
         get_user_profile as get_user_profile_uc, get_users, log_review, login as login_uc,
         register as register_uc, sync_poster, update_profile,
+        search as search_uc, get_person, get_person_credits,
     },
 };
 use domain::{
     errors::DomainError,
-    models::{DiaryEntry, ExportFormat, Movie, Review},
+    models::{DiaryEntry, ExportFormat, Movie, Review, PersonId, collections::PageParams},
     services::review_history::Trend,
     value_objects::{MovieId, UserId},
 };
@@ -43,6 +44,10 @@ use api_types::{
     MoviesQueryParams, MoviesResponse, PaginationQueryParams, ProfileResponse, RegisterRequest,
     ReviewDto, ReviewHistoryResponse, SocialFeedResponse, SocialReviewDto, UserProfileQueryParams,
     UserProfileResponse, UserStatsDto, UserSummaryDto, UserTrendsDto, UsersResponse,
+};
+use api_types::search::{
+    CastCreditDto, CrewCreditDto, MovieSearchHitDto, PersonCreditsDto, PersonDto,
+    PersonSearchHitDto, PaginatedMovieHits, PaginatedPersonHits, SearchQueryParams, SearchResponse,
 };
 use crate::{
     errors::ApiError,
@@ -1084,6 +1089,120 @@ pub async fn export_diary(
             .into_response(),
         Err(e) => {
             tracing::error!("export error: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+// Search and person endpoints are intentionally public — browsing the catalog
+// and people profiles does not require authentication.
+
+pub async fn get_search(
+    State(state): State<AppState>,
+    Query(params): Query<SearchQueryParams>,
+) -> impl IntoResponse {
+    let query = domain::models::SearchQuery {
+        text: params.q,
+        filters: domain::models::SearchFilters {
+            genre: params.genre,
+            year: params.year,
+            person_id: params.person_id.map(PersonId::from_uuid),
+            department: params.department,
+            language: params.language,
+        },
+        page: PageParams {
+            limit: params.limit.unwrap_or(5),
+            offset: params.offset.unwrap_or(0),
+        },
+    };
+
+    match search_uc::execute(&state.app_ctx, query).await {
+        Ok(results) => axum::Json(SearchResponse {
+            movies: PaginatedMovieHits {
+                items: results.movies.items.iter().map(|h| MovieSearchHitDto {
+                    movie_id: h.movie_id.value(),
+                    title: h.title.clone(),
+                    release_year: h.release_year,
+                    director: h.director.clone(),
+                    poster_path: h.poster_path.clone(),
+                    genres: h.genres.clone(),
+                }).collect(),
+                total_count: results.movies.total_count,
+                limit: results.movies.limit,
+                offset: results.movies.offset,
+            },
+            people: PaginatedPersonHits {
+                items: results.people.items.iter().map(|h| PersonSearchHitDto {
+                    person_id: h.person_id.value(),
+                    name: h.name.clone(),
+                    known_for_department: h.known_for_department.clone(),
+                    profile_path: h.profile_path.clone(),
+                    known_for_titles: h.known_for_titles.clone(),
+                }).collect(),
+                total_count: results.people.total_count,
+                limit: results.people.limit,
+                offset: results.people.offset,
+            },
+        }).into_response(),
+        Err(e) => {
+            tracing::error!("search failed: {e}");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+pub async fn get_person_handler(
+    State(state): State<AppState>,
+    Path(id): Path<uuid::Uuid>,
+) -> impl IntoResponse {
+    match get_person::execute(&state.app_ctx, PersonId::from_uuid(id)).await {
+        Ok(Some(person)) => axum::Json(PersonDto {
+            id: person.id().value(),
+            external_id: person.external_id().value().to_string(),
+            name: person.name().to_string(),
+            known_for_department: person.known_for_department().map(str::to_string),
+            profile_path: person.profile_path().map(str::to_string),
+        }).into_response(),
+        Ok(None) => StatusCode::NOT_FOUND.into_response(),
+        Err(e) => {
+            tracing::error!("get_person failed: {e}");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+pub async fn get_person_credits_handler(
+    State(state): State<AppState>,
+    Path(id): Path<uuid::Uuid>,
+) -> impl IntoResponse {
+    match get_person_credits::execute(&state.app_ctx, PersonId::from_uuid(id)).await {
+        Ok(credits) => axum::Json(PersonCreditsDto {
+            person: PersonDto {
+                id: credits.person.id().value(),
+                external_id: credits.person.external_id().value().to_string(),
+                name: credits.person.name().to_string(),
+                known_for_department: credits.person.known_for_department().map(str::to_string),
+                profile_path: credits.person.profile_path().map(str::to_string),
+            },
+            cast: credits.cast.iter().map(|c| CastCreditDto {
+                movie_id: c.movie_id.value(),
+                title: c.title.clone(),
+                release_year: c.release_year,
+                character: c.character.clone(),
+                poster_path: c.poster_path.clone(),
+            }).collect(),
+            crew: credits.crew.iter().map(|c| CrewCreditDto {
+                movie_id: c.movie_id.value(),
+                title: c.title.clone(),
+                release_year: c.release_year,
+                job: c.job.clone(),
+                department: c.department.clone(),
+                poster_path: c.poster_path.clone(),
+            }).collect(),
+        }).into_response(),
+        Err(DomainError::NotFound(_)) => StatusCode::NOT_FOUND.into_response(),
+        Err(e) => {
+            tracing::error!("get_person_credits failed: {e}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
     }

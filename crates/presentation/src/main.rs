@@ -15,6 +15,11 @@ use presentation::{openapi, routes, state::AppState};
 
 use domain::ports::{DiaryExporter, DocumentParser, EventPublisher, ImportProfileRepository, ImportSessionRepository};
 
+#[cfg(feature = "sqlite")]
+use sqlite_search;
+#[cfg(feature = "postgres")]
+use postgres_search;
+
 #[cfg(not(any(feature = "sqlite", feature = "postgres")))]
 compile_error!("At least one database backend must be enabled. Use --features sqlite or --features postgres");
 
@@ -49,17 +54,21 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
     let poster_fetcher = poster_fetcher::create()?;
     let image_storage = image_storage::create()?;
 
-    let (movie_repository, review_repository, diary_repository, stats_repository, user_repository, import_session_repository, import_profile_repository, movie_profile_repository, db_pool) =
+    let (movie_repository, review_repository, diary_repository, stats_repository, user_repository, import_session_repository, import_profile_repository, movie_profile_repository, person_command, person_query, search_command, search_port, db_pool) =
         match backend.as_str() {
             #[cfg(feature = "postgres")]
             "postgres" => {
                 let (pool, m, r, d, s, u, is, ip, mp) = postgres::wire(&database_url).await?;
-                (m, r, d, s, u, is, ip, mp, DbPool::Postgres(pool))
+                let (pc, pq) = postgres::create_person_adapter(pool.clone());
+                let (sc, sp) = postgres_search::create_search_adapter(pool.clone());
+                (m, r, d, s, u, is, ip, mp, pc, pq, sc, sp, DbPool::Postgres(pool))
             }
             #[cfg(feature = "sqlite")]
             _ => {
                 let (pool, m, r, d, s, u, is, ip, mp) = sqlite::wire(&database_url).await?;
-                (m, r, d, s, u, is, ip, mp, DbPool::Sqlite(pool))
+                let (pc, pq) = sqlite::create_person_adapter(pool.clone());
+                let (sc, sp) = sqlite_search::create_search_adapter(pool.clone());
+                (m, r, d, s, u, is, ip, mp, pc, pq, sc, sp, DbPool::Sqlite(pool))
             }
             #[cfg(not(feature = "sqlite"))]
             _ => anyhow::bail!("DATABASE_BACKEND={backend} is not supported by this build (sqlite feature is not enabled)"),
@@ -121,14 +130,14 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
     let event_publisher_arc: Arc<dyn EventPublisher> = match event_bus {
         EventBusBackend::Db => {
             tracing::info!("event bus: DB queue");
-            match backend.as_str() {
+            match &db_pool {
                 #[cfg(feature = "postgres")]
-                "postgres" => postgres_event_queue::PostgresEventQueue::create_publisher(
-                    pg_pool.as_ref().unwrap().clone()
+                DbPool::Postgres(pool) => postgres_event_queue::PostgresEventQueue::create_publisher(
+                    pool.clone()
                 ).await?,
                 #[cfg(feature = "sqlite")]
-                _ => sqlite_event_queue::SqliteEventQueue::create_publisher(
-                    sqlite_pool.as_ref().unwrap().clone()
+                DbPool::Sqlite(pool) => sqlite_event_queue::SqliteEventQueue::create_publisher(
+                    pool.clone()
                 ).await?,
                 #[cfg(not(feature = "sqlite"))]
                 _ => anyhow::bail!("EVENT_BUS_BACKEND=db has no adapter for DATABASE_BACKEND={backend}; enable the sqlite or postgres feature"),
@@ -162,6 +171,10 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
         import_session_repository: import_session_repository as Arc<dyn ImportSessionRepository>,
         import_profile_repository: import_profile_repository as Arc<dyn ImportProfileRepository>,
         movie_profile_repository,
+        person_command,
+        person_query,
+        search_port,
+        search_command,
         config: app_config,
     };
 

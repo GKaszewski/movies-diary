@@ -5,8 +5,8 @@ edition = "2024"
 
 [features]
 default = ["sqlite"]
-sqlite = ["dep:sqlite", "dep:sqlite-event-queue"]
-postgres = ["dep:postgres", "dep:postgres-event-queue"]
+sqlite = ["dep:sqlite", "dep:sqlite-event-queue", "dep:sqlite-search"]
+postgres = ["dep:postgres", "dep:postgres-event-queue", "dep:postgres-search"]
 nats = ["dep:nats"]
 federation = []
 sqlite-federation = ["sqlite", "dep:sqlite-federation", "dep:activitypub", "federation"]
@@ -37,6 +37,8 @@ sqlite = { workspace = true, optional = true }
 postgres = { workspace = true, optional = true }
 sqlite-event-queue   = { workspace = true, optional = true }
 postgres-event-queue = { workspace = true, optional = true }
+sqlite-search        = { workspace = true, optional = true }
+postgres-search      = { workspace = true, optional = true }
 
 # Optional — federation
 activitypub       = { workspace = true, optional = true }

@@ -3,6 +3,7 @@ pub mod common;
 pub mod diary;
 pub mod import;
 pub mod movies;
+pub mod search;
 pub mod social;
 pub mod users;
 

@@ -10,10 +10,11 @@ use axum::{
 use domain::{
     errors::DomainError,
     events::DomainEvent,
-    models::{Movie, User},
+    models::{Movie, User, PersonId, Person, PersonCredits, EntityType, IndexableDocument, SearchQuery, SearchResults, ExternalPersonId},
     ports::{
         AuthService, EventPublisher, GeneratedToken, ImageStorage, MetadataClient, MetadataSearchCriteria,
         PasswordHasher, PosterFetcherClient, UserRepository,
+        PersonCommand, PersonQuery, SearchPort, SearchCommand,
     },
     value_objects::{
         Email, ExternalMetadataId, PasswordHash, PosterUrl, UserId,
@@ -163,6 +164,33 @@ impl domain::ports::ImportProfileRepository for PanicImportProfile {
     async fn delete(&self, _: &domain::value_objects::ImportProfileId) -> Result<(), DomainError> { panic!() }
 }
 
+struct PanicPersonCommand;
+#[async_trait]
+impl PersonCommand for PanicPersonCommand {
+    async fn upsert_batch(&self, _: &[Person]) -> Result<(), DomainError> { panic!() }
+}
+
+struct PanicPersonQuery;
+#[async_trait]
+impl PersonQuery for PanicPersonQuery {
+    async fn get_by_id(&self, _: &PersonId) -> Result<Option<Person>, DomainError> { panic!() }
+    async fn get_by_external_id(&self, _: &ExternalPersonId) -> Result<Option<Person>, DomainError> { panic!() }
+    async fn get_credits(&self, _: &PersonId) -> Result<PersonCredits, DomainError> { panic!() }
+}
+
+struct PanicSearchPort;
+#[async_trait]
+impl SearchPort for PanicSearchPort {
+    async fn search(&self, _: &SearchQuery) -> Result<SearchResults, DomainError> { panic!() }
+}
+
+struct PanicSearchCommand;
+#[async_trait]
+impl SearchCommand for PanicSearchCommand {
+    async fn index(&self, _: IndexableDocument) -> Result<(), DomainError> { panic!() }
+    async fn remove(&self, _: EntityType, _: &str) -> Result<(), DomainError> { panic!() }
+}
+
 #[cfg(feature = "federation")]
 struct PanicSocialQuery;
 #[cfg(feature = "federation")]
@@ -207,6 +235,10 @@ async fn test_app() -> Router {
             import_session_repository: Arc::new(PanicImportSession),
             import_profile_repository: Arc::new(PanicImportProfile),
             movie_profile_repository: Arc::new(PanicMovieProfile),
+            person_command: Arc::new(PanicPersonCommand),
+            person_query: Arc::new(PanicPersonQuery),
+            search_port: Arc::new(PanicSearchPort),
+            search_command: Arc::new(PanicSearchCommand),
             config: AppConfig {
                 allow_registration: false,
                 base_url: "http://localhost:3000".to_string(),

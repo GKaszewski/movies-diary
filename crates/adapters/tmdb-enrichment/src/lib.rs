@@ -2,11 +2,12 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use chrono::Utc;
+use application::{commands::EnrichMovieCommand, use_cases::enrich_movie};
 use domain::{
     errors::DomainError,
     events::DomainEvent,
     models::{CastMember, CrewMember, Genre, Keyword, MovieProfile},
-    ports::{EventHandler, MovieEnrichmentClient, MovieProfileRepository},
+    ports::{EventHandler, MovieEnrichmentClient, MovieProfileRepository, MovieRepository, PersonCommand, SearchCommand},
     value_objects::MovieId,
 };
 use serde::Deserialize;
@@ -163,7 +164,10 @@ impl MovieEnrichmentClient for TmdbEnrichmentClient {
 
 pub struct EnrichmentHandler {
     pub enrichment_client: Arc<dyn MovieEnrichmentClient>,
-    pub profile_repo: Arc<dyn MovieProfileRepository>,
+    pub movie_repository:  Arc<dyn MovieRepository>,
+    pub profile_repo:      Arc<dyn MovieProfileRepository>,
+    pub person_command:    Arc<dyn PersonCommand>,
+    pub search_command:    Arc<dyn SearchCommand>,
 }
 
 #[async_trait]
@@ -176,7 +180,7 @@ impl EventHandler for EnrichmentHandler {
             _ => return Ok(()),
         };
 
-        // Skip if profile is fresh (checked by the repo's list_stale, but guard here too)
+        // Skip if profile is fresh (< 30 days old)
         if let Ok(Some(existing)) = self.profile_repo.get_by_movie_id(&movie_id).await {
             let age = Utc::now() - existing.enriched_at;
             if age.num_days() < 30 {
@@ -190,16 +194,17 @@ impl EventHandler for EnrichmentHandler {
         }
 
         tracing::info!(movie_id = %movie_id.value(), external_id = %external_metadata_id, "enriching movie");
+
         match self.enrichment_client.fetch_profile(movie_id.clone(), &external_metadata_id).await {
             Ok(profile) => {
-                self.profile_repo.upsert(&profile).await?;
-                tracing::info!(
-                    movie_id = %movie_id.value(),
-                    genres = profile.genres.len(),
-                    cast = profile.cast.len(),
-                    crew = profile.crew.len(),
-                    "enrichment stored"
-                );
+                enrich_movie::execute(
+                    &self.movie_repository,
+                    &self.profile_repo,
+                    &self.person_command,
+                    &self.search_command,
+                    EnrichMovieCommand { movie_id, profile },
+                )
+                .await?;
             }
             Err(DomainError::NotFound(msg)) => {
                 tracing::warn!(movie_id = %movie_id.value(), "TMDb lookup found nothing: {msg}");

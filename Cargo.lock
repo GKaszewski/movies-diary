@@ -3747,6 +3747,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "postgres-search"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "domain",
+ "sqlx",
+ "uuid",
+]
+
+[[package]]
 name = "potential_utf"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3797,12 +3807,14 @@ dependencies = [
  "postgres",
  "postgres-event-queue",
  "postgres-federation",
+ "postgres-search",
  "rss 0.1.0",
  "serde",
  "serde_json",
  "sqlite",
  "sqlite-event-queue",
  "sqlite-federation",
+ "sqlite-search",
  "sqlx",
  "template-askama",
  "tokio",
@@ -5003,6 +5015,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "sqlite-search"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "domain",
+ "sqlx",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
 name = "sqlx"
 version = "0.8.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5543,6 +5566,7 @@ name = "tmdb-enrichment"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "application",
  "async-trait",
  "chrono",
  "domain",
@@ -6798,9 +6822,11 @@ dependencies = [
  "postgres",
  "postgres-event-queue",
  "postgres-federation",
+ "postgres-search",
  "sqlite",
  "sqlite-event-queue",
  "sqlite-federation",
+ "sqlite-search",
  "sqlx",
  "tmdb-enrichment",
  "tokio",

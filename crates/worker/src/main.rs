@@ -4,7 +4,7 @@ mod event_bus;
 use std::sync::Arc;
 
 use anyhow::Context;
-use application::{config::AppConfig, context::AppContext, worker::WorkerService};
+use application::{config::AppConfig, context::AppContext, worker::WorkerService, SearchCleanupHandler};
 use export::ExportAdapter;
 use importer::ImporterDocumentParser;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -32,7 +32,11 @@ async fn main() -> anyhow::Result<()> {
     let (event_publisher_arc, consumer_arc) = event_bus::create(&db_pool).await?;
 
     let image_ref_command = Arc::clone(&repos.image_ref_command);
-    let image_ref_query = Arc::clone(&repos.image_ref_query);
+    let image_ref_query   = Arc::clone(&repos.image_ref_query);
+    let person_command    = Arc::clone(&repos.person_command);
+    let person_query      = Arc::clone(&repos.person_query);
+    let search_command    = Arc::clone(&repos.search_command);
+    let search_port       = Arc::clone(&repos.search_port);
 
     // Clone refs federation handler needs before ctx consumes them.
     #[cfg(feature = "federation")]
@@ -62,6 +66,10 @@ async fn main() -> anyhow::Result<()> {
         import_session_repository: repos.import_session,
         import_profile_repository: repos.import_profile,
         movie_profile_repository:  repos.movie_profile,
+        person_command:            Arc::clone(&person_command),
+        person_query:              Arc::clone(&person_query),
+        search_port:               Arc::clone(&search_port),
+        search_command:            Arc::clone(&search_command),
         config: app_config,
     };
 
@@ -75,7 +83,10 @@ async fn main() -> anyhow::Result<()> {
                 tracing::info!("TMDb enrichment enabled");
                 let handler = Arc::new(tmdb_enrichment::EnrichmentHandler {
                     enrichment_client: Arc::new(client),
-                    profile_repo: Arc::clone(&ctx.movie_profile_repository),
+                    movie_repository:  Arc::clone(&ctx.movie_repository),
+                    profile_repo:      Arc::clone(&ctx.movie_profile_repository),
+                    person_command:    Arc::clone(&ctx.person_command),
+                    search_command:    Arc::clone(&ctx.search_command),
                 }) as Arc<dyn EventHandler>;
                 let job = Arc::new(application::jobs::EnrichmentStalenessJob::new(ctx.clone()))
                     as Arc<dyn PeriodicJob>;
@@ -134,7 +145,10 @@ async fn main() -> anyhow::Result<()> {
 
         #[cfg(not(feature = "federation"))]
         {
-            let mut h = vec![poster, cleanup];
+            let search_cleanup = Arc::new(SearchCleanupHandler::new(
+                Arc::clone(&ctx.search_command),
+            )) as Arc<dyn EventHandler>;
+            let mut h = vec![poster, cleanup, search_cleanup];
             if let Some(e) = enrichment_handler { h.push(e); }
             if let Some((ref conv_handler, _)) = conversion { h.push(Arc::clone(conv_handler)); }
             h
@@ -160,8 +174,11 @@ async fn main() -> anyhow::Result<()> {
                 allow_registration,
             ).await?.event_handler;
 
+            let search_cleanup = Arc::new(SearchCleanupHandler::new(
+                Arc::clone(&ctx.search_command),
+            )) as Arc<dyn EventHandler>;
             tracing::info!("federation event handler registered");
-            let mut h = vec![poster, cleanup, ap];
+            let mut h = vec![poster, cleanup, ap, search_cleanup];
             if let Some(e) = enrichment_handler { h.push(e); }
             if let Some((ref conv_handler, _)) = conversion { h.push(Arc::clone(conv_handler)); }
             h

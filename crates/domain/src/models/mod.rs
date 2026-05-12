@@ -12,6 +12,8 @@ pub mod collections;
 pub mod import;
 pub mod import_session;
 pub mod import_profile;
+pub mod person;
+pub mod search;
 
 pub use import::{
     AnnotatedRow, DomainField, FieldMapping, FileFormat, ImportError,
@@ -19,6 +21,11 @@ pub use import::{
 };
 pub use import_session::ImportSession;
 pub use import_profile::ImportProfile;
+pub use person::{CastCredit, CrewCredit, ExternalPersonId, Person, PersonCredits, PersonId};
+pub use search::{
+    EntityType, IndexableDocument, MovieSearchHit, PersonSearchHit,
+    SearchFilters, SearchQuery, SearchResults,
+};
 
 #[derive(Clone, Debug, Default)]
 pub enum SortDirection {
