@@ -34,6 +34,8 @@ COPY crates/domain/Cargo.toml                     crates/domain/Cargo.toml
 COPY crates/presentation/Cargo.toml               crates/presentation/Cargo.toml
 COPY crates/tui/Cargo.toml                        crates/tui/Cargo.toml
 COPY crates/adapters/image-converter/Cargo.toml   crates/adapters/image-converter/Cargo.toml
+COPY crates/adapters/sqlite-search/Cargo.toml     crates/adapters/sqlite-search/Cargo.toml
+COPY crates/adapters/postgres-search/Cargo.toml   crates/adapters/postgres-search/Cargo.toml
 COPY crates/worker/Cargo.toml                     crates/worker/Cargo.toml
 
 # Stub every crate so cargo can resolve and fetch deps

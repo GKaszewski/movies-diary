@@ -8,6 +8,8 @@ A self-hosted, server-side rendered movie logging system with a full REST API. B
 - Immutable append-only viewing ledger (tracks re-watches)
 - Background poster fetching and storage (local filesystem or S3-compatible)
 - Movie enrichment via TMDb — full cast, crew, genres, keywords, runtime, budget/revenue, ratings; fetched automatically on movie discovery and refreshed every 30 days; exposed via `GET /api/v1/movies/{id}/profile`
+- Full-text search across movies and people via `GET /api/v1/search` — free-text query plus structured filters (genre, year, person, department, language); backed by SQLite FTS5 or PostgreSQL tsvector + GIN indexes
+- People as first-class entities — browse by person via `GET /api/v1/people/{id}` and full credit history via `GET /api/v1/people/{id}/credits`; index populated automatically during TMDb enrichment
 - RSS/Atom feed for public subscription (global and per-user)
 - JWT authentication via cookie (HTML) or Bearer token (REST API)
 - ActivityPub federation — follow/unfollow remote users, accept/reject/remove followers, federated reviews broadcast as `Note` objects with `#MoviesDiary` + `#MovieTitle` hashtags, paginated outbox, boost/Announce tracking, NodeInfo discovery endpoint, shared inbox delivery, actor profile sync (bio, avatar, discoverable)
@@ -51,6 +53,8 @@ adapters/
   event-publisher      — in-memory event channel (used in tests)
   activitypub          — ActivityPub federation wiring (follow, inbox/outbox, actor)
   activitypub-base     — core ActivityPub protocol types and service
+  sqlite-search        — SQLite FTS5 implementation of SearchPort + SearchCommand
+  postgres-search      — PostgreSQL tsvector + GIN implementation of SearchPort + SearchCommand
   sqlite-federation    — SQLite-backed federation repository
   postgres-federation  — PostgreSQL-backed federation repository
 tui                 — terminal UI client (ratatui); shares api-types with presentation for typed API access
