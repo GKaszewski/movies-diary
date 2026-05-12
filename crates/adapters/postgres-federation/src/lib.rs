@@ -121,7 +121,7 @@ impl FederationRepository for PostgresFederationRepository {
             let display_name: Option<String> = row.try_get("display_name").ok().flatten();
             let avatar_url: Option<String> = row.try_get("avatar_url").ok().flatten();
             Follower {
-                actor: RemoteActor { url, handle, inbox_url, shared_inbox_url, display_name, avatar_url },
+                actor: RemoteActor { url, handle, inbox_url, shared_inbox_url, display_name, avatar_url, outbox_url: row.try_get("outbox_url").ok().flatten() },
                 status: str_to_status(&status_str),
             }
         }).collect())
@@ -217,6 +217,7 @@ impl FederationRepository for PostgresFederationRepository {
             shared_inbox_url: row.try_get("shared_inbox_url").ok().flatten(),
             display_name: row.try_get("display_name").ok().flatten(),
             avatar_url: row.try_get("avatar_url").ok().flatten(),
+            outbox_url: row.try_get("outbox_url").ok().flatten(),
         }).collect())
     }
 
@@ -272,6 +273,7 @@ impl FederationRepository for PostgresFederationRepository {
             shared_inbox_url: row.try_get("shared_inbox_url").ok().flatten(),
             display_name: row.try_get("display_name").ok().flatten(),
             avatar_url: row.try_get("avatar_url").ok().flatten(),
+            outbox_url: row.try_get("outbox_url").ok().flatten(),
         }))
     }
 
@@ -327,6 +329,7 @@ impl FederationRepository for PostgresFederationRepository {
             shared_inbox_url: row.try_get("shared_inbox_url").ok().flatten(),
             display_name: row.try_get("display_name").ok().flatten(),
             avatar_url: row.try_get("avatar_url").ok().flatten(),
+            outbox_url: row.try_get("outbox_url").ok().flatten(),
         }).collect())
     }
 
@@ -353,6 +356,14 @@ impl FederationRepository for PostgresFederationRepository {
             tracing::warn!(local_user_id = %local_user_id, remote_actor_url, "update_following_status: no row found");
         }
         Ok(())
+    }
+
+    async fn get_following_outbox_url(
+        &self,
+        _local_user_id: uuid::Uuid,
+        _remote_actor_url: &str,
+    ) -> Result<Option<String>> {
+        Ok(None)
     }
 
     async fn add_announce(

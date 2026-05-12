@@ -219,6 +219,7 @@ impl Object for DbActor {
             shared_inbox_url: None,
             display_name: json.name.clone(),
             avatar_url: json.icon.as_ref().map(|i| i.url.to_string()),
+            outbox_url: Some(json.outbox.to_string()),
         };
         data.federation_repo.upsert_remote_actor(actor).await?;
 

@@ -173,6 +173,7 @@ impl ActivityPubService {
             shared_inbox_url: None,
             display_name: Some(remote_actor.username.clone()),
             avatar_url: None,
+            outbox_url: Some(remote_actor.outbox_url.to_string()),
         };
         data.federation_repo
             .add_following(local_user_id, remote, &follow_id_str)
@@ -867,6 +868,7 @@ impl ActivityPubService {
                     shared_inbox_url: None,
                     display_name: None,
                     avatar_url: None,
+                    outbox_url: None,
                 },
             };
             actors.push(actor);
@@ -928,6 +930,7 @@ impl ActivityPubService {
             shared_inbox_url: None,
             display_name: Some(target.username),
             avatar_url: None,
+            outbox_url: None,
         };
         data.federation_repo
             .add_following(local_user_id, target_as_remote, &follow_id)

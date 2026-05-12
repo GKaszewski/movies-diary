@@ -10,6 +10,7 @@ fn make_follower(inbox: &str, shared: Option<&str>) -> Follower {
             shared_inbox_url: shared.map(|s| s.to_string()),
             display_name: None,
             avatar_url: None,
+            outbox_url: None,
         },
         status: FollowerStatus::Accepted,
     }

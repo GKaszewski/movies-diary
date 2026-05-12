@@ -22,6 +22,7 @@ pub struct RemoteActor {
     pub shared_inbox_url: Option<String>,
     pub display_name: Option<String>,
     pub avatar_url: Option<String>,
+    pub outbox_url: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -96,6 +97,11 @@ pub trait FederationRepository: Send + Sync {
         remote_actor_url: &str,
         status: FollowingStatus,
     ) -> Result<()>;
+    async fn get_following_outbox_url(
+        &self,
+        local_user_id: uuid::Uuid,
+        remote_actor_url: &str,
+    ) -> Result<Option<String>>;
     async fn add_announce(
         &self,
         activity_id: &str,

@@ -119,9 +119,11 @@ impl From<&DomainEvent> for EventPayload {
                 }
             }
             DomainEvent::ImageStored { key } => EventPayload::ImageStored { key: key.clone() },
-            DomainEvent::WatchlistEntryAdded { .. } | DomainEvent::WatchlistEntryRemoved { .. } => {
+            DomainEvent::WatchlistEntryAdded { .. }
+            | DomainEvent::WatchlistEntryRemoved { .. }
+            | DomainEvent::FollowAccepted { .. } => {
                 // federation-only events; not serialized via EventPayload
-                unreachable!("watchlist events are handled by the AP event handler directly")
+                unreachable!("federation events are handled by the AP event handler directly")
             }
         }
     }
