@@ -115,6 +115,10 @@ pub struct WatchlistObject {
     pub(crate) poster_url: Option<String>,
     #[serde(default)]
     pub(crate) tag: Vec<ApHashtag>,
+    /// Discriminator so Movies Diary instances distinguish this from a review Note.
+    /// Non-Movies-Diary apps ignore unknown fields.
+    #[serde(default)]
+    pub(crate) watchlist_entry: bool,
 }
 
 pub fn watchlist_to_ap_object(
@@ -160,6 +164,7 @@ pub fn watchlist_to_ap_object(
         external_metadata_id,
         poster_url,
         tag,
+        watchlist_entry: true,
     }
 }
 

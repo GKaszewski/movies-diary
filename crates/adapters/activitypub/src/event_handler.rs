@@ -214,7 +214,7 @@ impl ActivityPubEventHandler {
         let json = serde_json::to_value(obj)?;
 
         self.ap_service
-            .broadcast_add_to_followers(user_id.value(), ap_id, json)
+            .broadcast_to_followers(user_id.value(), ap_id, json)
             .await?;
         Ok(())
     }
@@ -227,7 +227,7 @@ impl ActivityPubEventHandler {
         use crate::urls::watchlist_entry_url;
         let ap_id = watchlist_entry_url(&self.base_url, user_id.value(), movie_id.value());
         self.ap_service
-            .broadcast_undo_add_to_followers(user_id.value(), ap_id)
+            .broadcast_delete_to_followers(user_id.value(), ap_id)
             .await?;
         Ok(())
     }

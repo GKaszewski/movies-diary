@@ -36,9 +36,11 @@ impl ApObjectHandler for CompositeObjectHandler {
         actor_url: &Url,
         object: serde_json::Value,
     ) -> anyhow::Result<()> {
+        let is_watchlist = object.get("watchlistEntry").and_then(|v| v.as_bool()) == Some(true)
+            || (object.get("movieTitle").is_some() && object.get("rating").is_none());
         if object.get("rating").is_some() {
             self.review.on_create(ap_id, actor_url, object).await
-        } else if object.get("movieTitle").is_some() {
+        } else if is_watchlist {
             self.watchlist.on_create(ap_id, actor_url, object).await
         } else {
             tracing::debug!(ap_id = %ap_id, "ignoring Create for unknown object type");
