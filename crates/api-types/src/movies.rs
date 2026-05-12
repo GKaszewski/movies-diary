@@ -1,6 +1,25 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+// ── Movie list ────────────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct MoviesQueryParams {
+    pub limit: Option<u32>,
+    pub offset: Option<u32>,
+    /// Optional title filter (case-insensitive substring match)
+    pub search: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct MoviesResponse {
+    pub items: Vec<MovieDto>,
+    pub total_count: u64,
+    pub limit: u32,
+    pub offset: u32,
+}
+
 // ── Movie profile (enrichment) ────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]

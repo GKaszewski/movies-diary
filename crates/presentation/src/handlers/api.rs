@@ -10,15 +10,15 @@ use std::str::FromStr;
 
 use application::{
     commands::{
-        DeleteReviewCommand, ExportCommand, LoginCommand, RegisterCommand, SyncPosterCommand,
+        DeleteReviewCommand, RegisterCommand, SyncPosterCommand,
     },
     queries::{
-        GetActivityFeedQuery, GetMovieSocialPageQuery, GetReviewHistoryQuery, GetUserProfileQuery,
-        GetUsersQuery,
+        ExportQuery, GetActivityFeedQuery, GetMovieSocialPageQuery, GetMoviesQuery,
+        GetReviewHistoryQuery, GetUserProfileQuery, GetUsersQuery, LoginQuery,
     },
     use_cases::{
         delete_review, export_diary as export_diary_uc, get_activity_feed as get_feed_uc,
-        get_diary, get_movie_social_page, get_review_history,
+        get_diary, get_movie_social_page, get_movies, get_review_history,
         get_user_profile as get_user_profile_uc, get_users, log_review, login as login_uc,
         register as register_uc, sync_poster, update_profile,
     },
@@ -40,9 +40,9 @@ use api_types::{
     DiaryQueryParams, DiaryResponse, DirectorStatDto, ExportQueryParams, FeedEntryDto,
     GenreDto, KeywordDto, LogReviewRequest, LoginRequest, LoginResponse, MonthActivityDto,
     MonthlyRatingDto, MovieDetailResponse, MovieDto, MovieProfileResponse, MovieStatsDto,
-    PaginationQueryParams, ProfileResponse, RegisterRequest, ReviewDto, ReviewHistoryResponse,
-    SocialFeedResponse, SocialReviewDto, UserProfileQueryParams, UserProfileResponse, UserStatsDto,
-    UserSummaryDto, UserTrendsDto, UsersResponse,
+    MoviesQueryParams, MoviesResponse, PaginationQueryParams, ProfileResponse, RegisterRequest,
+    ReviewDto, ReviewHistoryResponse, SocialFeedResponse, SocialReviewDto, UserProfileQueryParams,
+    UserProfileResponse, UserStatsDto, UserSummaryDto, UserTrendsDto, UsersResponse,
 };
 use crate::{
     errors::ApiError,
@@ -68,6 +68,35 @@ pub async fn get_diary(
 
     Ok(Json(DiaryResponse {
         items: page.items.iter().map(entry_to_dto).collect(),
+        total_count: page.total_count,
+        limit: page.limit,
+        offset: page.offset,
+    }))
+}
+
+#[utoipa::path(
+    get, path = "/api/v1/movies",
+    params(MoviesQueryParams),
+    responses(
+        (status = 200, body = MoviesResponse),
+    )
+)]
+pub async fn list_movies(
+    State(state): State<AppState>,
+    Query(params): Query<MoviesQueryParams>,
+) -> Result<Json<MoviesResponse>, ApiError> {
+    let page = get_movies::execute(
+        &state.app_ctx,
+        GetMoviesQuery {
+            limit: params.limit,
+            offset: params.offset,
+            search: params.search,
+        },
+    )
+    .await?;
+
+    Ok(Json(MoviesResponse {
+        items: page.items.iter().map(movie_to_dto).collect(),
         total_count: page.total_count,
         limit: page.limit,
         offset: page.offset,
@@ -179,7 +208,7 @@ pub async fn login(
 ) -> Result<Json<LoginResponse>, ApiError> {
     let result = login_uc::execute(
         &state.app_ctx,
-        LoginCommand {
+        LoginQuery {
             email: req.email,
             password: req.password,
         },
@@ -415,7 +444,7 @@ pub async fn update_profile_handler(
         }
     }
 
-    let cmd = update_profile::UpdateProfileCommand {
+    let cmd = application::commands::UpdateProfileCommand {
         user_id: user_id.value(),
         bio,
         avatar_bytes,
@@ -1036,11 +1065,11 @@ pub async fn export_diary(
         ExportFormat::Csv => ("text/csv; charset=utf-8", "diary.csv"),
         ExportFormat::Json => ("application/json", "diary.json"),
     };
-    let cmd = ExportCommand {
+    let query = ExportQuery {
         user_id: user.0.value(),
         format,
     };
-    match export_diary_uc::execute(&state.app_ctx, cmd).await {
+    match export_diary_uc::execute(&state.app_ctx, query).await {
         Ok(bytes) => (
             StatusCode::OK,
             [

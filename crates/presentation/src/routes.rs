@@ -177,6 +177,7 @@ fn api_routes(rate_limit: u64) -> Router<AppState> {
             "/movies/{id}/history",
             routing::get(handlers::api::get_review_history),
         )
+        .route("/movies", routing::get(handlers::api::list_movies))
         .route(
             "/movies/{id}",
             routing::get(handlers::api::get_movie_detail),

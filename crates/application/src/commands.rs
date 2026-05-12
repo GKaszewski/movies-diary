@@ -1,5 +1,5 @@
 use chrono::NaiveDateTime;
-use domain::models::{ExportFormat, FieldMapping, FileFormat, UserRole};
+use domain::models::{FieldMapping, FileFormat, UserRole};
 use uuid::Uuid;
 
 pub struct LogReviewCommand {
@@ -21,11 +21,6 @@ pub struct SyncPosterCommand {
     pub external_metadata_id: String,
 }
 
-pub struct LoginCommand {
-    pub email: String,
-    pub password: String,
-}
-
 pub struct RegisterCommand {
     pub email: String,
     pub username: String,
@@ -36,11 +31,6 @@ pub struct RegisterCommand {
 pub struct DeleteReviewCommand {
     pub review_id: Uuid,
     pub requesting_user_id: Uuid,
-}
-
-pub struct ExportCommand {
-    pub user_id: Uuid,
-    pub format: ExportFormat,
 }
 
 // FileFormat is now in domain::models — no longer defined here
@@ -78,4 +68,11 @@ pub struct ApplyImportProfileCommand {
 pub struct DeleteImportProfileCommand {
     pub user_id: Uuid,
     pub profile_id: Uuid,
+}
+
+pub struct UpdateProfileCommand {
+    pub user_id: Uuid,
+    pub bio: Option<String>,
+    pub avatar_bytes: Option<Vec<u8>>,
+    pub avatar_content_type: Option<String>,
 }

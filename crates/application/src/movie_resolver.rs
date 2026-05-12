@@ -226,9 +226,8 @@ mod tests {
         async fn upsert_movie(&self, _: &Movie) -> Result<(), DomainError> {
             panic!("unexpected")
         }
-        async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> {
-            panic!("unexpected")
-        }
+        async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> { panic!("unexpected") }
+        async fn list_movies(&self, _: &domain::models::collections::PageParams, _: Option<&str>) -> Result<domain::models::collections::Paginated<Movie>, DomainError> { panic!("unexpected") }
     }
 
     #[async_trait]
@@ -249,12 +248,9 @@ mod tests {
         ) -> Result<Vec<Movie>, DomainError> {
             Ok(vec![])
         }
-        async fn upsert_movie(&self, _: &Movie) -> Result<(), DomainError> {
-            panic!("unexpected")
-        }
-        async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> {
-            panic!("unexpected")
-        }
+        async fn upsert_movie(&self, _: &Movie) -> Result<(), DomainError> { panic!("unexpected") }
+        async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> { panic!("unexpected") }
+        async fn list_movies(&self, _: &domain::models::collections::PageParams, _: Option<&str>) -> Result<domain::models::collections::Paginated<Movie>, DomainError> { panic!("unexpected") }
     }
 
     #[async_trait]
@@ -275,12 +271,9 @@ mod tests {
         ) -> Result<Vec<Movie>, DomainError> {
             Ok(vec![self.0.clone()])
         }
-        async fn upsert_movie(&self, _: &Movie) -> Result<(), DomainError> {
-            panic!("unexpected")
-        }
-        async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> {
-            panic!("unexpected")
-        }
+        async fn upsert_movie(&self, _: &Movie) -> Result<(), DomainError> { panic!("unexpected") }
+        async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> { panic!("unexpected") }
+        async fn list_movies(&self, _: &domain::models::collections::PageParams, _: Option<&str>) -> Result<domain::models::collections::Paginated<Movie>, DomainError> { panic!("unexpected") }
     }
 
     struct MetaReturnsMovie(Movie);

@@ -3,7 +3,7 @@ use uuid::Uuid;
 
 use domain::{errors::DomainError, value_objects::Email};
 
-use crate::{commands::LoginCommand, context::AppContext};
+use crate::{context::AppContext, queries::LoginQuery};
 
 pub struct LoginResult {
     pub token: String,
@@ -12,8 +12,8 @@ pub struct LoginResult {
     pub expires_at: DateTime<Utc>,
 }
 
-pub async fn execute(ctx: &AppContext, cmd: LoginCommand) -> Result<LoginResult, DomainError> {
-    let email = Email::new(cmd.email)?;
+pub async fn execute(ctx: &AppContext, query: LoginQuery) -> Result<LoginResult, DomainError> {
+    let email = Email::new(query.email)?;
     let user = ctx
         .user_repository
         .find_by_email(&email)
@@ -22,7 +22,7 @@ pub async fn execute(ctx: &AppContext, cmd: LoginCommand) -> Result<LoginResult,
 
     let valid = ctx
         .password_hasher
-        .verify(&cmd.password, user.password_hash())
+        .verify(&query.password, user.password_hash())
         .await?;
     if !valid {
         return Err(DomainError::Unauthorized("Invalid credentials".into()));

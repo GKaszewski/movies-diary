@@ -11,6 +11,7 @@ pub mod export_diary;
 pub mod get_activity_feed;
 pub mod get_diary;
 pub mod get_movie_social_page;
+pub mod get_movies;
 pub mod get_review_history;
 pub mod get_user_profile;
 pub mod get_users;

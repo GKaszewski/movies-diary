@@ -1,20 +1,30 @@
 use api_types::{
-    DirectorStatDto, MonthActivityDto, MonthlyRatingDto, MovieDetailResponse, MovieDto,
-    MovieStatsDto, ReviewHistoryResponse, SocialFeedResponse, SocialReviewDto, UserTrendsDto,
+    CastMemberDto, CrewMemberDto, DirectorStatDto, GenreDto, KeywordDto, MonthActivityDto,
+    MonthlyRatingDto, MovieDetailResponse, MovieDto, MovieProfileResponse, MovieStatsDto,
+    MoviesQueryParams, MoviesResponse, ReviewHistoryResponse, SocialFeedResponse, SocialReviewDto,
+    UserTrendsDto,
 };
 use utoipa::OpenApi;
 
 #[derive(OpenApi)]
 #[openapi(
     paths(
+        crate::handlers::api::list_movies,
         crate::handlers::api::get_movie_detail,
         crate::handlers::api::get_review_history,
+        crate::handlers::api::get_movie_profile,
         crate::handlers::api::sync_poster,
     ),
     components(schemas(
+        MoviesResponse,
         MovieDto,
         MovieDetailResponse,
         MovieStatsDto,
+        MovieProfileResponse,
+        GenreDto,
+        KeywordDto,
+        CastMemberDto,
+        CrewMemberDto,
         ReviewHistoryResponse,
         SocialFeedResponse,
         SocialReviewDto,

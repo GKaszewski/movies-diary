@@ -8,7 +8,7 @@ use crate::{
         AnnotatedRow, DiaryEntry, DiaryFilter, ExportFormat, FeedEntry, FieldMapping,
         FileFormat, ImportError, ImportProfile, ImportSession, Movie, MovieProfile, MovieStats,
         ParsedFile, Review, ReviewHistory, User, UserStats, UserSummary, UserTrends,
-        collections::{PageParams, Paginated},
+        collections::{self, PageParams, Paginated},
     },
     value_objects::{
         Email, ExternalMetadataId, ImportProfileId, ImportSessionId, MovieId, MovieTitle,
@@ -83,6 +83,11 @@ pub trait MovieRepository: Send + Sync {
     ) -> Result<Vec<Movie>, DomainError>;
     async fn upsert_movie(&self, movie: &Movie) -> Result<(), DomainError>;
     async fn delete_movie(&self, movie_id: &MovieId) -> Result<(), DomainError>;
+    async fn list_movies(
+        &self,
+        page: &collections::PageParams,
+        search: Option<&str>,
+    ) -> Result<collections::Paginated<Movie>, DomainError>;
 }
 
 #[async_trait]

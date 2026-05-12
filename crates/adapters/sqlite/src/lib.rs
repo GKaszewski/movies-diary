@@ -383,6 +383,54 @@ impl MovieRepository for SqliteMovieRepository {
             .map_err(Self::map_err)?;
         Ok(())
     }
+
+    async fn list_movies(
+        &self,
+        page: &domain::models::collections::PageParams,
+        search: Option<&str>,
+    ) -> Result<domain::models::collections::Paginated<domain::models::Movie>, DomainError> {
+        use sqlx::Row;
+        let limit = page.limit as i64;
+        let offset = page.offset as i64;
+        let pattern = search.map(|s| format!("%{}%", s.to_lowercase()));
+
+        let rows: Vec<models::MovieRow> = sqlx::query_as(
+            "SELECT id, external_metadata_id, title, release_year, director, poster_path \
+             FROM movies \
+             WHERE (? IS NULL OR LOWER(title) LIKE ?) \
+             ORDER BY title ASC \
+             LIMIT ? OFFSET ?",
+        )
+        .bind(&pattern)
+        .bind(&pattern)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(Self::map_err)?;
+
+        let total: i64 = sqlx::query(
+            "SELECT COUNT(*) FROM movies WHERE (? IS NULL OR LOWER(title) LIKE ?)",
+        )
+        .bind(&pattern)
+        .bind(&pattern)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(Self::map_err)?
+        .try_get(0)
+        .unwrap_or(0);
+
+        let items = rows.into_iter()
+            .map(|r| r.to_domain())
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(domain::models::collections::Paginated {
+            items,
+            total_count: total as u64,
+            limit: page.limit,
+            offset: page.offset,
+        })
+    }
 }
 
 #[async_trait]

@@ -177,6 +177,9 @@ mod tests {
         async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> {
             panic!()
         }
+        async fn list_movies(&self, _: &domain::models::collections::PageParams, _: Option<&str>) -> Result<domain::models::collections::Paginated<Movie>, DomainError> {
+            panic!()
+        }
     }
     #[async_trait::async_trait]
     impl ReviewRepository for Panic {

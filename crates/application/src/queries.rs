@@ -1,5 +1,15 @@
-use domain::models::SortDirection;
+use domain::models::{ExportFormat, SortDirection};
 use uuid::Uuid;
+
+pub struct LoginQuery {
+    pub email: String,
+    pub password: String,
+}
+
+pub struct ExportQuery {
+    pub user_id: Uuid,
+    pub format: ExportFormat,
+}
 
 pub struct GetDiaryQuery {
     pub limit: Option<u32>,
@@ -69,4 +79,10 @@ pub struct GetMovieSocialPageQuery {
     pub movie_id: uuid::Uuid,
     pub limit: u32,
     pub offset: u32,
+}
+
+pub struct GetMoviesQuery {
+    pub limit: Option<u32>,
+    pub offset: Option<u32>,
+    pub search: Option<String>,
 }

@@ -4,14 +4,7 @@ use domain::{
     value_objects::UserId,
 };
 
-use crate::context::AppContext;
-
-pub struct UpdateProfileCommand {
-    pub user_id: uuid::Uuid,
-    pub bio: Option<String>,
-    pub avatar_bytes: Option<Vec<u8>>,
-    pub avatar_content_type: Option<String>,
-}
+use crate::{commands::UpdateProfileCommand, context::AppContext};
 
 pub async fn execute(ctx: &AppContext, cmd: UpdateProfileCommand) -> Result<(), DomainError> {
     let user_id = UserId::from_uuid(cmd.user_id);

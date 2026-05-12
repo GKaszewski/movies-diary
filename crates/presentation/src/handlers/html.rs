@@ -15,12 +15,12 @@ use application::ports::{
     FollowersPageData, FollowingPageData,
 };
 use application::{
-    commands::{DeleteReviewCommand, ExportCommand, LoginCommand, RegisterCommand},
+    commands::{DeleteReviewCommand, RegisterCommand},
+    queries::{ExportQuery, GetMovieSocialPageQuery, LoginQuery},
     ports::{
         HtmlPageContext, LoginPageData, MovieDetailPageData, NewReviewPageData,
         ProfileSettingsPageData, RegisterPageData, RemoteActorView,
     },
-    queries::GetMovieSocialPageQuery,
     use_cases::{
         delete_review, export_diary as export_diary_uc, get_movie_social_page, log_review,
         login as login_uc, register as register_uc, update_profile,
@@ -133,7 +133,7 @@ pub async fn post_login(
     }
     match login_uc::execute(
         &state.app_ctx,
-        LoginCommand {
+        LoginQuery {
             email: form.email,
             password: form.password,
         },
@@ -215,7 +215,7 @@ pub async fn post_register(
     .await
     {
         Ok(_) => {
-            match login_uc::execute(&state.app_ctx, LoginCommand { email, password }).await {
+            match login_uc::execute(&state.app_ctx, LoginQuery { email, password }).await {
                 Ok(result) => {
                     let max_age = (result.expires_at - Utc::now()).num_seconds().max(0);
                     let cookie = set_cookie_header(&result.token, max_age);
@@ -320,11 +320,11 @@ pub async fn get_export(
         ExportFormat::Csv => ("text/csv; charset=utf-8", "diary.csv"),
         ExportFormat::Json => ("application/json", "diary.json"),
     };
-    let cmd = ExportCommand {
+    let query = ExportQuery {
         user_id: user_id.value(),
         format,
     };
-    match export_diary_uc::execute(&state.app_ctx, cmd).await {
+    match export_diary_uc::execute(&state.app_ctx, query).await {
         Ok(bytes) => (
             StatusCode::OK,
             [
@@ -1230,7 +1230,7 @@ pub async fn post_profile_settings(
         }
     }
 
-    let cmd = update_profile::UpdateProfileCommand {
+    let cmd = application::commands::UpdateProfileCommand {
         user_id: user_id.value(),
         bio,
         avatar_bytes,
