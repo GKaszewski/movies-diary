@@ -4,7 +4,7 @@ mod event_bus;
 use std::sync::Arc;
 
 use anyhow::Context;
-use application::{config::AppConfig, context::AppContext, worker::WorkerService, SearchCleanupHandler};
+use application::{config::AppConfig, context::AppContext, worker::WorkerService, MovieDiscoveryIndexer, SearchCleanupHandler};
 use export::ExportAdapter;
 use importer::ImporterDocumentParser;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -145,10 +145,9 @@ async fn main() -> anyhow::Result<()> {
 
         #[cfg(not(feature = "federation"))]
         {
-            let search_cleanup = Arc::new(SearchCleanupHandler::new(
-                Arc::clone(&ctx.search_command),
-            )) as Arc<dyn EventHandler>;
-            let mut h = vec![poster, cleanup, search_cleanup];
+            let search_cleanup = Arc::new(SearchCleanupHandler::new(Arc::clone(&ctx.search_command), Arc::clone(&ctx.person_query))) as Arc<dyn EventHandler>;
+            let discovery_indexer = Arc::new(MovieDiscoveryIndexer::new(Arc::clone(&ctx.movie_repository), Arc::clone(&ctx.search_command))) as Arc<dyn EventHandler>;
+            let mut h = vec![poster, cleanup, search_cleanup, discovery_indexer];
             if let Some(e) = enrichment_handler { h.push(e); }
             if let Some((ref conv_handler, _)) = conversion { h.push(Arc::clone(conv_handler)); }
             h
@@ -174,11 +173,10 @@ async fn main() -> anyhow::Result<()> {
                 allow_registration,
             ).await?.event_handler;
 
-            let search_cleanup = Arc::new(SearchCleanupHandler::new(
-                Arc::clone(&ctx.search_command),
-            )) as Arc<dyn EventHandler>;
+            let search_cleanup = Arc::new(SearchCleanupHandler::new(Arc::clone(&ctx.search_command), Arc::clone(&ctx.person_query))) as Arc<dyn EventHandler>;
+            let discovery_indexer = Arc::new(MovieDiscoveryIndexer::new(Arc::clone(&ctx.movie_repository), Arc::clone(&ctx.search_command))) as Arc<dyn EventHandler>;
             tracing::info!("federation event handler registered");
-            let mut h = vec![poster, cleanup, ap, search_cleanup];
+            let mut h = vec![poster, cleanup, ap, search_cleanup, discovery_indexer];
             if let Some(e) = enrichment_handler { h.push(e); }
             if let Some((ref conv_handler, _)) = conversion { h.push(Arc::clone(conv_handler)); }
             h

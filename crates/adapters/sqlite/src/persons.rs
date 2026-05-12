@@ -145,6 +145,26 @@ impl PersonQuery for SqlitePersonAdapter {
 
         Ok(PersonCredits { person, cast, crew })
     }
+
+    async fn list_orphaned_persons(&self) -> Result<Vec<PersonId>, DomainError> {
+        let rows: Vec<(String,)> = sqlx::query_as(
+            "SELECT id FROM persons
+             WHERE NOT EXISTS (
+                 SELECT 1 FROM movie_cast WHERE movie_cast.tmdb_person_id = persons.tmdb_person_id
+             )
+             AND NOT EXISTS (
+                 SELECT 1 FROM movie_crew WHERE movie_crew.tmdb_person_id = persons.tmdb_person_id
+             )",
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(map_err)?;
+
+        Ok(rows
+            .into_iter()
+            .filter_map(|(id,)| uuid::Uuid::parse_str(&id).ok().map(PersonId::from_uuid))
+            .collect())
+    }
 }
 
 // ── Row types ────────────────────────────────────────────────────────────────

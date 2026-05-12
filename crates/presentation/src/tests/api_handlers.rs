@@ -45,6 +45,9 @@ impl domain::ports::PersonQuery for PersonQueryStub {
     async fn get_credits(&self, _: &domain::models::PersonId) -> Result<domain::models::PersonCredits, DomainError> {
         Err(DomainError::NotFound("Person not found".into()))
     }
+    async fn list_orphaned_persons(&self) -> Result<Vec<domain::models::PersonId>, DomainError> {
+        Ok(vec![])
+    }
 }
 
 // --- Search endpoint tests ---

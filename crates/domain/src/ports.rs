@@ -291,6 +291,9 @@ pub trait PersonQuery: Send + Sync {
     async fn get_by_external_id(&self, id: &ExternalPersonId) -> Result<Option<Person>, DomainError>;
     /// Returns the person's full cast and crew credit history across all indexed movies.
     async fn get_credits(&self, id: &PersonId) -> Result<PersonCredits, DomainError>;
+    /// Returns persons who have no remaining entries in movie_cast or movie_crew.
+    /// Called after movie deletion to find index entries that can be pruned.
+    async fn list_orphaned_persons(&self) -> Result<Vec<PersonId>, DomainError>;
 }
 
 /// Read port — executes search queries. No mutations.

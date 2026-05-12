@@ -1,6 +1,7 @@
 use domain::{
     errors::DomainError,
     events::DomainEvent,
+    models::IndexableDocument,
     value_objects::{ExternalMetadataId, MovieId, PosterPath},
 };
 
@@ -52,6 +53,20 @@ pub async fn execute(ctx: &AppContext, cmd: SyncPosterCommand) -> Result<(), Dom
 
     movie.update_poster(poster_path);
     ctx.movie_repository.upsert_movie(&movie).await?;
+
+    // Refresh search index so the new poster_path is reflected immediately.
+    // Fetch existing profile if available for a complete index document.
+    let profile = ctx.movie_profile_repository.get_by_movie_id(&movie_id).await.ok().flatten();
+    if let Err(e) = ctx.search_command
+        .index(IndexableDocument::Movie {
+            id: movie_id.clone(),
+            movie: Box::new(movie),
+            profile: profile.map(Box::new),
+        })
+        .await
+    {
+        tracing::warn!(movie_id = %movie_id.value(), "failed to refresh search index after poster sync: {e}");
+    }
 
     Ok(())
 }

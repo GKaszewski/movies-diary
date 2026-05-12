@@ -362,6 +362,7 @@ impl PersonQuery for Panic {
     async fn get_by_id(&self, _: &PersonId) -> Result<Option<Person>, DomainError> { panic!() }
     async fn get_by_external_id(&self, _: &domain::models::ExternalPersonId) -> Result<Option<Person>, DomainError> { panic!() }
     async fn get_credits(&self, _: &PersonId) -> Result<PersonCredits, DomainError> { panic!() }
+    async fn list_orphaned_persons(&self) -> Result<Vec<PersonId>, DomainError> { panic!() }
 }
 #[async_trait::async_trait]
 impl SearchPort for Panic {
