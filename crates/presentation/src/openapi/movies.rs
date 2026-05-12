@@ -1,8 +1,7 @@
 use api_types::{
     CastMemberDto, CrewMemberDto, DirectorStatDto, GenreDto, KeywordDto, MonthActivityDto,
     MonthlyRatingDto, MovieDetailResponse, MovieDto, MovieProfileResponse, MovieStatsDto,
-    MoviesQueryParams, MoviesResponse, ReviewHistoryResponse, SocialFeedResponse, SocialReviewDto,
-    UserTrendsDto,
+    MoviesResponse, ReviewHistoryResponse, SocialFeedResponse, SocialReviewDto, UserTrendsDto,
 };
 use utoipa::OpenApi;
 
@@ -32,6 +31,6 @@ use utoipa::OpenApi;
         MonthlyRatingDto,
         DirectorStatDto,
         UserTrendsDto,
-    )),
+    ))
 )]
 pub struct MoviesDoc;
