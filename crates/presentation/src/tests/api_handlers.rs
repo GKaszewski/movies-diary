@@ -143,3 +143,48 @@ async fn person_credits_endpoint_returns_404_for_unknown_id() {
 
     assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 }
+
+// --- Watchlist endpoint tests ---
+
+#[tokio::test]
+async fn get_watchlist_requires_auth() {
+    let state = make_test_state(Arc::new(Panic));
+    let app = Router::new()
+        .route("/api/v1/watchlist", get(crate::handlers::api::get_watchlist_handler))
+        .with_state(state);
+
+    let resp = app
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/watchlist")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn get_watchlist_status_requires_auth() {
+    let state = make_test_state(Arc::new(Panic));
+    let app = Router::new()
+        .route(
+            "/api/v1/watchlist/{movie_id}",
+            get(crate::handlers::api::get_watchlist_status),
+        )
+        .with_state(state);
+
+    let resp = app
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/watchlist/00000000-0000-0000-0000-000000000001")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+}

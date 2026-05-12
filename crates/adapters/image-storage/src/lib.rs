@@ -7,14 +7,9 @@ use domain::{
     events::DomainEvent,
     ports::{EventHandler, ImageStorage},
 };
-use object_store::{Attribute, Attributes, ObjectStore, PutOptions, path::Path};
+use object_store::{ObjectStore, path::Path};
 use std::sync::Arc;
 
-fn detect_mime(bytes: &[u8]) -> &'static str {
-    infer::get(bytes)
-        .map(|t| t.mime_type())
-        .unwrap_or("application/octet-stream")
-}
 
 pub struct ImageStorageAdapter {
     store: Arc<dyn ObjectStore>,
@@ -34,12 +29,8 @@ impl ImageStorageAdapter {
 impl ImageStorage for ImageStorageAdapter {
     async fn store(&self, key: &str, image_bytes: &[u8]) -> Result<String, DomainError> {
         let path = Path::from(key);
-        let mime = detect_mime(image_bytes);
-        let mut attributes = Attributes::new();
-        attributes.insert(Attribute::ContentType, mime.into());
-        let opts = PutOptions { attributes, ..Default::default() };
         self.store
-            .put_opts(&path, image_bytes.to_vec().into(), opts)
+            .put(&path, image_bytes.to_vec().into())
             .await
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
         Ok(key.to_string())

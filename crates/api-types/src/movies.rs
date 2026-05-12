@@ -10,6 +10,10 @@ pub struct MoviesQueryParams {
     pub offset: Option<u32>,
     /// Optional title filter (case-insensitive substring match)
     pub search: Option<String>,
+    /// Filter by genre name (case-insensitive)
+    pub genre: Option<String>,
+    /// Filter by ISO language code (e.g. "en")
+    pub language: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
@@ -79,6 +83,11 @@ pub struct MovieDto {
     pub release_year: u16,
     pub director: Option<String>,
     pub poster_path: Option<String>,
+    pub genres: Vec<String>,
+    pub runtime_minutes: Option<u32>,
+    pub original_language: Option<String>,
+    pub overview: Option<String>,
+    pub collection_name: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]

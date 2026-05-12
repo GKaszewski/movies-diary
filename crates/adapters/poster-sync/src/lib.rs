@@ -69,6 +69,19 @@ impl EventHandler for PosterSyncHandler {
             DomainEvent::MovieDiscovered { movie_id, external_metadata_id } => {
                 (movie_id.value(), external_metadata_id.value().to_owned())
             }
+            DomainEvent::MovieEnrichmentRequested { movie_id, external_metadata_id } => {
+                // Only sync poster if the movie doesn't have one yet
+                let already_has_poster = self
+                    .movie_repository
+                    .get_movie_by_id(&MovieId::from_uuid(movie_id.value()))
+                    .await?
+                    .map(|m| m.poster_path().is_some())
+                    .unwrap_or(false);
+                if already_has_poster {
+                    return Ok(());
+                }
+                (movie_id.value(), external_metadata_id.clone())
+            }
             _ => return Ok(()),
         };
 

@@ -389,7 +389,8 @@ form button[type="submit"]:hover {
 }
 
 /* Errors */
-.error {
+.error,
+.form-error {
   color: #e05050;
   background: rgba(220, 50, 50, 0.1);
   padding: 8px 12px;
@@ -1036,6 +1037,102 @@ form button[type="submit"]:hover {
 .hist-bar-wrap { flex: 1; background: rgba(255, 255, 255, 0.06); border-radius: 2px; height: 6px; }
 .hist-bar { background: oklch(85.2% 0.199 91.936); border-radius: 2px; height: 100%; min-width: 1px; }
 .hist-count { color: rgba(255, 255, 255, 0.45); width: 1.5rem; }
+
+/* ── Movie detail — profile sections ──────────────────────────────────────── */
+
+.movie-meta {
+  font-size: 0.82em;
+  color: var(--text-muted);
+  margin-bottom: 0.4rem;
+}
+
+.genre-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.35rem;
+  margin-bottom: 0.35rem;
+}
+
+.genre-pill {
+  font-size: 0.72em;
+  padding: 0.15rem 0.55rem;
+  border-radius: 10px;
+  background: rgba(229, 192, 52, 0.12);
+  border: 1px solid rgba(229, 192, 52, 0.3);
+  color: oklch(85.2% 0.199 91.936);
+}
+
+.movie-tagline {
+  font-size: 0.85em;
+  font-style: italic;
+  color: var(--text-muted);
+  margin-top: 0.3rem;
+}
+
+.movie-overview {
+  font-size: 0.88em;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin-bottom: 1.25rem;
+}
+
+.cast-strip {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  margin-bottom: 1.25rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,.15) transparent;
+}
+
+.cast-card {
+  flex-shrink: 0;
+  width: 72px;
+}
+
+.cast-card img {
+  width: 72px;
+  height: 96px;
+  object-fit: cover;
+  border-radius: 6px;
+  display: block;
+  background: #2a2a2a;
+}
+
+.cast-name {
+  font-size: 0.7em;
+  font-weight: 600;
+  margin-top: 4px;
+  line-height: 1.3;
+  color: var(--text);
+}
+
+.cast-char {
+  font-size: 0.65em;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-top: 1px;
+}
+
+.crew-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.25rem;
+  font-size: 0.85em;
+}
+
+.crew-list li {
+  padding: 0.2rem 0;
+  color: var(--text-muted);
+}
+
+.crew-role {
+  color: var(--text-light);
+  margin-right: 0.4rem;
+  font-size: 0.9em;
+}
 
 .feed-section-label {
   font-size: 0.7rem;

@@ -36,13 +36,11 @@ pub async fn execute(ctx: &AppContext, cmd: ApplyImportMappingCommand) -> Result
 }
 
 async fn check_duplicate(ctx: &AppContext, row: &domain::models::ImportRow) -> Result<bool, DomainError> {
-    if let Some(ext_id) = &row.external_metadata_id {
-        if let Ok(eid) = ExternalMetadataId::new(ext_id.clone()) {
-            if ctx.movie_repository.get_movie_by_external_id(&eid).await?.is_some() {
+    if let Some(ext_id) = &row.external_metadata_id
+        && let Ok(eid) = ExternalMetadataId::new(ext_id.clone())
+            && ctx.movie_repository.get_movie_by_external_id(&eid).await?.is_some() {
                 return Ok(true);
             }
-        }
-    }
     if let (Some(title), Some(year_str)) = (&row.title, &row.release_year) {
         let title_vo = MovieTitle::new(title.clone());
         let year_vo = year_str.parse::<u16>().ok().and_then(|y| ReleaseYear::new(y).ok());

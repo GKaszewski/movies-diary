@@ -1,8 +1,8 @@
 use uuid::Uuid;
 
 use domain::models::{
-    DiaryEntry, FeedEntry, MonthActivity, Movie, MovieStats, UserStats, UserSummary, UserTrends,
-    collections::Paginated,
+    DiaryEntry, FeedEntry, MonthActivity, Movie, MovieProfile, MovieStats, UserStats, UserSummary,
+    UserTrends, collections::Paginated,
 };
 
 pub struct RemoteActorView {
@@ -102,10 +102,36 @@ pub struct MovieDetailPageData {
     pub movie: Movie,
     pub stats: MovieStats,
     pub reviews: Paginated<FeedEntry>,
+    pub profile: Option<MovieProfile>,
+    pub on_watchlist: bool,
     pub current_offset: u32,
     pub has_more: bool,
     pub limit: u32,
     pub histogram_max: u64,
+}
+
+#[derive(Clone, Debug)]
+pub struct WatchlistDisplayEntry {
+    /// Always a full URL: /images/{path} for local, https://... for remote
+    pub poster_url: Option<String>,
+    pub movie_title: String,
+    pub release_year: u16,
+    /// /movies/{id} for local; None for remote entries without a local movie record
+    pub movie_url: Option<String>,
+    pub added_at: String,
+    /// /watchlist/{movie_id}/remove for owner; None for remote or non-owner
+    pub remove_url: Option<String>,
+}
+
+pub struct WatchlistPageData {
+    pub ctx: HtmlPageContext,
+    pub owner_id: uuid::Uuid,
+    pub display_entries: Vec<WatchlistDisplayEntry>,
+    pub current_offset: u32,
+    pub has_more: bool,
+    pub limit: u32,
+    pub is_owner: bool,
+    pub error: Option<String>,
 }
 
 pub struct ImportUploadPageData {
@@ -201,6 +227,7 @@ pub trait HtmlRenderer: Send + Sync {
     ) -> Result<String, String>;
     fn render_blocked_domains_page(&self, data: BlockedDomainsPageData) -> Result<String, String>;
     fn render_blocked_actors_page(&self, data: BlockedActorsPageData) -> Result<String, String>;
+    fn render_watchlist_page(&self, data: WatchlistPageData) -> Result<String, String>;
 }
 
 pub trait RssFeedRenderer: Send + Sync {

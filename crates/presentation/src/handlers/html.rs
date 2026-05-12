@@ -15,15 +15,17 @@ use application::ports::{
     FollowersPageData, FollowingPageData,
 };
 use application::{
-    commands::{DeleteReviewCommand, RegisterCommand},
-    queries::{ExportQuery, GetMovieSocialPageQuery, LoginQuery},
+    commands::{AddToWatchlistCommand, DeleteReviewCommand, MovieInput, RegisterCommand, RemoveFromWatchlistCommand},
+    queries::{ExportQuery, GetMovieSocialPageQuery, GetWatchlistQuery, LoginQuery},
     ports::{
         HtmlPageContext, LoginPageData, MovieDetailPageData, NewReviewPageData,
-        ProfileSettingsPageData, RegisterPageData, RemoteActorView,
+        ProfileSettingsPageData, RegisterPageData, RemoteActorView, WatchlistDisplayEntry,
+        WatchlistPageData,
     },
     use_cases::{
-        delete_review, export_diary as export_diary_uc, get_movie_social_page, log_review,
-        login as login_uc, register as register_uc, update_profile,
+        add_to_watchlist, delete_review, export_diary as export_diary_uc, get_movie_social_page,
+        get_watchlist, log_review, login as login_uc, register as register_uc,
+        remove_from_watchlist, update_profile,
     },
 };
 use domain::models::ExportFormat;
@@ -383,12 +385,11 @@ pub async fn get_activity_feed(
             let mut local_ids = vec![uid.value()];
             let mut remote_urls = Vec::new();
             for url in urls {
-                if let Some(suffix) = url.strip_prefix(&format!("{}/users/", base_url)) {
-                    if let Ok(parsed_id) = uuid::Uuid::parse_str(suffix) {
+                if let Some(suffix) = url.strip_prefix(&format!("{}/users/", base_url))
+                    && let Ok(parsed_id) = uuid::Uuid::parse_str(suffix) {
                         local_ids.push(parsed_id);
                         continue;
                     }
-                }
                 remote_urls.push(url);
             }
             Some(domain::ports::FollowingFilter {
@@ -953,7 +954,7 @@ pub async fn get_movie_detail(
     Query(params): Query<api_types::PaginationQueryParams>,
     Extension(csrf): Extension<CsrfToken>,
 ) -> impl IntoResponse {
-    let ctx = build_page_context(&state, user_id, csrf.0).await;
+    let ctx = build_page_context(&state, user_id.clone(), csrf.0).await;
     let limit = params.limit.unwrap_or(20);
     let offset = params.offset.unwrap_or(0);
 
@@ -973,10 +974,19 @@ pub async fn get_movie_detail(
             let histogram_max = result.stats.rating_histogram.iter().copied().max().unwrap_or(1);
             let has_more = result.reviews.offset + result.reviews.limit
                 < result.reviews.total_count as u32;
+            let on_watchlist = match &user_id {
+                Some(uid) => state.app_ctx.watchlist_repository
+                    .contains(uid, &domain::value_objects::MovieId::from_uuid(movie_id))
+                    .await
+                    .unwrap_or(false),
+                None => false,
+            };
             let data = MovieDetailPageData {
                 ctx,
                 movie: result.movie,
                 stats: result.stats,
+                profile: result.profile,
+                on_watchlist,
                 current_offset: result.reviews.offset,
                 has_more,
                 limit: result.reviews.limit,
@@ -990,6 +1000,206 @@ pub async fn get_movie_detail(
                     StatusCode::INTERNAL_SERVER_ERROR.into_response()
                 }
             }
+        }
+    }
+}
+
+pub async fn get_watchlist_page(
+    OptionalCookieUser(viewer_id): OptionalCookieUser,
+    State(state): State<AppState>,
+    Path(owner_id): Path<uuid::Uuid>,
+    Query(params): Query<crate::forms::WatchlistQuery>,
+    Extension(csrf): Extension<CsrfToken>,
+) -> impl IntoResponse {
+    let ctx = build_page_context(&state, viewer_id.clone(), csrf.0).await;
+    let limit = params.limit.unwrap_or(20);
+    let offset = params.offset.unwrap_or(0);
+    let is_owner = viewer_id.map(|u| u.value() == owner_id).unwrap_or(false);
+
+    // Try local user first
+    let local_user = state.app_ctx.user_repository
+        .find_by_id(&domain::value_objects::UserId::from_uuid(owner_id))
+        .await
+        .ok()
+        .flatten();
+
+    let (display_entries, has_more, current_offset, page_limit) = if local_user.is_some() {
+        match get_watchlist::execute(
+            &state.app_ctx,
+            GetWatchlistQuery { user_id: owner_id, limit: Some(limit), offset: Some(offset) },
+        ).await {
+            Err(e) => {
+                tracing::error!("watchlist error: {:?}", e);
+                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            }
+            Ok(entries) => {
+                let has_more = entries.offset + entries.limit < entries.total_count as u32;
+                let display: Vec<WatchlistDisplayEntry> = entries.items.iter().map(|w| {
+                    let remove_url = if is_owner {
+                        Some(format!("/watchlist/{}/remove", w.movie.id().value()))
+                    } else {
+                        None
+                    };
+                    WatchlistDisplayEntry {
+                        poster_url: w.movie.poster_path()
+                            .map(|p| format!("/images/{}", p.value())),
+                        movie_title: w.movie.title().value().to_string(),
+                        release_year: w.movie.release_year().value(),
+                        movie_url: Some(format!("/movies/{}", w.movie.id().value())),
+                        added_at: w.entry.added_at.format("%b %-d, %Y").to_string(),
+                        remove_url,
+                    }
+                }).collect();
+                (display, has_more, entries.offset, entries.limit)
+            }
+        }
+    } else {
+        #[cfg(feature = "federation")]
+        {
+            let remote_entries = state.app_ctx.remote_watchlist_repository
+                .get_by_derived_uuid(owner_id)
+                .await
+                .unwrap_or_default();
+            let display: Vec<WatchlistDisplayEntry> = remote_entries.into_iter().map(|e| {
+                WatchlistDisplayEntry {
+                    poster_url: e.poster_url,
+                    movie_title: e.movie_title,
+                    release_year: e.release_year,
+                    movie_url: None,
+                    added_at: e.added_at.format("%b %-d, %Y").to_string(),
+                    remove_url: None,
+                }
+            }).collect();
+            let len = display.len() as u32;
+            (display, false, 0u32, len)
+        }
+        #[cfg(not(feature = "federation"))]
+        {
+            (vec![], false, 0u32, 0u32)
+        }
+    };
+
+    let data = WatchlistPageData {
+        ctx,
+        owner_id,
+        display_entries,
+        current_offset,
+        has_more,
+        limit: page_limit,
+        is_owner,
+        error: params.error,
+    };
+    match state.html_renderer.render_watchlist_page(data) {
+        Ok(html) => Html(html).into_response(),
+        Err(e) => {
+            tracing::error!("watchlist template error: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+pub async fn post_watchlist_add(
+    State(state): State<AppState>,
+    RequiredCookieUser(user_id): RequiredCookieUser,
+    Extension(csrf): Extension<CsrfToken>,
+    Form(form): Form<crate::forms::WatchlistAddForm>,
+) -> impl IntoResponse {
+    if crate::csrf::mismatch(&csrf, &form.csrf_token) {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+
+    let redirect_base = form
+        .redirect_after
+        .as_deref()
+        .filter(|u| u.starts_with('/') && !u.starts_with("//"))
+        .unwrap_or("/")
+        .to_string();
+
+    let input = if let Some(id) = form.movie_id {
+        MovieInput {
+            movie_id: Some(id),
+            external_metadata_id: None,
+            manual_title: None,
+            manual_release_year: None,
+            manual_director: None,
+        }
+    } else {
+        let query = form.query.as_deref().unwrap_or("").trim().to_string();
+        let is_external_id = query.starts_with("tmdb:")
+            || (query.starts_with("tt")
+                && query.len() > 2
+                && query[2..].chars().all(|c| c.is_ascii_digit()));
+        if is_external_id {
+            MovieInput {
+                movie_id: None,
+                external_metadata_id: Some(query),
+                manual_title: None,
+                manual_release_year: None,
+                manual_director: None,
+            }
+        } else {
+            MovieInput {
+                movie_id: None,
+                external_metadata_id: None,
+                manual_title: if query.is_empty() { None } else { Some(query) },
+                manual_release_year: form.year,
+                manual_director: None,
+            }
+        }
+    };
+
+    match add_to_watchlist::execute(
+        &state.app_ctx,
+        AddToWatchlistCommand {
+            user_id: user_id.value(),
+            input,
+        },
+    )
+    .await
+    {
+        Ok(()) => Redirect::to(&redirect_base).into_response(),
+        Err(DomainError::NotFound(_)) => Redirect::to(&redirect_base).into_response(),
+        Err(DomainError::ValidationError(msg)) => {
+            let sep = if redirect_base.contains('?') { '&' } else { '?' };
+            let url = format!("{}{}error={}", redirect_base, sep, encode_error(&msg));
+            Redirect::to(&url).into_response()
+        }
+        Err(e) => {
+            tracing::error!("watchlist add error: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+pub async fn post_watchlist_remove(
+    State(state): State<AppState>,
+    RequiredCookieUser(user_id): RequiredCookieUser,
+    Extension(csrf): Extension<CsrfToken>,
+    Path(movie_id): Path<uuid::Uuid>,
+    Form(form): Form<crate::forms::DeleteRedirectForm>,
+) -> impl IntoResponse {
+    if crate::csrf::mismatch(&csrf, &form.csrf_token) {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+    match remove_from_watchlist::execute(
+        &state.app_ctx,
+        RemoveFromWatchlistCommand {
+            user_id: user_id.value(),
+            movie_id,
+        },
+    )
+    .await
+    {
+        Ok(()) | Err(DomainError::NotFound(_)) => {
+            let redirect_url = form
+                .redirect_after
+                .filter(|u| u.starts_with('/') && !u.starts_with("//"))
+                .unwrap_or_else(|| "/".to_string());
+            Redirect::to(&redirect_url).into_response()
+        }
+        Err(e) => {
+            tracing::error!("watchlist remove error: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
     }
 }
@@ -1219,12 +1429,11 @@ pub async fn post_profile_settings(
             }
             "avatar" => {
                 let content_type = field.content_type().map(|s| s.to_string());
-                if let Ok(bytes) = field.bytes().await {
-                    if !bytes.is_empty() {
+                if let Ok(bytes) = field.bytes().await
+                    && !bytes.is_empty() {
                         avatar_bytes = Some(bytes.to_vec());
                         avatar_content_type = content_type;
                     }
-                }
             }
             _ => {}
         }

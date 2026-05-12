@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+#[cfg(feature = "nats")]
 use anyhow::Context;
 use domain::ports::{EventConsumer, EventPublisher};
 

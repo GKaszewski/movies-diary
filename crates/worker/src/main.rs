@@ -48,6 +48,14 @@ async fn main() -> anyhow::Result<()> {
         app_config.base_url.clone(),
         app_config.allow_registration,
     );
+    // Wire federation repos early to get remote_watchlist_repo for AppContext.
+    #[cfg(feature = "federation")]
+    let (fed_federation_repo, _fed_social_query, fed_review_store, fed_remote_watchlist_repo) = match &db_pool {
+        #[cfg(feature = "sqlite-federation")]
+        db::DbPool::Sqlite(pool) => sqlite_federation::wire(pool.clone()),
+        #[cfg(feature = "postgres-federation")]
+        db::DbPool::Postgres(pool) => postgres_federation::wire(pool.clone()),
+    };
 
     let ctx = AppContext {
         movie_repository:       repos.movie,
@@ -66,6 +74,9 @@ async fn main() -> anyhow::Result<()> {
         import_session_repository: repos.import_session,
         import_profile_repository: repos.import_profile,
         movie_profile_repository:  repos.movie_profile,
+        watchlist_repository:      repos.watchlist,
+        #[cfg(feature = "federation")]
+        remote_watchlist_repository: fed_remote_watchlist_repo.clone(),
         person_command:            Arc::clone(&person_command),
         person_query:              Arc::clone(&person_query),
         search_port:               Arc::clone(&search_port),
@@ -155,16 +166,11 @@ async fn main() -> anyhow::Result<()> {
 
         #[cfg(feature = "federation")]
         {
-            let (federation_repo, _social_query, review_store) = match &db_pool {
-                #[cfg(feature = "sqlite-federation")]
-                db::DbPool::Sqlite(pool) => sqlite_federation::wire(pool.clone()),
-                #[cfg(feature = "postgres-federation")]
-                db::DbPool::Postgres(pool) => postgres_federation::wire(pool.clone()),
-            };
-
             let ap = activitypub::wire(
-                federation_repo,
-                review_store,
+                fed_federation_repo,
+                fed_review_store,
+                fed_remote_watchlist_repo,
+                Arc::clone(&ctx.watchlist_repository),
                 fed_user_repo,
                 fed_movie_repo,
                 fed_review_repo,

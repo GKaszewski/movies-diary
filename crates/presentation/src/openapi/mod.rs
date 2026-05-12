@@ -5,6 +5,7 @@ mod movies;
 mod search;
 mod social;
 mod users;
+mod watchlist;
 
 use axum::Router;
 use utoipa::{
@@ -38,6 +39,7 @@ fn build() -> utoipa::openapi::OpenApi {
     api.merge(users::UsersDoc::openapi());
     api.merge(import::ImportDoc::openapi());
     api.merge(search::SearchDoc::openapi());
+    api.merge(watchlist::WatchlistDoc::openapi());
     #[cfg(feature = "federation")]
     api.merge(social::SocialDoc::openapi());
     SecurityAddon.modify(&mut api);

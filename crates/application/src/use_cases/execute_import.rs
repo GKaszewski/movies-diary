@@ -6,7 +6,7 @@ use domain::{
 };
 use uuid::Uuid;
 
-use crate::{commands::{ExecuteImportCommand, LogReviewCommand}, context::AppContext, use_cases::log_review};
+use crate::{commands::{ExecuteImportCommand, LogReviewCommand, MovieInput}, context::AppContext, use_cases::log_review};
 
 pub struct ImportSummary {
     pub imported: usize,
@@ -71,11 +71,14 @@ fn row_to_command(row: &ImportRow, user_id: Uuid) -> Result<LogReviewCommand, St
         .map_err(|_| format!("cannot parse watched_at: '{}'", watched_at_str))?;
 
     Ok(LogReviewCommand {
-        external_metadata_id: row.external_metadata_id.clone(),
-        manual_title: row.title.clone(),
-        manual_release_year: row.release_year.as_deref().and_then(|s| s.parse().ok()),
-        manual_director: row.director.clone(),
         user_id,
+        input: MovieInput {
+            movie_id: None,
+            external_metadata_id: row.external_metadata_id.clone(),
+            manual_title: row.title.clone(),
+            manual_release_year: row.release_year.as_deref().and_then(|s| s.parse().ok()),
+            manual_director: row.director.clone(),
+        },
         rating,
         comment: row.comment.clone(),
         watched_at,

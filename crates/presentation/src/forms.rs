@@ -2,7 +2,7 @@ use chrono::NaiveDateTime;
 use serde::Deserialize;
 use uuid::Uuid;
 
-use application::{commands::LogReviewCommand, queries::GetDiaryQuery};
+use application::{commands::{LogReviewCommand, MovieInput}, queries::GetDiaryQuery};
 use domain::{errors::DomainError, models::SortDirection};
 
 use api_types::{DiaryQueryParams, LogReviewRequest};
@@ -124,6 +124,25 @@ pub struct ActorUrlForm {
     pub csrf_token: String,
 }
 
+#[derive(serde::Deserialize)]
+pub struct WatchlistAddForm {
+    pub movie_id: Option<uuid::Uuid>,
+    pub query: Option<String>,
+    #[serde(default, deserialize_with = "empty_string_as_none")]
+    pub year: Option<u16>,
+    #[serde(rename = "_csrf", default)]
+    pub csrf_token: String,
+    #[serde(default)]
+    pub redirect_after: Option<String>,
+}
+
+#[derive(serde::Deserialize, Default)]
+pub struct WatchlistQuery {
+    pub limit: Option<u32>,
+    pub offset: Option<u32>,
+    pub error: Option<String>,
+}
+
 #[derive(Deserialize, Default)]
 pub struct ProfileQueryParams {
     pub view: Option<String>,
@@ -206,14 +225,17 @@ impl TryFrom<LogReviewRequest> for LogReviewData {
 impl LogReviewData {
     pub fn into_command(self, user_id: Uuid) -> LogReviewCommand {
         LogReviewCommand {
-            external_metadata_id: self.external_metadata_id,
-            manual_title: self.manual_title,
-            manual_release_year: self.manual_release_year,
-            manual_director: self.manual_director,
+            user_id,
+            input: MovieInput {
+                movie_id: None,
+                external_metadata_id: self.external_metadata_id,
+                manual_title: self.manual_title,
+                manual_release_year: self.manual_release_year,
+                manual_director: self.manual_director,
+            },
             rating: self.rating,
             comment: self.comment,
             watched_at: self.watched_at,
-            user_id,
         }
     }
 }

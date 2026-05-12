@@ -1,7 +1,7 @@
 use chrono::NaiveDateTime;
 use domain::{
     errors::DomainError,
-    models::{DiaryEntry, FeedEntry, Movie, Review, ReviewSource, UserSummary},
+    models::{DiaryEntry, FeedEntry, Movie, MovieSummary, Review, ReviewSource, UserSummary},
     value_objects::{
         Comment, Email, ExternalMetadataId, MovieId, MovieTitle, PosterPath, Rating, ReleaseYear,
         ReviewId, UserId,
@@ -20,7 +20,7 @@ pub(crate) struct MovieRow {
 }
 
 impl MovieRow {
-    pub fn to_domain(self) -> Result<Movie, DomainError> {
+    pub fn into_domain(self) -> Result<Movie, DomainError> {
         let id = MovieId::from_uuid(parse_uuid(&self.id)?);
         let external_metadata_id = self
             .external_metadata_id
@@ -41,6 +41,43 @@ impl MovieRow {
 }
 
 #[derive(sqlx::FromRow)]
+pub(crate) struct MovieSummaryRow {
+    pub id: String,
+    pub external_metadata_id: Option<String>,
+    pub title: String,
+    pub release_year: i64,
+    pub director: Option<String>,
+    pub poster_path: Option<String>,
+    pub genres: Option<Vec<String>>,
+    pub runtime_minutes: Option<i64>,
+    pub original_language: Option<String>,
+    pub overview: Option<String>,
+    pub collection_name: Option<String>,
+}
+
+impl MovieSummaryRow {
+    pub fn into_domain(self) -> Result<MovieSummary, DomainError> {
+        let movie = MovieRow {
+            id: self.id,
+            external_metadata_id: self.external_metadata_id,
+            title: self.title,
+            release_year: self.release_year,
+            director: self.director,
+            poster_path: self.poster_path,
+        }
+        .into_domain()?;
+        Ok(MovieSummary {
+            movie,
+            genres: self.genres.unwrap_or_default(),
+            runtime_minutes: self.runtime_minutes.map(|v| v as u32),
+            original_language: self.original_language,
+            overview: self.overview,
+            collection_name: self.collection_name,
+        })
+    }
+}
+
+#[derive(sqlx::FromRow)]
 pub(crate) struct ReviewRow {
     pub id: String,
     pub movie_id: String,
@@ -53,7 +90,7 @@ pub(crate) struct ReviewRow {
 }
 
 impl ReviewRow {
-    pub fn to_domain(self) -> Result<Review, DomainError> {
+    pub fn into_domain(self) -> Result<Review, DomainError> {
         let id = ReviewId::from_uuid(parse_uuid(&self.id)?);
         let movie_id = MovieId::from_uuid(parse_uuid(&self.movie_id)?);
         let user_id = UserId::from_uuid(parse_uuid(&self.user_id)?);
@@ -90,7 +127,7 @@ pub(crate) struct DiaryRow {
 }
 
 impl DiaryRow {
-    pub fn to_domain(self) -> Result<DiaryEntry, DomainError> {
+    pub fn into_domain(self) -> Result<DiaryEntry, DomainError> {
         let movie = MovieRow {
             id: self.id,
             external_metadata_id: self.external_metadata_id,
@@ -99,7 +136,7 @@ impl DiaryRow {
             director: self.director,
             poster_path: self.poster_path,
         }
-        .to_domain()?;
+        .into_domain()?;
         let review = ReviewRow {
             id: self.review_id,
             movie_id: self.movie_id,
@@ -110,7 +147,7 @@ impl DiaryRow {
             created_at: self.created_at,
             remote_actor_url: self.remote_actor_url,
         }
-        .to_domain()?;
+        .into_domain()?;
         Ok(DiaryEntry::new(movie, review))
     }
 }
@@ -135,7 +172,7 @@ pub(crate) struct FeedRow {
 }
 
 impl FeedRow {
-    pub fn to_domain(self) -> Result<FeedEntry, DomainError> {
+    pub fn into_domain(self) -> Result<FeedEntry, DomainError> {
         let diary = DiaryRow {
             id: self.id,
             external_metadata_id: self.external_metadata_id,
@@ -152,7 +189,7 @@ impl FeedRow {
             created_at: self.created_at,
             remote_actor_url: self.remote_actor_url,
         }
-        .to_domain()?;
+        .into_domain()?;
         Ok(FeedEntry::new(diary, self.user_email))
     }
 }
@@ -170,7 +207,7 @@ pub(crate) struct MovieStatsRow {
 }
 
 impl MovieStatsRow {
-    pub fn to_domain(self) -> domain::models::MovieStats {
+    pub fn into_domain(self) -> domain::models::MovieStats {
         domain::models::MovieStats {
             total_count: self.total_count as u64,
             avg_rating: self.avg_rating,
@@ -195,7 +232,7 @@ pub(crate) struct UserSummaryRow {
 }
 
 impl UserSummaryRow {
-    pub fn to_domain(self) -> Result<UserSummary, DomainError> {
+    pub fn into_domain(self) -> Result<UserSummary, DomainError> {
         Ok(UserSummary::new(
             UserId::from_uuid(parse_uuid(&self.id)?),
             Email::new(self.email)?,

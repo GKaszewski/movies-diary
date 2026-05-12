@@ -2,14 +2,17 @@ use chrono::NaiveDateTime;
 use domain::models::{FieldMapping, FileFormat, UserRole};
 use uuid::Uuid;
 
-pub struct LogReviewCommand {
+pub struct MovieInput {
+    pub movie_id: Option<Uuid>,
     pub external_metadata_id: Option<String>,
-
     pub manual_title: Option<String>,
     pub manual_release_year: Option<u16>,
     pub manual_director: Option<String>,
+}
 
+pub struct LogReviewCommand {
     pub user_id: Uuid,
+    pub input: MovieInput,
     pub rating: u8,
     pub comment: Option<String>,
     pub watched_at: NaiveDateTime,
@@ -80,4 +83,14 @@ pub struct UpdateProfileCommand {
 pub struct EnrichMovieCommand {
     pub movie_id: domain::value_objects::MovieId,
     pub profile: domain::models::MovieProfile,
+}
+
+pub struct AddToWatchlistCommand {
+    pub user_id: Uuid,
+    pub input: MovieInput,
+}
+
+pub struct RemoveFromWatchlistCommand {
+    pub user_id: Uuid,
+    pub movie_id: Uuid,
 }

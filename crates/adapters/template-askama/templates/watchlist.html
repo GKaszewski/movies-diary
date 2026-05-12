@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="movie-detail">
+  <div class="entry-title" style="margin-bottom:1rem">Watchlist</div>
+
+  {% if is_owner %}
+  {% if let Some(err) = &error %}
+  <p class="form-error">{{ err }}</p>
+  {% endif %}
+  <form method="post" action="/watchlist/add" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.5rem;align-items:flex-end">
+    <div style="flex:1;min-width:200px">
+      <label style="display:block;font-size:0.8em;opacity:.6;margin-bottom:0.25rem">Title or TMDB ID</label>
+      <input type="text" name="query" placeholder='e.g. "Dune" or tmdb:438631' style="width:100%;box-sizing:border-box">
+    </div>
+    <div style="width:90px">
+      <label style="display:block;font-size:0.8em;opacity:.6;margin-bottom:0.25rem">Year</label>
+      <input type="number" name="year" placeholder="2021" min="1888" max="2099" style="width:100%;box-sizing:border-box">
+    </div>
+    <input type="hidden" name="_csrf" value="{{ ctx.csrf_token }}">
+    <input type="hidden" name="redirect_after" value="/users/{{ owner_id }}/watchlist">
+    <button type="submit" class="btn-small" style="height:2.25rem">Add</button>
+  </form>
+  {% endif %}
+
+  {% if display_entries.is_empty() %}
+  <p class="empty">No movies on the watchlist yet.</p>
+  {% else %}
+  <div class="diary">
+    {% for entry in display_entries %}
+    <article class="entry">
+      {% if let Some(url) = &entry.poster_url %}
+      <div class="poster"><img src="{{ url }}" alt=""></div>
+      {% endif %}
+      <div class="entry-body">
+        <div class="entry-title">
+          {% if let Some(url) = &entry.movie_url %}
+          <a href="{{ url }}" class="movie-title-link">{{ entry.movie_title }}</a>
+          {% else %}
+          {{ entry.movie_title }}
+          {% endif %}
+          <span class="year">({{ entry.release_year }})</span>
+        </div>
+        <div class="feed-meta" style="margin-top:0.4rem">
+          <span class="feed-time">Added {{ entry.added_at }}</span>
+        </div>
+        {% if let Some(remove_url) = &entry.remove_url %}
+        <form method="post" action="{{ remove_url }}" style="margin-top:0.5rem">
+          <input type="hidden" name="redirect_after" value="/users/{{ owner_id }}/watchlist">
+          <input type="hidden" name="_csrf" value="{{ ctx.csrf_token }}">
+          <button type="submit" class="btn-small" style="color:#e57a7a;border-color:rgba(229,122,122,.3)">Remove</button>
+        </form>
+        {% endif %}
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+
+  <nav class="pagination">
+    {% if current_offset >= limit %}
+    <a href="/users/{{ owner_id }}/watchlist?offset={{ current_offset - limit }}&limit={{ limit }}" class="page-nav">&larr; Prev</a>
+    {% endif %}
+    {% if has_more %}
+    <a href="/users/{{ owner_id }}/watchlist?offset={{ current_offset + limit }}&limit={{ limit }}" class="page-nav">Next &rarr;</a>
+    {% endif %}
+  </nav>
+  {% endif %}
+</div>
+{% endblock %}

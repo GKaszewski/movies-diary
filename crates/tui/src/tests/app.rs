@@ -43,6 +43,11 @@ fn diary_entry() -> DiaryEntryDto {
             release_year: 1999,
             director: None,
             poster_path: None,
+            genres: vec![],
+            runtime_minutes: None,
+            original_language: None,
+            overview: None,
+            collection_name: None,
         },
         review: ReviewDto {
             id: Uuid::new_v4(),

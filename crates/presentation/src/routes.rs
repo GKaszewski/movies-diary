@@ -107,7 +107,19 @@ fn html_routes(rate_limit: u64) -> Router<AppState> {
             routing::get(handlers::html::get_profile_settings)
                 .post(handlers::html::post_profile_settings),
         )
-        .route("/tags/{tag}", routing::get(handlers::html::get_tag));
+        .route("/tags/{tag}", routing::get(handlers::html::get_tag))
+        .route(
+            "/users/{id}/watchlist",
+            routing::get(handlers::html::get_watchlist_page),
+        )
+        .route(
+            "/watchlist/add",
+            routing::post(handlers::html::post_watchlist_add),
+        )
+        .route(
+            "/watchlist/{movie_id}/remove",
+            routing::post(handlers::html::post_watchlist_remove),
+        );
 
     #[cfg(feature = "federation")]
     let base = base.merge(federation_html_routes());
@@ -213,7 +225,17 @@ fn api_routes(rate_limit: u64) -> Router<AppState> {
         .route("/profile", routing::get(handlers::api::get_profile).put(handlers::api::update_profile_handler))
         .route("/search", routing::get(handlers::api::get_search))
         .route("/people/{id}", routing::get(handlers::api::get_person_handler))
-        .route("/people/{id}/credits", routing::get(handlers::api::get_person_credits_handler));
+        .route("/people/{id}/credits", routing::get(handlers::api::get_person_credits_handler))
+        .route(
+            "/watchlist",
+            routing::get(handlers::api::get_watchlist_handler)
+                .post(handlers::api::post_watchlist_add),
+        )
+        .route(
+            "/watchlist/{movie_id}",
+            routing::get(handlers::api::get_watchlist_status)
+                .delete(handlers::api::delete_watchlist_entry),
+        );
 
     #[cfg(feature = "federation")]
     let base = base.merge(federation_api_routes());

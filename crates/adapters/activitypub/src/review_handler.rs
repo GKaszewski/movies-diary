@@ -100,11 +100,10 @@ impl ApObjectHandler for ReviewObjectHandler {
             let published =
                 chrono::DateTime::from_naive_utc_and_offset(*review.watched_at(), chrono::Utc);
 
-            if let Some(cutoff) = before {
-                if published >= cutoff {
+            if let Some(cutoff) = before
+                && published >= cutoff {
                     continue;
                 }
-            }
 
             let ap_id = review_url(&self.base_url, review.id());
             let actor_url = actor_url(&self.base_url, user_id);

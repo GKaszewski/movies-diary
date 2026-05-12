@@ -6,10 +6,10 @@ use crate::{
     events::{DomainEvent, EventEnvelope},
     models::{
         AnnotatedRow, DiaryEntry, DiaryFilter, ExportFormat, FeedEntry, FieldMapping,
-        FileFormat, ImportError, ImportProfile, ImportSession, Movie, MovieProfile, MovieStats,
-        ParsedFile, Review, ReviewHistory, User, UserStats, UserSummary, UserTrends,
-        EntityType, ExternalPersonId, IndexableDocument, Person, PersonCredits,
-        PersonId, SearchQuery, SearchResults,
+        FileFormat, ImportError, ImportProfile, ImportSession, Movie, MovieFilter, MovieProfile,
+        MovieStats, MovieSummary, ParsedFile, Review, ReviewHistory, User, UserStats, UserSummary,
+        UserTrends, WatchlistEntry, WatchlistWithMovie, RemoteWatchlistEntry, EntityType, ExternalPersonId,
+        IndexableDocument, Person, PersonCredits, PersonId, SearchQuery, SearchResults,
         collections::{self, PageParams, Paginated},
     },
     value_objects::{
@@ -88,8 +88,8 @@ pub trait MovieRepository: Send + Sync {
     async fn list_movies(
         &self,
         page: &collections::PageParams,
-        search: Option<&str>,
-    ) -> Result<collections::Paginated<Movie>, DomainError>;
+        filter: &MovieFilter,
+    ) -> Result<collections::Paginated<MovieSummary>, DomainError>;
 }
 
 #[async_trait]
@@ -309,4 +309,42 @@ pub trait SearchCommand: Send + Sync {
     async fn index(&self, doc: IndexableDocument) -> Result<(), DomainError>;
     /// Remove a document from the search index by entity type and internal ID string.
     async fn remove(&self, entity_type: EntityType, id: &str) -> Result<(), DomainError>;
+}
+
+#[async_trait]
+pub trait WatchlistRepository: Send + Sync {
+    /// Add a new entry. Silently succeeds if the entry already exists.
+    async fn add(&self, entry: &WatchlistEntry) -> Result<(), DomainError>;
+
+    /// Remove an entry. Returns NotFound if the entry does not exist.
+    async fn remove(&self, user_id: &UserId, movie_id: &MovieId) -> Result<(), DomainError>;
+
+    /// Remove an entry if it exists. Never returns NotFound.
+    async fn remove_if_present(
+        &self,
+        user_id: &UserId,
+        movie_id: &MovieId,
+    ) -> Result<bool, DomainError>;
+
+    async fn get_for_user(
+        &self,
+        user_id: &UserId,
+        page: &collections::PageParams,
+    ) -> Result<collections::Paginated<WatchlistWithMovie>, DomainError>;
+
+    async fn contains(
+        &self,
+        user_id: &UserId,
+        movie_id: &MovieId,
+    ) -> Result<bool, DomainError>;
+}
+
+#[async_trait]
+pub trait RemoteWatchlistRepository: Send + Sync {
+    async fn save(&self, entry: RemoteWatchlistEntry) -> Result<(), DomainError>;
+    async fn remove_by_ap_id(&self, ap_id: &str, actor_url: &str) -> Result<(), DomainError>;
+    async fn get_by_actor_url(&self, actor_url: &str) -> Result<Vec<RemoteWatchlistEntry>, DomainError>;
+    async fn remove_all_by_actor(&self, actor_url: &str) -> Result<(), DomainError>;
+    /// Find entries for a remote actor whose URL hashes (v5 UUID) to the given UUID.
+    async fn get_by_derived_uuid(&self, uuid: uuid::Uuid) -> Result<Vec<RemoteWatchlistEntry>, DomainError>;
 }

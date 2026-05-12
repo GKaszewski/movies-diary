@@ -6,7 +6,7 @@ use domain::{
     value_objects::{ExternalMetadataId, MovieTitle, ReleaseYear},
 };
 
-use crate::commands::LogReviewCommand;
+use crate::commands::MovieInput;
 
 pub struct MovieResolverDeps<'a> {
     pub repository: &'a dyn MovieRepository,
@@ -15,10 +15,10 @@ pub struct MovieResolverDeps<'a> {
 
 #[async_trait]
 pub trait ResolutionStrategy: Send + Sync {
-    fn can_handle(&self, cmd: &LogReviewCommand) -> bool;
+    fn can_handle(&self, input: &MovieInput) -> bool;
     async fn resolve(
         &self,
-        cmd: &LogReviewCommand,
+        input: &MovieInput,
         deps: &MovieResolverDeps<'_>,
     ) -> Result<Option<(Movie, bool)>, DomainError>;
 }
@@ -44,15 +44,14 @@ impl MovieResolver {
 
     pub async fn resolve(
         &self,
-        cmd: &LogReviewCommand,
+        input: &MovieInput,
         deps: &MovieResolverDeps<'_>,
     ) -> Result<(Movie, bool), DomainError> {
         for strategy in &self.strategies {
-            if strategy.can_handle(cmd) {
-                if let Some(result) = strategy.resolve(cmd, deps).await? {
+            if strategy.can_handle(input)
+                && let Some(result) = strategy.resolve(input, deps).await? {
                     return Ok(result);
                 }
-            }
         }
         Err(DomainError::ValidationError(
             "Manual title required if TMDB fetch fails or is omitted".into(),
@@ -62,16 +61,16 @@ impl MovieResolver {
 
 #[async_trait]
 impl ResolutionStrategy for ExternalIdStrategy {
-    fn can_handle(&self, cmd: &LogReviewCommand) -> bool {
-        cmd.external_metadata_id.is_some()
+    fn can_handle(&self, input: &MovieInput) -> bool {
+        input.external_metadata_id.is_some()
     }
 
     async fn resolve(
         &self,
-        cmd: &LogReviewCommand,
+        input: &MovieInput,
         deps: &MovieResolverDeps<'_>,
     ) -> Result<Option<(Movie, bool)>, DomainError> {
-        let ext_id_str = cmd.external_metadata_id.as_deref().unwrap();
+        let ext_id_str = input.external_metadata_id.as_deref().unwrap();
         let tmdb_id = ExternalMetadataId::new(ext_id_str.to_string())?;
 
         if let Some(m) = deps.repository.get_movie_by_external_id(&tmdb_id).await? {
@@ -97,22 +96,30 @@ impl ResolutionStrategy for ExternalIdStrategy {
 
 #[async_trait]
 impl ResolutionStrategy for TitleSearchStrategy {
-    fn can_handle(&self, cmd: &LogReviewCommand) -> bool {
-        cmd.manual_title.is_some()
+    fn can_handle(&self, input: &MovieInput) -> bool {
+        input.manual_title.is_some()
     }
 
     async fn resolve(
         &self,
-        cmd: &LogReviewCommand,
+        input: &MovieInput,
         deps: &MovieResolverDeps<'_>,
     ) -> Result<Option<(Movie, bool)>, DomainError> {
-        let title = cmd.manual_title.as_deref().unwrap();
+        let title = input.manual_title.as_deref().unwrap();
         let criteria = MetadataSearchCriteria::Title {
             title: MovieTitle::new(title.to_string())?,
-            year: cmd.manual_release_year.map(ReleaseYear::new).transpose()?,
+            year: input.manual_release_year.map(ReleaseYear::new).transpose()?,
         };
         match deps.metadata_client.fetch_movie_metadata(&criteria).await {
-            Ok(m) => Ok(Some((m, true))),
+            Ok(m) => {
+                // Movie may already exist in DB under this external_metadata_id
+                if let Some(ext_id) = m.external_metadata_id() {
+                    if let Some(existing) = deps.repository.get_movie_by_external_id(ext_id).await? {
+                        return Ok(Some((existing, false)));
+                    }
+                }
+                Ok(Some((m, true)))
+            }
             Err(e) => {
                 tracing::warn!("OMDb title search failed, falling back to manual: {:?}", e);
                 Ok(None)
@@ -123,20 +130,20 @@ impl ResolutionStrategy for TitleSearchStrategy {
 
 #[async_trait]
 impl ResolutionStrategy for ManualMovieStrategy {
-    fn can_handle(&self, cmd: &LogReviewCommand) -> bool {
-        cmd.manual_title.is_some()
+    fn can_handle(&self, input: &MovieInput) -> bool {
+        input.manual_title.is_some()
     }
 
     async fn resolve(
         &self,
-        cmd: &LogReviewCommand,
+        input: &MovieInput,
         deps: &MovieResolverDeps<'_>,
     ) -> Result<Option<(Movie, bool)>, DomainError> {
-        let title_str = match &cmd.manual_title {
+        let title_str = match &input.manual_title {
             Some(t) => t,
             None => return Ok(None),
         };
-        let year_val = cmd.manual_release_year.ok_or_else(|| {
+        let year_val = input.manual_release_year.ok_or_else(|| {
             DomainError::ValidationError(
                 "Manual release year required if TMDB fetch fails or is omitted".into(),
             )
@@ -152,13 +159,13 @@ impl ResolutionStrategy for ManualMovieStrategy {
 
         let matched = candidates
             .into_iter()
-            .find(|m| m.is_manual_match(&title, &release_year, cmd.manual_director.as_deref()));
+            .find(|m| m.is_manual_match(&title, &release_year, input.manual_director.as_deref()));
 
         if let Some(existing) = matched {
             Ok(Some((existing, false)))
         } else {
             let new_movie =
-                Movie::new(None, title, release_year, cmd.manual_director.clone(), None);
+                Movie::new(None, title, release_year, input.manual_director.clone(), None);
             Ok(Some((new_movie, true)))
         }
     }

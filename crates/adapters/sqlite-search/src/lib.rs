@@ -160,7 +160,7 @@ impl SqliteSearchAdapter {
         }
 
         let total: u64 = if let Some(text) = &query.text {
-            let fts_query = format!("{}*", text.replace('"', "").replace('*', ""));
+            let fts_query = format!("{}*", text.replace(['"', '*'], ""));
             let count: i64 = sqlx::query_scalar(
                 "SELECT COUNT(DISTINCT m.id)
                  FROM movies_fts fts
@@ -198,7 +198,7 @@ impl SqliteSearchAdapter {
         };
 
         let rows: Vec<Row> = if let Some(text) = &query.text {
-            let fts_query = format!("{}*", text.replace('"', "").replace('*', ""));
+            let fts_query = format!("{}*", text.replace(['"', '*'], ""));
             sqlx::query_as::<_, Row>(
                 "SELECT m.id, m.title, m.release_year, m.director, m.poster_path,
                         GROUP_CONCAT(DISTINCT mg.name) AS genres
@@ -273,7 +273,7 @@ impl SqliteSearchAdapter {
 
         let limit = query.page.limit as i64;
         let offset = query.page.offset as i64;
-        let fts_query = format!("{}*", text.replace('"', "").replace('*', ""));
+        let fts_query = format!("{}*", text.replace(['"', '*'], ""));
 
         let total: u64 = {
             let count: i64 = sqlx::query_scalar(

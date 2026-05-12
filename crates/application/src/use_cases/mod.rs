@@ -24,3 +24,7 @@ pub mod register;
 pub mod search;
 pub mod sync_poster;
 pub mod update_profile;
+pub mod add_to_watchlist;
+pub mod remove_from_watchlist;
+pub mod get_watchlist;
+pub mod is_on_watchlist;

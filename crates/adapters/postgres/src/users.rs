@@ -231,7 +231,7 @@ impl UserRepository for PostgresUserRepository {
         .await
         .map_err(Self::map_err)?
         .into_iter()
-        .map(UserSummaryRow::to_domain)
+        .map(UserSummaryRow::into_domain)
         .collect()
     }
 }

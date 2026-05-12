@@ -1,6 +1,6 @@
 use domain::{
     errors::DomainError,
-    models::{FeedEntry, Movie, MovieStats, collections::{PageParams, Paginated}},
+    models::{FeedEntry, Movie, MovieProfile, MovieStats, collections::{PageParams, Paginated}},
     value_objects::MovieId,
 };
 
@@ -10,6 +10,7 @@ pub struct MovieSocialPageResult {
     pub movie: Movie,
     pub stats: MovieStats,
     pub reviews: Paginated<FeedEntry>,
+    pub profile: Option<MovieProfile>,
 }
 
 pub async fn execute(
@@ -25,10 +26,11 @@ pub async fn execute(
         .await?
         .ok_or_else(|| DomainError::NotFound(format!("Movie {}", query.movie_id)))?;
 
-    let (stats, reviews) = tokio::try_join!(
+    let (stats, reviews, profile) = tokio::try_join!(
         ctx.diary_repository.get_movie_stats(&movie_id),
         ctx.diary_repository.get_movie_social_feed(&movie_id, &page),
+        ctx.movie_profile_repository.get_by_movie_id(&movie_id),
     )?;
 
-    Ok(MovieSocialPageResult { movie, stats, reviews })
+    Ok(MovieSocialPageResult { movie, stats, reviews, profile })
 }

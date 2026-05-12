@@ -2,6 +2,7 @@
 {% block content %}
 <div class="movie-detail">
 
+  {# ── Hero ── #}
   <article class="entry" style="margin-bottom:1.5rem">
     {% if let Some(poster) = movie.poster_path() %}
     <div class="poster"><img src="/posters/{{ poster.value() }}" alt=""></div>
@@ -11,15 +12,46 @@
         {{ movie.title().value() }}
         <span class="year">({{ movie.release_year().value() }})</span>
       </div>
-      {% if let Some(dir) = movie.director() %}
-      <div class="director">{{ dir }}</div>
+      <div class="movie-meta">
+        {% if let Some(dir) = movie.director() %}{{ dir }}{% endif %}
+        {% if let Some(p) = profile %}
+          {% if let Some(runtime) = p.runtime_minutes %}· {{ runtime }} min{% endif %}
+          {% if let Some(lang) = &p.original_language %}· {{ lang|upper }}{% endif %}
+        {% endif %}
+      </div>
+      {% if let Some(p) = profile %}
+        {% if !p.genres.is_empty() %}
+        <div class="genre-pills">
+          {% for g in &p.genres %}<span class="genre-pill">{{ g.name }}</span>{% endfor %}
+        </div>
+        {% endif %}
+        {% if let Some(tagline) = &p.tagline %}{% if !tagline.is_empty() %}
+        <div class="movie-tagline">"{{ tagline }}"</div>
+        {% endif %}{% endif %}
       {% endif %}
       <div style="margin-top:0.75rem">
         <a href="/reviews/new" class="btn-small">+ Log a review</a>
+        {% if ctx.user_id.is_some() %}
+        {% if on_watchlist %}
+        <form method="post" action="/watchlist/{{ movie.id().value() }}/remove" style="display:inline">
+          <input type="hidden" name="redirect_after" value="/movies/{{ movie.id().value() }}">
+          <input type="hidden" name="_csrf" value="{{ ctx.csrf_token }}">
+          <button type="submit" class="btn-small" style="color:#4aaa77;border-color:rgba(74,170,119,.3)">✓ On watchlist · Remove</button>
+        </form>
+        {% else %}
+        <form method="post" action="/watchlist/add" style="display:inline">
+          <input type="hidden" name="movie_id" value="{{ movie.id().value() }}">
+          <input type="hidden" name="redirect_after" value="/movies/{{ movie.id().value() }}">
+          <input type="hidden" name="_csrf" value="{{ ctx.csrf_token }}">
+          <button type="submit" class="btn-small">＋ Want to watch</button>
+        </form>
+        {% endif %}
+        {% endif %}
       </div>
     </div>
   </article>
 
+  {# ── Stats ── #}
   <div class="stats-bar">
     {% if let Some(avg) = stats.avg_rating %}
     <div class="stat-box">
@@ -47,6 +79,46 @@
     </div>
   </div>
 
+  {% if let Some(p) = profile %}
+
+    {# ── Overview ── #}
+    {% if let Some(overview) = &p.overview %}{% if !overview.is_empty() %}
+    <p class="movie-overview">{{ overview }}</p>
+    {% endif %}{% endif %}
+
+    {# ── Cast ── #}
+    {% if !p.cast.is_empty() %}
+    <div class="feed-section-label">CAST</div>
+    <div class="cast-strip">
+      {% for (i, member) in p.cast.iter().enumerate() %}{% if i < 10 %}
+      <div class="cast-card">
+        {% if let Some(path) = &member.profile_path %}
+        <img src="https://image.tmdb.org/t/p/w185{{ path }}" alt="{{ member.name }}" loading="lazy">
+        {% else %}
+        <img src="/static/person-placeholder.svg" alt="{{ member.name }}">
+        {% endif %}
+        <div class="cast-name">{{ member.name }}</div>
+        <div class="cast-char">{{ member.character }}</div>
+      </div>
+      {% endif %}{% endfor %}
+    </div>
+    {% endif %}
+
+    {# ── Crew ── #}
+    {% if !p.crew.is_empty() %}
+    <div class="feed-section-label">CREW</div>
+    <ul class="crew-list">
+      {% for member in &p.crew %}
+      {% if member.job == "Screenplay" || member.job == "Story" || member.job == "Original Music Composer" || member.job == "Director of Photography" %}
+      <li><span class="crew-role">{{ member.job }}</span>{{ member.name }}</li>
+      {% endif %}
+      {% endfor %}
+    </ul>
+    {% endif %}
+
+  {% endif %}
+
+  {# ── Reviews ── #}
   <div class="feed-section-label">REVIEWS</div>
   <div class="diary">
     {% for entry in reviews %}

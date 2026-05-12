@@ -7,7 +7,10 @@ use domain::ports::{
     MetadataClient, MovieProfileRepository, MovieRepository, PasswordHasher, PosterFetcherClient,
     PersonCommand, PersonQuery, SearchCommand, SearchPort,
     ReviewRepository, StatsRepository, UserRepository,
+    WatchlistRepository,
 };
+#[cfg(feature = "federation")]
+use domain::ports::RemoteWatchlistRepository;
 
 use crate::config::AppConfig;
 
@@ -33,5 +36,8 @@ pub struct AppContext {
     pub person_query: Arc<dyn PersonQuery>,
     pub search_port: Arc<dyn SearchPort>,
     pub search_command: Arc<dyn SearchCommand>,
+    pub watchlist_repository: Arc<dyn WatchlistRepository>,
+    #[cfg(feature = "federation")]
+    pub remote_watchlist_repository: Arc<dyn RemoteWatchlistRepository>,
     pub config: AppConfig,
 }

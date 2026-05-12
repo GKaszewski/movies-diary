@@ -10,11 +10,13 @@ use std::str::FromStr;
 
 use application::{
     commands::{
-        DeleteReviewCommand, RegisterCommand, SyncPosterCommand,
+        DeleteReviewCommand, MovieInput, RegisterCommand, SyncPosterCommand,
+        AddToWatchlistCommand, RemoveFromWatchlistCommand,
     },
     queries::{
         ExportQuery, GetActivityFeedQuery, GetMovieSocialPageQuery, GetMoviesQuery,
         GetReviewHistoryQuery, GetUserProfileQuery, GetUsersQuery, LoginQuery,
+        GetWatchlistQuery, IsOnWatchlistQuery,
     },
     use_cases::{
         delete_review, export_diary as export_diary_uc, get_activity_feed as get_feed_uc,
@@ -22,11 +24,12 @@ use application::{
         get_user_profile as get_user_profile_uc, get_users, log_review, login as login_uc,
         register as register_uc, sync_poster, update_profile,
         search as search_uc, get_person, get_person_credits,
+        add_to_watchlist, remove_from_watchlist, get_watchlist, is_on_watchlist,
     },
 };
 use domain::{
     errors::DomainError,
-    models::{DiaryEntry, ExportFormat, Movie, Review, PersonId, collections::PageParams},
+    models::{DiaryEntry, ExportFormat, Movie, MovieSummary, Review, PersonId, collections::PageParams},
     services::review_history::Trend,
     value_objects::{MovieId, UserId},
 };
@@ -44,6 +47,7 @@ use api_types::{
     MoviesQueryParams, MoviesResponse, PaginationQueryParams, ProfileResponse, RegisterRequest,
     ReviewDto, ReviewHistoryResponse, SocialFeedResponse, SocialReviewDto, UserProfileQueryParams,
     UserProfileResponse, UserStatsDto, UserSummaryDto, UserTrendsDto, UsersResponse,
+    WatchlistResponse, WatchlistEntryDto, WatchlistStatusResponse, AddToWatchlistRequest,
 };
 use api_types::search::{
     CastCreditDto, CrewCreditDto, MovieSearchHitDto, PersonCreditsDto, PersonDto,
@@ -96,12 +100,14 @@ pub async fn list_movies(
             limit: params.limit,
             offset: params.offset,
             search: params.search,
+            genre: params.genre,
+            language: params.language,
         },
     )
     .await?;
 
     Ok(Json(MoviesResponse {
-        items: page.items.iter().map(movie_to_dto).collect(),
+        items: page.items.iter().map(summary_to_dto).collect(),
         total_count: page.total_count,
         limit: page.limit,
         offset: page.offset,
@@ -438,12 +444,11 @@ pub async fn update_profile_handler(
             }
             "avatar" => {
                 let content_type = field.content_type().map(|s| s.to_string());
-                if let Ok(bytes) = field.bytes().await {
-                    if !bytes.is_empty() {
+                if let Ok(bytes) = field.bytes().await
+                    && !bytes.is_empty() {
                         avatar_bytes = Some(bytes.to_vec());
                         avatar_content_type = content_type;
                     }
-                }
             }
             _ => {}
         }
@@ -476,6 +481,26 @@ fn movie_to_dto(movie: &Movie) -> MovieDto {
         release_year: movie.release_year().value(),
         director: movie.director().map(|d| d.to_string()),
         poster_path: movie.poster_path().map(|p| p.value().to_string()),
+        genres: vec![],
+        runtime_minutes: None,
+        original_language: None,
+        overview: None,
+        collection_name: None,
+    }
+}
+
+fn summary_to_dto(summary: &MovieSummary) -> MovieDto {
+    MovieDto {
+        id: summary.movie.id().value(),
+        title: summary.movie.title().value().to_string(),
+        release_year: summary.movie.release_year().value(),
+        director: summary.movie.director().map(|d| d.to_string()),
+        poster_path: summary.movie.poster_path().map(|p| p.value().to_string()),
+        genres: summary.genres.clone(),
+        runtime_minutes: summary.runtime_minutes,
+        original_language: summary.original_language.clone(),
+        overview: summary.overview.clone(),
+        collection_name: summary.collection_name.clone(),
     }
 }
 
@@ -1232,4 +1257,120 @@ pub async fn get_person_credits_handler(
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
     }
+}
+
+#[utoipa::path(
+    get, path = "/api/v1/watchlist",
+    params(
+        ("limit" = Option<u32>, Query, description = "Max results"),
+        ("offset" = Option<u32>, Query, description = "Offset"),
+    ),
+    responses(
+        (status = 200, body = WatchlistResponse),
+        (status = 401, description = "Unauthorized"),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn get_watchlist_handler(
+    State(state): State<AppState>,
+    user: AuthenticatedUser,
+    Query(params): Query<PaginationQueryParams>,
+) -> Result<Json<WatchlistResponse>, ApiError> {
+    let page = get_watchlist::execute(
+        &state.app_ctx,
+        GetWatchlistQuery {
+            user_id: user.0.value(),
+            limit: params.limit,
+            offset: params.offset,
+        },
+    )
+    .await?;
+
+    Ok(Json(WatchlistResponse {
+        items: page.items.into_iter().map(|w| WatchlistEntryDto {
+            id: w.entry.id.value(),
+            movie: movie_to_dto(&w.movie),
+            added_at: w.entry.added_at.to_string(),
+        }).collect(),
+        total_count: page.total_count,
+        limit: page.limit,
+        offset: page.offset,
+    }))
+}
+
+#[utoipa::path(
+    post, path = "/api/v1/watchlist",
+    request_body = AddToWatchlistRequest,
+    responses(
+        (status = 201, description = "Added to watchlist"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Movie not found"),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn post_watchlist_add(
+    State(state): State<AppState>,
+    user: AuthenticatedUser,
+    Json(req): Json<AddToWatchlistRequest>,
+) -> Result<impl IntoResponse, ApiError> {
+    add_to_watchlist::execute(
+        &state.app_ctx,
+        AddToWatchlistCommand {
+            user_id: user.0.value(),
+            input: MovieInput {
+                movie_id: Some(req.movie_id),
+                external_metadata_id: None,
+                manual_title: None,
+                manual_release_year: None,
+                manual_director: None,
+            },
+        },
+    )
+    .await?;
+    Ok(StatusCode::CREATED)
+}
+
+#[utoipa::path(
+    delete, path = "/api/v1/watchlist/{movie_id}",
+    params(("movie_id" = Uuid, Path, description = "Movie ID")),
+    responses(
+        (status = 204, description = "Removed from watchlist"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Not on watchlist"),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn delete_watchlist_entry(
+    State(state): State<AppState>,
+    user: AuthenticatedUser,
+    Path(movie_id): Path<Uuid>,
+) -> Result<impl IntoResponse, ApiError> {
+    remove_from_watchlist::execute(
+        &state.app_ctx,
+        RemoveFromWatchlistCommand { user_id: user.0.value(), movie_id },
+    )
+    .await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+#[utoipa::path(
+    get, path = "/api/v1/watchlist/{movie_id}",
+    params(("movie_id" = Uuid, Path, description = "Movie ID")),
+    responses(
+        (status = 200, body = WatchlistStatusResponse),
+        (status = 401, description = "Unauthorized"),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn get_watchlist_status(
+    State(state): State<AppState>,
+    user: AuthenticatedUser,
+    Path(movie_id): Path<Uuid>,
+) -> Result<Json<WatchlistStatusResponse>, ApiError> {
+    let on_watchlist = is_on_watchlist::execute(
+        &state.app_ctx,
+        IsOnWatchlistQuery { user_id: user.0.value(), movie_id },
+    )
+    .await?;
+    Ok(Json(WatchlistStatusResponse { on_watchlist }))
 }

@@ -3,7 +3,7 @@ use domain::ports::EventHandler;
 use domain::{
     errors::DomainError,
     events::DomainEvent,
-    ports::{MovieRepository, ReviewRepository},
+    ports::{MovieRepository, ReviewRepository, WatchlistRepository},
     value_objects::{ReviewId, UserId},
 };
 use std::sync::Arc;
@@ -17,6 +17,7 @@ pub struct ActivityPubEventHandler {
     ap_service: Arc<ActivityPubService>,
     movie_repository: Arc<dyn MovieRepository>,
     review_repository: Arc<dyn ReviewRepository>,
+    watchlist_repository: Arc<dyn WatchlistRepository>,
     base_url: String,
 }
 
@@ -25,12 +26,14 @@ impl ActivityPubEventHandler {
         ap_service: Arc<ActivityPubService>,
         movie_repository: Arc<dyn MovieRepository>,
         review_repository: Arc<dyn ReviewRepository>,
+        watchlist_repository: Arc<dyn WatchlistRepository>,
         base_url: String,
     ) -> Self {
         Self {
             ap_service,
             movie_repository,
             review_repository,
+            watchlist_repository,
             base_url,
         }
     }
@@ -55,6 +58,21 @@ impl EventHandler for ActivityPubEventHandler {
             DomainEvent::UserUpdated { user_id } => self
                 .ap_service
                 .broadcast_actor_update(user_id.value())
+                .await
+                .map_err(|e| DomainError::InfrastructureError(e.to_string())),
+            DomainEvent::WatchlistEntryAdded {
+                user_id,
+                movie_id,
+                movie_title,
+                release_year,
+                external_metadata_id,
+                added_at,
+            } => self
+                .on_watchlist_added(user_id, movie_id, movie_title, *release_year, external_metadata_id, added_at)
+                .await
+                .map_err(|e| DomainError::InfrastructureError(e.to_string())),
+            DomainEvent::WatchlistEntryRemoved { user_id, movie_id } => self
+                .on_watchlist_removed(user_id, movie_id)
                 .await
                 .map_err(|e| DomainError::InfrastructureError(e.to_string())),
             _ => Ok(()),
@@ -159,6 +177,60 @@ impl ActivityPubEventHandler {
         let ap_id = review_url(&self.base_url, review_id);
         self.ap_service
             .broadcast_delete_to_followers(user_id.value(), ap_id)
+            .await?;
+        Ok(())
+    }
+
+    async fn on_watchlist_added(
+        &self,
+        user_id: &UserId,
+        movie_id: &domain::value_objects::MovieId,
+        movie_title: &str,
+        release_year: u16,
+        external_metadata_id: &Option<String>,
+        added_at: &chrono::NaiveDateTime,
+    ) -> anyhow::Result<()> {
+        use crate::urls::watchlist_entry_url;
+        let ap_id = watchlist_entry_url(&self.base_url, user_id.value(), movie_id.value());
+        let actor = actor_url(&self.base_url, user_id.value());
+
+        let poster_url = self
+            .movie_repository
+            .get_movie_by_id(movie_id)
+            .await
+            .ok()
+            .flatten()
+            .and_then(|m| m.poster_path().map(|p| format!("{}/images/{}", self.base_url, p.value())));
+
+        let added_at_utc =
+            chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(*added_at, chrono::Utc);
+        let obj = crate::objects::watchlist_to_ap_object(
+            ap_id.clone(),
+            actor,
+            movie_title.to_string(),
+            release_year,
+            external_metadata_id.clone(),
+            poster_url,
+            added_at_utc,
+            &self.base_url,
+        );
+        let json = serde_json::to_value(obj)?;
+
+        self.ap_service
+            .broadcast_add_to_followers(user_id.value(), ap_id, json)
+            .await?;
+        Ok(())
+    }
+
+    async fn on_watchlist_removed(
+        &self,
+        user_id: &UserId,
+        movie_id: &domain::value_objects::MovieId,
+    ) -> anyhow::Result<()> {
+        use crate::urls::watchlist_entry_url;
+        let ap_id = watchlist_entry_url(&self.base_url, user_id.value(), movie_id.value());
+        self.ap_service
+            .broadcast_undo_add_to_followers(user_id.value(), ap_id)
             .await?;
         Ok(())
     }

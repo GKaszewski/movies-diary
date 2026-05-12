@@ -164,6 +164,16 @@ impl domain::ports::ImportProfileRepository for PanicImportProfile {
     async fn delete(&self, _: &domain::value_objects::ImportProfileId) -> Result<(), DomainError> { panic!() }
 }
 
+struct PanicWatchlist;
+#[async_trait]
+impl domain::ports::WatchlistRepository for PanicWatchlist {
+    async fn add(&self, _: &domain::models::WatchlistEntry) -> Result<(), DomainError> { panic!() }
+    async fn remove(&self, _: &domain::value_objects::UserId, _: &domain::value_objects::MovieId) -> Result<(), DomainError> { panic!() }
+    async fn remove_if_present(&self, _: &domain::value_objects::UserId, _: &domain::value_objects::MovieId) -> Result<bool, DomainError> { Ok(false) }
+    async fn get_for_user(&self, _: &domain::value_objects::UserId, _: &domain::models::collections::PageParams) -> Result<domain::models::collections::Paginated<domain::models::WatchlistWithMovie>, DomainError> { panic!() }
+    async fn contains(&self, _: &domain::value_objects::UserId, _: &domain::value_objects::MovieId) -> Result<bool, DomainError> { Ok(false) }
+}
+
 struct PanicPersonCommand;
 #[async_trait]
 impl PersonCommand for PanicPersonCommand {
@@ -194,6 +204,18 @@ impl SearchCommand for PanicSearchCommand {
 
 #[cfg(feature = "federation")]
 struct PanicSocialQuery;
+
+#[cfg(feature = "federation")]
+struct PanicRemoteWatchlist;
+#[cfg(feature = "federation")]
+#[async_trait::async_trait]
+impl domain::ports::RemoteWatchlistRepository for PanicRemoteWatchlist {
+    async fn save(&self, _: domain::models::RemoteWatchlistEntry) -> Result<(), DomainError> { Ok(()) }
+    async fn remove_by_ap_id(&self, _: &str, _: &str) -> Result<(), DomainError> { Ok(()) }
+    async fn get_by_actor_url(&self, _: &str) -> Result<Vec<domain::models::RemoteWatchlistEntry>, DomainError> { Ok(vec![]) }
+    async fn remove_all_by_actor(&self, _: &str) -> Result<(), DomainError> { Ok(()) }
+    async fn get_by_derived_uuid(&self, _: uuid::Uuid) -> Result<Vec<domain::models::RemoteWatchlistEntry>, DomainError> { Ok(vec![]) }
+}
 #[cfg(feature = "federation")]
 #[async_trait::async_trait]
 impl domain::ports::SocialQueryPort for PanicSocialQuery {
@@ -236,6 +258,9 @@ async fn test_app() -> Router {
             import_session_repository: Arc::new(PanicImportSession),
             import_profile_repository: Arc::new(PanicImportProfile),
             movie_profile_repository: Arc::new(PanicMovieProfile),
+            watchlist_repository: Arc::new(PanicWatchlist),
+            #[cfg(feature = "federation")]
+            remote_watchlist_repository: Arc::new(PanicRemoteWatchlist),
             person_command: Arc::new(PanicPersonCommand),
             person_query: Arc::new(PanicPersonQuery),
             search_port: Arc::new(PanicSearchPort),

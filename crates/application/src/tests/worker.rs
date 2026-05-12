@@ -45,6 +45,7 @@ impl EventHandler for RecordingHandler {
             DomainEvent::UserUpdated { .. } => "user_updated",
             DomainEvent::MovieEnrichmentRequested { .. } => "movie_enrichment_requested",
             DomainEvent::ImageStored { .. } => "image_stored",
+            DomainEvent::WatchlistEntryAdded { .. } | DomainEvent::WatchlistEntryRemoved { .. } => "watchlist",
         };
         self.calls.lock().unwrap().push(label);
         Ok(())

@@ -14,6 +14,10 @@ pub mod import_session;
 pub mod import_profile;
 pub mod person;
 pub mod search;
+pub mod watchlist;
+pub use watchlist::{WatchlistEntry, WatchlistWithMovie};
+pub mod remote_watchlist;
+pub use remote_watchlist::RemoteWatchlistEntry;
 
 pub use import::{
     AnnotatedRow, DomainField, FieldMapping, FileFormat, ImportError,
@@ -43,6 +47,23 @@ pub struct DiaryFilter {
     pub movie_id: Option<MovieId>,
     pub user_id: Option<UserId>,
     pub search: Option<String>,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct MovieFilter {
+    pub search: Option<String>,
+    pub genre: Option<String>,
+    pub language: Option<String>,
+}
+
+#[derive(Clone, Debug)]
+pub struct MovieSummary {
+    pub movie: Movie,
+    pub genres: Vec<String>,
+    pub runtime_minutes: Option<u32>,
+    pub original_language: Option<String>,
+    pub overview: Option<String>,
+    pub collection_name: Option<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -133,16 +154,11 @@ impl Movie {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub enum ReviewSource {
+    #[default]
     Local,
     Remote { actor_url: String },
-}
-
-impl Default for ReviewSource {
-    fn default() -> Self {
-        ReviewSource::Local
-    }
 }
 
 #[derive(Clone, Debug)]

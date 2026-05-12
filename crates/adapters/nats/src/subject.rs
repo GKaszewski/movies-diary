@@ -10,6 +10,9 @@ pub fn event_to_subject(prefix: &str, event: &DomainEvent) -> String {
         DomainEvent::UserUpdated { .. }               => "user.updated",
         DomainEvent::MovieEnrichmentRequested { .. }  => "movie.enrichment.requested",
         DomainEvent::ImageStored { .. }              => "image.stored",
+        DomainEvent::WatchlistEntryAdded { .. } | DomainEvent::WatchlistEntryRemoved { .. } => {
+            unreachable!("watchlist events are not published to NATS")
+        }
     };
     format!("{prefix}.{suffix}")
 }

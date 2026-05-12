@@ -6,6 +6,7 @@ pub mod movies;
 pub mod search;
 pub mod social;
 pub mod users;
+pub mod watchlist;
 
 pub use auth::*;
 pub use common::*;
@@ -14,3 +15,4 @@ pub use import::*;
 pub use movies::*;
 pub use social::*;
 pub use users::*;
+pub use watchlist::*;

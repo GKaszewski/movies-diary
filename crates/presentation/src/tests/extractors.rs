@@ -19,7 +19,7 @@ use domain::{
     ports::{
         AuthService, DiaryRepository, EventPublisher, GeneratedToken, ImageStorage,
         MetadataClient, MovieRepository, PasswordHasher, PosterFetcherClient, ReviewRepository,
-        StatsRepository, UserRepository,
+        StatsRepository, UserRepository, WatchlistRepository,
         PersonCommand, PersonQuery, SearchPort, SearchCommand,
     },
     value_objects::{
@@ -58,7 +58,7 @@ impl MovieRepository for Panic {
     async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> {
         panic!()
     }
-    async fn list_movies(&self, _: &domain::models::collections::PageParams, _: Option<&str>) -> Result<domain::models::collections::Paginated<Movie>, DomainError> {
+    async fn list_movies(&self, _: &domain::models::collections::PageParams, _: &domain::models::MovieFilter) -> Result<domain::models::collections::Paginated<domain::models::MovieSummary>, DomainError> {
         panic!()
     }
 }
@@ -242,6 +242,14 @@ impl domain::ports::ImportProfileRepository for Panic {
     async fn delete(&self, _: &domain::value_objects::ImportProfileId) -> Result<(), DomainError> { panic!() }
 }
 #[async_trait::async_trait]
+impl WatchlistRepository for Panic {
+    async fn add(&self, _: &domain::models::WatchlistEntry) -> Result<(), DomainError> { panic!() }
+    async fn remove(&self, _: &domain::value_objects::UserId, _: &domain::value_objects::MovieId) -> Result<(), DomainError> { panic!() }
+    async fn remove_if_present(&self, _: &domain::value_objects::UserId, _: &domain::value_objects::MovieId) -> Result<bool, DomainError> { Ok(false) }
+    async fn get_for_user(&self, _: &domain::value_objects::UserId, _: &domain::models::collections::PageParams) -> Result<domain::models::collections::Paginated<domain::models::WatchlistWithMovie>, DomainError> { panic!() }
+    async fn contains(&self, _: &domain::value_objects::UserId, _: &domain::value_objects::MovieId) -> Result<bool, DomainError> { Ok(false) }
+}
+#[async_trait::async_trait]
 impl domain::ports::MovieProfileRepository for Panic {
     async fn upsert(&self, _: &domain::models::MovieProfile) -> Result<(), DomainError> { panic!() }
     async fn get_by_movie_id(&self, _: &domain::value_objects::MovieId) -> Result<Option<domain::models::MovieProfile>, DomainError> { Ok(None) }
@@ -335,6 +343,7 @@ impl crate::ports::HtmlRenderer for Panic {
     fn render_profile_settings_page(&self, _: application::ports::ProfileSettingsPageData) -> Result<String, String> { panic!() }
     fn render_blocked_domains_page(&self, _: application::ports::BlockedDomainsPageData) -> Result<String, String> { panic!() }
     fn render_blocked_actors_page(&self, _: application::ports::BlockedActorsPageData) -> Result<String, String> { panic!() }
+    fn render_watchlist_page(&self, _: application::ports::WatchlistPageData) -> Result<String, String> { panic!() }
 }
 impl crate::ports::RssFeedRenderer for Panic {
     fn render_feed(&self, _: &[DiaryEntry], _: &str) -> Result<String, String> {
@@ -373,6 +382,15 @@ impl SearchCommand for Panic {
     async fn index(&self, _: IndexableDocument) -> Result<(), DomainError> { panic!() }
     async fn remove(&self, _: EntityType, _: &str) -> Result<(), DomainError> { panic!() }
 }
+#[cfg(feature = "federation")]
+#[async_trait::async_trait]
+impl domain::ports::RemoteWatchlistRepository for Panic {
+    async fn save(&self, _: domain::models::RemoteWatchlistEntry) -> Result<(), DomainError> { Ok(()) }
+    async fn remove_by_ap_id(&self, _: &str, _: &str) -> Result<(), DomainError> { Ok(()) }
+    async fn get_by_actor_url(&self, _: &str) -> Result<Vec<domain::models::RemoteWatchlistEntry>, DomainError> { Ok(vec![]) }
+    async fn remove_all_by_actor(&self, _: &str) -> Result<(), DomainError> { Ok(()) }
+    async fn get_by_derived_uuid(&self, _: uuid::Uuid) -> Result<Vec<domain::models::RemoteWatchlistEntry>, DomainError> { Ok(vec![]) }
+}
 
 // --- Single state factory — only auth_service varies ---
 
@@ -395,6 +413,9 @@ pub fn make_test_state(auth_service: Arc<dyn AuthService>) -> crate::state::AppS
             import_session_repository: Arc::clone(&repo) as _,
             import_profile_repository: Arc::clone(&repo) as _,
             movie_profile_repository: Arc::clone(&repo) as _,
+            watchlist_repository: Arc::clone(&repo) as _,
+            #[cfg(feature = "federation")]
+            remote_watchlist_repository: Arc::clone(&repo) as _,
             person_command: Arc::clone(&repo) as _,
             person_query: Arc::clone(&repo) as _,
             search_port: Arc::clone(&repo) as _,

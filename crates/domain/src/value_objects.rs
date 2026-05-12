@@ -25,6 +25,7 @@ uuid_id!(ReviewId);
 uuid_id!(UserId);
 uuid_id!(ImportSessionId);
 uuid_id!(ImportProfileId);
+uuid_id!(WatchlistEntryId);
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ExternalMetadataId(String);
@@ -80,7 +81,7 @@ impl MovieTitle {
             ))
         } else if trimmed.len() > Self::MAX_LENGTH {
             Err(DomainError::ValidationError(
-                format!("Movie title exceeds {} characters", Self::MAX_LENGTH).into(),
+                format!("Movie title exceeds {} characters", Self::MAX_LENGTH),
             ))
         } else {
             Ok(Self(trimmed.to_string()))
@@ -102,7 +103,7 @@ impl Comment {
         let trimmed = comment.trim();
         if trimmed.len() > Self::MAX_LENGTH {
             Err(DomainError::ValidationError(
-                format!("Comment exceeds {} characters", Self::MAX_LENGTH).into(),
+                format!("Comment exceeds {} characters", Self::MAX_LENGTH),
             ))
         } else {
             Ok(Self(trimmed.to_string()))
@@ -190,8 +191,7 @@ impl Username {
                     "Username must be {}–{} characters",
                     Self::MIN_LENGTH,
                     Self::MAX_LENGTH
-                )
-                .into(),
+                ),
             ));
         }
         if !s

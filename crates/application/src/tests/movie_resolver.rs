@@ -1,5 +1,5 @@
 use super::*;
-use chrono::NaiveDate;
+use crate::commands::MovieInput;
 use domain::{
     errors::DomainError,
     models::Movie,
@@ -7,19 +7,13 @@ use domain::{
     value_objects::{ExternalMetadataId, MovieId, MovieTitle, PosterUrl, ReleaseYear},
 };
 
-fn make_cmd(ext_id: Option<&str>, title: Option<&str>, year: Option<u16>) -> LogReviewCommand {
-    LogReviewCommand {
+fn make_input(ext_id: Option<&str>, title: Option<&str>, year: Option<u16>) -> MovieInput {
+    MovieInput {
+        movie_id: None,
         external_metadata_id: ext_id.map(String::from),
         manual_title: title.map(String::from),
         manual_release_year: year,
         manual_director: None,
-        user_id: uuid::Uuid::new_v4(),
-        rating: 4,
-        comment: None,
-        watched_at: NaiveDate::from_ymd_opt(2024, 1, 1)
-            .unwrap()
-            .and_hms_opt(0, 0, 0)
-            .unwrap(),
     }
 }
 
@@ -59,7 +53,7 @@ impl MovieRepository for RepoWithExternalMovie {
         panic!("unexpected")
     }
     async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> { panic!("unexpected") }
-    async fn list_movies(&self, _: &domain::models::collections::PageParams, _: Option<&str>) -> Result<domain::models::collections::Paginated<Movie>, DomainError> { panic!("unexpected") }
+    async fn list_movies(&self, _: &domain::models::collections::PageParams, _: &domain::models::MovieFilter) -> Result<domain::models::collections::Paginated<domain::models::MovieSummary>, DomainError> { panic!("unexpected") }
 }
 
 #[async_trait::async_trait]
@@ -82,7 +76,7 @@ impl MovieRepository for RepoEmpty {
     }
     async fn upsert_movie(&self, _: &Movie) -> Result<(), DomainError> { panic!("unexpected") }
     async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> { panic!("unexpected") }
-    async fn list_movies(&self, _: &domain::models::collections::PageParams, _: Option<&str>) -> Result<domain::models::collections::Paginated<Movie>, DomainError> { panic!("unexpected") }
+    async fn list_movies(&self, _: &domain::models::collections::PageParams, _: &domain::models::MovieFilter) -> Result<domain::models::collections::Paginated<domain::models::MovieSummary>, DomainError> { panic!("unexpected") }
 }
 
 #[async_trait::async_trait]
@@ -105,7 +99,7 @@ impl MovieRepository for RepoWithTitleMatch {
     }
     async fn upsert_movie(&self, _: &Movie) -> Result<(), DomainError> { panic!("unexpected") }
     async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> { panic!("unexpected") }
-    async fn list_movies(&self, _: &domain::models::collections::PageParams, _: Option<&str>) -> Result<domain::models::collections::Paginated<Movie>, DomainError> { panic!("unexpected") }
+    async fn list_movies(&self, _: &domain::models::collections::PageParams, _: &domain::models::MovieFilter) -> Result<domain::models::collections::Paginated<domain::models::MovieSummary>, DomainError> { panic!("unexpected") }
 }
 
 struct MetaReturnsMovie(Movie);
@@ -149,14 +143,14 @@ impl MetadataClient for MetaErrors {
 
 #[test]
 fn external_id_strategy_can_handle_cmd_with_id() {
-    let cmd = make_cmd(Some("tt123"), None, None);
-    assert!(ExternalIdStrategy.can_handle(&cmd));
+    let input = make_input(Some("tt123"), None, None);
+    assert!(ExternalIdStrategy.can_handle(&input));
 }
 
 #[test]
 fn external_id_strategy_cannot_handle_cmd_without_id() {
-    let cmd = make_cmd(None, Some("Inception"), Some(2010));
-    assert!(!ExternalIdStrategy.can_handle(&cmd));
+    let input = make_input(None, Some("Inception"), Some(2010));
+    assert!(!ExternalIdStrategy.can_handle(&input));
 }
 
 #[tokio::test]
@@ -168,8 +162,8 @@ async fn external_id_strategy_returns_cached_movie() {
         repository: &repo,
         metadata_client: &meta,
     };
-    let cmd = make_cmd(Some("tt123"), None, None);
-    let result = ExternalIdStrategy.resolve(&cmd, &deps).await.unwrap();
+    let input = make_input(Some("tt123"), None, None);
+    let result = ExternalIdStrategy.resolve(&input, &deps).await.unwrap();
     assert!(matches!(result, Some((_, false))));
 }
 
@@ -182,8 +176,8 @@ async fn external_id_strategy_fetches_from_metadata_when_not_cached() {
         repository: &repo,
         metadata_client: &meta,
     };
-    let cmd = make_cmd(Some("tt123"), None, None);
-    let result = ExternalIdStrategy.resolve(&cmd, &deps).await.unwrap();
+    let input = make_input(Some("tt123"), None, None);
+    let result = ExternalIdStrategy.resolve(&input, &deps).await.unwrap();
     assert!(matches!(result, Some((_, true))));
 }
 
@@ -195,8 +189,8 @@ async fn external_id_strategy_falls_through_on_metadata_error() {
         repository: &repo,
         metadata_client: &meta,
     };
-    let cmd = make_cmd(Some("tt123"), None, None);
-    let result = ExternalIdStrategy.resolve(&cmd, &deps).await.unwrap();
+    let input = make_input(Some("tt123"), None, None);
+    let result = ExternalIdStrategy.resolve(&input, &deps).await.unwrap();
     assert!(result.is_none());
 }
 
@@ -204,14 +198,14 @@ async fn external_id_strategy_falls_through_on_metadata_error() {
 
 #[test]
 fn title_strategy_can_handle_cmd_with_title() {
-    let cmd = make_cmd(None, Some("Inception"), Some(2010));
-    assert!(TitleSearchStrategy.can_handle(&cmd));
+    let input = make_input(None, Some("Inception"), Some(2010));
+    assert!(TitleSearchStrategy.can_handle(&input));
 }
 
 #[test]
 fn title_strategy_cannot_handle_cmd_without_title() {
-    let cmd = make_cmd(Some("tt123"), None, None);
-    assert!(!TitleSearchStrategy.can_handle(&cmd));
+    let input = make_input(Some("tt123"), None, None);
+    assert!(!TitleSearchStrategy.can_handle(&input));
 }
 
 #[tokio::test]
@@ -223,8 +217,8 @@ async fn title_strategy_fetches_from_metadata() {
         repository: &repo,
         metadata_client: &meta,
     };
-    let cmd = make_cmd(None, Some("Inception"), Some(2010));
-    let result = TitleSearchStrategy.resolve(&cmd, &deps).await.unwrap();
+    let input = make_input(None, Some("Inception"), Some(2010));
+    let result = TitleSearchStrategy.resolve(&input, &deps).await.unwrap();
     assert!(matches!(result, Some((_, true))));
 }
 
@@ -236,8 +230,8 @@ async fn title_strategy_falls_through_on_metadata_error() {
         repository: &repo,
         metadata_client: &meta,
     };
-    let cmd = make_cmd(None, Some("Inception"), Some(2010));
-    let result = TitleSearchStrategy.resolve(&cmd, &deps).await.unwrap();
+    let input = make_input(None, Some("Inception"), Some(2010));
+    let result = TitleSearchStrategy.resolve(&input, &deps).await.unwrap();
     assert!(result.is_none());
 }
 
@@ -245,14 +239,14 @@ async fn title_strategy_falls_through_on_metadata_error() {
 
 #[test]
 fn manual_strategy_can_handle_cmd_with_title() {
-    let cmd = make_cmd(None, Some("Inception"), Some(2010));
-    assert!(ManualMovieStrategy.can_handle(&cmd));
+    let input = make_input(None, Some("Inception"), Some(2010));
+    assert!(ManualMovieStrategy.can_handle(&input));
 }
 
 #[test]
 fn manual_strategy_cannot_handle_cmd_without_title() {
-    let cmd = make_cmd(Some("tt123"), None, None);
-    assert!(!ManualMovieStrategy.can_handle(&cmd));
+    let input = make_input(Some("tt123"), None, None);
+    assert!(!ManualMovieStrategy.can_handle(&input));
 }
 
 #[tokio::test]
@@ -264,8 +258,8 @@ async fn manual_strategy_returns_existing_movie() {
         repository: &repo,
         metadata_client: &meta,
     };
-    let cmd = make_cmd(None, Some("Inception"), Some(2010));
-    let result = ManualMovieStrategy.resolve(&cmd, &deps).await.unwrap();
+    let input = make_input(None, Some("Inception"), Some(2010));
+    let result = ManualMovieStrategy.resolve(&input, &deps).await.unwrap();
     assert!(matches!(result, Some((_, false))));
 }
 
@@ -277,8 +271,8 @@ async fn manual_strategy_creates_new_movie_when_no_match() {
         repository: &repo,
         metadata_client: &meta,
     };
-    let cmd = make_cmd(None, Some("Inception"), Some(2010));
-    let result = ManualMovieStrategy.resolve(&cmd, &deps).await.unwrap();
+    let input = make_input(None, Some("Inception"), Some(2010));
+    let result = ManualMovieStrategy.resolve(&input, &deps).await.unwrap();
     assert!(matches!(result, Some((_, true))));
 }
 
@@ -290,8 +284,8 @@ async fn manual_strategy_errors_without_year() {
         repository: &repo,
         metadata_client: &meta,
     };
-    let cmd = make_cmd(None, Some("Inception"), None);
-    assert!(ManualMovieStrategy.resolve(&cmd, &deps).await.is_err());
+    let input = make_input(None, Some("Inception"), None);
+    assert!(ManualMovieStrategy.resolve(&input, &deps).await.is_err());
 }
 
 // --- MovieResolver pipeline ---
@@ -304,8 +298,8 @@ async fn resolver_returns_error_when_no_strategy_matches() {
         repository: &repo,
         metadata_client: &meta,
     };
-    let cmd = make_cmd(None, None, None);
-    let result = MovieResolver::default_pipeline().resolve(&cmd, &deps).await;
+    let input = make_input(None, None, None);
+    let result = MovieResolver::default_pipeline().resolve(&input, &deps).await;
     assert!(result.is_err());
 }
 
@@ -318,9 +312,9 @@ async fn resolver_uses_cached_movie_when_external_id_matches() {
         repository: &repo,
         metadata_client: &meta,
     };
-    let cmd = make_cmd(Some("tt123"), None, None);
+    let input = make_input(Some("tt123"), None, None);
     let (_, is_new) = MovieResolver::default_pipeline()
-        .resolve(&cmd, &deps)
+        .resolve(&input, &deps)
         .await
         .unwrap();
     assert!(!is_new);
@@ -334,9 +328,9 @@ async fn resolver_falls_through_to_manual_when_external_and_title_both_fail() {
         repository: &repo,
         metadata_client: &meta,
     };
-    let cmd = make_cmd(Some("tt123"), Some("Inception"), Some(2010));
+    let input = make_input(Some("tt123"), Some("Inception"), Some(2010));
     let (_, is_new) = MovieResolver::default_pipeline()
-        .resolve(&cmd, &deps)
+        .resolve(&input, &deps)
         .await
         .unwrap();
     assert!(is_new);

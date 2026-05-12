@@ -200,7 +200,7 @@ pub struct UndoActivity {
     #[serde(rename = "type", default)]
     pub(crate) kind: UndoType,
     pub(crate) actor: ObjectId<DbActor>,
-    pub(crate) object: FollowActivity,
+    pub(crate) object: serde_json::Value,
 }
 
 #[async_trait::async_trait]
@@ -223,19 +223,51 @@ impl Activity for UndoActivity {
     async fn receive(self, data: &Data<Self::DataType>) -> Result<(), Self::Error> {
         let domain = self.actor().host_str().unwrap_or("");
         if data.federation_repo.is_domain_blocked(domain).await? {
-            tracing::info!(actor = %self.actor(), "ignoring activity from blocked domain");
+            tracing::info!(actor = %self.actor(), "ignoring Undo from blocked domain");
             return Ok(());
         }
-        if let Some(user_id) = crate::urls::extract_user_id_from_url(self.object.object.inner()) {
-            data.federation_repo
-                .remove_follower(user_id, self.actor.inner().as_str())
-                .await?;
+
+        let obj_type = self.object.get("type").and_then(|t| t.as_str()).unwrap_or("");
+
+        match obj_type {
+            "Follow" => {
+                if let Some(obj_url) = self.object.get("object").and_then(|o| o.as_str()) {
+                    if let Ok(url) = Url::parse(obj_url) {
+                        if let Some(user_id) = crate::urls::extract_user_id_from_url(&url) {
+                            data.federation_repo
+                                .remove_follower(user_id, self.actor.inner().as_str())
+                                .await?;
+                        }
+                    }
+                }
+                data.object_handler
+                    .on_actor_removed(self.actor.inner())
+                    .await
+                    .map_err(|e| Error::from(anyhow::anyhow!(e)))?;
+                tracing::info!(actor = %self.actor.inner(), "unfollowed");
+            }
+            "Add" => {
+                let ap_id_str = self.object
+                    .get("object")
+                    .and_then(|o| o.get("id"))
+                    .and_then(|id| id.as_str())
+                    .or_else(|| self.object.get("id").and_then(|id| id.as_str()));
+
+                if let Some(ap_id_str) = ap_id_str {
+                    if let Ok(ap_id) = Url::parse(ap_id_str) {
+                        data.object_handler
+                            .on_delete(&ap_id, self.actor.inner())
+                            .await
+                            .map_err(|e| Error::from(anyhow::anyhow!(e)))?;
+                        tracing::info!(ap_id = %ap_id_str, "undo Add (watchlist remove)");
+                    }
+                }
+            }
+            other => {
+                tracing::debug!(kind = %other, "ignoring Undo of unknown activity type");
+            }
         }
-        data.object_handler
-            .on_actor_removed(self.actor.inner())
-            .await
-            .map_err(|e| Error::from(anyhow::anyhow!(e)))?;
-        tracing::info!(actor = %self.actor.inner(), "unfollowed");
+
         Ok(())
     }
 }
@@ -430,6 +462,56 @@ impl Activity for AnnounceActivity {
     }
 }
 
+// --- Add ---
+
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[serde(rename = "Add")]
+pub struct AddType;
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AddActivity {
+    pub(crate) id: Url,
+    #[serde(rename = "type", default)]
+    pub(crate) kind: AddType,
+    pub(crate) actor: ObjectId<DbActor>,
+    pub(crate) object: serde_json::Value,
+}
+
+#[async_trait::async_trait]
+impl Activity for AddActivity {
+    type DataType = FederationData;
+    type Error = Error;
+
+    fn id(&self) -> &Url {
+        &self.id
+    }
+
+    fn actor(&self) -> &Url {
+        self.actor.inner()
+    }
+
+    async fn verify(&self, _data: &Data<Self::DataType>) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    async fn receive(self, data: &Data<Self::DataType>) -> Result<(), Self::Error> {
+        let domain = self.actor().host_str().unwrap_or("");
+        if data.federation_repo.is_domain_blocked(domain).await? {
+            tracing::info!(actor = %self.actor(), "ignoring Add from blocked domain");
+            return Ok(());
+        }
+        let ap_id = self.id.clone();
+        let actor_url = self.actor.inner().clone();
+        data.object_handler
+            .on_create(&ap_id, &actor_url, self.object)
+            .await
+            .map_err(|e| Error::from(anyhow::anyhow!(e)))?;
+        tracing::info!(actor = %actor_url, "received Add activity");
+        Ok(())
+    }
+}
+
 // --- Block ---
 
 #[derive(Clone, Default, Debug, Serialize, Deserialize)]
@@ -503,6 +585,8 @@ pub enum InboxActivities {
     Update(UpdateActivity),
     #[serde(rename = "Announce")]
     Announce(AnnounceActivity),
+    #[serde(rename = "Add")]
+    Add(AddActivity),
     #[serde(rename = "Block")]
     Block(BlockActivity),
 }

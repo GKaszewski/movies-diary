@@ -44,6 +44,18 @@ pub enum DomainEvent {
     ImageStored {
         key: String,
     },
+    WatchlistEntryAdded {
+        user_id: UserId,
+        movie_id: MovieId,
+        movie_title: String,
+        release_year: u16,
+        external_metadata_id: Option<String>,
+        added_at: chrono::NaiveDateTime,
+    },
+    WatchlistEntryRemoved {
+        user_id: UserId,
+        movie_id: MovieId,
+    },
 }
 
 #[async_trait]

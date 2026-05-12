@@ -644,23 +644,21 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
         }
 
         Action::ScrollUp => {
-            if let Screen::Main(m) = &mut app.screen {
-                if m.diary.selected > 0 {
+            if let Screen::Main(m) = &mut app.screen
+                && m.diary.selected > 0 {
                     m.diary.selected -= 1;
                     m.diary.history = None;
                 }
-            }
             vec![]
         }
 
         Action::OpenHistory => {
-            if let Screen::Main(m) = &mut app.screen {
-                if let Some(entry) = m.diary.entries.get(m.diary.selected) {
+            if let Screen::Main(m) = &mut app.screen
+                && let Some(entry) = m.diary.entries.get(m.diary.selected) {
                     let movie_id = entry.movie.id;
                     app.loading = true;
                     return vec![Command::LoadHistory { movie_id }];
                 }
-            }
             vec![]
         }
 
@@ -676,13 +674,12 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
         }
 
         Action::LoadPrev => {
-            if let Screen::Main(m) = &mut app.screen {
-                if m.diary.offset > 0 {
+            if let Screen::Main(m) = &mut app.screen
+                && m.diary.offset > 0 {
                     let prev = m.diary.offset.saturating_sub(20);
                     m.diary.offset = prev;
                     return vec![Command::LoadDiary { offset: prev }];
                 }
-            }
             vec![]
         }
 
@@ -732,20 +729,18 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
         }
 
         Action::DeleteInit => {
-            if let Screen::Main(m) = &mut app.screen {
-                if let Some(entry) = m.diary.entries.get(m.diary.selected) {
+            if let Screen::Main(m) = &mut app.screen
+                && let Some(entry) = m.diary.entries.get(m.diary.selected) {
                     m.diary.delete_pending = Some(entry.review.id);
                 }
-            }
             vec![]
         }
 
         Action::DeleteConfirm => {
-            if let Screen::Main(m) = &mut app.screen {
-                if let Some(review_id) = m.diary.delete_pending.take() {
+            if let Screen::Main(m) = &mut app.screen
+                && let Some(review_id) = m.diary.delete_pending.take() {
                     return vec![Command::DeleteReview(review_id)];
                 }
-            }
             vec![]
         }
 
@@ -782,26 +777,24 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
 
         // ── Add Review ────────────────────────────────────────────────────────
         Action::RatingUp => {
-            if let Screen::Main(m) = &mut app.screen {
-                if m.add_review.rating < 5 {
+            if let Screen::Main(m) = &mut app.screen
+                && m.add_review.rating < 5 {
                     m.add_review.rating += 1;
                 }
-            }
             vec![]
         }
 
         Action::RatingDown => {
-            if let Screen::Main(m) = &mut app.screen {
-                if m.add_review.rating > 0 {
+            if let Screen::Main(m) = &mut app.screen
+                && m.add_review.rating > 0 {
                     m.add_review.rating -= 1;
                 }
-            }
             vec![]
         }
 
         Action::ReviewSubmit => {
-            if let Screen::Main(m) = &app.screen {
-                if m.tab == Tab::AddReview {
+            if let Screen::Main(m) = &app.screen
+                && m.tab == Tab::AddReview {
                     let f = &m.add_review;
                     let has_ext = !f.external_id.is_empty();
                     let has_title = !f.title.is_empty();
@@ -851,7 +844,6 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
                     app.loading = true;
                     return vec![Command::CreateReview(req)];
                 }
-            }
             vec![]
         }
 
@@ -878,8 +870,8 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
 
         // ── Bulk Import ───────────────────────────────────────────────────────
         Action::BulkParseFile => {
-            if let Screen::Main(m) = &mut app.screen {
-                if m.tab == Tab::BulkImport && m.bulk_import.stage == BulkImportStage::EnterPath {
+            if let Screen::Main(m) = &mut app.screen
+                && m.tab == Tab::BulkImport && m.bulk_import.stage == BulkImportStage::EnterPath {
                     let path = m.bulk_import.file_path.trim().to_string();
                     match std::fs::read_to_string(&path) {
                         Ok(content) => {
@@ -894,13 +886,12 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
                         }
                     }
                 }
-            }
             vec![]
         }
 
         Action::BulkImportAll => {
-            if let Screen::Main(m) = &mut app.screen {
-                if m.tab == Tab::BulkImport && m.bulk_import.stage == BulkImportStage::Preview {
+            if let Screen::Main(m) = &mut app.screen
+                && m.tab == Tab::BulkImport && m.bulk_import.stage == BulkImportStage::Preview {
                     let valid: Vec<LogReviewRequest> = m
                         .bulk_import
                         .parsed
@@ -919,7 +910,6 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
                     m.bulk_import.stage = BulkImportStage::Importing { done: 0 };
                     return vec![Command::ImportNext(0)];
                 }
-            }
             vec![]
         }
 

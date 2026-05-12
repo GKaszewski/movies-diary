@@ -3,7 +3,7 @@ use application::ports::{
     BlockedDomainsPageData, FollowersPageData, FollowingPageData, HtmlPageContext, HtmlRenderer,
     ImportMappingPageData, ImportPreviewPageData, ImportPreviewRow, ImportProfileView,
     ImportRowStatus, ImportUploadPageData, LoginPageData, MovieDetailPageData, NewReviewPageData,
-    ProfilePageData, ProfileSettingsPageData, RegisterPageData, UsersPageData,
+    ProfilePageData, ProfileSettingsPageData, RegisterPageData, UsersPageData, WatchlistPageData,
 };
 use askama::Template;
 use chrono::Datelike;
@@ -101,11 +101,26 @@ struct MovieDetailTemplate<'a> {
     ctx: &'a HtmlPageContext,
     movie: &'a domain::models::Movie,
     stats: &'a domain::models::MovieStats,
+    profile: Option<&'a domain::models::MovieProfile>,
     reviews: &'a [domain::models::FeedEntry],
+    on_watchlist: bool,
     current_offset: u32,
     has_more: bool,
     limit: u32,
     histogram_max: u64,
+}
+
+#[derive(Template)]
+#[template(path = "watchlist.html")]
+struct WatchlistTemplate<'a> {
+    ctx: &'a HtmlPageContext,
+    owner_id: uuid::Uuid,
+    display_entries: &'a [application::ports::WatchlistDisplayEntry],
+    current_offset: u32,
+    has_more: bool,
+    limit: u32,
+    is_owner: bool,
+    error: Option<String>,
 }
 
 impl<'a> ActivityFeedTemplate<'a> {
@@ -358,6 +373,7 @@ struct ImportPreviewTemplate<'a> {
     rows: &'a [ImportPreviewRow],
 }
 
+#[derive(Default)]
 pub struct AskamaHtmlRenderer;
 
 impl AskamaHtmlRenderer {
@@ -374,7 +390,7 @@ impl HtmlRenderer for AskamaHtmlRenderer {
     ) -> Result<String, String> {
         let has_more = (data.offset + data.limit) < data.total_count as u32;
         let (total_pages, current_page) = if data.limit > 0 {
-            let tp = ((data.total_count + data.limit as u64 - 1) / data.limit as u64) as u32;
+            let tp = data.total_count.div_ceil(data.limit as u64) as u32;
             (tp, data.offset / data.limit)
         } else {
             (0, 0)
@@ -420,16 +436,8 @@ impl HtmlRenderer for AskamaHtmlRenderer {
 
     fn render_activity_feed_page(&self, data: ActivityFeedPageData) -> Result<String, String> {
         let limit = data.limit;
-        let total_pages = if limit > 0 {
-            ((data.entries.total_count + limit as u64 - 1) / limit as u64) as u32
-        } else {
-            0
-        };
-        let current_page = if limit > 0 {
-            data.current_offset / limit
-        } else {
-            0
-        };
+        let total_pages = data.entries.total_count.div_ceil(limit.max(1) as u64) as u32;
+        let current_page = data.current_offset.checked_div(limit).unwrap_or(0);
         ActivityFeedTemplate {
             entries: &data.entries.items,
             current_offset: data.current_offset,
@@ -496,7 +504,7 @@ impl HtmlRenderer for AskamaHtmlRenderer {
         let heatmap = data
             .history
             .as_deref()
-            .map(|h| build_heatmap(h))
+            .map(build_heatmap)
             .unwrap_or_default();
         let profile_display_name = data
             .profile_user_email
@@ -521,18 +529,10 @@ impl HtmlRenderer for AskamaHtmlRenderer {
             .entries
             .as_ref()
             .map(|e| {
-                if e.limit > 0 {
-                    ((e.total_count + e.limit as u64 - 1) / e.limit as u64) as u32
-                } else {
-                    0
-                }
+                e.total_count.div_ceil(e.limit.max(1) as u64) as u32
             })
             .unwrap_or(0);
-        let current_page = if data.limit > 0 {
-            data.current_offset / data.limit
-        } else {
-            0
-        };
+        let current_page = data.current_offset.checked_div(data.limit).unwrap_or(0);
         let avg_rating_display = data
             .stats
             .avg_rating
@@ -594,11 +594,28 @@ impl HtmlRenderer for AskamaHtmlRenderer {
             ctx: &data.ctx,
             movie: &data.movie,
             stats: &data.stats,
+            profile: data.profile.as_ref(),
             reviews: &data.reviews.items,
+            on_watchlist: data.on_watchlist,
             current_offset: data.current_offset,
             has_more: data.has_more,
             limit: data.limit,
             histogram_max: data.histogram_max,
+        }
+        .render()
+        .map_err(|e| e.to_string())
+    }
+
+    fn render_watchlist_page(&self, data: WatchlistPageData) -> Result<String, String> {
+        WatchlistTemplate {
+            ctx: &data.ctx,
+            owner_id: data.owner_id,
+            display_entries: &data.display_entries,
+            current_offset: data.current_offset,
+            has_more: data.has_more,
+            limit: data.limit,
+            is_owner: data.is_owner,
+            error: data.error,
         }
         .render()
         .map_err(|e| e.to_string())

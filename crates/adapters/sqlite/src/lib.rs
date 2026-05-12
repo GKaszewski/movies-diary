@@ -20,10 +20,11 @@ mod models;
 mod persons;
 mod profile;
 mod users;
+mod watchlist;
 
 use models::{
-    DiaryRow, DirectorCountRow, FeedRow, MonthlyRatingRow, MovieRow, MovieStatsRow, ReviewRow,
-    UserTotalsRow, datetime_to_str,
+    DiaryRow, DirectorCountRow, FeedRow, MonthlyRatingRow, MovieRow, MovieStatsRow,
+    MovieSummaryRow, ReviewRow, UserTotalsRow, datetime_to_str,
 };
 
 pub use image_ref::{SqliteImageRefAdapter, create_image_ref};
@@ -32,6 +33,7 @@ pub use import_session::SqliteImportSessionRepository;
 pub use persons::{SqlitePersonAdapter, create_person_adapter};
 pub use profile::SqliteMovieProfileRepository;
 pub use users::SqliteUserRepository;
+pub use watchlist::SqliteWatchlistRepository;
 
 fn format_year_month(ym: &str) -> String {
     let parts: Vec<&str> = ym.splitn(2, '-').collect();
@@ -307,7 +309,7 @@ impl MovieRepository for SqliteMovieRepository {
         .fetch_optional(&self.pool)
         .await
         .map_err(Self::map_err)?
-        .map(MovieRow::to_domain)
+        .map(MovieRow::into_domain)
         .transpose()
     }
 
@@ -322,7 +324,7 @@ impl MovieRepository for SqliteMovieRepository {
         .fetch_optional(&self.pool)
         .await
         .map_err(Self::map_err)?
-        .map(MovieRow::to_domain)
+        .map(MovieRow::into_domain)
         .transpose()
     }
 
@@ -344,7 +346,7 @@ impl MovieRepository for SqliteMovieRepository {
         .await
         .map_err(Self::map_err)?
         .into_iter()
-        .map(MovieRow::to_domain)
+        .map(MovieRow::into_domain)
         .collect()
     }
 
@@ -391,22 +393,37 @@ impl MovieRepository for SqliteMovieRepository {
     async fn list_movies(
         &self,
         page: &domain::models::collections::PageParams,
-        search: Option<&str>,
-    ) -> Result<domain::models::collections::Paginated<domain::models::Movie>, DomainError> {
+        filter: &domain::models::MovieFilter,
+    ) -> Result<domain::models::collections::Paginated<domain::models::MovieSummary>, DomainError> {
         use sqlx::Row;
         let limit = page.limit as i64;
         let offset = page.offset as i64;
-        let pattern = search.map(|s| format!("%{}%", s.to_lowercase()));
+        let pattern = filter.search.as_deref().map(|s| format!("%{}%", s.to_lowercase()));
+        let genre = filter.genre.as_deref();
+        let language = filter.language.as_deref();
 
-        let rows: Vec<models::MovieRow> = sqlx::query_as(
-            "SELECT id, external_metadata_id, title, release_year, director, poster_path \
-             FROM movies \
-             WHERE (? IS NULL OR LOWER(title) LIKE ?) \
-             ORDER BY title ASC \
+        let rows: Vec<MovieSummaryRow> = sqlx::query_as(
+            "SELECT \
+               m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path, \
+               p.overview, p.runtime_minutes, p.original_language, p.collection_name, \
+               GROUP_CONCAT(g.name) AS genres \
+             FROM movies m \
+             LEFT JOIN movie_profiles p ON p.movie_id = m.id \
+             LEFT JOIN movie_genres g ON g.movie_id = m.id \
+             WHERE (? IS NULL OR LOWER(m.title) LIKE ?) \
+               AND (? IS NULL OR p.original_language = ?) \
+               AND (? IS NULL OR m.id IN (SELECT movie_id FROM movie_genres WHERE LOWER(name) = LOWER(?))) \
+             GROUP BY m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path, \
+                      p.overview, p.runtime_minutes, p.original_language, p.collection_name \
+             ORDER BY m.title ASC \
              LIMIT ? OFFSET ?",
         )
         .bind(&pattern)
         .bind(&pattern)
+        .bind(language)
+        .bind(language)
+        .bind(genre)
+        .bind(genre)
         .bind(limit)
         .bind(offset)
         .fetch_all(&self.pool)
@@ -414,18 +431,28 @@ impl MovieRepository for SqliteMovieRepository {
         .map_err(Self::map_err)?;
 
         let total: i64 = sqlx::query(
-            "SELECT COUNT(*) FROM movies WHERE (? IS NULL OR LOWER(title) LIKE ?)",
+            "SELECT COUNT(DISTINCT m.id) \
+             FROM movies m \
+             LEFT JOIN movie_profiles p ON p.movie_id = m.id \
+             WHERE (? IS NULL OR LOWER(m.title) LIKE ?) \
+               AND (? IS NULL OR p.original_language = ?) \
+               AND (? IS NULL OR m.id IN (SELECT movie_id FROM movie_genres WHERE LOWER(name) = LOWER(?)))",
         )
         .bind(&pattern)
         .bind(&pattern)
+        .bind(language)
+        .bind(language)
+        .bind(genre)
+        .bind(genre)
         .fetch_one(&self.pool)
         .await
         .map_err(Self::map_err)?
         .try_get(0)
         .unwrap_or(0);
 
-        let items = rows.into_iter()
-            .map(|r| r.to_domain())
+        let items = rows
+            .into_iter()
+            .map(|r| r.into_domain())
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(domain::models::collections::Paginated {
@@ -488,7 +515,7 @@ impl ReviewRepository for SqliteMovieRepository {
         .fetch_optional(&self.pool)
         .await
         .map_err(Self::map_err)?
-        .map(ReviewRow::to_domain)
+        .map(ReviewRow::into_domain)
         .transpose()
     }
 
@@ -547,7 +574,7 @@ impl DiaryRepository for SqliteMovieRepository {
 
         let items = rows
             .into_iter()
-            .map(DiaryRow::to_domain)
+            .map(DiaryRow::into_domain)
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(Paginated {
@@ -674,7 +701,7 @@ impl DiaryRepository for SqliteMovieRepository {
 
         let items = rows
             .into_iter()
-            .map(FeedRow::to_domain)
+            .map(FeedRow::into_domain)
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(Paginated {
@@ -698,7 +725,7 @@ impl DiaryRepository for SqliteMovieRepository {
         .await
         .map_err(Self::map_err)?
         .ok_or_else(|| DomainError::NotFound(format!("Movie {}", id_str)))?
-        .to_domain()?;
+        .into_domain()?;
 
         let viewings = sqlx::query_as!(
             ReviewRow,
@@ -710,7 +737,7 @@ impl DiaryRepository for SqliteMovieRepository {
         .await
         .map_err(Self::map_err)?
         .into_iter()
-        .map(ReviewRow::to_domain)
+        .map(ReviewRow::into_domain)
         .collect::<Result<Vec<_>, _>>()?;
 
         Ok(ReviewHistory::new(movie, viewings))
@@ -732,7 +759,7 @@ impl DiaryRepository for SqliteMovieRepository {
         .await
         .map_err(Self::map_err)?;
 
-        rows.into_iter().map(DiaryRow::to_domain).collect()
+        rows.into_iter().map(DiaryRow::into_domain).collect()
     }
 
     async fn get_movie_stats(&self, movie_id: &MovieId) -> Result<MovieStats, DomainError> {
@@ -753,7 +780,7 @@ impl DiaryRepository for SqliteMovieRepository {
         .fetch_one(&self.pool)
         .await
         .map_err(Self::map_err)
-        .map(MovieStatsRow::to_domain)
+        .map(MovieStatsRow::into_domain)
     }
 
     async fn get_movie_social_feed(
@@ -796,7 +823,7 @@ impl DiaryRepository for SqliteMovieRepository {
 
         let items = rows
             .into_iter()
-            .map(FeedRow::to_domain)
+            .map(FeedRow::into_domain)
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(Paginated {
@@ -909,6 +936,7 @@ pub async fn wire(database_url: &str) -> anyhow::Result<(
     std::sync::Arc<dyn domain::ports::ImportSessionRepository>,
     std::sync::Arc<dyn domain::ports::ImportProfileRepository>,
     std::sync::Arc<dyn domain::ports::MovieProfileRepository>,
+    std::sync::Arc<dyn domain::ports::WatchlistRepository>,
 )> {
     use std::str::FromStr;
     use anyhow::Context;
@@ -932,6 +960,7 @@ pub async fn wire(database_url: &str) -> anyhow::Result<(
     let import_session_repo = std::sync::Arc::new(SqliteImportSessionRepository::new(pool.clone()));
     let import_profile_repo = std::sync::Arc::new(SqliteImportProfileRepository::new(pool.clone()));
     let movie_profile_repo = std::sync::Arc::new(SqliteMovieProfileRepository::new(pool.clone()));
+    let watchlist_repo = std::sync::Arc::new(SqliteWatchlistRepository::new(pool.clone()));
 
     Ok((
         pool.clone(),
@@ -943,6 +972,7 @@ pub async fn wire(database_url: &str) -> anyhow::Result<(
         import_session_repo as _,
         import_profile_repo as _,
         movie_profile_repo as _,
+        watchlist_repo as _,
     ))
 }
 

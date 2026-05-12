@@ -4,11 +4,11 @@ version = "0.1.0"
 edition = "2024"
 
 [features]
-default = ["sqlite"]
+default = ["sqlite", "sqlite-federation"]
 sqlite = ["dep:sqlite", "dep:sqlite-event-queue", "dep:sqlite-search"]
 postgres = ["dep:postgres", "dep:postgres-event-queue", "dep:postgres-search"]
 nats = ["dep:nats"]
-federation = []
+federation = ["application/federation"]
 sqlite-federation = ["sqlite", "dep:sqlite-federation", "dep:activitypub", "federation"]
 postgres-federation = ["postgres", "dep:postgres-federation", "dep:activitypub", "federation"]
 

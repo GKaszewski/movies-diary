@@ -34,11 +34,10 @@ fn collect_inboxes(followers: &[crate::repository::Follower]) -> Vec<Url> {
             .shared_inbox_url
             .as_deref()
             .unwrap_or(&f.actor.inbox_url);
-        if seen.insert(inbox_str.to_string()) {
-            if let Ok(url) = Url::parse(inbox_str) {
+        if seen.insert(inbox_str.to_string())
+            && let Ok(url) = Url::parse(inbox_str) {
                 inboxes.push(url);
             }
-        }
     }
     inboxes
 }
@@ -228,7 +227,7 @@ impl ActivityPubService {
             id: undo_id,
             kind: Default::default(),
             actor: ObjectId::from(local_actor.ap_id.clone()),
-            object: follow,
+            object: serde_json::to_value(&follow).map_err(|e| anyhow::anyhow!("{e}"))?,
         };
 
         let sends = SendActivityTask::prepare(
@@ -565,6 +564,131 @@ impl ActivityPubService {
         Ok(())
     }
 
+    /// Broadcast an Add(WatchlistObject) activity to all accepted followers.
+    pub async fn broadcast_add_to_followers(
+        &self,
+        local_user_id: uuid::Uuid,
+        ap_id: Url,
+        object: serde_json::Value,
+    ) -> anyhow::Result<()> {
+        let data = self.federation_config.to_request_data();
+        let local_actor = get_local_actor(local_user_id, &data)
+            .await
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
+
+        let followers = data.federation_repo.get_followers(local_user_id).await?;
+        let blocked = data
+            .federation_repo
+            .get_blocked_actors(local_user_id)
+            .await
+            .unwrap_or_default();
+        let blocked_set: std::collections::HashSet<String> = blocked.into_iter().collect();
+        let blocked_domains = data
+            .federation_repo
+            .get_blocked_domains()
+            .await
+            .unwrap_or_default();
+        let blocked_domain_set: std::collections::HashSet<String> =
+            blocked_domains.into_iter().map(|d| d.domain).collect();
+        let accepted: Vec<_> = followers
+            .into_iter()
+            .filter(|f| f.status == FollowerStatus::Accepted)
+            .filter(|f| !blocked_set.contains(&f.actor.url))
+            .filter(|f| {
+                let domain = url::Url::parse(&f.actor.inbox_url)
+                    .ok()
+                    .and_then(|u| u.host_str().map(|s| s.to_string()))
+                    .unwrap_or_default();
+                !blocked_domain_set.contains(&domain)
+            })
+            .collect();
+
+        if accepted.is_empty() {
+            return Ok(());
+        }
+
+        let add = crate::activities::AddActivity {
+            id: ap_id,
+            kind: Default::default(),
+            actor: ObjectId::from(local_actor.ap_id.clone()),
+            object,
+        };
+        let add_with_ctx = WithContext::new_default(add);
+        let inboxes = collect_inboxes(&accepted);
+        let sends =
+            SendActivityTask::prepare(&add_with_ctx, &local_actor, inboxes, &data).await?;
+        let failures = send_with_retry(sends, &data).await;
+        if !failures.is_empty() {
+            tracing::warn!(count = failures.len(), "some Add deliveries failed");
+        }
+        Ok(())
+    }
+
+    /// Broadcast an Undo(Add) activity to all accepted followers.
+    pub async fn broadcast_undo_add_to_followers(
+        &self,
+        local_user_id: uuid::Uuid,
+        watchlist_entry_ap_id: Url,
+    ) -> anyhow::Result<()> {
+        let data = self.federation_config.to_request_data();
+        let local_actor = get_local_actor(local_user_id, &data)
+            .await
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
+
+        let followers = data.federation_repo.get_followers(local_user_id).await?;
+        let blocked = data
+            .federation_repo
+            .get_blocked_actors(local_user_id)
+            .await
+            .unwrap_or_default();
+        let blocked_set: std::collections::HashSet<String> = blocked.into_iter().collect();
+        let blocked_domains = data
+            .federation_repo
+            .get_blocked_domains()
+            .await
+            .unwrap_or_default();
+        let blocked_domain_set: std::collections::HashSet<String> =
+            blocked_domains.into_iter().map(|d| d.domain).collect();
+        let accepted: Vec<_> = followers
+            .into_iter()
+            .filter(|f| f.status == FollowerStatus::Accepted)
+            .filter(|f| !blocked_set.contains(&f.actor.url))
+            .filter(|f| {
+                let domain = url::Url::parse(&f.actor.inbox_url)
+                    .ok()
+                    .and_then(|u| u.host_str().map(|s| s.to_string()))
+                    .unwrap_or_default();
+                !blocked_domain_set.contains(&domain)
+            })
+            .collect();
+
+        if accepted.is_empty() {
+            return Ok(());
+        }
+
+        let undo_id = crate::urls::activity_url(&self.base_url)
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
+        let undo = crate::activities::UndoActivity {
+            id: undo_id,
+            kind: Default::default(),
+            actor: ObjectId::from(local_actor.ap_id.clone()),
+            object: serde_json::json!({
+                "type": "Add",
+                "id": watchlist_entry_ap_id.as_str(),
+                "object": { "id": watchlist_entry_ap_id.as_str() }
+            }),
+        };
+        let undo_with_ctx = WithContext::new_default(undo);
+        let inboxes = collect_inboxes(&accepted);
+        let sends =
+            SendActivityTask::prepare(&undo_with_ctx, &local_actor, inboxes, &data).await?;
+        let failures = send_with_retry(sends, &data).await;
+        if !failures.is_empty() {
+            tracing::warn!(count = failures.len(), "some Undo(Add) deliveries failed");
+        }
+        Ok(())
+    }
+
     /// Broadcast an Update(Note) activity to all accepted followers for an edited review.
     pub async fn broadcast_update_to_followers(
         &self,
@@ -812,7 +936,7 @@ impl ActivityPubService {
         data.federation_repo
             .update_following_status(
                 local_user_id,
-                &target_actor_url.to_string(),
+                target_actor_url.as_ref(),
                 FollowingStatus::Accepted,
             )
             .await?;

@@ -15,8 +15,6 @@ use presentation::{openapi, routes, state::AppState};
 
 use domain::ports::{DiaryExporter, DocumentParser, EventPublisher, ImportProfileRepository, ImportSessionRepository};
 
-#[cfg(feature = "sqlite")]
-use sqlite_search;
 #[cfg(feature = "postgres")]
 use postgres_search;
 
@@ -54,21 +52,21 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
     let poster_fetcher = poster_fetcher::create()?;
     let image_storage = image_storage::create()?;
 
-    let (movie_repository, review_repository, diary_repository, stats_repository, user_repository, import_session_repository, import_profile_repository, movie_profile_repository, person_command, person_query, search_command, search_port, db_pool) =
+    let (movie_repository, review_repository, diary_repository, stats_repository, user_repository, import_session_repository, import_profile_repository, movie_profile_repository, watchlist_repository, person_command, person_query, search_command, search_port, db_pool) =
         match backend.as_str() {
             #[cfg(feature = "postgres")]
             "postgres" => {
-                let (pool, m, r, d, s, u, is, ip, mp) = postgres::wire(&database_url).await?;
+                let (pool, m, r, d, s, u, is, ip, mp, wl) = postgres::wire(&database_url).await?;
                 let (pc, pq) = postgres::create_person_adapter(pool.clone());
                 let (sc, sp) = postgres_search::create_search_adapter(pool.clone());
-                (m, r, d, s, u, is, ip, mp, pc, pq, sc, sp, DbPool::Postgres(pool))
+                (m, r, d, s, u, is, ip, mp, wl, pc, pq, sc, sp, DbPool::Postgres(pool))
             }
             #[cfg(feature = "sqlite")]
             _ => {
-                let (pool, m, r, d, s, u, is, ip, mp) = sqlite::wire(&database_url).await?;
+                let (pool, m, r, d, s, u, is, ip, mp, wl) = sqlite::wire(&database_url).await?;
                 let (pc, pq) = sqlite::create_person_adapter(pool.clone());
                 let (sc, sp) = sqlite_search::create_search_adapter(pool.clone());
-                (m, r, d, s, u, is, ip, mp, pc, pq, sc, sp, DbPool::Sqlite(pool))
+                (m, r, d, s, u, is, ip, mp, wl, pc, pq, sc, sp, DbPool::Sqlite(pool))
             }
             #[cfg(not(feature = "sqlite"))]
             _ => anyhow::bail!("DATABASE_BACKEND={backend} is not supported by this build (sqlite feature is not enabled)"),
@@ -78,8 +76,8 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
     let event_bus = EventBusBackend::from_env()?;
 
     #[cfg(feature = "federation")]
-    let (event_publisher_arc, ap_router, ap_service, social_query) = {
-        let (federation_repo, social_query_arc, review_store) = match &db_pool {
+    let (event_publisher_arc, ap_router, ap_service, social_query, remote_watchlist_repo) = {
+        let (federation_repo, social_query_arc, review_store, remote_watchlist_repo) = match &db_pool {
             #[cfg(feature = "postgres-federation")]
             DbPool::Postgres(pool) => postgres_federation::wire(pool.clone()),
             #[cfg(feature = "sqlite-federation")]
@@ -91,6 +89,8 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
         let ap = activitypub::wire(
             federation_repo,
             review_store,
+            remote_watchlist_repo.clone(),
+            Arc::clone(&watchlist_repository),
             Arc::clone(&user_repository),
             Arc::clone(&movie_repository),
             Arc::clone(&review_repository),
@@ -123,7 +123,7 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
                 nats::create_publisher(cfg).await?
             }
         };
-        (ep, ap_router, ap_service_arc, social_query_arc)
+        (ep, ap_router, ap_service_arc, social_query_arc, remote_watchlist_repo)
     };
 
     #[cfg(not(feature = "federation"))]
@@ -171,6 +171,9 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
         import_session_repository: import_session_repository as Arc<dyn ImportSessionRepository>,
         import_profile_repository: import_profile_repository as Arc<dyn ImportProfileRepository>,
         movie_profile_repository,
+        watchlist_repository,
+        #[cfg(feature = "federation")]
+        remote_watchlist_repository: remote_watchlist_repo,
         person_command,
         person_query,
         search_port,

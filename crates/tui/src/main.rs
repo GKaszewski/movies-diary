@@ -41,8 +41,8 @@ async fn run() -> anyhow::Result<()> {
     let mut terminal = ratatui::init();
 
     // If we start directly in Main (saved token), trigger an initial diary load
-    if matches!(app.screen, Screen::Main(_)) {
-        if let Some(token) = &saved_token {
+    if matches!(app.screen, Screen::Main(_))
+        && let Some(token) = &saved_token {
             let c = client.clone();
             let t = token.clone();
             let tx2 = tx.clone();
@@ -57,15 +57,14 @@ async fn run() -> anyhow::Result<()> {
                 let _ = tx2.send(action).await;
             });
         }
-    }
 
     let result = async {
         loop {
             terminal.draw(|f| tui::ui::render(f, &app))?;
 
             // Poll keyboard — non-blocking with short timeout
-            if event::poll(Duration::from_millis(50))? {
-                if let Event::Key(key) = event::read()? {
+            if event::poll(Duration::from_millis(50))?
+                && let Event::Key(key) = event::read()? {
                     if key.kind != ratatui::crossterm::event::KeyEventKind::Press {
                         continue;
                     }
@@ -79,7 +78,6 @@ async fn run() -> anyhow::Result<()> {
                         }
                     }
                 }
-            }
 
             // Drain async results
             while let Ok(action) = rx.try_recv() {

@@ -9,7 +9,7 @@ sqlite = ["dep:sqlite", "dep:sqlite-event-queue", "dep:sqlite-search"]
 postgres = ["dep:postgres", "dep:postgres-event-queue", "dep:postgres-search"]
 nats = ["dep:nats"]
 # Meta-feature: true when any federation adapter is active — keeps all #[cfg(feature = "federation")] gates working
-federation = []
+federation = ["application/federation"]
 sqlite-federation = [
     "sqlite",
     "dep:sqlite-federation",

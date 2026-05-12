@@ -19,10 +19,11 @@ mod models;
 mod persons;
 mod profile;
 mod users;
+mod watchlist;
 
 use models::{
-    DiaryRow, DirectorCountRow, FeedRow, MonthlyRatingRow, MovieRow, MovieStatsRow, ReviewRow,
-    UserTotalsRow, datetime_to_str,
+    DiaryRow, DirectorCountRow, FeedRow, MonthlyRatingRow, MovieRow, MovieStatsRow,
+    MovieSummaryRow, ReviewRow, UserTotalsRow, datetime_to_str,
 };
 
 pub use image_ref::{PostgresImageRefAdapter, create_image_ref};
@@ -31,6 +32,7 @@ pub use import_session::PostgresImportSessionRepository;
 pub use persons::{PostgresPersonAdapter, create_person_adapter};
 pub use profile::PostgresMovieProfileRepository;
 pub use users::PostgresUserRepository;
+pub use watchlist::PostgresWatchlistRepository;
 
 fn format_year_month(ym: &str) -> String {
     let parts: Vec<&str> = ym.splitn(2, '-').collect();
@@ -300,7 +302,7 @@ impl MovieRepository for PostgresRepository {
         .fetch_optional(&self.pool)
         .await
         .map_err(Self::map_err)?
-        .map(MovieRow::to_domain)
+        .map(MovieRow::into_domain)
         .transpose()
     }
 
@@ -314,7 +316,7 @@ impl MovieRepository for PostgresRepository {
         .fetch_optional(&self.pool)
         .await
         .map_err(Self::map_err)?
-        .map(MovieRow::to_domain)
+        .map(MovieRow::into_domain)
         .transpose()
     }
 
@@ -335,7 +337,7 @@ impl MovieRepository for PostgresRepository {
         .await
         .map_err(Self::map_err)?
         .into_iter()
-        .map(MovieRow::to_domain)
+        .map(MovieRow::into_domain)
         .collect()
     }
 
@@ -383,21 +385,34 @@ impl MovieRepository for PostgresRepository {
     async fn list_movies(
         &self,
         page: &domain::models::collections::PageParams,
-        search: Option<&str>,
-    ) -> Result<domain::models::collections::Paginated<domain::models::Movie>, DomainError> {
+        filter: &domain::models::MovieFilter,
+    ) -> Result<domain::models::collections::Paginated<domain::models::MovieSummary>, DomainError> {
         use sqlx::Row;
         let limit = page.limit as i64;
         let offset = page.offset as i64;
-        let pattern = search.map(|s| format!("%{}%", s.to_lowercase()));
+        let pattern = filter.search.as_deref().map(|s| format!("%{}%", s.to_lowercase()));
+        let genre = filter.genre.as_deref();
+        let language = filter.language.as_deref();
 
-        let rows: Vec<models::MovieRow> = sqlx::query_as(
-            "SELECT id, external_metadata_id, title, release_year, director, poster_path \
-             FROM movies \
-             WHERE ($1::text IS NULL OR LOWER(title) LIKE $1) \
-             ORDER BY title ASC \
-             LIMIT $2 OFFSET $3",
+        let rows: Vec<MovieSummaryRow> = sqlx::query_as(
+            "SELECT \
+               m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path, \
+               p.overview, p.runtime_minutes, p.original_language, p.collection_name, \
+               array_agg(g.name) FILTER (WHERE g.name IS NOT NULL) AS genres \
+             FROM movies m \
+             LEFT JOIN movie_profiles p ON p.movie_id = m.id \
+             LEFT JOIN movie_genres g ON g.movie_id = m.id \
+             WHERE ($1::text IS NULL OR LOWER(m.title) LIKE $1) \
+               AND ($2::text IS NULL OR p.original_language = $2) \
+               AND ($3::text IS NULL OR m.id IN (SELECT movie_id FROM movie_genres WHERE LOWER(name) = LOWER($3))) \
+             GROUP BY m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path, \
+                      p.overview, p.runtime_minutes, p.original_language, p.collection_name \
+             ORDER BY m.title ASC \
+             LIMIT $4 OFFSET $5",
         )
         .bind(&pattern)
+        .bind(language)
+        .bind(genre)
         .bind(limit)
         .bind(offset)
         .fetch_all(&self.pool)
@@ -405,17 +420,25 @@ impl MovieRepository for PostgresRepository {
         .map_err(Self::map_err)?;
 
         let total: i64 = sqlx::query(
-            "SELECT COUNT(*) FROM movies WHERE ($1::text IS NULL OR LOWER(title) LIKE $1)",
+            "SELECT COUNT(DISTINCT m.id) \
+             FROM movies m \
+             LEFT JOIN movie_profiles p ON p.movie_id = m.id \
+             WHERE ($1::text IS NULL OR LOWER(m.title) LIKE $1) \
+               AND ($2::text IS NULL OR p.original_language = $2) \
+               AND ($3::text IS NULL OR m.id IN (SELECT movie_id FROM movie_genres WHERE LOWER(name) = LOWER($3)))",
         )
         .bind(&pattern)
+        .bind(language)
+        .bind(genre)
         .fetch_one(&self.pool)
         .await
         .map_err(Self::map_err)?
         .try_get(0)
         .unwrap_or(0);
 
-        let items = rows.into_iter()
-            .map(|r| r.to_domain())
+        let items = rows
+            .into_iter()
+            .map(|r| r.into_domain())
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(domain::models::collections::Paginated {
@@ -480,7 +503,7 @@ impl ReviewRepository for PostgresRepository {
         .fetch_optional(&self.pool)
         .await
         .map_err(Self::map_err)?
-        .map(ReviewRow::to_domain)
+        .map(ReviewRow::into_domain)
         .transpose()
     }
 
@@ -540,7 +563,7 @@ impl DiaryRepository for PostgresRepository {
 
         let items = rows
             .into_iter()
-            .map(DiaryRow::to_domain)
+            .map(DiaryRow::into_domain)
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(Paginated {
@@ -681,7 +704,7 @@ impl DiaryRepository for PostgresRepository {
 
         let items = rows
             .into_iter()
-            .map(FeedRow::to_domain)
+            .map(FeedRow::into_domain)
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(Paginated {
@@ -704,7 +727,7 @@ impl DiaryRepository for PostgresRepository {
         .await
         .map_err(Self::map_err)?
         .ok_or_else(|| DomainError::NotFound(format!("Movie {}", id_str)))?
-        .to_domain()?;
+        .into_domain()?;
 
         let viewings = sqlx::query_as::<_, ReviewRow>(
             "SELECT id, movie_id, user_id, rating, comment,
@@ -718,7 +741,7 @@ impl DiaryRepository for PostgresRepository {
         .await
         .map_err(Self::map_err)?
         .into_iter()
-        .map(ReviewRow::to_domain)
+        .map(ReviewRow::into_domain)
         .collect::<Result<Vec<_>, _>>()?;
 
         Ok(ReviewHistory::new(movie, viewings))
@@ -742,7 +765,7 @@ impl DiaryRepository for PostgresRepository {
         .await
         .map_err(Self::map_err)?;
 
-        rows.into_iter().map(DiaryRow::to_domain).collect()
+        rows.into_iter().map(DiaryRow::into_domain).collect()
     }
 
     async fn get_movie_stats(&self, movie_id: &MovieId) -> Result<MovieStats, DomainError> {
@@ -763,7 +786,7 @@ impl DiaryRepository for PostgresRepository {
         .fetch_one(&self.pool)
         .await
         .map_err(Self::map_err)
-        .map(MovieStatsRow::to_domain)
+        .map(MovieStatsRow::into_domain)
     }
 
     async fn get_movie_social_feed(
@@ -808,7 +831,7 @@ impl DiaryRepository for PostgresRepository {
 
         let items = rows
             .into_iter()
-            .map(FeedRow::to_domain)
+            .map(FeedRow::into_domain)
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(Paginated {
@@ -918,6 +941,7 @@ pub async fn wire(database_url: &str) -> anyhow::Result<(
     std::sync::Arc<dyn domain::ports::ImportSessionRepository>,
     std::sync::Arc<dyn domain::ports::ImportProfileRepository>,
     std::sync::Arc<dyn domain::ports::MovieProfileRepository>,
+    std::sync::Arc<dyn domain::ports::WatchlistRepository>,
 )> {
     use anyhow::Context;
 
@@ -934,6 +958,7 @@ pub async fn wire(database_url: &str) -> anyhow::Result<(
     let import_session_repo = std::sync::Arc::new(PostgresImportSessionRepository::new(pool.clone()));
     let import_profile_repo = std::sync::Arc::new(PostgresImportProfileRepository::new(pool.clone()));
     let movie_profile_repo = std::sync::Arc::new(PostgresMovieProfileRepository::new(pool.clone()));
+    let watchlist_repo = std::sync::Arc::new(PostgresWatchlistRepository::new(pool.clone()));
 
     Ok((
         pool.clone(),
@@ -945,5 +970,6 @@ pub async fn wire(database_url: &str) -> anyhow::Result<(
         import_session_repo as _,
         import_profile_repo as _,
         movie_profile_repo as _,
+        watchlist_repo as _,
     ))
 }

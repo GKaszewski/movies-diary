@@ -1,0 +1,17 @@
+{
+  "name": "Movies Diary",
+  "short_name": "Movies",
+  "description": "Track what you watch, rate and review films.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#111111",
+  "theme_color": "#e5c034",
+  "icons": [
+    {
+      "src": "/static/logo.webp",
+      "sizes": "any",
+      "type": "image/webp",
+      "purpose": "any"
+    }
+  ]
+}

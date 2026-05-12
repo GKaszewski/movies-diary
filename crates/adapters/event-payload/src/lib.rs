@@ -119,6 +119,10 @@ impl From<&DomainEvent> for EventPayload {
                 }
             }
             DomainEvent::ImageStored { key } => EventPayload::ImageStored { key: key.clone() },
+            DomainEvent::WatchlistEntryAdded { .. } | DomainEvent::WatchlistEntryRemoved { .. } => {
+                // federation-only events; not serialized via EventPayload
+                unreachable!("watchlist events are handled by the AP event handler directly")
+            }
         }
     }
 }
@@ -154,7 +158,7 @@ impl TryFrom<EventPayload> for DomainEvent {
             EventPayload::MovieDeleted { movie_id, poster_path } => {
                 let movie_id = MovieId::from_uuid(parse_uuid(&movie_id, "movie_id")?);
                 let poster_path = poster_path
-                    .map(|p| PosterPath::new(p))
+                    .map(PosterPath::new)
                     .transpose()
                     .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
                 Ok(DomainEvent::MovieDeleted { movie_id, poster_path })

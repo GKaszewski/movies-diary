@@ -43,7 +43,7 @@ impl EventHandler for ImageConversionHandler {
         let converted = tokio::task::spawn_blocking(move || convert(bytes, format))
             .await
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?
-            .map_err(|e| DomainError::InfrastructureError(e))?;
+            .map_err(DomainError::InfrastructureError)?;
 
         let ext = format.extension();
         let new_key = format!("{key}{ext}");

@@ -97,6 +97,72 @@ pub fn review_to_ap_object(
     }
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WatchlistObject {
+    #[serde(rename = "type")]
+    pub(crate) kind: NoteType,
+    pub(crate) id: Url,
+    pub(crate) attributed_to: Url,
+    pub(crate) content: String,
+    pub(crate) published: chrono::DateTime<chrono::Utc>,
+    pub(crate) movie_title: String,
+    #[serde(default)]
+    pub(crate) release_year: u16,
+    #[serde(default)]
+    pub(crate) external_metadata_id: Option<String>,
+    #[serde(default)]
+    pub(crate) poster_url: Option<String>,
+    #[serde(default)]
+    pub(crate) tag: Vec<ApHashtag>,
+}
+
+pub fn watchlist_to_ap_object(
+    ap_id: Url,
+    actor_url: Url,
+    movie_title: String,
+    release_year: u16,
+    external_metadata_id: Option<String>,
+    poster_url: Option<String>,
+    added_at: chrono::DateTime<chrono::Utc>,
+    base_url: &str,
+) -> WatchlistObject {
+    let year_str = if release_year > 0 {
+        format!(" ({})", release_year)
+    } else {
+        String::new()
+    };
+    let content = format!("📋 {}{} — want to watch", movie_title, year_str);
+    let normalized = normalize_hashtag(&movie_title);
+    let tag = vec![
+        ApHashtag {
+            kind: "Hashtag".to_string(),
+            href: Url::parse(&format!("{}/tags/moviesdiary", base_url))
+                .expect("valid base_url"),
+            name: "#MoviesDiary".to_string(),
+        },
+        ApHashtag {
+            kind: "Hashtag".to_string(),
+            href: Url::parse(&format!("{}/tags/{}", base_url, normalized.to_lowercase()))
+                .expect("valid base_url"),
+            name: format!("#{}", normalized),
+        },
+    ];
+
+    WatchlistObject {
+        kind: NoteType::default(),
+        id: ap_id,
+        attributed_to: actor_url,
+        content,
+        published: added_at,
+        movie_title,
+        release_year,
+        external_metadata_id,
+        poster_url,
+        tag,
+    }
+}
+
 #[cfg(test)]
 #[path = "tests/objects.rs"]
 mod tests;
