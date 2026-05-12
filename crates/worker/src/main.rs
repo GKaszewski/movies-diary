@@ -31,8 +31,8 @@ async fn main() -> anyhow::Result<()> {
     let (repos, db_pool) = db::connect(&database_url, &backend).await?;
     let (event_publisher_arc, consumer_arc) = event_bus::create(&db_pool).await?;
 
-    // Save image_ref before ctx consumes repos.
-    let image_ref = Arc::clone(&repos.image_ref);
+    let image_ref_command = Arc::clone(&repos.image_ref_command);
+    let image_ref_query = Arc::clone(&repos.image_ref_query);
 
     // Clone refs federation handler needs before ctx consumes them.
     #[cfg(feature = "federation")]
@@ -91,7 +91,8 @@ async fn main() -> anyhow::Result<()> {
 
     let conversion = image_converter::build(
         Arc::clone(&ctx.image_storage),
-        image_ref,
+        image_ref_command,
+        image_ref_query,
         Arc::clone(&ctx.event_publisher),
     )?;
 

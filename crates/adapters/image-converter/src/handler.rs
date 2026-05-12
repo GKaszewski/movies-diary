@@ -4,21 +4,21 @@ use async_trait::async_trait;
 use domain::{
     errors::DomainError,
     events::DomainEvent,
-    ports::{EventHandler, ImageRefPort, ImageStorage},
+    ports::{EventHandler, ImageRefCommand, ImageStorage},
 };
 
 use crate::Format;
 
 pub struct ImageConversionHandler {
     storage: Arc<dyn ImageStorage>,
-    image_ref: Arc<dyn ImageRefPort>,
+    image_ref: Arc<dyn ImageRefCommand>,
     format: Format,
 }
 
 impl ImageConversionHandler {
     pub fn new(
         storage: Arc<dyn ImageStorage>,
-        image_ref: Arc<dyn ImageRefPort>,
+        image_ref: Arc<dyn ImageRefCommand>,
         format: Format,
     ) -> Self {
         Self { storage, image_ref, format }
@@ -50,7 +50,7 @@ impl EventHandler for ImageConversionHandler {
         self.storage.store(&new_key, &converted).await?;
 
         if let Err(e) = self.image_ref.swap(&key, &new_key).await {
-            tracing::error!("ImageRefPort::swap failed for {key} → {new_key}: {e}");
+            tracing::error!("swap failed for {key} → {new_key}: {e}");
             return Err(e);
         }
 
@@ -113,13 +113,10 @@ mod tests {
     }
 
     #[async_trait::async_trait]
-    impl ImageRefPort for MockImageRef {
+    impl ImageRefCommand for MockImageRef {
         async fn swap(&self, old: &str, new: &str) -> Result<(), DomainError> {
             self.swaps.lock().unwrap().push((old.into(), new.into()));
             Ok(())
-        }
-        async fn list_keys(&self) -> Result<Vec<String>, DomainError> {
-            Ok(vec![])
         }
     }
 
@@ -143,7 +140,7 @@ mod tests {
         let image_ref = MockImageRef::new();
         let handler = ImageConversionHandler::new(
             Arc::clone(&storage) as Arc<dyn ImageStorage>,
-            Arc::clone(&image_ref) as Arc<dyn ImageRefPort>,
+            Arc::clone(&image_ref) as Arc<dyn ImageRefCommand>,
             Format::Avif,
         );
 
@@ -161,7 +158,7 @@ mod tests {
         let image_ref = MockImageRef::new();
         let handler = ImageConversionHandler::new(
             Arc::clone(&storage) as Arc<dyn ImageStorage>,
-            Arc::clone(&image_ref) as Arc<dyn ImageRefPort>,
+            Arc::clone(&image_ref) as Arc<dyn ImageRefCommand>,
             Format::Avif,
         );
 
@@ -177,7 +174,7 @@ mod tests {
         let image_ref = MockImageRef::new();
         let handler = ImageConversionHandler::new(
             Arc::clone(&storage) as Arc<dyn ImageStorage>,
-            Arc::clone(&image_ref) as Arc<dyn ImageRefPort>,
+            Arc::clone(&image_ref) as Arc<dyn ImageRefCommand>,
             Format::Webp,
         );
 
@@ -193,7 +190,7 @@ mod tests {
         let image_ref = MockImageRef::new();
         let handler = ImageConversionHandler::new(
             Arc::clone(&storage) as Arc<dyn ImageStorage>,
-            Arc::clone(&image_ref) as Arc<dyn ImageRefPort>,
+            Arc::clone(&image_ref) as Arc<dyn ImageRefCommand>,
             Format::Avif,
         );
 
@@ -211,7 +208,7 @@ mod tests {
         let image_ref = MockImageRef::new();
         let handler = ImageConversionHandler::new(
             Arc::clone(&storage) as Arc<dyn ImageStorage>,
-            Arc::clone(&image_ref) as Arc<dyn ImageRefPort>,
+            Arc::clone(&image_ref) as Arc<dyn ImageRefCommand>,
             Format::Webp,
         );
 

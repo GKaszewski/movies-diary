@@ -4,17 +4,17 @@ use async_trait::async_trait;
 use domain::{
     errors::DomainError,
     events::DomainEvent,
-    ports::{EventPublisher, ImageRefPort, PeriodicJob},
+    ports::{EventPublisher, ImageRefQuery, PeriodicJob},
 };
 
 pub struct ConversionBackfillJob {
-    image_ref: Arc<dyn ImageRefPort>,
+    image_ref: Arc<dyn ImageRefQuery>,
     event_publisher: Arc<dyn EventPublisher>,
 }
 
 impl ConversionBackfillJob {
     pub fn new(
-        image_ref: Arc<dyn ImageRefPort>,
+        image_ref: Arc<dyn ImageRefQuery>,
         event_publisher: Arc<dyn EventPublisher>,
     ) -> Self {
         Self { image_ref, event_publisher }
@@ -56,8 +56,7 @@ mod tests {
     }
 
     #[async_trait::async_trait]
-    impl ImageRefPort for MockImageRef {
-        async fn swap(&self, _: &str, _: &str) -> Result<(), DomainError> { Ok(()) }
+    impl ImageRefQuery for MockImageRef {
         async fn list_keys(&self) -> Result<Vec<String>, DomainError> {
             Ok(self.keys.clone())
         }

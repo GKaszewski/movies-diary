@@ -7,11 +7,12 @@ pub use config::{ConversionConfig, Format};
 pub use handler::ImageConversionHandler;
 
 use std::sync::Arc;
-use domain::ports::{EventHandler, EventPublisher, ImageRefPort, ImageStorage, PeriodicJob};
+use domain::ports::{EventHandler, EventPublisher, ImageRefCommand, ImageRefQuery, ImageStorage, PeriodicJob};
 
 pub fn build(
     image_storage: Arc<dyn ImageStorage>,
-    image_ref: Arc<dyn ImageRefPort>,
+    image_ref_command: Arc<dyn ImageRefCommand>,
+    image_ref_query: Arc<dyn ImageRefQuery>,
     event_publisher: Arc<dyn EventPublisher>,
 ) -> anyhow::Result<Option<(Arc<dyn EventHandler>, Arc<dyn PeriodicJob>)>> {
     let config = match ConversionConfig::from_env()? {
@@ -23,12 +24,12 @@ pub fn build(
 
     let handler = Arc::new(ImageConversionHandler::new(
         Arc::clone(&image_storage),
-        Arc::clone(&image_ref),
+        image_ref_command,
         format,
     )) as Arc<dyn EventHandler>;
 
     let job = Arc::new(ConversionBackfillJob::new(
-        Arc::clone(&image_ref),
+        image_ref_query,
         Arc::clone(&event_publisher),
     )) as Arc<dyn PeriodicJob>;
 

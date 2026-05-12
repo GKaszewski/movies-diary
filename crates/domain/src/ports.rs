@@ -266,7 +266,11 @@ pub trait ImportProfileRepository: Send + Sync {
 }
 
 #[async_trait]
-pub trait ImageRefPort: Send + Sync {
+pub trait ImageRefCommand: Send + Sync {
     async fn swap(&self, old_key: &str, new_key: &str) -> Result<(), DomainError>;
+}
+
+#[async_trait]
+pub trait ImageRefQuery: Send + Sync {
     async fn list_keys(&self) -> Result<Vec<String>, DomainError>;
 }

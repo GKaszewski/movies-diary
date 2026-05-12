@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use domain::{errors::DomainError, ports::ImageRefPort};
+use domain::{errors::DomainError, ports::{ImageRefCommand, ImageRefQuery}};
 use sqlx::PgPool;
 use std::sync::Arc;
 
@@ -13,12 +13,13 @@ impl PostgresImageRefAdapter {
     }
 }
 
-pub fn create_image_ref(pool: PgPool) -> Arc<dyn ImageRefPort> {
-    Arc::new(PostgresImageRefAdapter::new(pool))
+pub fn create_image_ref(pool: PgPool) -> (Arc<dyn ImageRefCommand>, Arc<dyn ImageRefQuery>) {
+    let adapter = Arc::new(PostgresImageRefAdapter::new(pool));
+    (Arc::clone(&adapter) as Arc<dyn ImageRefCommand>, adapter as Arc<dyn ImageRefQuery>)
 }
 
 #[async_trait]
-impl ImageRefPort for PostgresImageRefAdapter {
+impl ImageRefCommand for PostgresImageRefAdapter {
     async fn swap(&self, old_key: &str, new_key: &str) -> Result<(), DomainError> {
         let mut tx = self.pool.begin().await
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
@@ -33,7 +34,10 @@ impl ImageRefPort for PostgresImageRefAdapter {
         tx.commit().await
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))
     }
+}
 
+#[async_trait]
+impl ImageRefQuery for PostgresImageRefAdapter {
     async fn list_keys(&self) -> Result<Vec<String>, DomainError> {
         let rows: Vec<(String,)> = sqlx::query_as(
             "SELECT avatar_path FROM users WHERE avatar_path IS NOT NULL
