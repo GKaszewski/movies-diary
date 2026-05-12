@@ -236,14 +236,15 @@ impl FederationRepository for PostgresFederationRepository {
         let now = Utc::now().naive_utc();
         let fetched_at = datetime_to_str(&now);
         sqlx::query(
-            "INSERT INTO ap_remote_actors (url, handle, inbox_url, shared_inbox_url, display_name, avatar_url, fetched_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7::timestamptz)
+            "INSERT INTO ap_remote_actors (url, handle, inbox_url, shared_inbox_url, display_name, avatar_url, outbox_url, fetched_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8::timestamptz)
              ON CONFLICT(url) DO UPDATE SET
                  handle           = EXCLUDED.handle,
                  inbox_url        = EXCLUDED.inbox_url,
                  shared_inbox_url = EXCLUDED.shared_inbox_url,
                  display_name     = EXCLUDED.display_name,
                  avatar_url       = EXCLUDED.avatar_url,
+                 outbox_url       = COALESCE(EXCLUDED.outbox_url, ap_remote_actors.outbox_url),
                  fetched_at       = EXCLUDED.fetched_at",
         )
         .bind(&actor.url)
@@ -252,6 +253,7 @@ impl FederationRepository for PostgresFederationRepository {
         .bind(&actor.shared_inbox_url)
         .bind(&actor.display_name)
         .bind(&actor.avatar_url)
+        .bind(&actor.outbox_url)
         .bind(&fetched_at)
         .execute(&self.pool)
         .await?;
@@ -360,10 +362,21 @@ impl FederationRepository for PostgresFederationRepository {
 
     async fn get_following_outbox_url(
         &self,
-        _local_user_id: uuid::Uuid,
-        _remote_actor_url: &str,
+        local_user_id: uuid::Uuid,
+        remote_actor_url: &str,
     ) -> Result<Option<String>> {
-        Ok(None)
+        let uid = local_user_id.to_string();
+        let row: Option<Option<String>> = sqlx::query_scalar(
+            "SELECT a.outbox_url
+             FROM ap_following f
+             INNER JOIN ap_remote_actors a ON a.url = f.remote_actor_url
+             WHERE f.local_user_id = $1 AND f.remote_actor_url = $2",
+        )
+        .bind(&uid)
+        .bind(remote_actor_url)
+        .fetch_optional(&self.pool)
+        .await?;
+        Ok(row.flatten())
     }
 
     async fn add_announce(
