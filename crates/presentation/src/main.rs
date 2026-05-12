@@ -90,7 +90,6 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
             federation_repo,
             review_store,
             remote_watchlist_repo.clone(),
-            Arc::clone(&watchlist_repository),
             Arc::clone(&user_repository),
             Arc::clone(&movie_repository),
             Arc::clone(&review_repository),

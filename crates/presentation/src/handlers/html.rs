@@ -10,13 +10,16 @@ use chrono::Utc;
 use uuid::Uuid;
 
 #[cfg(feature = "federation")]
-use application::ports::{
-    BlockedActorEntry, BlockedActorsPageData, BlockedDomainEntry, BlockedDomainsPageData,
-    FollowersPageData, FollowingPageData,
+use application::{
+    ports::{
+        BlockedActorEntry, BlockedActorsPageData, BlockedDomainEntry, BlockedDomainsPageData,
+        FollowersPageData, FollowingPageData,
+    },
+    use_cases::get_remote_watchlist,
 };
 use application::{
     commands::{AddToWatchlistCommand, DeleteReviewCommand, MovieInput, RegisterCommand, RemoveFromWatchlistCommand},
-    queries::{ExportQuery, GetMovieSocialPageQuery, GetWatchlistQuery, LoginQuery},
+    queries::{ExportQuery, GetMovieSocialPageQuery, GetWatchlistQuery, IsOnWatchlistQuery, LoginQuery},
     ports::{
         HtmlPageContext, LoginPageData, MovieDetailPageData, NewReviewPageData,
         ProfileSettingsPageData, RegisterPageData, RemoteActorView, WatchlistDisplayEntry,
@@ -24,7 +27,7 @@ use application::{
     },
     use_cases::{
         add_to_watchlist, delete_review, export_diary as export_diary_uc, get_movie_social_page,
-        get_watchlist, log_review, login as login_uc, register as register_uc,
+        get_watchlist, is_on_watchlist, log_review, login as login_uc, register as register_uc,
         remove_from_watchlist, update_profile,
     },
 };
@@ -975,10 +978,12 @@ pub async fn get_movie_detail(
             let has_more = result.reviews.offset + result.reviews.limit
                 < result.reviews.total_count as u32;
             let on_watchlist = match &user_id {
-                Some(uid) => state.app_ctx.watchlist_repository
-                    .contains(uid, &domain::value_objects::MovieId::from_uuid(movie_id))
-                    .await
-                    .unwrap_or(false),
+                Some(uid) => is_on_watchlist::execute(
+                    &state.app_ctx,
+                    IsOnWatchlistQuery { user_id: uid.value(), movie_id },
+                )
+                .await
+                .unwrap_or(false),
                 None => false,
             };
             let data = MovieDetailPageData {
@@ -1056,8 +1061,7 @@ pub async fn get_watchlist_page(
     } else {
         #[cfg(feature = "federation")]
         {
-            let remote_entries = state.app_ctx.remote_watchlist_repository
-                .get_by_derived_uuid(owner_id)
+            let remote_entries = get_remote_watchlist::execute(&state.app_ctx, owner_id)
                 .await
                 .unwrap_or_default();
             let display: Vec<WatchlistDisplayEntry> = remote_entries.into_iter().map(|e| {

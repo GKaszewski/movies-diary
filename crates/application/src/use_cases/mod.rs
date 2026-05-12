@@ -28,3 +28,5 @@ pub mod add_to_watchlist;
 pub mod remove_from_watchlist;
 pub mod get_watchlist;
 pub mod is_on_watchlist;
+#[cfg(feature = "federation")]
+pub mod get_remote_watchlist;

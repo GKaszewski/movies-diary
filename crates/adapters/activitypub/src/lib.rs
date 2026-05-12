@@ -30,7 +30,6 @@ pub async fn wire(
     federation_repo:       std::sync::Arc<dyn FederationRepository>,
     review_store:          std::sync::Arc<dyn RemoteReviewRepository>,
     remote_watchlist_repo: std::sync::Arc<dyn domain::ports::RemoteWatchlistRepository>,
-    watchlist_repo:        std::sync::Arc<dyn domain::ports::WatchlistRepository>,
     user_repo:             std::sync::Arc<dyn domain::ports::UserRepository>,
     movie_repo:            std::sync::Arc<dyn domain::ports::MovieRepository>,
     review_repo:           std::sync::Arc<dyn domain::ports::ReviewRepository>,
@@ -70,7 +69,6 @@ pub async fn wire(
         std::sync::Arc::clone(&concrete),
         movie_repo,
         review_repo,
-        watchlist_repo,
         base_url,
     )) as std::sync::Arc<dyn domain::ports::EventHandler>;
 

@@ -3,7 +3,7 @@ use domain::ports::EventHandler;
 use domain::{
     errors::DomainError,
     events::DomainEvent,
-    ports::{MovieRepository, ReviewRepository, WatchlistRepository},
+    ports::{MovieRepository, ReviewRepository},
     value_objects::{ReviewId, UserId},
 };
 use std::sync::Arc;
@@ -17,7 +17,6 @@ pub struct ActivityPubEventHandler {
     ap_service: Arc<ActivityPubService>,
     movie_repository: Arc<dyn MovieRepository>,
     review_repository: Arc<dyn ReviewRepository>,
-    watchlist_repository: Arc<dyn WatchlistRepository>,
     base_url: String,
 }
 
@@ -26,14 +25,12 @@ impl ActivityPubEventHandler {
         ap_service: Arc<ActivityPubService>,
         movie_repository: Arc<dyn MovieRepository>,
         review_repository: Arc<dyn ReviewRepository>,
-        watchlist_repository: Arc<dyn WatchlistRepository>,
         base_url: String,
     ) -> Self {
         Self {
             ap_service,
             movie_repository,
             review_repository,
-            watchlist_repository,
             base_url,
         }
     }

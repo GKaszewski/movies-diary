@@ -170,7 +170,6 @@ async fn main() -> anyhow::Result<()> {
                 fed_federation_repo,
                 fed_review_store,
                 fed_remote_watchlist_repo,
-                Arc::clone(&ctx.watchlist_repository),
                 fed_user_repo,
                 fed_movie_repo,
                 fed_review_repo,
