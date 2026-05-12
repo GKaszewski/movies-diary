@@ -12,6 +12,7 @@ use domain::{
 };
 use sqlx::SqlitePool;
 
+mod image_ref;
 mod import_profile;
 mod import_session;
 mod migrations;
@@ -24,6 +25,7 @@ use models::{
     UserTotalsRow, datetime_to_str,
 };
 
+pub use image_ref::{SqliteImageRefAdapter, create_image_ref};
 pub use import_profile::SqliteImportProfileRepository;
 pub use import_session::SqliteImportSessionRepository;
 pub use profile::SqliteMovieProfileRepository;

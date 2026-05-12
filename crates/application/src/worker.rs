@@ -97,6 +97,7 @@ mod tests {
                 DomainEvent::MovieDeleted { .. } => "movie_deleted",
                 DomainEvent::UserUpdated { .. } => "user_updated",
                 DomainEvent::MovieEnrichmentRequested { .. } => "movie_enrichment_requested",
+                DomainEvent::ImageStored { .. } => "image_stored",
             };
             self.calls.lock().unwrap().push(label);
             Ok(())

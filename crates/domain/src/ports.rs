@@ -264,3 +264,9 @@ pub trait ImportProfileRepository: Send + Sync {
     async fn get(&self, id: &ImportProfileId, user_id: &UserId) -> Result<Option<ImportProfile>, DomainError>;
     async fn delete(&self, id: &ImportProfileId) -> Result<(), DomainError>;
 }
+
+#[async_trait]
+pub trait ImageRefPort: Send + Sync {
+    async fn swap(&self, old_key: &str, new_key: &str) -> Result<(), DomainError>;
+    async fn list_keys(&self) -> Result<Vec<String>, DomainError>;
+}

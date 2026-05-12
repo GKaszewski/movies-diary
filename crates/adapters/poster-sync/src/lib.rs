@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use domain::{
     errors::DomainError,
     events::DomainEvent,
-    ports::{EventHandler, ImageStorage, MetadataClient, MovieRepository, PosterFetcherClient},
+    ports::{EventHandler, EventPublisher, ImageStorage, MetadataClient, MovieRepository, PosterFetcherClient},
     value_objects::{ExternalMetadataId, MovieId, PosterPath},
 };
 
@@ -13,6 +13,7 @@ pub struct PosterSyncHandler {
     metadata_client: Arc<dyn MetadataClient>,
     poster_fetcher: Arc<dyn PosterFetcherClient>,
     image_storage: Arc<dyn ImageStorage>,
+    event_publisher: Arc<dyn EventPublisher>,
     max_retries: u32,
 }
 
@@ -22,9 +23,10 @@ impl PosterSyncHandler {
         metadata_client: Arc<dyn MetadataClient>,
         poster_fetcher: Arc<dyn PosterFetcherClient>,
         image_storage: Arc<dyn ImageStorage>,
+        event_publisher: Arc<dyn EventPublisher>,
         max_retries: u32,
     ) -> Self {
-        Self { movie_repository, metadata_client, poster_fetcher, image_storage, max_retries }
+        Self { movie_repository, metadata_client, poster_fetcher, image_storage, event_publisher, max_retries }
     }
 
     async fn sync(&self, movie_id: MovieId, external_metadata_id: ExternalMetadataId) -> Result<(), DomainError> {
@@ -47,6 +49,12 @@ impl PosterSyncHandler {
 
         let image_bytes = self.poster_fetcher.fetch_poster_bytes(&poster_url).await?;
         let stored_path = self.image_storage.store(&movie_id.value().to_string(), &image_bytes).await?;
+        if let Err(e) = self.event_publisher
+            .publish(&DomainEvent::ImageStored { key: stored_path.clone() })
+            .await
+        {
+            tracing::warn!("failed to emit ImageStored for {stored_path}: {e}");
+        }
         let poster_path = PosterPath::new(stored_path)?;
 
         movie.update_poster(poster_path);

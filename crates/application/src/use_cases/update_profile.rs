@@ -27,6 +27,14 @@ pub async fn execute(ctx: &AppContext, cmd: UpdateProfileCommand) -> Result<(), 
         }
         let key = format!("avatars/{}", user_id.value());
         let stored = ctx.image_storage.store(&key, &bytes).await?;
+
+        if let Err(e) = ctx.event_publisher
+            .publish(&DomainEvent::ImageStored { key: stored.clone() })
+            .await
+        {
+            tracing::warn!("failed to emit ImageStored for {stored}: {e}");
+        }
+
         Some(stored)
     } else {
         user.avatar_path().map(|s| s.to_string())

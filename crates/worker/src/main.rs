@@ -31,6 +31,9 @@ async fn main() -> anyhow::Result<()> {
     let (repos, db_pool) = db::connect(&database_url, &backend).await?;
     let (event_publisher_arc, consumer_arc) = event_bus::create(&db_pool).await?;
 
+    // Save image_ref before ctx consumes repos.
+    let image_ref = Arc::clone(&repos.image_ref);
+
     // Clone refs federation handler needs before ctx consumes them.
     #[cfg(feature = "federation")]
     let (fed_movie_repo, fed_review_repo, fed_diary_repo, fed_user_repo, base_url, allow_registration) = (
@@ -84,12 +87,21 @@ async fn main() -> anyhow::Result<()> {
             }
         };
 
+    // ── Image conversion ──────────────────────────────────────────────────────
+
+    let conversion = image_converter::build(
+        Arc::clone(&ctx.image_storage),
+        image_ref,
+        Arc::clone(&ctx.event_publisher),
+    )?;
+
     // ── Periodic jobs ─────────────────────────────────────────────────────────
 
     let mut periodic_jobs: Vec<Arc<dyn PeriodicJob>> = vec![
         Arc::new(application::jobs::ImportSessionCleanupJob::new(ctx.clone())),
     ];
     if let Some(job) = enrichment_job { periodic_jobs.push(job); }
+    if let Some((_, ref conv_job)) = conversion { periodic_jobs.push(Arc::clone(conv_job)); }
 
     for job in periodic_jobs {
         tokio::spawn(async move {
@@ -111,6 +123,7 @@ async fn main() -> anyhow::Result<()> {
             Arc::clone(&ctx.metadata_client),
             Arc::clone(&ctx.poster_fetcher),
             Arc::clone(&ctx.image_storage),
+            Arc::clone(&ctx.event_publisher),
             3,
         )) as Arc<dyn EventHandler>;
 
@@ -122,6 +135,7 @@ async fn main() -> anyhow::Result<()> {
         {
             let mut h = vec![poster, cleanup];
             if let Some(e) = enrichment_handler { h.push(e); }
+            if let Some((ref conv_handler, _)) = conversion { h.push(Arc::clone(conv_handler)); }
             h
         }
 
@@ -148,6 +162,7 @@ async fn main() -> anyhow::Result<()> {
             tracing::info!("federation event handler registered");
             let mut h = vec![poster, cleanup, ap];
             if let Some(e) = enrichment_handler { h.push(e); }
+            if let Some((ref conv_handler, _)) = conversion { h.push(Arc::clone(conv_handler)); }
             h
         }
     };

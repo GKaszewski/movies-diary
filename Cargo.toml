@@ -22,6 +22,7 @@ members = [
     "crates/api-types",
     "crates/application",
     "crates/adapters/tmdb-enrichment",
+    "crates/adapters/image-converter",
     "crates/domain",
     "crates/presentation",
     "crates/tui",
@@ -79,3 +80,4 @@ nats = { path = "crates/adapters/nats" }
 sqlite-event-queue = { path = "crates/adapters/sqlite-event-queue" }
 postgres-event-queue = { path = "crates/adapters/postgres-event-queue" }
 importer = { path = "crates/adapters/importer" }
+image-converter = { path = "crates/adapters/image-converter" }

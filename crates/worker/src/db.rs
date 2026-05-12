@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use domain::ports::{
-    DiaryRepository, ImportProfileRepository, ImportSessionRepository, MovieProfileRepository,
-    MovieRepository, ReviewRepository, StatsRepository, UserRepository,
+    DiaryRepository, ImageRefPort, ImportProfileRepository, ImportSessionRepository,
+    MovieProfileRepository, MovieRepository, ReviewRepository, StatsRepository, UserRepository,
 };
 
 pub enum DbPool {
@@ -22,6 +22,7 @@ pub struct Repos {
     pub import_session: Arc<dyn ImportSessionRepository>,
     pub import_profile: Arc<dyn ImportProfileRepository>,
     pub movie_profile: Arc<dyn MovieProfileRepository>,
+    pub image_ref: Arc<dyn ImageRefPort>,
 }
 
 pub async fn connect(database_url: &str, backend: &str) -> anyhow::Result<(Repos, DbPool)> {
@@ -30,13 +31,15 @@ pub async fn connect(database_url: &str, backend: &str) -> anyhow::Result<(Repos
         "postgres" => {
             let (pool, m, r, d, s, u, is, ip, mp) =
                 postgres::wire(database_url).await.context("PostgreSQL connection failed")?;
-            Ok((Repos { movie: m, review: r, diary: d, stats: s, user: u, import_session: is, import_profile: ip, movie_profile: mp }, DbPool::Postgres(pool)))
+            let image_ref = postgres::create_image_ref(pool.clone());
+            Ok((Repos { movie: m, review: r, diary: d, stats: s, user: u, import_session: is, import_profile: ip, movie_profile: mp, image_ref }, DbPool::Postgres(pool)))
         }
         #[cfg(feature = "sqlite")]
         _ => {
             let (pool, m, r, d, s, u, is, ip, mp) =
                 sqlite::wire(database_url).await.context("SQLite connection failed")?;
-            Ok((Repos { movie: m, review: r, diary: d, stats: s, user: u, import_session: is, import_profile: ip, movie_profile: mp }, DbPool::Sqlite(pool)))
+            let image_ref = sqlite::create_image_ref(pool.clone());
+            Ok((Repos { movie: m, review: r, diary: d, stats: s, user: u, import_session: is, import_profile: ip, movie_profile: mp, image_ref }, DbPool::Sqlite(pool)))
         }
         #[cfg(not(feature = "sqlite"))]
         _ => anyhow::bail!("DATABASE_BACKEND={backend} is not supported by this build"),

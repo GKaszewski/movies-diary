@@ -12,6 +12,7 @@ use domain::{
 };
 use sqlx::PgPool;
 
+mod image_ref;
 mod import_profile;
 mod import_session;
 mod models;
@@ -23,6 +24,7 @@ use models::{
     UserTotalsRow, datetime_to_str,
 };
 
+pub use image_ref::{PostgresImageRefAdapter, create_image_ref};
 pub use import_profile::PostgresImportProfileRepository;
 pub use import_session::PostgresImportSessionRepository;
 pub use profile::PostgresMovieProfileRepository;

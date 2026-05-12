@@ -1,0 +1,19 @@
+[package]
+name = "image-converter"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+domain      = { workspace = true }
+async-trait = { workspace = true }
+anyhow      = { workspace = true }
+tracing     = { workspace = true }
+tokio       = { workspace = true }
+image       = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"] }
+ravif       = { version = "0.11", default-features = false }
+webp        = "0.3"
+
+[dev-dependencies]
+image-storage = { workspace = true }
+object_store = "0.11"
+uuid = { workspace = true }

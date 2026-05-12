@@ -1,5 +1,6 @@
 use domain::{
     errors::DomainError,
+    events::DomainEvent,
     value_objects::{ExternalMetadataId, MovieId, PosterPath},
 };
 
@@ -39,6 +40,14 @@ pub async fn execute(ctx: &AppContext, cmd: SyncPosterCommand) -> Result<(), Dom
         .image_storage
         .store(&movie_id.value().to_string(), &image_bytes)
         .await?;
+
+    if let Err(e) = ctx.event_publisher
+        .publish(&DomainEvent::ImageStored { key: stored_path.clone() })
+        .await
+    {
+        tracing::warn!("failed to emit ImageStored for {stored_path}: {e}");
+    }
+
     let poster_path = PosterPath::new(stored_path)?;
 
     movie.update_poster(poster_path);

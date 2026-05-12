@@ -28,6 +28,7 @@ poster-sync = { workspace = true }
 export = { workspace = true }
 tmdb-enrichment = { workspace = true }
 importer = { workspace = true }
+image-converter = { workspace = true }
 nats = { workspace = true, optional = true }
 sqlx = { workspace = true }
 

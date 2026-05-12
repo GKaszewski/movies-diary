@@ -41,6 +41,9 @@ pub enum DomainEvent {
         movie_id: MovieId,
         external_metadata_id: String,
     },
+    ImageStored {
+        key: String,
+    },
 }
 
 #[async_trait]

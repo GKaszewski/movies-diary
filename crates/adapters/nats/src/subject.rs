@@ -9,6 +9,7 @@ pub fn event_to_subject(prefix: &str, event: &DomainEvent) -> String {
         DomainEvent::MovieDeleted { .. }              => "movie.deleted",
         DomainEvent::UserUpdated { .. }               => "user.updated",
         DomainEvent::MovieEnrichmentRequested { .. }  => "movie.enrichment.requested",
+        DomainEvent::ImageStored { .. }              => "image.stored",
     };
     format!("{prefix}.{suffix}")
 }

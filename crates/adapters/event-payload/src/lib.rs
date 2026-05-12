@@ -43,6 +43,9 @@ pub enum EventPayload {
         movie_id: String,
         external_metadata_id: String,
     },
+    ImageStored {
+        key: String,
+    },
 }
 
 impl EventPayload {
@@ -55,6 +58,7 @@ impl EventPayload {
             EventPayload::UserUpdated { .. } => "UserUpdated",
             EventPayload::ReviewDeleted { .. } => "ReviewDeleted",
             EventPayload::MovieEnrichmentRequested { .. } => "MovieEnrichmentRequested",
+            EventPayload::ImageStored { .. } => "ImageStored",
         }
     }
 }
@@ -114,6 +118,7 @@ impl From<&DomainEvent> for EventPayload {
                     external_metadata_id: external_metadata_id.clone(),
                 }
             }
+            DomainEvent::ImageStored { key } => EventPayload::ImageStored { key: key.clone() },
         }
     }
 }
@@ -170,6 +175,9 @@ impl TryFrom<EventPayload> for DomainEvent {
                     movie_id: MovieId::from_uuid(parse_uuid(&movie_id, "movie_id")?),
                     external_metadata_id,
                 })
+            }
+            EventPayload::ImageStored { key } => {
+                Ok(DomainEvent::ImageStored { key })
             }
         }
     }
@@ -246,5 +254,21 @@ mod tests {
         assert_eq!(EventPayload::from(&review_logged()).event_type(), "ReviewLogged");
         assert_eq!(EventPayload::from(&review_updated()).event_type(), "ReviewUpdated");
         assert_eq!(EventPayload::from(&movie_discovered()).event_type(), "MovieDiscovered");
+    }
+
+    #[test]
+    fn round_trip_image_stored() {
+        let event = DomainEvent::ImageStored { key: "avatars/abc123".into() };
+        let payload = EventPayload::from(&event);
+        let json = serde_json::to_string(&payload).unwrap();
+        let back: EventPayload = serde_json::from_str(&json).unwrap();
+        let recovered = DomainEvent::try_from(back).unwrap();
+        assert_eq!(EventPayload::from(&event), EventPayload::from(&recovered));
+    }
+
+    #[test]
+    fn image_stored_event_type() {
+        let payload = EventPayload::from(&DomainEvent::ImageStored { key: "posters/x".into() });
+        assert_eq!(payload.event_type(), "ImageStored");
     }
 }
