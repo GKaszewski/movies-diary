@@ -1,5 +1,6 @@
 mod db;
 mod event_bus;
+mod follow_backfill_handler;
 
 use std::sync::Arc;
 
@@ -180,12 +181,14 @@ async fn main() -> anyhow::Result<()> {
             ).await?;
 
             let ap_event_handler = ap_wire.event_handler;
-            let _ap_service = ap_wire.service; // used by FollowBackfillHandler in Task 8
+            let backfill = Arc::new(follow_backfill_handler::FollowBackfillHandler {
+                ap_service: ap_wire.service,
+            }) as Arc<dyn EventHandler>;
 
             let search_cleanup = Arc::new(SearchCleanupHandler::new(Arc::clone(&ctx.search_command), Arc::clone(&ctx.person_query))) as Arc<dyn EventHandler>;
             let discovery_indexer = Arc::new(MovieDiscoveryIndexer::new(Arc::clone(&ctx.movie_repository), Arc::clone(&ctx.search_command))) as Arc<dyn EventHandler>;
             tracing::info!("federation event handler registered");
-            let mut h = vec![poster, cleanup, ap_event_handler, search_cleanup, discovery_indexer];
+            let mut h = vec![poster, cleanup, ap_event_handler, backfill, search_cleanup, discovery_indexer];
             if let Some(e) = enrichment_handler { h.push(e); }
             if let Some((ref conv_handler, _)) = conversion { h.push(Arc::clone(conv_handler)); }
             h

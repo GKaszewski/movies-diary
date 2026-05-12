@@ -31,6 +31,7 @@ importer = { workspace = true }
 image-converter = { workspace = true }
 nats = { workspace = true, optional = true }
 sqlx = { workspace = true }
+async-trait = { workspace = true }
 
 # Optional — database backends
 sqlite = { workspace = true, optional = true }
