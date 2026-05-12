@@ -33,11 +33,18 @@ COPY crates/adapters/tmdb-enrichment/Cargo.toml   crates/adapters/tmdb-enrichmen
 COPY crates/domain/Cargo.toml                     crates/domain/Cargo.toml
 COPY crates/presentation/Cargo.toml               crates/presentation/Cargo.toml
 COPY crates/tui/Cargo.toml                        crates/tui/Cargo.toml
+COPY crates/adapters/image-converter/Cargo.toml   crates/adapters/image-converter/Cargo.toml
 COPY crates/worker/Cargo.toml                     crates/worker/Cargo.toml
 
 # Stub every crate so cargo can resolve and fetch deps
 RUN find crates -name "Cargo.toml" | sed 's|/Cargo.toml||' | \
     xargs -I{} sh -c 'mkdir -p {}/src && echo "fn main(){}" > {}/src/main.rs && echo "" > {}/src/lib.rs'
+
+# libwebp-dev: required at build time by the `webp` crate (C bindings)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libwebp-dev \
+    pkg-config \
+ && rm -rf /var/lib/apt/lists/*
 
 RUN cargo fetch
 
@@ -60,6 +67,7 @@ FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     wget \
+    libwebp7 \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

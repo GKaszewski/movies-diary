@@ -38,6 +38,7 @@ adapters/
   poster-fetcher       — downloads poster images
   image-storage        — stores images (posters + user avatars) on local filesystem or S3-compatible storage
   poster-sync          — event handler: triggers poster fetch+store on MovieDiscovered
+  image-converter      — optional background worker: converts stored images to AVIF or WebP; backfills existing images via a 24h periodic job
   tmdb-enrichment      — event handler: fetches full movie profile (cast, crew, genres, keywords, box office) from TMDb on MovieEnrichmentRequested; resolves IMDb IDs automatically
   template-askama      — Askama HTML rendering
   rss                  — RSS/Atom feed generation
@@ -95,6 +96,10 @@ IMAGE_STORAGE_PATH=./images
 # MINIO_REGION=minio
 # MINIO_ACCESS_KEY_ID=minioadmin
 # MINIO_SECRET_ACCESS_KEY=minioadmin
+
+# Image conversion (optional — converts stored images to AVIF or WebP to save space)
+# IMAGE_CONVERSION_ENABLED=false
+# IMAGE_CONVERSION_FORMAT=avif   # avif or webp
 
 # Optional
 HOST=0.0.0.0
