@@ -36,9 +36,10 @@ use api_types::{
     BlockedDomainResponse, FollowRequest, RemoteActorDto,
 };
 use api_types::{
-    ActivityFeedQueryParams, ActivityFeedResponse, DiaryEntryDto, DiaryQueryParams, DiaryResponse,
-    DirectorStatDto, ExportQueryParams, FeedEntryDto, LogReviewRequest, LoginRequest, LoginResponse,
-    MonthActivityDto, MonthlyRatingDto, MovieDetailResponse, MovieDto, MovieStatsDto,
+    ActivityFeedQueryParams, ActivityFeedResponse, CastMemberDto, CrewMemberDto, DiaryEntryDto,
+    DiaryQueryParams, DiaryResponse, DirectorStatDto, ExportQueryParams, FeedEntryDto,
+    GenreDto, KeywordDto, LogReviewRequest, LoginRequest, LoginResponse, MonthActivityDto,
+    MonthlyRatingDto, MovieDetailResponse, MovieDto, MovieProfileResponse, MovieStatsDto,
     PaginationQueryParams, ProfileResponse, RegisterRequest, ReviewDto, ReviewHistoryResponse,
     SocialFeedResponse, SocialReviewDto, UserProfileQueryParams, UserProfileResponse, UserStatsDto,
     UserSummaryDto, UserTrendsDto, UsersResponse,
@@ -291,6 +292,52 @@ pub async fn get_movie_detail(
             offset: result.reviews.offset,
         },
     }))
+}
+
+#[utoipa::path(
+    get, path = "/api/v1/movies/{id}/profile",
+    params(("id" = Uuid, Path, description = "Movie ID")),
+    responses(
+        (status = 200, body = MovieProfileResponse),
+        (status = 404, description = "No profile found for this movie"),
+    )
+)]
+pub async fn get_movie_profile(
+    State(state): State<AppState>,
+    Path(movie_id): Path<Uuid>,
+) -> impl IntoResponse {
+    let id = domain::value_objects::MovieId::from_uuid(movie_id);
+    match state.app_ctx.movie_profile_repository.get_by_movie_id(&id).await {
+        Ok(Some(p)) => Json(MovieProfileResponse {
+            tmdb_id: p.tmdb_id,
+            imdb_id: p.imdb_id,
+            overview: p.overview,
+            tagline: p.tagline,
+            runtime_minutes: p.runtime_minutes,
+            budget_usd: p.budget_usd,
+            revenue_usd: p.revenue_usd,
+            vote_average: p.vote_average,
+            vote_count: p.vote_count,
+            original_language: p.original_language,
+            collection_name: p.collection_name,
+            genres: p.genres.into_iter().map(|g| GenreDto { tmdb_id: g.tmdb_id, name: g.name }).collect(),
+            keywords: p.keywords.into_iter().map(|k| KeywordDto { tmdb_id: k.tmdb_id, name: k.name }).collect(),
+            cast: p.cast.into_iter().map(|c| CastMemberDto {
+                tmdb_person_id: c.tmdb_person_id, name: c.name, character: c.character,
+                billing_order: c.billing_order, profile_path: c.profile_path,
+            }).collect(),
+            crew: p.crew.into_iter().map(|c| CrewMemberDto {
+                tmdb_person_id: c.tmdb_person_id, name: c.name, job: c.job,
+                department: c.department, profile_path: c.profile_path,
+            }).collect(),
+            enriched_at: p.enriched_at.to_rfc3339(),
+        }).into_response(),
+        Ok(None) => StatusCode::NOT_FOUND.into_response(),
+        Err(e) => {
+            tracing::error!("get_movie_profile: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
 }
 
 #[utoipa::path(

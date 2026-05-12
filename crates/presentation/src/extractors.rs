@@ -358,6 +358,12 @@ mod tests {
         async fn delete(&self, _: &domain::value_objects::ImportProfileId) -> Result<(), DomainError> { panic!() }
     }
     #[async_trait::async_trait]
+    impl domain::ports::MovieProfileRepository for Panic {
+        async fn upsert(&self, _: &domain::models::MovieProfile) -> Result<(), DomainError> { panic!() }
+        async fn get_by_movie_id(&self, _: &domain::value_objects::MovieId) -> Result<Option<domain::models::MovieProfile>, DomainError> { Ok(None) }
+        async fn list_stale(&self) -> Result<Vec<(domain::value_objects::MovieId, String)>, DomainError> { Ok(vec![]) }
+    }
+    #[async_trait::async_trait]
     impl domain::ports::DiaryExporter for Panic {
         async fn serialize_entries(
             &self,
@@ -483,6 +489,7 @@ mod tests {
                 user_repository: Arc::clone(&repo) as _,
                 import_session_repository: Arc::clone(&repo) as _,
                 import_profile_repository: Arc::clone(&repo) as _,
+                movie_profile_repository: Arc::clone(&repo) as _,
                 auth_service,
                 config: AppConfig {
                     allow_registration: false,

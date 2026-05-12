@@ -29,6 +29,7 @@ COPY crates/adapters/postgres-event-queue/Cargo.toml crates/adapters/postgres-ev
 COPY crates/adapters/template-askama/Cargo.toml   crates/adapters/template-askama/Cargo.toml
 COPY crates/api-types/Cargo.toml                  crates/api-types/Cargo.toml
 COPY crates/application/Cargo.toml                crates/application/Cargo.toml
+COPY crates/adapters/tmdb-enrichment/Cargo.toml   crates/adapters/tmdb-enrichment/Cargo.toml
 COPY crates/domain/Cargo.toml                     crates/domain/Cargo.toml
 COPY crates/presentation/Cargo.toml               crates/presentation/Cargo.toml
 COPY crates/tui/Cargo.toml                        crates/tui/Cargo.toml

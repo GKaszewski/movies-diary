@@ -26,6 +26,7 @@ poster-fetcher = { workspace = true }
 image-storage = { workspace = true }
 poster-sync = { workspace = true }
 export = { workspace = true }
+tmdb-enrichment = { workspace = true }
 importer = { workspace = true }
 nats = { workspace = true, optional = true }
 sqlx = { workspace = true }

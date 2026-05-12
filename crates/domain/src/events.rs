@@ -37,6 +37,10 @@ pub enum DomainEvent {
         review_id: ReviewId,
         user_id: UserId,
     },
+    MovieEnrichmentRequested {
+        movie_id: MovieId,
+        external_metadata_id: String,
+    },
 }
 
 #[async_trait]

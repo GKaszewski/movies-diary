@@ -6,8 +6,8 @@ use crate::{
     events::{DomainEvent, EventEnvelope},
     models::{
         AnnotatedRow, DiaryEntry, DiaryFilter, ExportFormat, FeedEntry, FieldMapping,
-        FileFormat, ImportError, ImportProfile, ImportSession, Movie, MovieStats, ParsedFile,
-        Review, ReviewHistory, User, UserStats, UserSummary, UserTrends,
+        FileFormat, ImportError, ImportProfile, ImportSession, Movie, MovieProfile, MovieStats,
+        ParsedFile, Review, ReviewHistory, User, UserStats, UserSummary, UserTrends,
         collections::{PageParams, Paginated},
     },
     value_objects::{
@@ -215,6 +215,31 @@ pub trait DiaryExporter: Send + Sync {
 #[async_trait]
 pub trait EventHandler: Send + Sync {
     async fn handle(&self, event: &DomainEvent) -> Result<(), DomainError>;
+}
+
+#[async_trait]
+pub trait PeriodicJob: Send + Sync {
+    fn interval(&self) -> std::time::Duration;
+    async fn run(&self) -> Result<(), DomainError>;
+}
+
+#[async_trait]
+pub trait MovieProfileRepository: Send + Sync {
+    async fn upsert(&self, profile: &MovieProfile) -> Result<(), DomainError>;
+    async fn get_by_movie_id(&self, id: &MovieId) -> Result<Option<MovieProfile>, DomainError>;
+    /// Returns (movie_id, external_metadata_id) for movies with no profile or a stale one
+    /// (enriched_at older than 30 days).
+    async fn list_stale(&self) -> Result<Vec<(MovieId, String)>, DomainError>;
+}
+
+#[async_trait]
+pub trait MovieEnrichmentClient: Send + Sync {
+    /// Resolves an external ID (TMDb or IMDb) and fetches the full movie profile.
+    async fn fetch_profile(
+        &self,
+        movie_id: MovieId,
+        external_metadata_id: &str,
+    ) -> Result<MovieProfile, DomainError>;
 }
 
 #[async_trait]

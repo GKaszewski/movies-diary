@@ -7,6 +7,7 @@ A self-hosted, server-side rendered movie logging system with a full REST API. B
 - Log movies with a TMDB/OMDb ID or manual title/year/director, with a 0–5 rating
 - Immutable append-only viewing ledger (tracks re-watches)
 - Background poster fetching and storage (local filesystem or S3-compatible)
+- Movie enrichment via TMDb — full cast, crew, genres, keywords, runtime, budget/revenue, ratings; fetched automatically on movie discovery and refreshed every 30 days; exposed via `GET /api/v1/movies/{id}/profile`
 - RSS/Atom feed for public subscription (global and per-user)
 - JWT authentication via cookie (HTML) or Bearer token (REST API)
 - ActivityPub federation — follow/unfollow remote users, accept/reject/remove followers, federated reviews broadcast as `Note` objects with `#MoviesDiary` + `#MovieTitle` hashtags, paginated outbox, boost/Announce tracking, NodeInfo discovery endpoint, shared inbox delivery, actor profile sync (bio, avatar, discoverable)
@@ -37,6 +38,7 @@ adapters/
   poster-fetcher       — downloads poster images
   image-storage        — stores images (posters + user avatars) on local filesystem or S3-compatible storage
   poster-sync          — event handler: triggers poster fetch+store on MovieDiscovered
+  tmdb-enrichment      — event handler: fetches full movie profile (cast, crew, genres, keywords, box office) from TMDb on MovieEnrichmentRequested; resolves IMDb IDs automatically
   template-askama      — Askama HTML rendering
   rss                  — RSS/Atom feed generation
   export               — CSV and JSON diary serialization
@@ -73,6 +75,9 @@ JWT_SECRET=change-me
 
 # OMDb metadata
 OMDB_API_KEY=your-key
+
+# TMDb metadata + enrichment (optional — enables full cast/crew/genre data)
+# TMDB_API_KEY=your-key
 
 # Public base URL (used for ActivityPub actor URLs and canonical links)
 BASE_URL=https://yourdomain.example.com

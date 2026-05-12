@@ -5153,6 +5153,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 
 [[package]]
+name = "tmdb-enrichment"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "domain",
+ "reqwest 0.13.3",
+ "serde",
+ "serde_json",
+ "tracing",
+]
+
+[[package]]
 name = "tokio"
 version = "1.52.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6331,6 +6345,7 @@ dependencies = [
  "sqlite-event-queue",
  "sqlite-federation",
  "sqlx",
+ "tmdb-enrichment",
  "tokio",
  "tracing",
  "tracing-subscriber",

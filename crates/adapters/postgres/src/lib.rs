@@ -15,6 +15,7 @@ use sqlx::PgPool;
 mod import_profile;
 mod import_session;
 mod models;
+mod profile;
 mod users;
 
 use models::{
@@ -24,6 +25,7 @@ use models::{
 
 pub use import_profile::PostgresImportProfileRepository;
 pub use import_session::PostgresImportSessionRepository;
+pub use profile::PostgresMovieProfileRepository;
 pub use users::PostgresUserRepository;
 
 fn format_year_month(ym: &str) -> String {
@@ -865,6 +867,7 @@ pub async fn wire(database_url: &str) -> anyhow::Result<(
     std::sync::Arc<dyn domain::ports::UserRepository>,
     std::sync::Arc<dyn domain::ports::ImportSessionRepository>,
     std::sync::Arc<dyn domain::ports::ImportProfileRepository>,
+    std::sync::Arc<dyn domain::ports::MovieProfileRepository>,
 )> {
     use anyhow::Context;
 
@@ -880,6 +883,7 @@ pub async fn wire(database_url: &str) -> anyhow::Result<(
 
     let import_session_repo = std::sync::Arc::new(PostgresImportSessionRepository::new(pool.clone()));
     let import_profile_repo = std::sync::Arc::new(PostgresImportProfileRepository::new(pool.clone()));
+    let movie_profile_repo = std::sync::Arc::new(PostgresMovieProfileRepository::new(pool.clone()));
 
     Ok((
         pool.clone(),
@@ -890,5 +894,6 @@ pub async fn wire(database_url: &str) -> anyhow::Result<(
         std::sync::Arc::new(PostgresUserRepository::new(pool)) as _,
         import_session_repo as _,
         import_profile_repo as _,
+        movie_profile_repo as _,
     ))
 }

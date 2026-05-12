@@ -49,17 +49,17 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
     let poster_fetcher = poster_fetcher::create()?;
     let image_storage = image_storage::create()?;
 
-    let (movie_repository, review_repository, diary_repository, stats_repository, user_repository, import_session_repository, import_profile_repository, db_pool) =
+    let (movie_repository, review_repository, diary_repository, stats_repository, user_repository, import_session_repository, import_profile_repository, movie_profile_repository, db_pool) =
         match backend.as_str() {
             #[cfg(feature = "postgres")]
             "postgres" => {
-                let (pool, m, r, d, s, u, is, ip) = postgres::wire(&database_url).await?;
-                (m, r, d, s, u, is, ip, DbPool::Postgres(pool))
+                let (pool, m, r, d, s, u, is, ip, mp) = postgres::wire(&database_url).await?;
+                (m, r, d, s, u, is, ip, mp, DbPool::Postgres(pool))
             }
             #[cfg(feature = "sqlite")]
             _ => {
-                let (pool, m, r, d, s, u, is, ip) = sqlite::wire(&database_url).await?;
-                (m, r, d, s, u, is, ip, DbPool::Sqlite(pool))
+                let (pool, m, r, d, s, u, is, ip, mp) = sqlite::wire(&database_url).await?;
+                (m, r, d, s, u, is, ip, mp, DbPool::Sqlite(pool))
             }
             #[cfg(not(feature = "sqlite"))]
             _ => anyhow::bail!("DATABASE_BACKEND={backend} is not supported by this build (sqlite feature is not enabled)"),
@@ -161,6 +161,7 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
         user_repository,
         import_session_repository: import_session_repository as Arc<dyn ImportSessionRepository>,
         import_profile_repository: import_profile_repository as Arc<dyn ImportProfileRepository>,
+        movie_profile_repository,
         config: app_config,
     };
 
@@ -184,6 +185,7 @@ enum DbPool {
     #[cfg(feature = "postgres")]
     Postgres(sqlx::PgPool),
 }
+
 
 #[derive(Clone, Copy)]
 enum EventBusBackend {

@@ -50,6 +50,14 @@ async fn publish_events(
         }
     }
 
+    if let Some(ext_id) = movie.external_metadata_id() {
+        let enrichment_event = DomainEvent::MovieEnrichmentRequested {
+            movie_id: movie.id().clone(),
+            external_metadata_id: ext_id.value().to_string(),
+        };
+        ctx.event_publisher.publish(&enrichment_event).await?;
+    }
+
     ctx.event_publisher.publish(&review_event).await?;
     Ok(())
 }

@@ -6,7 +6,7 @@ use export::ExportAdapter;
 use importer::ImporterDocumentParser;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use domain::ports::{DiaryExporter, DocumentParser, EventHandler};
+use domain::ports::{DiaryExporter, DocumentParser, EventHandler, PeriodicJob};
 
 #[cfg(not(any(feature = "sqlite", feature = "postgres")))]
 compile_error!("At least one database backend must be enabled. Use --features sqlite or --features postgres");
@@ -25,17 +25,17 @@ async fn main() -> anyhow::Result<()> {
     let poster_fetcher = poster_fetcher::create()?;
     let image_storage = image_storage::create()?;
 
-    let (movie_repository, review_repository, diary_repository, stats_repository, user_repository, import_session_repository, import_profile_repository, db_pool) =
+    let (movie_repository, review_repository, diary_repository, stats_repository, user_repository, import_session_repository, import_profile_repository, movie_profile_repository, db_pool) =
         match backend.as_str() {
             #[cfg(feature = "postgres")]
             "postgres" => {
-                let (pool, m, r, d, s, u, is, ip) = postgres::wire(&database_url).await?;
-                (m, r, d, s, u, is, ip, DbPool::Postgres(pool))
+                let (pool, m, r, d, s, u, is, ip, mp) = postgres::wire(&database_url).await?;
+                (m, r, d, s, u, is, ip, mp, DbPool::Postgres(pool))
             }
             #[cfg(feature = "sqlite")]
             _ => {
-                let (pool, m, r, d, s, u, is, ip) = sqlite::wire(&database_url).await?;
-                (m, r, d, s, u, is, ip, DbPool::Sqlite(pool))
+                let (pool, m, r, d, s, u, is, ip, mp) = sqlite::wire(&database_url).await?;
+                (m, r, d, s, u, is, ip, mp, DbPool::Sqlite(pool))
             }
             #[cfg(not(feature = "sqlite"))]
             _ => anyhow::bail!("DATABASE_BACKEND={backend} is not supported by this build"),
@@ -62,6 +62,8 @@ async fn main() -> anyhow::Result<()> {
             nats::create_channel(cfg).await?
         }
     };
+
+    let profile_repo = movie_profile_repository;
 
     // Clone what federation handler needs before ctx and app_config are consumed.
     #[cfg(feature = "federation")]
@@ -90,19 +92,37 @@ async fn main() -> anyhow::Result<()> {
         user_repository,
         import_session_repository,
         import_profile_repository,
+        movie_profile_repository: Arc::clone(&profile_repo) as _,
         config: app_config,
     };
 
-    // Spawn periodic import session cleanup (hourly)
-    {
-        let cleanup_ctx = ctx.clone();
+    let enrichment_handler: Option<Arc<dyn EventHandler>> =
+        match tmdb_enrichment::TmdbEnrichmentClient::from_env() {
+            Ok(client) => {
+                tracing::info!("TMDb enrichment enabled");
+                Some(Arc::new(tmdb_enrichment::EnrichmentHandler {
+                    enrichment_client: Arc::new(client),
+                    profile_repo: Arc::clone(&profile_repo),
+                }))
+            }
+            Err(e) => {
+                tracing::warn!("TMDb enrichment disabled: {e}");
+                None
+            }
+        };
+
+    let periodic_jobs: Vec<Arc<dyn PeriodicJob>> = vec![
+        Arc::new(application::jobs::ImportSessionCleanupJob::new(ctx.clone())),
+        Arc::new(application::jobs::EnrichmentStalenessJob::new(ctx.clone())),
+    ];
+
+    for job in periodic_jobs {
         tokio::spawn(async move {
-            let mut interval = tokio::time::interval(std::time::Duration::from_secs(3600));
+            let mut tick = tokio::time::interval(job.interval());
             loop {
-                interval.tick().await;
-                match application::use_cases::cleanup_expired_import_sessions::execute(&cleanup_ctx).await {
-                    Ok(n) => tracing::info!("import session cleanup: removed {} expired sessions", n),
-                    Err(e) => tracing::error!("import session cleanup failed: {:?}", e),
+                tick.tick().await;
+                if let Err(e) = job.run().await {
+                    tracing::error!("periodic job failed: {e}");
                 }
             }
         });
@@ -121,8 +141,14 @@ async fn main() -> anyhow::Result<()> {
             Arc::clone(&ctx.image_storage),
         )) as Arc<dyn EventHandler>;
 
+        let enrichment = enrichment_handler;
+
         #[cfg(not(feature = "federation"))]
-        { vec![poster, cleanup] }
+        {
+            let mut h: Vec<Arc<dyn EventHandler>> = vec![poster, cleanup];
+            if let Some(e) = enrichment { h.push(e); }
+            h
+        }
 
         #[cfg(feature = "federation")]
         {
@@ -145,7 +171,9 @@ async fn main() -> anyhow::Result<()> {
             ).await?.event_handler;
 
             tracing::info!("federation event handler registered");
-            vec![poster, cleanup, ap]
+            let mut h: Vec<Arc<dyn EventHandler>> = vec![poster, cleanup, ap];
+            if let Some(e) = enrichment { h.push(e); }
+            h
         }
     };
 

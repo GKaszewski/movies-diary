@@ -4,7 +4,7 @@ use domain::ports::{
     AuthService, DiaryExporter, DiaryRepository, DocumentParser, EventPublisher,
     ImageStorage,
     ImportProfileRepository, ImportSessionRepository,
-    MetadataClient, MovieRepository, PasswordHasher, PosterFetcherClient,
+    MetadataClient, MovieProfileRepository, MovieRepository, PasswordHasher, PosterFetcherClient,
     ReviewRepository, StatsRepository, UserRepository,
 };
 
@@ -27,5 +27,6 @@ pub struct AppContext {
     pub user_repository: Arc<dyn UserRepository>,
     pub import_session_repository: Arc<dyn ImportSessionRepository>,
     pub import_profile_repository: Arc<dyn ImportProfileRepository>,
+    pub movie_profile_repository: Arc<dyn MovieProfileRepository>,
     pub config: AppConfig,
 }

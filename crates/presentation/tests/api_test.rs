@@ -147,6 +147,14 @@ impl domain::ports::DocumentParser for PanicDocumentParser {
 }
 
 struct PanicImportProfile;
+
+struct PanicMovieProfile;
+#[async_trait]
+impl domain::ports::MovieProfileRepository for PanicMovieProfile {
+    async fn upsert(&self, _: &domain::models::MovieProfile) -> Result<(), DomainError> { panic!() }
+    async fn get_by_movie_id(&self, _: &domain::value_objects::MovieId) -> Result<Option<domain::models::MovieProfile>, DomainError> { Ok(None) }
+    async fn list_stale(&self) -> Result<Vec<(domain::value_objects::MovieId, String)>, DomainError> { Ok(vec![]) }
+}
 #[async_trait]
 impl domain::ports::ImportProfileRepository for PanicImportProfile {
     async fn save(&self, _: &domain::models::ImportProfile) -> Result<(), DomainError> { panic!() }
@@ -198,6 +206,7 @@ async fn test_app() -> Router {
             user_repository: Arc::new(NobodyUserRepo),
             import_session_repository: Arc::new(PanicImportSession),
             import_profile_repository: Arc::new(PanicImportProfile),
+            movie_profile_repository: Arc::new(PanicMovieProfile),
             config: AppConfig {
                 allow_registration: false,
                 base_url: "http://localhost:3000".to_string(),

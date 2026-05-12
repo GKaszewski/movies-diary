@@ -181,6 +181,10 @@ fn api_routes(rate_limit: u64) -> Router<AppState> {
             "/movies/{id}",
             routing::get(handlers::api::get_movie_detail),
         )
+        .route(
+            "/movies/{id}/profile",
+            routing::get(handlers::api::get_movie_profile),
+        )
         .route("/reviews", routing::post(handlers::api::post_review))
         .route(
             "/reviews/{id}",

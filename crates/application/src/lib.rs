@@ -1,4 +1,5 @@
 pub mod commands;
+pub mod jobs;
 pub mod worker;
 pub mod config;
 pub mod context;

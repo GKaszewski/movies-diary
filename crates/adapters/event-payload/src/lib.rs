@@ -39,6 +39,10 @@ pub enum EventPayload {
         review_id: String,
         user_id: String,
     },
+    MovieEnrichmentRequested {
+        movie_id: String,
+        external_metadata_id: String,
+    },
 }
 
 impl EventPayload {
@@ -50,6 +54,7 @@ impl EventPayload {
             EventPayload::MovieDeleted { .. } => "MovieDeleted",
             EventPayload::UserUpdated { .. } => "UserUpdated",
             EventPayload::ReviewDeleted { .. } => "ReviewDeleted",
+            EventPayload::MovieEnrichmentRequested { .. } => "MovieEnrichmentRequested",
         }
     }
 }
@@ -103,6 +108,12 @@ impl From<&DomainEvent> for EventPayload {
                 review_id: review_id.value().to_string(),
                 user_id: user_id.value().to_string(),
             },
+            DomainEvent::MovieEnrichmentRequested { movie_id, external_metadata_id } => {
+                EventPayload::MovieEnrichmentRequested {
+                    movie_id: movie_id.value().to_string(),
+                    external_metadata_id: external_metadata_id.clone(),
+                }
+            }
         }
     }
 }
@@ -152,6 +163,12 @@ impl TryFrom<EventPayload> for DomainEvent {
                 Ok(DomainEvent::ReviewDeleted {
                     review_id: ReviewId::from_uuid(parse_uuid(&review_id, "review_id")?),
                     user_id: UserId::from_uuid(parse_uuid(&user_id, "user_id")?),
+                })
+            }
+            EventPayload::MovieEnrichmentRequested { movie_id, external_metadata_id } => {
+                Ok(DomainEvent::MovieEnrichmentRequested {
+                    movie_id: MovieId::from_uuid(parse_uuid(&movie_id, "movie_id")?),
+                    external_metadata_id,
                 })
             }
         }
