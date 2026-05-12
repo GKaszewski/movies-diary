@@ -1,4 +1,4 @@
-# Movies Diary
+# Screened
 
 A self-hosted, server-side rendered movie logging system with a full REST API. Built in Rust — no JavaScript in the HTML interface, just HTML forms and an RSS feed. Designed to run as a lightweight widget embedded on a personal site or as a backend for third-party clients.
 
@@ -10,7 +10,7 @@ A self-hosted, server-side rendered movie logging system with a full REST API. B
 - Movie enrichment via TMDb — full cast, crew, genres, keywords, runtime, budget/revenue, ratings; fetched automatically on movie discovery and refreshed every 30 days; exposed via `GET /api/v1/movies/{id}/profile`
 - RSS/Atom feed for public subscription (global and per-user)
 - JWT authentication via cookie (HTML) or Bearer token (REST API)
-- ActivityPub federation — follow/unfollow remote users, accept/reject/remove followers, federated reviews broadcast as `Note` objects with `#MoviesDiary` + `#MovieTitle` hashtags, paginated outbox, boost/Announce tracking, NodeInfo discovery endpoint, shared inbox delivery, actor profile sync (bio, avatar, discoverable)
+- ActivityPub federation — follow/unfollow remote users, accept/reject/remove followers, federated reviews broadcast as `Note` objects with `#Screened` + `#MovieTitle` hashtags, paginated outbox, boost/Announce tracking, NodeInfo discovery endpoint, shared inbox delivery, actor profile sync (bio, avatar, discoverable)
 - Federation moderation — instance-level domain blocking (admin-managed), per-user actor blocking with `Block` activity, delivery filter excludes blocked actors and blocked-domain inboxes
 - CSV and JSON diary export
 - File importer: upload CSV, TSV, JSON, or XLSX from any source (Letterboxd, IMDb, etc.), map columns to domain fields via a step-by-step wizard or REST API, save mapping profiles for repeat imports
