@@ -266,14 +266,15 @@ impl FederationRepository for SqliteFederationRepository {
         let fetched_at = datetime_to_str(&now);
 
         sqlx::query(
-            "INSERT INTO ap_remote_actors (url, handle, inbox_url, shared_inbox_url, display_name, avatar_url, fetched_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?)
+            "INSERT INTO ap_remote_actors (url, handle, inbox_url, shared_inbox_url, display_name, avatar_url, outbox_url, fetched_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
              ON CONFLICT(url) DO UPDATE SET
                  handle           = excluded.handle,
                  inbox_url        = excluded.inbox_url,
                  shared_inbox_url = excluded.shared_inbox_url,
                  display_name     = excluded.display_name,
                  avatar_url       = excluded.avatar_url,
+                 outbox_url       = COALESCE(excluded.outbox_url, ap_remote_actors.outbox_url),
                  fetched_at       = excluded.fetched_at",
         )
         .bind(&actor.url)
@@ -282,6 +283,7 @@ impl FederationRepository for SqliteFederationRepository {
         .bind(&actor.shared_inbox_url)
         .bind(&actor.display_name)
         .bind(&actor.avatar_url)
+        .bind(&actor.outbox_url)
         .bind(&fetched_at)
         .execute(&self.pool)
         .await?;
@@ -407,10 +409,21 @@ impl FederationRepository for SqliteFederationRepository {
 
     async fn get_following_outbox_url(
         &self,
-        _local_user_id: uuid::Uuid,
-        _remote_actor_url: &str,
+        local_user_id: uuid::Uuid,
+        remote_actor_url: &str,
     ) -> Result<Option<String>> {
-        Ok(None)
+        let uid = local_user_id.to_string();
+        let row: Option<Option<String>> = sqlx::query_scalar(
+            "SELECT a.outbox_url
+             FROM ap_following f
+             INNER JOIN ap_remote_actors a ON a.url = f.remote_actor_url
+             WHERE f.local_user_id = ? AND f.remote_actor_url = ?",
+        )
+        .bind(&uid)
+        .bind(remote_actor_url)
+        .fetch_optional(&self.pool)
+        .await?;
+        Ok(row.flatten())
     }
 
     async fn add_announce(
@@ -790,6 +803,79 @@ pub fn wire(pool: sqlx::SqlitePool) -> (
         std::sync::Arc::clone(&fed) as _,
         fed as _,
     )
+}
+
+#[cfg(test)]
+mod outbox_url_tests {
+    use super::*;
+    use activitypub_base::{FederationRepository, FollowingStatus, RemoteActor};
+
+    async fn setup_pool() -> SqlitePool {
+        let pool = SqlitePool::connect(":memory:").await.unwrap();
+        sqlx::query(
+            "CREATE TABLE ap_remote_actors (
+                url TEXT PRIMARY KEY, handle TEXT NOT NULL, inbox_url TEXT NOT NULL,
+                shared_inbox_url TEXT, display_name TEXT, avatar_url TEXT,
+                outbox_url TEXT, fetched_at TEXT NOT NULL
+             );
+             CREATE TABLE ap_following (
+                local_user_id TEXT NOT NULL, remote_actor_url TEXT NOT NULL,
+                follow_activity_id TEXT, created_at TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'pending',
+                PRIMARY KEY (local_user_id, remote_actor_url)
+             );",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        pool
+    }
+
+    #[tokio::test]
+    async fn get_following_outbox_url_returns_stored_url() {
+        let pool = setup_pool().await;
+        let repo = SqliteFederationRepository::new(pool);
+        let local_user = uuid::Uuid::new_v4();
+        let actor = RemoteActor {
+            url: "https://remote.example/users/alice".to_string(),
+            handle: "alice@remote.example".to_string(),
+            inbox_url: "https://remote.example/users/alice/inbox".to_string(),
+            shared_inbox_url: None,
+            display_name: None,
+            avatar_url: None,
+            outbox_url: Some("https://remote.example/users/alice/outbox".to_string()),
+        };
+        repo.add_following(local_user, actor, "https://local/activities/1")
+            .await
+            .unwrap();
+        repo.update_following_status(
+            local_user,
+            "https://remote.example/users/alice",
+            FollowingStatus::Accepted,
+        )
+        .await
+        .unwrap();
+
+        let result = repo
+            .get_following_outbox_url(local_user, "https://remote.example/users/alice")
+            .await
+            .unwrap();
+        assert_eq!(
+            result,
+            Some("https://remote.example/users/alice/outbox".to_string())
+        );
+    }
+
+    #[tokio::test]
+    async fn get_following_outbox_url_returns_none_when_not_following() {
+        let pool = setup_pool().await;
+        let repo = SqliteFederationRepository::new(pool);
+        let result = repo
+            .get_following_outbox_url(uuid::Uuid::new_v4(), "https://remote.example/users/alice")
+            .await
+            .unwrap();
+        assert_eq!(result, None);
+    }
 }
 
 #[cfg(test)]
