@@ -13,6 +13,7 @@ pub fn event_to_subject(prefix: &str, event: &DomainEvent) -> String {
         DomainEvent::WatchlistEntryAdded { .. } | DomainEvent::WatchlistEntryRemoved { .. } => {
             unreachable!("watchlist events are not published to NATS")
         }
+        DomainEvent::FollowAccepted { .. } => "follow.accepted",
     };
     format!("{prefix}.{suffix}")
 }
