@@ -1,7 +1,10 @@
 use super::*;
 use async_trait::async_trait;
-use domain::{errors::DomainError, events::{AckHandle, DomainEvent}};
 use domain::value_objects::{ExternalMetadataId, MovieId};
+use domain::{
+    errors::DomainError,
+    events::{AckHandle, DomainEvent},
+};
 use futures::{stream, stream::BoxStream};
 use std::sync::{Arc, Mutex};
 
@@ -9,8 +12,12 @@ struct NoopAck;
 
 #[async_trait]
 impl AckHandle for NoopAck {
-    async fn ack(&self) -> Result<(), DomainError> { Ok(()) }
-    async fn nack(&self) -> Result<(), DomainError> { Ok(()) }
+    async fn ack(&self) -> Result<(), DomainError> {
+        Ok(())
+    }
+    async fn nack(&self) -> Result<(), DomainError> {
+        Ok(())
+    }
 }
 
 struct VecConsumer {
@@ -45,7 +52,10 @@ impl EventHandler for RecordingHandler {
             DomainEvent::UserUpdated { .. } => "user_updated",
             DomainEvent::MovieEnrichmentRequested { .. } => "movie_enrichment_requested",
             DomainEvent::ImageStored { .. } => "image_stored",
-            DomainEvent::WatchlistEntryAdded { .. } | DomainEvent::WatchlistEntryRemoved { .. } => "watchlist",
+            DomainEvent::WatchlistEntryAdded { .. } | DomainEvent::WatchlistEntryRemoved { .. } => {
+                "watchlist"
+            }
+            DomainEvent::FollowAccepted { .. } => "follow_accepted",
         };
         self.calls.lock().unwrap().push(label);
         Ok(())
@@ -62,8 +72,12 @@ fn movie_discovered() -> DomainEvent {
 #[tokio::test]
 async fn dispatches_to_all_handlers() {
     let calls = Arc::new(Mutex::new(vec![]));
-    let consumer = VecConsumer { events: vec![movie_discovered()] };
-    let handler = RecordingHandler { calls: Arc::clone(&calls) };
+    let consumer = VecConsumer {
+        events: vec![movie_discovered()],
+    };
+    let handler = RecordingHandler {
+        calls: Arc::clone(&calls),
+    };
 
     WorkerService::new(Arc::new(consumer), vec![Arc::new(handler)])
         .run()
@@ -82,7 +96,9 @@ async fn nacks_when_handler_fails() {
 
     #[async_trait]
     impl AckHandle for TrackingAck {
-        async fn ack(&self) -> Result<(), DomainError> { Ok(()) }
+        async fn ack(&self) -> Result<(), DomainError> {
+            Ok(())
+        }
         async fn nack(&self) -> Result<(), DomainError> {
             *self.nack_called.lock().unwrap() = true;
             Ok(())
@@ -98,7 +114,9 @@ async fn nacks_when_handler_fails() {
         fn consume(&self) -> BoxStream<'_, Result<EventEnvelope, DomainError>> {
             let envelope = EventEnvelope::new(
                 self.event.clone(),
-                Box::new(TrackingAck { nack_called: Arc::clone(&self.nack_called) }),
+                Box::new(TrackingAck {
+                    nack_called: Arc::clone(&self.nack_called),
+                }),
             );
             Box::pin(stream::iter(vec![Ok(envelope)]))
         }
@@ -139,7 +157,9 @@ async fn acks_when_all_handlers_succeed() {
             *self.ack_called.lock().unwrap() = true;
             Ok(())
         }
-        async fn nack(&self) -> Result<(), DomainError> { Ok(()) }
+        async fn nack(&self) -> Result<(), DomainError> {
+            Ok(())
+        }
     }
 
     struct TrackingConsumer {
@@ -151,7 +171,9 @@ async fn acks_when_all_handlers_succeed() {
         fn consume(&self) -> BoxStream<'_, Result<EventEnvelope, DomainError>> {
             let envelope = EventEnvelope::new(
                 self.event.clone(),
-                Box::new(TrackingAck { ack_called: Arc::clone(&self.ack_called) }),
+                Box::new(TrackingAck {
+                    ack_called: Arc::clone(&self.ack_called),
+                }),
             );
             Box::pin(stream::iter(vec![Ok(envelope)]))
         }
@@ -162,9 +184,7 @@ async fn acks_when_all_handlers_succeed() {
         ack_called: Arc::clone(&ack_called),
     };
 
-    WorkerService::new(Arc::new(consumer), vec![])
-        .run()
-        .await;
+    WorkerService::new(Arc::new(consumer), vec![]).run().await;
 
     assert!(*ack_called.lock().unwrap());
 }
