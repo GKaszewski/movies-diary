@@ -81,8 +81,12 @@ impl ActivityPubService {
         allow_registration: bool,
         software_name: String,
         debug: bool,
+        event_publisher: Option<Arc<dyn domain::ports::EventPublisher>>,
     ) -> anyhow::Result<Self> {
-        let data = FederationData::new(repo, user_repo, object_handler, base_url.clone(), allow_registration, software_name);
+        let data = FederationData::new(
+            repo, user_repo, object_handler, base_url.clone(),
+            allow_registration, software_name, event_publisher,
+        );
         let federation_config = ApFederationConfig::new(data, debug).await?;
         Ok(Self {
             federation_config,

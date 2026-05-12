@@ -17,6 +17,7 @@ use crate::actors::DbActor;
 use crate::data::FederationData;
 use crate::error::Error;
 use crate::repository::{FollowerStatus, FollowingStatus};
+use domain::{events::DomainEvent, value_objects::UserId};
 
 // --- Follow ---
 
@@ -141,6 +142,24 @@ impl Activity for AcceptActivity {
                 FollowingStatus::Accepted,
             )
             .await?;
+
+        if let Ok(Some(outbox_url)) = data
+            .federation_repo
+            .get_following_outbox_url(local_user_id, self.actor.inner().as_str())
+            .await
+        {
+            let event = DomainEvent::FollowAccepted {
+                local_user_id: UserId::from_uuid(local_user_id),
+                remote_actor_url: self.actor.inner().to_string(),
+                outbox_url,
+            };
+            if let Some(publisher) = &data.event_publisher {
+                if let Err(e) = publisher.publish(&event).await {
+                    tracing::warn!(error = %e, "failed to publish FollowAccepted event");
+                }
+            }
+        }
+
         tracing::info!(remote_actor = %self.actor.inner(), "follow accepted by remote");
         Ok(())
     }

@@ -60,6 +60,7 @@ pub async fn wire(
             allow_registration,
             "movies-diary".to_string(),
             cfg!(debug_assertions),
+            None,  // event_publisher wired in Task 6
         )
         .await?,
     );

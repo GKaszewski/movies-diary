@@ -17,3 +17,5 @@ axum = { workspace = true }
 activitypub_federation = "0.7.0-beta.11"
 url = { version = "2", features = ["serde"] }
 enum_delegate = "0.2"
+domain = { workspace = true }
+reqwest = { workspace = true }
