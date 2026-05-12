@@ -2,6 +2,7 @@ mod auth;
 mod diary;
 mod import;
 mod movies;
+mod search;
 mod social;
 mod users;
 
@@ -36,6 +37,7 @@ fn build() -> utoipa::openapi::OpenApi {
     api.merge(movies::MoviesDoc::openapi());
     api.merge(users::UsersDoc::openapi());
     api.merge(import::ImportDoc::openapi());
+    api.merge(search::SearchDoc::openapi());
     #[cfg(feature = "federation")]
     api.merge(social::SocialDoc::openapi());
     SecurityAddon.modify(&mut api);

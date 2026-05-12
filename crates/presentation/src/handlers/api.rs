@@ -1097,6 +1097,14 @@ pub async fn export_diary(
 // Search and person endpoints are intentionally public — browsing the catalog
 // and people profiles does not require authentication.
 
+#[utoipa::path(
+    get, path = "/api/v1/search",
+    params(api_types::search::SearchQueryParams),
+    responses(
+        (status = 200, body = api_types::search::SearchResponse),
+    ),
+    tag = "search",
+)]
 pub async fn get_search(
     State(state): State<AppState>,
     Query(params): Query<SearchQueryParams>,
@@ -1151,6 +1159,15 @@ pub async fn get_search(
     }
 }
 
+#[utoipa::path(
+    get, path = "/api/v1/people/{id}",
+    params(("id" = Uuid, Path, description = "Person ID")),
+    responses(
+        (status = 200, body = api_types::search::PersonDto),
+        (status = 404, description = "Person not found"),
+    ),
+    tag = "search",
+)]
 pub async fn get_person_handler(
     State(state): State<AppState>,
     Path(id): Path<uuid::Uuid>,
@@ -1171,6 +1188,15 @@ pub async fn get_person_handler(
     }
 }
 
+#[utoipa::path(
+    get, path = "/api/v1/people/{id}/credits",
+    params(("id" = Uuid, Path, description = "Person ID")),
+    responses(
+        (status = 200, body = api_types::search::PersonCreditsDto),
+        (status = 404, description = "Person not found"),
+    ),
+    tag = "search",
+)]
 pub async fn get_person_credits_handler(
     State(state): State<AppState>,
     Path(id): Path<uuid::Uuid>,

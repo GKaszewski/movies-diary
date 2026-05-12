@@ -1,25 +1,34 @@
 use serde::{Deserialize, Serialize};
+use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, IntoParams)]
 pub struct SearchQueryParams {
+    /// Free-text query matched across title, cast, crew, genres and keywords.
     pub q: Option<String>,
+    /// Filter by genre name (exact match, case-sensitive).
     pub genre: Option<String>,
+    /// Filter by release year.
     pub year: Option<u16>,
+    /// Filter by person ID (UUID).
     pub person_id: Option<Uuid>,
+    /// Filter crew results by department (e.g. "Directing", "Writing").
     pub department: Option<String>,
+    /// Filter by original language code (e.g. "en", "fr").
     pub language: Option<String>,
+    /// Max results to return (default 20).
     pub limit: Option<u32>,
+    /// Offset for pagination (default 0).
     pub offset: Option<u32>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct SearchResponse {
     pub movies: PaginatedMovieHits,
     pub people: PaginatedPersonHits,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct PaginatedMovieHits {
     pub items: Vec<MovieSearchHitDto>,
     pub total_count: u64,
@@ -27,7 +36,7 @@ pub struct PaginatedMovieHits {
     pub offset: u32,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct PaginatedPersonHits {
     pub items: Vec<PersonSearchHitDto>,
     pub total_count: u64,
@@ -35,7 +44,7 @@ pub struct PaginatedPersonHits {
     pub offset: u32,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct MovieSearchHitDto {
     pub movie_id: Uuid,
     pub title: String,
@@ -45,7 +54,7 @@ pub struct MovieSearchHitDto {
     pub genres: Vec<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct PersonSearchHitDto {
     pub person_id: Uuid,
     pub name: String,
@@ -54,7 +63,7 @@ pub struct PersonSearchHitDto {
     pub known_for_titles: Vec<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct PersonDto {
     pub id: Uuid,
     pub external_id: String,
@@ -63,14 +72,14 @@ pub struct PersonDto {
     pub profile_path: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct PersonCreditsDto {
     pub person: PersonDto,
     pub cast: Vec<CastCreditDto>,
     pub crew: Vec<CrewCreditDto>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct CastCreditDto {
     pub movie_id: Uuid,
     pub title: String,
@@ -79,7 +88,7 @@ pub struct CastCreditDto {
     pub poster_path: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct CrewCreditDto {
     pub movie_id: Uuid,
     pub title: String,
