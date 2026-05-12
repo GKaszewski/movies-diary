@@ -18,12 +18,17 @@ pub fn build_router(state: AppState, ap_router: Router) -> Router {
     let ap_router = ap_router.layer(GovernorLayer::new(ap_cfg));
 
     Router::new()
+        .route("/health", routing::get(health_handler))
         .merge(html_routes(rate_limit))
         .merge(api_routes(rate_limit))
         .nest_service("/static", ServeDir::new("static"))
         .layer(TraceLayer::new_for_http())
         .with_state(state)
         .merge(ap_router)
+}
+
+async fn health_handler() -> axum::Json<serde_json::Value> {
+    axum::Json(serde_json::json!({ "status": "ok" }))
 }
 
 fn per_minute(n: u64) -> Quota {
