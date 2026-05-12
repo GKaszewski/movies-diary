@@ -24,9 +24,10 @@ A self-hosted, server-side rendered movie logging system with a full REST API. B
 Hexagonal (Ports & Adapters) with Domain-Driven Design:
 
 ```
+api-types           — shared REST API request/response DTOs (Serialize/Deserialize + utoipa schemas); used by presentation and tui
 domain              — pure types and trait definitions, no external deps
 application         — use cases / business logic orchestration
-presentation        — Axum HTTP router, composition root for the HTTP process
+presentation        — Axum HTTP router, OpenAPI spec assembly, Swagger UI + Scalar serving, composition root for the HTTP process
 worker              — standalone worker binary (event consumer, poster sync, federation)
 adapters/
   auth                 — JWT issuance and validation (Argon2 passwords)
@@ -44,13 +45,12 @@ adapters/
   sqlite-event-queue   — durable polling event queue backed by SQLite
   postgres-event-queue — durable polling event queue backed by PostgreSQL
   nats                 — NATS Core / JetStream event publisher and consumer
-  event-publisher      — in-memory event channel (tests only)
+  event-publisher      — in-memory event channel (used in tests)
   activitypub          — ActivityPub federation wiring (follow, inbox/outbox, actor)
   activitypub-base     — core ActivityPub protocol types and service
   sqlite-federation    — SQLite-backed federation repository
   postgres-federation  — PostgreSQL-backed federation repository
-doc                 — OpenAPI spec assembly and Swagger UI / Scalar serving
-tui                 — terminal UI client (ratatui)
+tui                 — terminal UI client (ratatui); shares api-types with presentation for typed API access
 ```
 
 ## Prerequisites

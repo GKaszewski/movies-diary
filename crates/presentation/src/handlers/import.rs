@@ -4,7 +4,11 @@ use axum::{
     http::StatusCode,
     response::{Html, IntoResponse, Redirect},
 };
-use serde::{Deserialize, Serialize};
+use api_types::{
+    ApplyMappingRequest, ConfirmRequest, SaveProfileRequest, SessionCreatedResponse,
+    SessionStateResponse,
+};
+use serde::Deserialize;
 use std::collections::HashMap;
 
 use application::{
@@ -465,13 +469,6 @@ pub async fn get_import_done(
 
 // ── REST API handlers ──────────────────────────────────────────────────────
 
-#[derive(Serialize, utoipa::ToSchema)]
-pub struct SessionCreatedResponse {
-    pub session_id: String,
-    pub columns: Vec<String>,
-    pub sample_rows: Vec<Vec<String>>,
-}
-
 #[utoipa::path(
     post, path = "/api/v1/import/sessions",
     request_body(content_type = "multipart/form-data", description = "file (binary) + format (csv|json|xlsx)"),
@@ -544,14 +541,6 @@ pub async fn api_post_session(
     }
 }
 
-#[derive(Serialize, utoipa::ToSchema)]
-pub struct SessionStateResponse {
-    pub session_id: String,
-    pub columns: Vec<String>,
-    pub has_mappings: bool,
-    pub row_count: usize,
-}
-
 #[utoipa::path(
     get, path = "/api/v1/import/sessions/{id}",
     params(("id" = String, Path, description = "Import session UUID")),
@@ -605,23 +594,6 @@ pub async fn api_get_session(
         )
             .into_response(),
     }
-}
-
-#[derive(Deserialize, utoipa::ToSchema)]
-pub struct ApiFieldMapping {
-    /// Column name in the source file
-    pub source_column: String,
-    /// Domain field: title | release_year | director | rating | watched_at | comment | external_metadata_id
-    pub domain_field: String,
-    /// For rating fields: multiply raw value by this factor (e.g. 0.5 for 10-point → 5-point scale)
-    pub rating_scale: Option<f64>,
-    /// For watched_at fields: strftime format hint (e.g. "%d/%m/%Y")
-    pub date_format: Option<String>,
-}
-
-#[derive(Deserialize, utoipa::ToSchema)]
-pub struct ApplyMappingRequest {
-    pub mappings: Vec<ApiFieldMapping>,
 }
 
 #[utoipa::path(
@@ -690,12 +662,6 @@ pub async fn api_put_mapping(
         )
             .into_response(),
     }
-}
-
-#[derive(Deserialize, utoipa::ToSchema)]
-pub struct ConfirmRequest {
-    /// Indices (0-based) of rows from the mapping preview to import
-    pub confirmed_indices: Vec<usize>,
 }
 
 #[utoipa::path(
@@ -774,14 +740,6 @@ pub async fn api_get_profiles(
         )
             .into_response(),
     }
-}
-
-#[derive(Deserialize, utoipa::ToSchema)]
-pub struct SaveProfileRequest {
-    /// Session UUID whose current field_mappings to save
-    pub session_id: String,
-    /// Human-readable profile name (e.g. "Letterboxd")
-    pub name: String,
 }
 
 #[utoipa::path(

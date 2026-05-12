@@ -19,18 +19,18 @@ members = [
     "crates/adapters/export",
     "crates/adapters/event-payload",
     "crates/adapters/nats",
+    "crates/api-types",
     "crates/application",
     "crates/domain",
     "crates/presentation",
     "crates/tui",
-    "crates/doc",
     "crates/worker",
     "crates/adapters/importer",
 ]
 resolver = "2"
 
 [workspace.dependencies]
-tokio = { version = "1.0", features = ["full"] }
+tokio = { version = "1.0", features = ["macros", "net", "rt", "rt-multi-thread", "sync", "time"] }
 futures = "0.3"
 dotenvy = "0.15"
 serde = { version = "1.0", features = ["derive"] }
@@ -53,6 +53,7 @@ object_store = { version = "0.11", features = ["aws"] }
 axum = { version = "0.8.8", features = ["macros", "multipart"] }
 csv = "1"
 
+api-types = { path = "crates/api-types" }
 domain = { path = "crates/domain" }
 application = { path = "crates/application" }
 presentation = { path = "crates/presentation" }
@@ -71,7 +72,6 @@ postgres-federation = { path = "crates/adapters/postgres-federation" }
 template-askama = { path = "crates/adapters/template-askama" }
 activitypub = { path = "crates/adapters/activitypub" }
 activitypub-base = { path = "crates/adapters/activitypub-base" }
-doc = { path = "crates/doc" }
 event-payload = { path = "crates/adapters/event-payload" }
 nats = { path = "crates/adapters/nats" }
 sqlite-event-queue = { path = "crates/adapters/sqlite-event-queue" }

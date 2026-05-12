@@ -33,7 +33,6 @@ axum = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 anyhow = { workspace = true }
-thiserror = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 tokio = { workspace = true }
@@ -42,6 +41,7 @@ uuid = { workspace = true }
 chrono = { workspace = true }
 async-trait = { workspace = true }
 
+api-types = { workspace = true }
 domain = { workspace = true }
 application = { workspace = true }
 auth = { workspace = true }
@@ -52,10 +52,11 @@ template-askama = { workspace = true }
 nats = { workspace = true, optional = true }
 rss = { workspace = true }
 export = { workspace = true }
-doc = { workspace = true }
 importer = { workspace = true }
 sqlx = { workspace = true }
 utoipa = { version = "5.5.0", features = ["axum_extras", "uuid"] }
+utoipa-scalar = { version = "0.3.0", features = ["axum"], default-features = false }
+utoipa-swagger-ui = { version = "9.0.2", features = ["axum", "vendored"] }
 
 # Optional — database backends
 sqlite = { workspace = true, optional = true }

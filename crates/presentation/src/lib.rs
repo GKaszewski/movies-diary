@@ -1,5 +1,5 @@
 pub mod csrf;
-pub mod dtos;
+pub mod forms;
 pub mod errors;
 pub mod extractors;
 pub mod handlers;

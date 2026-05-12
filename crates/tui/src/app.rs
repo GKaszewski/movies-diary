@@ -1,4 +1,4 @@
-use crate::client::{DiaryEntryDto, LogReviewRequest, ReviewHistoryResponse};
+use api_types::{DiaryEntryDto, LogReviewRequest, ReviewHistoryResponse};
 use crate::config::Config;
 use uuid::Uuid;
 
@@ -995,7 +995,7 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::client::{DiaryEntryDto, MovieDto, ReviewDto};
+    use api_types::{DiaryEntryDto, MovieDto, ReviewDto};
     use uuid::Uuid;
 
     fn setup_app() -> App {
@@ -1038,6 +1038,7 @@ mod tests {
                 title: "The Matrix".into(),
                 release_year: 1999,
                 director: None,
+                poster_path: None,
             },
             review: ReviewDto {
                 id: Uuid::new_v4(),

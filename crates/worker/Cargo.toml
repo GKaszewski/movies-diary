@@ -17,16 +17,9 @@ domain = { workspace = true }
 application = { workspace = true }
 tokio = { workspace = true }
 anyhow = { workspace = true }
-thiserror = { workspace = true }
-chrono = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
-futures = { workspace = true }
 dotenvy = { workspace = true }
-uuid = { workspace = true }
-serde = { workspace = true }
-serde_json = { workspace = true }
-async-trait = { workspace = true }
 auth = { workspace = true }
 metadata = { workspace = true }
 poster-fetcher = { workspace = true }

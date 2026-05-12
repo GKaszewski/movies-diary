@@ -11,9 +11,7 @@ use importer::ImporterDocumentParser;
 use rss::RssAdapter;
 use template_askama::AskamaHtmlRenderer;
 
-use doc::ApiDocExt;
-use presentation::{openapi::ApiDoc, routes, state::AppState};
-use utoipa::OpenApi as _;
+use presentation::{openapi, routes, state::AppState};
 
 use domain::ports::{DiaryExporter, DocumentParser, EventPublisher, ImportProfileRepository, ImportSessionRepository};
 
@@ -29,7 +27,7 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context("Failed to wire dependencies")?;
 
-    let app = routes::build_router(state, ap_router).with_api_doc(ApiDoc::openapi());
+    let app = openapi::serve(routes::build_router(state, ap_router));
 
     let host = std::env::var("HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
     let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());

@@ -31,19 +31,22 @@ use domain::{
 };
 
 #[cfg(feature = "federation")]
-use crate::dtos::{ActorListResponse, ActorUrlRequest, FollowRequest, RemoteActorDto};
+use api_types::{
+    ActorListResponse, ActorUrlRequest, AddBlockedDomainRequest, BlockedActorResponse,
+    BlockedDomainResponse, FollowRequest, RemoteActorDto,
+};
+use api_types::{
+    ActivityFeedQueryParams, ActivityFeedResponse, DiaryEntryDto, DiaryQueryParams, DiaryResponse,
+    DirectorStatDto, ExportQueryParams, FeedEntryDto, LogReviewRequest, LoginRequest, LoginResponse,
+    MonthActivityDto, MonthlyRatingDto, MovieDetailResponse, MovieDto, MovieStatsDto,
+    PaginationQueryParams, ProfileResponse, RegisterRequest, ReviewDto, ReviewHistoryResponse,
+    SocialFeedResponse, SocialReviewDto, UserProfileQueryParams, UserProfileResponse, UserStatsDto,
+    UserSummaryDto, UserTrendsDto, UsersResponse,
+};
 use crate::{
-    dtos::{
-        ActivityFeedQueryParams, ActivityFeedResponse, DiaryEntryDto, DiaryQueryParams,
-        DiaryResponse, DirectorStatDto, ExportQueryParams, FeedEntryDto, LogReviewData,
-        LogReviewRequest, LoginRequest, LoginResponse, MonthActivityDto, MonthlyRatingDto,
-        MovieDetailResponse, MovieDto, MovieStatsDto, PaginationQueryParams, ProfileResponse,
-        RegisterRequest, ReviewDto, ReviewHistoryResponse, SocialFeedResponse, SocialReviewDto,
-        UserProfileQueryParams, UserProfileResponse, UserStatsDto, UserSummaryDto, UserTrendsDto,
-        UsersResponse,
-    },
     errors::ApiError,
     extractors::AuthenticatedUser,
+    forms::{to_diary_query, LogReviewData},
     state::AppState,
 };
 
@@ -60,7 +63,7 @@ pub async fn get_diary(
     State(state): State<AppState>,
     Query(params): Query<DiaryQueryParams>,
 ) -> Result<Json<DiaryResponse>, ApiError> {
-    let page = get_diary::execute(&state.app_ctx, params.into()).await?;
+    let page = get_diary::execute(&state.app_ctx, to_diary_query(params)).await?;
 
     Ok(Json(DiaryResponse {
         items: page.items.iter().map(entry_to_dto).collect(),
@@ -415,7 +418,7 @@ fn entry_to_dto(entry: &DiaryEntry) -> DiaryEntryDto {
 #[utoipa::path(
     get, path = "/api/v1/admin/blocked-domains",
     responses(
-        (status = 200, body = Vec<crate::dtos::BlockedDomainResponse>),
+        (status = 200, body = Vec<BlockedDomainResponse>),
         (status = 401, description = "Unauthorized"),
         (status = 403, description = "Forbidden — admin only"),
     ),
@@ -427,9 +430,9 @@ pub async fn get_blocked_domains_admin(
 ) -> impl IntoResponse {
     match state.ap_service.get_blocked_domains().await {
         Ok(domains) => {
-            let response: Vec<crate::dtos::BlockedDomainResponse> = domains
+            let response: Vec<BlockedDomainResponse> = domains
                 .into_iter()
-                .map(|d| crate::dtos::BlockedDomainResponse {
+                .map(|d| BlockedDomainResponse {
                     domain: d.domain,
                     reason: d.reason,
                     blocked_at: d.blocked_at,
@@ -444,7 +447,7 @@ pub async fn get_blocked_domains_admin(
 #[cfg(feature = "federation")]
 #[utoipa::path(
     post, path = "/api/v1/admin/blocked-domains",
-    request_body = crate::dtos::AddBlockedDomainRequest,
+    request_body = AddBlockedDomainRequest,
     responses(
         (status = 201, description = "Domain blocked"),
         (status = 401, description = "Unauthorized"),
@@ -455,7 +458,7 @@ pub async fn get_blocked_domains_admin(
 pub async fn add_blocked_domain_admin(
     State(state): State<AppState>,
     _admin: crate::extractors::AdminUser,
-    axum::Json(body): axum::Json<crate::dtos::AddBlockedDomainRequest>,
+    axum::Json(body): axum::Json<AddBlockedDomainRequest>,
 ) -> impl IntoResponse {
     match state.ap_service.add_blocked_domain(&body.domain, body.reason.as_deref()).await {
         Ok(()) => StatusCode::CREATED.into_response(),
@@ -531,7 +534,7 @@ pub async fn unblock_actor_api(
 #[utoipa::path(
     get, path = "/api/v1/social/blocked",
     responses(
-        (status = 200, body = Vec<crate::dtos::BlockedActorResponse>),
+        (status = 200, body = Vec<BlockedActorResponse>),
         (status = 401, description = "Unauthorized"),
     ),
     security(("bearer_auth" = []))
@@ -542,9 +545,9 @@ pub async fn get_blocked_actors_api(
 ) -> impl IntoResponse {
     match state.ap_service.get_blocked_actors(user.0.value()).await {
         Ok(actors) => {
-            let response: Vec<crate::dtos::BlockedActorResponse> = actors
+            let response: Vec<BlockedActorResponse> = actors
                 .into_iter()
-                .map(|a| crate::dtos::BlockedActorResponse {
+                .map(|a| BlockedActorResponse {
                     url: a.url,
                     handle: a.handle,
                     display_name: a.display_name,

@@ -9,10 +9,7 @@ domain      = { workspace = true }
 event-payload = { workspace = true }
 anyhow      = { workspace = true }
 async-trait = { workspace = true }
-serde       = { workspace = true }
 serde_json  = { workspace = true }
 tokio       = { workspace = true }
 futures     = { workspace = true }
 tracing     = { workspace = true }
-chrono      = { workspace = true }
-uuid        = { workspace = true }

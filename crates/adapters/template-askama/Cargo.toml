@@ -6,7 +6,6 @@ edition = "2024"
 [dependencies]
 askama = { version = "0.16.0" }
 
-serde = { workspace = true }
 chrono = { workspace = true }
 uuid = { workspace = true }
 

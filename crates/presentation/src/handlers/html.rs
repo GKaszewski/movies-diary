@@ -30,12 +30,10 @@ use domain::models::ExportFormat;
 use domain::{errors::DomainError, value_objects::UserId};
 
 #[cfg(feature = "federation")]
-use crate::dtos::{ActorUrlForm, BlockDomainForm, FollowForm, FollowerActionForm, RemoveDomainForm, UnfollowForm};
+use crate::forms::{ActorUrlForm, BlockDomainForm, FollowForm, FollowerActionForm, RemoveDomainForm, UnfollowForm};
 use crate::{
     csrf::CsrfToken,
-    dtos::{
-        ErrorQuery, FeedQueryParams, LogReviewData, LogReviewForm, LoginForm, RegisterForm,
-    },
+    forms::{ErrorQuery, FeedQueryParams, LogReviewData, LogReviewForm, LoginForm, RegisterForm},
     extractors::{AdminUser, OptionalCookieUser, RequiredCookieUser},
     state::AppState,
 };
@@ -280,7 +278,7 @@ pub async fn post_delete_review(
     RequiredCookieUser(user_id): RequiredCookieUser,
     Extension(csrf): Extension<CsrfToken>,
     Path(review_id): Path<Uuid>,
-    Form(form): Form<crate::dtos::DeleteRedirectForm>,
+    Form(form): Form<crate::forms::DeleteRedirectForm>,
 ) -> impl IntoResponse {
     if crate::csrf::mismatch(&csrf, &form.csrf_token) {
         return StatusCode::FORBIDDEN.into_response();
@@ -311,7 +309,7 @@ pub async fn post_delete_review(
 pub async fn get_export(
     State(state): State<AppState>,
     RequiredCookieUser(user_id): RequiredCookieUser,
-    Query(params): Query<crate::dtos::ExportQueryParams>,
+    Query(params): Query<api_types::ExportQueryParams>,
 ) -> impl IntoResponse {
     let format = match params.format.as_str() {
         "csv" => ExportFormat::Csv,
@@ -504,7 +502,7 @@ pub async fn get_user_profile(
     State(state): State<AppState>,
     Path(profile_user_uuid): Path<Uuid>,
     headers: axum::http::HeaderMap,
-    Query(params): Query<crate::dtos::ProfileQueryParams>,
+    Query(params): Query<crate::forms::ProfileQueryParams>,
     Extension(csrf): Extension<CsrfToken>,
 ) -> impl IntoResponse {
     // Content negotiation: AP clients request application/activity+json
@@ -800,7 +798,7 @@ pub async fn get_following_page(
     RequiredCookieUser(user_id): RequiredCookieUser,
     State(state): State<AppState>,
     Path(profile_user_uuid): Path<Uuid>,
-    Query(params): Query<crate::dtos::ErrorQuery>,
+    Query(params): Query<crate::forms::ErrorQuery>,
     Extension(csrf): Extension<CsrfToken>,
 ) -> impl IntoResponse {
     if user_id.value() != profile_user_uuid {
@@ -850,7 +848,7 @@ pub async fn get_followers_page(
     RequiredCookieUser(user_id): RequiredCookieUser,
     State(state): State<AppState>,
     Path(profile_user_uuid): Path<Uuid>,
-    Query(params): Query<crate::dtos::ErrorQuery>,
+    Query(params): Query<crate::forms::ErrorQuery>,
     Extension(csrf): Extension<CsrfToken>,
 ) -> impl IntoResponse {
     if user_id.value() != profile_user_uuid {
@@ -935,7 +933,7 @@ pub async fn get_movie_detail(
     OptionalCookieUser(user_id): OptionalCookieUser,
     State(state): State<AppState>,
     Path(movie_id): Path<uuid::Uuid>,
-    Query(params): Query<crate::dtos::PaginationQueryParams>,
+    Query(params): Query<api_types::PaginationQueryParams>,
     Extension(csrf): Extension<CsrfToken>,
 ) -> impl IntoResponse {
     let ctx = build_page_context(&state, user_id, csrf.0).await;
