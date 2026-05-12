@@ -69,9 +69,9 @@ pub fn review_to_ap_object(
     let tag = vec![
         ApHashtag {
             kind: "Hashtag".to_string(),
-            href: Url::parse(&format!("{}/tags/screened", base_url))
+            href: Url::parse(&format!("{}/tags/moviesdiary", base_url))
                 .expect("valid base_url"),
-            name: "#Screened".to_string(),
+            name: "#MoviesDiary".to_string(),
         },
         ApHashtag {
             kind: "Hashtag".to_string(),
@@ -137,7 +137,7 @@ mod tests {
         );
         assert_eq!(obj.tag.len(), 2);
         let names: Vec<&str> = obj.tag.iter().map(|t| t.name.as_str()).collect();
-        assert!(names.contains(&"#Screened"));
+        assert!(names.contains(&"#MoviesDiary"));
         assert!(names.contains(&"#Dune"));
     }
 }

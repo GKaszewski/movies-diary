@@ -64,7 +64,7 @@ pub(crate) async fn build_page_context(
         is_admin,
         register_enabled: state.app_ctx.config.allow_registration,
         rss_url: "/feed.rss".to_string(),
-        page_title: domain::PRODUCT_NAME.to_string(),
+        page_title: "Movies Diary".to_string(),
         canonical_url: state.app_ctx.config.base_url.clone(),
         csrf_token,
         page_rss_url: None,
@@ -108,7 +108,7 @@ pub async fn get_login_page(
         is_admin: false,
         register_enabled: state.app_ctx.config.allow_registration,
         rss_url: "/feed.rss".to_string(),
-        page_title: format!("Login — {}", domain::PRODUCT_NAME),
+        page_title: "Login — Movies Diary".to_string(),
         canonical_url: format!("{}/login", state.app_ctx.config.base_url),
         csrf_token: csrf.0,
         page_rss_url: None,
@@ -175,7 +175,7 @@ pub async fn get_register_page(
         is_admin: false,
         register_enabled: true,
         rss_url: "/feed.rss".to_string(),
-        page_title: format!("Register — {}", domain::PRODUCT_NAME),
+        page_title: "Register — Movies Diary".to_string(),
         canonical_url: format!("{}/register", state.app_ctx.config.base_url),
         csrf_token: csrf.0,
         page_rss_url: None,
@@ -236,7 +236,7 @@ pub async fn get_new_review_page(
     Extension(csrf): Extension<CsrfToken>,
 ) -> impl IntoResponse {
     let mut ctx = build_page_context(&state, Some(user_id), csrf.0).await;
-    ctx.page_title = format!("Log a Review — {}", domain::PRODUCT_NAME);
+    ctx.page_title = "Log a Review — Movies Diary".to_string();
     ctx.canonical_url = format!("{}/reviews/new", state.app_ctx.config.base_url);
     let html = state
         .html_renderer
@@ -450,7 +450,7 @@ pub async fn get_users_list(
     Extension(csrf): Extension<CsrfToken>,
 ) -> impl IntoResponse {
     let mut ctx = build_page_context(&state, user_id, csrf.0).await;
-    ctx.page_title = format!("Members — {}", domain::PRODUCT_NAME);
+    ctx.page_title = "Members — Movies Diary".to_string();
     ctx.canonical_url = format!("{}/users", state.app_ctx.config.base_url);
 
     #[cfg(feature = "federation")]
@@ -575,7 +575,7 @@ pub async fn get_user_profile(
     };
 
     let display_name = profile_user.username().value();
-    ctx.page_title = format!("{}'s Diary — {}", display_name, domain::PRODUCT_NAME);
+    ctx.page_title = format!("{}'s Diary — Movies Diary", display_name);
     ctx.canonical_url = format!(
         "{}/users/{}",
         state.app_ctx.config.base_url, profile_user_uuid
@@ -822,7 +822,7 @@ pub async fn get_following_page(
         return StatusCode::FORBIDDEN.into_response();
     }
     let mut ctx = build_page_context(&state, Some(user_id.clone()), csrf.0).await;
-    ctx.page_title = format!("Following — {}", domain::PRODUCT_NAME);
+    ctx.page_title = "Following — Movies Diary".to_string();
     ctx.canonical_url = format!(
         "{}/users/{}/following-list",
         state.app_ctx.config.base_url, profile_user_uuid
@@ -872,7 +872,7 @@ pub async fn get_followers_page(
         return StatusCode::FORBIDDEN.into_response();
     }
     let mut ctx = build_page_context(&state, Some(user_id.clone()), csrf.0).await;
-    ctx.page_title = format!("Followers — {}", domain::PRODUCT_NAME);
+    ctx.page_title = "Followers — Movies Diary".to_string();
     ctx.canonical_url = format!(
         "{}/users/{}/followers-list",
         state.app_ctx.config.base_url, profile_user_uuid
@@ -1006,7 +1006,7 @@ pub async fn get_profile_settings(
     Extension(csrf): Extension<CsrfToken>,
 ) -> impl IntoResponse {
     let mut ctx = build_page_context(&state, Some(user_id.clone()), csrf.0).await;
-    ctx.page_title = format!("Profile Settings — {}", domain::PRODUCT_NAME);
+    ctx.page_title = "Profile Settings — Movies Diary".to_string();
     ctx.canonical_url = format!("{}/settings/profile", state.app_ctx.config.base_url);
 
     let user = match state
@@ -1061,7 +1061,7 @@ pub async fn get_blocked_domains_page(
     Extension(csrf): Extension<CsrfToken>,
 ) -> impl IntoResponse {
     let mut ctx = build_page_context(&state, Some(user_id), csrf.0).await;
-    ctx.page_title = format!("Blocked Domains — {}", domain::PRODUCT_NAME);
+    ctx.page_title = "Blocked Domains — Movies Diary".to_string();
     ctx.canonical_url = format!("{}/admin/blocked-domains", state.app_ctx.config.base_url);
     match state.ap_service.get_blocked_domains().await {
         Ok(domains) => {
@@ -1134,7 +1134,7 @@ pub async fn get_blocked_actors_page(
     Extension(csrf): Extension<CsrfToken>,
 ) -> impl IntoResponse {
     let mut ctx = build_page_context(&state, Some(user_id.clone()), csrf.0).await;
-    ctx.page_title = format!("Blocked Users — {}", domain::PRODUCT_NAME);
+    ctx.page_title = "Blocked Users — Movies Diary".to_string();
     ctx.canonical_url = format!("{}/social/blocked", state.app_ctx.config.base_url);
     match state.ap_service.get_blocked_actors(user_id.value()).await {
         Ok(actors) => {

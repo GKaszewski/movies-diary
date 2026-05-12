@@ -6,7 +6,6 @@ mod social;
 mod users;
 
 use axum::Router;
-use domain::PRODUCT_NAME;
 use utoipa::{
     Modify, OpenApi,
     openapi::security::{Http, HttpAuthScheme, SecurityScheme},
@@ -29,9 +28,9 @@ impl Modify for SecurityAddon {
 fn build() -> utoipa::openapi::OpenApi {
     let mut api = auth::AuthDoc::openapi();
     api.info = utoipa::openapi::InfoBuilder::new()
-        .title(format!("{} API", PRODUCT_NAME))
+        .title("Movies Diary API")
         .version("1.0.0")
-        .description(Some(format!("REST API for {}. Authenticate with `POST /api/v1/auth/login` to get a Bearer token.", PRODUCT_NAME)))
+        .description(Some("REST API for Movies Diary. Authenticate with `POST /api/v1/auth/login` to get a Bearer token."))
         .build();
     api.merge(diary::DiaryDoc::openapi());
     api.merge(movies::MoviesDoc::openapi());

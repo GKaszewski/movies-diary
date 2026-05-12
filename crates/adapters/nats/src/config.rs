@@ -28,9 +28,9 @@ impl NatsConfig {
         };
 
         let subject_prefix = std::env::var("NATS_SUBJECT_PREFIX")
-            .unwrap_or_else(|_| "screened.events".to_string());
+            .unwrap_or_else(|_| "movies-diary.events".to_string());
         let stream_name = std::env::var("NATS_STREAM_NAME")
-            .unwrap_or_else(|_| "SCREENED_EVENTS".to_string());
+            .unwrap_or_else(|_| "MOVIES_DIARY_EVENTS".to_string());
         let consumer_name = std::env::var("NATS_CONSUMER_NAME")
             .unwrap_or_else(|_| "worker".to_string());
 
@@ -61,8 +61,8 @@ mod tests {
         let cfg = NatsConfig::from_env().unwrap();
         assert_eq!(cfg.url, "nats://localhost:4222");
         assert_eq!(cfg.mode, NatsMode::JetStream);
-        assert_eq!(cfg.subject_prefix, "screened.events");
-        assert_eq!(cfg.stream_name, "SCREENED_EVENTS");
+        assert_eq!(cfg.subject_prefix, "movies-diary.events");
+        assert_eq!(cfg.stream_name, "MOVIES_DIARY_EVENTS");
         assert_eq!(cfg.consumer_name, "worker");
 
         unsafe { std::env::remove_var("NATS_URL"); }

@@ -6,8 +6,6 @@ pub mod review_handler;
 pub(crate) mod urls;
 pub mod user_adapter;
 
-use domain::PRODUCT_NAME;
-
 // Re-export the generic base types that callers need
 pub use activitypub_base::{
     ActivityPubService, ApFederationConfig, ApObjectHandler, ApUser, ApUserRepository,
@@ -48,7 +46,7 @@ pub async fn wire(
             }),
             base_url.clone(),
             allow_registration,
-            PRODUCT_NAME.to_lowercase(),
+            "movies-diary".to_string(),
             cfg!(debug_assertions),
         )
         .await?,
