@@ -36,6 +36,7 @@ pub async fn wire(
     diary_repo:            std::sync::Arc<dyn domain::ports::DiaryRepository>,
     base_url:              String,
     allow_registration:    bool,
+    event_publisher:       std::sync::Arc<dyn domain::ports::EventPublisher>,
 ) -> anyhow::Result<ActivityPubWire> {
     let review_handler = std::sync::Arc::new(ReviewObjectHandler {
         movie_repository: std::sync::Arc::clone(&movie_repo),
@@ -60,7 +61,7 @@ pub async fn wire(
             allow_registration,
             "movies-diary".to_string(),
             cfg!(debug_assertions),
-            None,  // event_publisher wired in Task 6
+            Some(event_publisher),
         )
         .await?,
     );

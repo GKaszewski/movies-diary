@@ -86,20 +86,6 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
             _ => anyhow::bail!("DATABASE_BACKEND={backend} federation is not supported by this build"),
         };
 
-        let ap = activitypub::wire(
-            federation_repo,
-            review_store,
-            remote_watchlist_repo.clone(),
-            Arc::clone(&user_repository),
-            Arc::clone(&movie_repository),
-            Arc::clone(&review_repository),
-            Arc::clone(&diary_repository),
-            app_config.base_url.clone(),
-            app_config.allow_registration,
-        ).await?;
-        let ap_router = ap.router;
-        let ap_service_arc = ap.service;
-
         let ep: Arc<dyn EventPublisher> = match event_bus {
             EventBusBackend::Db => {
                 tracing::info!("event bus: DB queue");
@@ -122,6 +108,22 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
                 nats::create_publisher(cfg).await?
             }
         };
+
+        let ap = activitypub::wire(
+            federation_repo,
+            review_store,
+            remote_watchlist_repo.clone(),
+            Arc::clone(&user_repository),
+            Arc::clone(&movie_repository),
+            Arc::clone(&review_repository),
+            Arc::clone(&diary_repository),
+            app_config.base_url.clone(),
+            app_config.allow_registration,
+            Arc::clone(&ep),
+        ).await?;
+        let ap_router = ap.router;
+        let ap_service_arc = ap.service;
+
         (ep, ap_router, ap_service_arc, social_query_arc, remote_watchlist_repo)
     };
 
