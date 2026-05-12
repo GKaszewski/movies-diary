@@ -31,6 +31,7 @@ pub trait ActivityPubPort: Send + Sync {
     async fn add_blocked_domain(&self, domain: &str, reason: Option<&str>) -> anyhow::Result<()>;
     async fn remove_blocked_domain(&self, domain: &str) -> anyhow::Result<()>;
     async fn get_blocked_domains(&self) -> anyhow::Result<Vec<BlockedDomain>>;
+    async fn backfill_outbox(&self, outbox_url: &str, actor_url: &str) -> anyhow::Result<()>;
 }
 
 #[async_trait]
@@ -97,6 +98,9 @@ impl ActivityPubPort for ActivityPubService {
     async fn get_blocked_domains(&self) -> anyhow::Result<Vec<BlockedDomain>> {
         self.get_blocked_domains().await
     }
+    async fn backfill_outbox(&self, outbox_url: &str, actor_url: &str) -> anyhow::Result<()> {
+        self.backfill_outbox(outbox_url, actor_url).await
+    }
 }
 
 pub struct NoopActivityPubService;
@@ -153,5 +157,8 @@ impl ActivityPubPort for NoopActivityPubService {
     }
     async fn get_blocked_domains(&self) -> anyhow::Result<Vec<BlockedDomain>> {
         Ok(vec![])
+    }
+    async fn backfill_outbox(&self, _: &str, _: &str) -> anyhow::Result<()> {
+        Ok(())
     }
 }
