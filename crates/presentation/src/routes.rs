@@ -60,6 +60,7 @@ fn html_routes(rate_limit: u64) -> Router<AppState> {
     let base = Router::new()
         .route("/", routing::get(handlers::html::get_activity_feed))
         .route("/users", routing::get(handlers::html::get_users_list))
+        .route("/u/{username}", routing::get(handlers::html::get_user_by_username))
         .route(
             "/users/{id}",
             routing::get(handlers::html::get_user_profile),

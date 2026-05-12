@@ -497,6 +497,23 @@ pub async fn get_users_list(
     }
 }
 
+pub async fn get_user_by_username(
+    State(state): State<AppState>,
+    Path(username): Path<String>,
+) -> impl IntoResponse {
+    let uname = match domain::value_objects::Username::new(username) {
+        Ok(u) => u,
+        Err(_) => return StatusCode::NOT_FOUND.into_response(),
+    };
+    match state.app_ctx.user_repository.find_by_username(&uname).await {
+        Ok(Some(user)) => {
+            axum::response::Redirect::permanent(&format!("/users/{}", user.id().value()))
+                .into_response()
+        }
+        _ => StatusCode::NOT_FOUND.into_response(),
+    }
+}
+
 pub async fn get_user_profile(
     OptionalCookieUser(user_id): OptionalCookieUser,
     State(state): State<AppState>,
