@@ -4,6 +4,7 @@ pub fn event_to_subject(prefix: &str, event: &DomainEvent) -> String {
     let suffix = match event {
         DomainEvent::ReviewLogged { .. }    => "review.logged",
         DomainEvent::ReviewUpdated { .. }   => "review.updated",
+        DomainEvent::ReviewDeleted { .. }   => "review.deleted",
         DomainEvent::MovieDiscovered { .. } => "movie.discovered",
         DomainEvent::MovieDeleted { .. }    => "movie.deleted",
         DomainEvent::UserUpdated { .. }     => "user.updated",

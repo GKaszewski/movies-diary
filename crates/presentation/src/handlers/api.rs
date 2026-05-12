@@ -412,6 +412,15 @@ fn entry_to_dto(entry: &DiaryEntry) -> DiaryEntryDto {
 }
 
 #[cfg(feature = "federation")]
+#[utoipa::path(
+    get, path = "/api/v1/admin/blocked-domains",
+    responses(
+        (status = 200, body = Vec<crate::dtos::BlockedDomainResponse>),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden — admin only"),
+    ),
+    security(("bearer_auth" = []))
+)]
 pub async fn get_blocked_domains_admin(
     State(state): State<AppState>,
     _admin: crate::extractors::AdminUser,
@@ -433,6 +442,16 @@ pub async fn get_blocked_domains_admin(
 }
 
 #[cfg(feature = "federation")]
+#[utoipa::path(
+    post, path = "/api/v1/admin/blocked-domains",
+    request_body = crate::dtos::AddBlockedDomainRequest,
+    responses(
+        (status = 201, description = "Domain blocked"),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden — admin only"),
+    ),
+    security(("bearer_auth" = []))
+)]
 pub async fn add_blocked_domain_admin(
     State(state): State<AppState>,
     _admin: crate::extractors::AdminUser,
@@ -445,6 +464,16 @@ pub async fn add_blocked_domain_admin(
 }
 
 #[cfg(feature = "federation")]
+#[utoipa::path(
+    delete, path = "/api/v1/admin/blocked-domains/{domain}",
+    params(("domain" = String, Path, description = "Domain to unblock")),
+    responses(
+        (status = 204, description = "Domain unblocked"),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden — admin only"),
+    ),
+    security(("bearer_auth" = []))
+)]
 pub async fn remove_blocked_domain_admin(
     State(state): State<AppState>,
     _admin: crate::extractors::AdminUser,
@@ -457,6 +486,15 @@ pub async fn remove_blocked_domain_admin(
 }
 
 #[cfg(feature = "federation")]
+#[utoipa::path(
+    post, path = "/api/v1/social/block",
+    request_body = ActorUrlRequest,
+    responses(
+        (status = 204, description = "Actor blocked"),
+        (status = 401, description = "Unauthorized"),
+    ),
+    security(("bearer_auth" = []))
+)]
 pub async fn block_actor_api(
     State(state): State<AppState>,
     user: AuthenticatedUser,
@@ -469,6 +507,15 @@ pub async fn block_actor_api(
 }
 
 #[cfg(feature = "federation")]
+#[utoipa::path(
+    post, path = "/api/v1/social/unblock",
+    request_body = ActorUrlRequest,
+    responses(
+        (status = 204, description = "Actor unblocked"),
+        (status = 401, description = "Unauthorized"),
+    ),
+    security(("bearer_auth" = []))
+)]
 pub async fn unblock_actor_api(
     State(state): State<AppState>,
     user: AuthenticatedUser,
@@ -481,6 +528,14 @@ pub async fn unblock_actor_api(
 }
 
 #[cfg(feature = "federation")]
+#[utoipa::path(
+    get, path = "/api/v1/social/blocked",
+    responses(
+        (status = 200, body = Vec<crate::dtos::BlockedActorResponse>),
+        (status = 401, description = "Unauthorized"),
+    ),
+    security(("bearer_auth" = []))
+)]
 pub async fn get_blocked_actors_api(
     State(state): State<AppState>,
     user: AuthenticatedUser,

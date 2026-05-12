@@ -35,6 +35,10 @@ pub enum EventPayload {
     UserUpdated {
         user_id: String,
     },
+    ReviewDeleted {
+        review_id: String,
+        user_id: String,
+    },
 }
 
 impl EventPayload {
@@ -45,6 +49,7 @@ impl EventPayload {
             EventPayload::MovieDiscovered { .. } => "MovieDiscovered",
             EventPayload::MovieDeleted { .. } => "MovieDeleted",
             EventPayload::UserUpdated { .. } => "UserUpdated",
+            EventPayload::ReviewDeleted { .. } => "ReviewDeleted",
         }
     }
 }
@@ -94,6 +99,10 @@ impl From<&DomainEvent> for EventPayload {
             DomainEvent::UserUpdated { user_id } => EventPayload::UserUpdated {
                 user_id: user_id.value().to_string(),
             },
+            DomainEvent::ReviewDeleted { review_id, user_id } => EventPayload::ReviewDeleted {
+                review_id: review_id.value().to_string(),
+                user_id: user_id.value().to_string(),
+            },
         }
     }
 }
@@ -136,6 +145,12 @@ impl TryFrom<EventPayload> for DomainEvent {
             }
             EventPayload::UserUpdated { user_id } => {
                 Ok(DomainEvent::UserUpdated {
+                    user_id: UserId::from_uuid(parse_uuid(&user_id, "user_id")?),
+                })
+            }
+            EventPayload::ReviewDeleted { review_id, user_id } => {
+                Ok(DomainEvent::ReviewDeleted {
+                    review_id: ReviewId::from_uuid(parse_uuid(&review_id, "review_id")?),
                     user_id: UserId::from_uuid(parse_uuid(&user_id, "user_id")?),
                 })
             }

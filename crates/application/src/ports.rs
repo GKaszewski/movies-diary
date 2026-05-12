@@ -9,6 +9,7 @@ pub struct RemoteActorView {
     pub handle: String,
     pub display_name: Option<String>,
     pub url: String,
+    pub avatar_url: Option<String>,
 }
 
 pub struct HtmlPageContext {

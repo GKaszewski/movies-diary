@@ -33,6 +33,10 @@ pub enum DomainEvent {
     UserUpdated {
         user_id: UserId,
     },
+    ReviewDeleted {
+        review_id: ReviewId,
+        user_id: UserId,
+    },
 }
 
 #[async_trait]

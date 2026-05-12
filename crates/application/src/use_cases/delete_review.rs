@@ -22,6 +22,17 @@ pub async fn execute(ctx: &AppContext, cmd: DeleteReviewCommand) -> Result<(), D
     let movie_id = review.movie_id().clone();
     ctx.review_repository.delete_review(&review_id).await?;
 
+    if let Err(e) = ctx
+        .event_publisher
+        .publish(&DomainEvent::ReviewDeleted {
+            review_id: review_id.clone(),
+            user_id: requesting_user_id.clone(),
+        })
+        .await
+    {
+        tracing::warn!("failed to publish ReviewDeleted: {e}");
+    }
+
     let history = ctx.diary_repository.get_review_history(&movie_id).await?;
     if history.viewings().is_empty() {
         let poster_path = history.movie().poster_path().cloned();

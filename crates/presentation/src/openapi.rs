@@ -7,15 +7,18 @@ use crate::dtos::{
     ActivityFeedResponse, DiaryEntryDto, DiaryResponse,
     DirectorStatDto, FeedEntryDto, LoginRequest, LoginResponse, LogReviewRequest,
     MonthActivityDto, MonthlyRatingDto, MovieDetailResponse, MovieDto, MovieStatsDto,
-    RegisterRequest, ReviewDto, ReviewHistoryResponse, SocialFeedResponse, SocialReviewDto,
-    UserProfileResponse, UserStatsDto, UserSummaryDto, UserTrendsDto, UsersResponse,
+    ProfileResponse, RegisterRequest, ReviewDto, ReviewHistoryResponse, SocialFeedResponse,
+    SocialReviewDto, UserProfileResponse, UserStatsDto, UserSummaryDto, UserTrendsDto, UsersResponse,
 };
 use crate::handlers::import::{
     ApiFieldMapping, ApplyMappingRequest, ConfirmRequest, SaveProfileRequest,
     SessionCreatedResponse, SessionStateResponse,
 };
 #[cfg(feature = "federation")]
-use crate::dtos::{ActorListResponse, ActorUrlRequest, FollowRequest, RemoteActorDto};
+use crate::dtos::{
+    ActorListResponse, ActorUrlRequest, BlockedActorResponse, BlockedDomainResponse,
+    AddBlockedDomainRequest, FollowRequest, RemoteActorDto,
+};
 
 struct SecurityAddon;
 
@@ -57,6 +60,8 @@ impl Modify for SecurityAddon {
         crate::handlers::import::api_get_profiles,
         crate::handlers::import::api_post_profile,
         crate::handlers::import::api_delete_profile,
+        crate::handlers::api::get_profile,
+        crate::handlers::api::update_profile_handler,
     ),
     components(schemas(
         DiaryResponse,
@@ -82,6 +87,7 @@ impl Modify for SecurityAddon {
         MonthlyRatingDto,
         DirectorStatDto,
         UserTrendsDto,
+        ProfileResponse,
         SessionCreatedResponse,
         SessionStateResponse,
         ApiFieldMapping,
@@ -122,6 +128,14 @@ pub struct ApiDoc;
         crate::handlers::api::accept_follower,
         crate::handlers::api::reject_follower,
         crate::handlers::api::remove_follower,
+        crate::handlers::api::get_profile,
+        crate::handlers::api::update_profile_handler,
+        crate::handlers::api::get_blocked_domains_admin,
+        crate::handlers::api::add_blocked_domain_admin,
+        crate::handlers::api::remove_blocked_domain_admin,
+        crate::handlers::api::block_actor_api,
+        crate::handlers::api::unblock_actor_api,
+        crate::handlers::api::get_blocked_actors_api,
         crate::handlers::import::api_post_session,
         crate::handlers::import::api_get_session,
         crate::handlers::import::api_put_mapping,
@@ -148,6 +162,10 @@ pub struct ApiDoc;
         RemoteActorDto,
         FollowRequest,
         ActorUrlRequest,
+        ProfileResponse,
+        BlockedDomainResponse,
+        AddBlockedDomainRequest,
+        BlockedActorResponse,
         ActivityFeedResponse,
         FeedEntryDto,
         UsersResponse,

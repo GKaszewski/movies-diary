@@ -65,12 +65,13 @@ async fn main() -> anyhow::Result<()> {
 
     // Clone what federation handler needs before ctx and app_config are consumed.
     #[cfg(feature = "federation")]
-    let (fed_movie_repo, fed_review_repo, fed_diary_repo, fed_user_repo, base_url) = (
+    let (fed_movie_repo, fed_review_repo, fed_diary_repo, fed_user_repo, base_url, allow_registration) = (
         Arc::clone(&movie_repository),
         Arc::clone(&review_repository),
         Arc::clone(&diary_repository),
         Arc::clone(&user_repository),
         app_config.base_url.clone(),
+        app_config.allow_registration,
     );
 
     let ctx = AppContext {
@@ -140,6 +141,7 @@ async fn main() -> anyhow::Result<()> {
                 fed_review_repo,
                 fed_diary_repo,
                 base_url,
+                allow_registration,
             ).await?.event_handler;
 
             tracing::info!("federation event handler registered");

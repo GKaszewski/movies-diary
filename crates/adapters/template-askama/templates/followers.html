@@ -10,6 +10,9 @@
 <ul class="following-list">
 {% for actor in actors %}
 <li class="following-item">
+  {% if let Some(avatar) = actor.avatar_url %}
+  <img src="{{ avatar }}" alt="" style="width:32px;height:32px;border-radius:50%;vertical-align:middle;margin-right:6px" />
+  {% endif %}
   <strong>{{ actor.handle }}</strong>
   {% if let Some(name) = actor.display_name %}
   ({{ name }})

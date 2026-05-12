@@ -495,20 +495,20 @@ pub struct MovieDetailResponse {
     pub reviews: SocialFeedResponse,
 }
 
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, utoipa::ToSchema)]
 pub struct BlockedDomainResponse {
     pub domain: String,
     pub reason: Option<String>,
     pub blocked_at: String,
 }
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, utoipa::ToSchema)]
 pub struct AddBlockedDomainRequest {
     pub domain: String,
     pub reason: Option<String>,
 }
 
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, utoipa::ToSchema)]
 pub struct BlockedActorResponse {
     pub url: String,
     pub handle: String,

@@ -205,6 +205,7 @@ struct RemoteActorData {
     handle: String,
     display_name: Option<String>,
     url: String,
+    avatar_url: Option<String>,
 }
 
 #[derive(Template)]
@@ -578,6 +579,7 @@ impl HtmlRenderer for AskamaHtmlRenderer {
                     handle: a.handle,
                     url: a.url,
                     display_name: a.display_name,
+                    avatar_url: a.avatar_url,
                 })
                 .collect(),
             sort_by: data.sort_by.clone(),
@@ -613,6 +615,7 @@ impl HtmlRenderer for AskamaHtmlRenderer {
                     handle: a.handle,
                     display_name: a.display_name,
                     url: a.url,
+                    avatar_url: a.avatar_url,
                 })
                 .collect(),
             error: data.error,
@@ -632,6 +635,7 @@ impl HtmlRenderer for AskamaHtmlRenderer {
                     handle: a.handle,
                     display_name: a.display_name,
                     url: a.url,
+                    avatar_url: a.avatar_url,
                 })
                 .collect(),
             error: data.error,

@@ -93,6 +93,7 @@ mod tests {
                 DomainEvent::MovieDiscovered { .. } => "movie_discovered",
                 DomainEvent::ReviewLogged { .. } => "review_logged",
                 DomainEvent::ReviewUpdated { .. } => "review_updated",
+                DomainEvent::ReviewDeleted { .. } => "review_deleted",
                 DomainEvent::MovieDeleted { .. } => "movie_deleted",
                 DomainEvent::UserUpdated { .. } => "user_updated",
             };

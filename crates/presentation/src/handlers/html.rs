@@ -481,6 +481,7 @@ pub async fn get_users_list(
                     handle: a.handle,
                     display_name: a.display_name,
                     url: a.url,
+                    avatar_url: None,
                 })
                 .collect();
             let data = application::ports::UsersPageData {
@@ -619,6 +620,7 @@ pub async fn get_user_profile(
                 handle: a.handle,
                 url: a.url,
                 display_name: a.display_name,
+                avatar_url: a.avatar_url.clone(),
             })
             .collect()
     } else {
@@ -818,6 +820,7 @@ pub async fn get_following_page(
                     handle: a.handle,
                     display_name: a.display_name,
                     url: a.url,
+                    avatar_url: a.avatar_url.clone(),
                 })
                 .collect();
             let data = FollowingPageData {
@@ -871,6 +874,7 @@ pub async fn get_followers_page(
                     handle: a.handle,
                     display_name: a.display_name,
                     url: a.url,
+                    avatar_url: a.avatar_url.clone(),
                 })
                 .collect();
             let data = FollowersPageData {

@@ -171,7 +171,7 @@ impl Object for DbActor {
         }))
     }
 
-    async fn into_json(self, data: &Data<Self::DataType>) -> Result<Self::Kind, Self::Error> {
+    async fn into_json(self, _data: &Data<Self::DataType>) -> Result<Self::Kind, Self::Error> {
         let public_key = PublicKey {
             id: format!("{}#main-key", &self.ap_id),
             owner: self.ap_id.clone(),

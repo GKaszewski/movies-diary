@@ -501,6 +501,137 @@ impl ActivityPubService {
         Ok(())
     }
 
+    /// Broadcast a Delete activity to all accepted followers for a removed review.
+    pub async fn broadcast_delete_to_followers(
+        &self,
+        local_user_id: uuid::Uuid,
+        ap_id: Url,
+    ) -> anyhow::Result<()> {
+        let data = self.federation_config.to_request_data();
+        let local_actor = get_local_actor(local_user_id, &data)
+            .await
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
+
+        let followers = data.federation_repo.get_followers(local_user_id).await?;
+        let blocked = data
+            .federation_repo
+            .get_blocked_actors(local_user_id)
+            .await
+            .unwrap_or_default();
+        let blocked_set: std::collections::HashSet<String> = blocked.into_iter().collect();
+        let blocked_domains = data
+            .federation_repo
+            .get_blocked_domains()
+            .await
+            .unwrap_or_default();
+        let blocked_domain_set: std::collections::HashSet<String> =
+            blocked_domains.into_iter().map(|d| d.domain).collect();
+        let accepted: Vec<_> = followers
+            .into_iter()
+            .filter(|f| f.status == FollowerStatus::Accepted)
+            .filter(|f| !blocked_set.contains(&f.actor.url))
+            .filter(|f| {
+                let domain = url::Url::parse(&f.actor.inbox_url)
+                    .ok()
+                    .and_then(|u| u.host_str().map(|s| s.to_string()))
+                    .unwrap_or_default();
+                !blocked_domain_set.contains(&domain)
+            })
+            .collect();
+
+        if accepted.is_empty() {
+            return Ok(());
+        }
+
+        let delete_id = crate::urls::activity_url(&self.base_url)
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
+        let delete = crate::activities::DeleteActivity {
+            id: delete_id,
+            kind: Default::default(),
+            actor: ObjectId::from(local_actor.ap_id.clone()),
+            object: ap_id,
+        };
+        let delete_with_ctx = WithContext::new_default(delete);
+        let inboxes = collect_inboxes(&accepted);
+        let sends =
+            SendActivityTask::prepare(&delete_with_ctx, &local_actor, inboxes, &data).await?;
+        let failures = send_with_retry(sends, &data).await;
+        if !failures.is_empty() {
+            tracing::warn!(
+                count = failures.len(),
+                "some delete activity deliveries failed"
+            );
+        }
+        Ok(())
+    }
+
+    /// Broadcast an Update(Note) activity to all accepted followers for an edited review.
+    pub async fn broadcast_update_to_followers(
+        &self,
+        local_user_id: uuid::Uuid,
+        object: serde_json::Value,
+    ) -> anyhow::Result<()> {
+        let data = self.federation_config.to_request_data();
+        let local_actor = get_local_actor(local_user_id, &data)
+            .await
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
+
+        let followers = data.federation_repo.get_followers(local_user_id).await?;
+        let blocked = data
+            .federation_repo
+            .get_blocked_actors(local_user_id)
+            .await
+            .unwrap_or_default();
+        let blocked_set: std::collections::HashSet<String> = blocked.into_iter().collect();
+        let blocked_domains = data
+            .federation_repo
+            .get_blocked_domains()
+            .await
+            .unwrap_or_default();
+        let blocked_domain_set: std::collections::HashSet<String> =
+            blocked_domains.into_iter().map(|d| d.domain).collect();
+        let accepted: Vec<_> = followers
+            .into_iter()
+            .filter(|f| f.status == FollowerStatus::Accepted)
+            .filter(|f| !blocked_set.contains(&f.actor.url))
+            .filter(|f| {
+                let domain = url::Url::parse(&f.actor.inbox_url)
+                    .ok()
+                    .and_then(|u| u.host_str().map(|s| s.to_string()))
+                    .unwrap_or_default();
+                !blocked_domain_set.contains(&domain)
+            })
+            .collect();
+
+        if accepted.is_empty() {
+            return Ok(());
+        }
+
+        let update_id = Url::parse(&format!(
+            "{}/activities/update/{}",
+            self.base_url,
+            uuid::Uuid::new_v4()
+        ))?;
+        let update = crate::activities::UpdateActivity {
+            id: update_id,
+            kind: Default::default(),
+            actor: ObjectId::from(local_actor.ap_id.clone()),
+            object,
+        };
+        let update_with_ctx = WithContext::new_default(update);
+        let inboxes = collect_inboxes(&accepted);
+        let sends =
+            SendActivityTask::prepare(&update_with_ctx, &local_actor, inboxes, &data).await?;
+        let failures = send_with_retry(sends, &data).await;
+        if !failures.is_empty() {
+            tracing::warn!(
+                count = failures.len(),
+                "some update activity deliveries failed"
+            );
+        }
+        Ok(())
+    }
+
     pub async fn broadcast_actor_update(&self, user_id: uuid::Uuid) -> anyhow::Result<()> {
         use activitypub_federation::traits::Object;
 
