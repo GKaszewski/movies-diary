@@ -42,8 +42,11 @@ pub async fn execute(ctx: &AppContext, cmd: SyncPosterCommand) -> Result<(), Dom
         .store(&movie_id.value().to_string(), &image_bytes)
         .await?;
 
-    if let Err(e) = ctx.event_publisher
-        .publish(&DomainEvent::ImageStored { key: stored_path.clone() })
+    if let Err(e) = ctx
+        .event_publisher
+        .publish(&DomainEvent::ImageStored {
+            key: stored_path.clone(),
+        })
         .await
     {
         tracing::warn!("failed to emit ImageStored for {stored_path}: {e}");
@@ -56,8 +59,14 @@ pub async fn execute(ctx: &AppContext, cmd: SyncPosterCommand) -> Result<(), Dom
 
     // Refresh search index so the new poster_path is reflected immediately.
     // Fetch existing profile if available for a complete index document.
-    let profile = ctx.movie_profile_repository.get_by_movie_id(&movie_id).await.ok().flatten();
-    if let Err(e) = ctx.search_command
+    let profile = ctx
+        .movie_profile_repository
+        .get_by_movie_id(&movie_id)
+        .await
+        .ok()
+        .flatten();
+    if let Err(e) = ctx
+        .search_command
         .index(IndexableDocument::Movie {
             id: movie_id.clone(),
             movie: Box::new(movie),

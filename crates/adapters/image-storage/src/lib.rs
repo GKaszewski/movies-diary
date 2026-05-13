@@ -10,7 +10,6 @@ use domain::{
 use object_store::{ObjectStore, path::Path};
 use std::sync::Arc;
 
-
 pub struct ImageStorageAdapter {
     store: Arc<dyn ObjectStore>,
 }
@@ -76,7 +75,9 @@ impl EventHandler for ImageCleanupHandler {
             DomainEvent::MovieDeleted { poster_path, .. } => poster_path,
             _ => return Ok(()),
         };
-        let Some(path) = poster_path else { return Ok(()) };
+        let Some(path) = poster_path else {
+            return Ok(());
+        };
         if let Err(e) = self.image_storage.delete(path.value()).await {
             tracing::warn!("image cleanup failed for {}: {e}", path.value());
         }
@@ -85,7 +86,9 @@ impl EventHandler for ImageCleanupHandler {
 }
 
 pub fn create() -> anyhow::Result<Arc<dyn ImageStorage>> {
-    Ok(Arc::new(ImageStorageAdapter::from_config(StorageConfig::from_env()?)))
+    Ok(Arc::new(ImageStorageAdapter::from_config(
+        StorageConfig::from_env()?,
+    )))
 }
 
 #[cfg(test)]

@@ -9,6 +9,25 @@ use axum::{
 use chrono::Utc;
 use uuid::Uuid;
 
+use application::{
+    commands::{
+        AddToWatchlistCommand, DeleteReviewCommand, MovieInput, RegisterCommand,
+        RemoveFromWatchlistCommand,
+    },
+    ports::{
+        HtmlPageContext, LoginPageData, MovieDetailPageData, NewReviewPageData,
+        ProfileSettingsPageData, RegisterPageData, RemoteActorView, WatchlistDisplayEntry,
+        WatchlistPageData,
+    },
+    queries::{
+        ExportQuery, GetMovieSocialPageQuery, GetWatchlistQuery, IsOnWatchlistQuery, LoginQuery,
+    },
+    use_cases::{
+        add_to_watchlist, delete_review, export_diary as export_diary_uc, get_movie_social_page,
+        get_watchlist, is_on_watchlist, log_review, login as login_uc, register as register_uc,
+        remove_from_watchlist, update_profile, update_profile_fields,
+    },
+};
 #[cfg(feature = "federation")]
 use application::{
     ports::{
@@ -17,29 +36,17 @@ use application::{
     },
     use_cases::get_remote_watchlist,
 };
-use application::{
-    commands::{AddToWatchlistCommand, DeleteReviewCommand, MovieInput, RegisterCommand, RemoveFromWatchlistCommand},
-    queries::{ExportQuery, GetMovieSocialPageQuery, GetWatchlistQuery, IsOnWatchlistQuery, LoginQuery},
-    ports::{
-        HtmlPageContext, LoginPageData, MovieDetailPageData, NewReviewPageData,
-        ProfileSettingsPageData, RegisterPageData, RemoteActorView, WatchlistDisplayEntry,
-        WatchlistPageData,
-    },
-    use_cases::{
-        add_to_watchlist, delete_review, export_diary as export_diary_uc, get_movie_social_page,
-        get_watchlist, is_on_watchlist, log_review, login as login_uc, register as register_uc,
-        remove_from_watchlist, update_profile, update_profile_fields,
-    },
-};
 use domain::models::ExportFormat;
 use domain::{errors::DomainError, value_objects::UserId};
 
 #[cfg(feature = "federation")]
-use crate::forms::{ActorUrlForm, BlockDomainForm, FollowForm, FollowerActionForm, RemoveDomainForm, UnfollowForm};
+use crate::forms::{
+    ActorUrlForm, BlockDomainForm, FollowForm, FollowerActionForm, RemoveDomainForm, UnfollowForm,
+};
 use crate::{
     csrf::CsrfToken,
-    forms::{ErrorQuery, FeedQueryParams, LogReviewData, LogReviewForm, LoginForm, RegisterForm},
     extractors::{AdminUser, OptionalCookieUser, RequiredCookieUser},
+    forms::{ErrorQuery, FeedQueryParams, LogReviewData, LogReviewForm, LoginForm, RegisterForm},
     state::AppState,
 };
 
@@ -58,7 +65,10 @@ pub(crate) async fn build_page_context(
             .ok()
             .flatten();
         let email = user.as_ref().map(|u| u.email().value().to_string());
-        let admin = user.as_ref().map(|u| matches!(u.role(), domain::models::UserRole::Admin)).unwrap_or(false);
+        let admin = user
+            .as_ref()
+            .map(|u| matches!(u.role(), domain::models::UserRole::Admin))
+            .unwrap_or(false);
         (email, admin)
     } else {
         (None, false)
@@ -219,18 +229,17 @@ pub async fn post_register(
     )
     .await
     {
-        Ok(_) => {
-            match login_uc::execute(&state.app_ctx, LoginQuery { email, password }).await {
-                Ok(result) => {
-                    let max_age = (result.expires_at - Utc::now()).num_seconds().max(0);
-                    let cookie = set_cookie_header(&result.token, max_age);
-                    ([cookie], Redirect::to("/")).into_response()
-                }
-                Err(_) => Redirect::to("/login").into_response(),
+        Ok(_) => match login_uc::execute(&state.app_ctx, LoginQuery { email, password }).await {
+            Ok(result) => {
+                let max_age = (result.expires_at - Utc::now()).num_seconds().max(0);
+                let cookie = set_cookie_header(&result.token, max_age);
+                ([cookie], Redirect::to("/")).into_response()
             }
+            Err(_) => Redirect::to("/login").into_response(),
+        },
+        Err(_) => {
+            Redirect::to("/register?error=Registration+failed.+Please+try+again.").into_response()
         }
-        Err(_) => Redirect::to("/register?error=Registration+failed.+Please+try+again.")
-            .into_response(),
     }
 }
 
@@ -389,10 +398,11 @@ pub async fn get_activity_feed(
             let mut remote_urls = Vec::new();
             for url in urls {
                 if let Some(suffix) = url.strip_prefix(&format!("{}/users/", base_url))
-                    && let Ok(parsed_id) = uuid::Uuid::parse_str(suffix) {
-                        local_ids.push(parsed_id);
-                        continue;
-                    }
+                    && let Ok(parsed_id) = uuid::Uuid::parse_str(suffix)
+                {
+                    local_ids.push(parsed_id);
+                    continue;
+                }
                 remote_urls.push(url);
             }
             Some(domain::ports::FollowingFilter {
@@ -533,9 +543,7 @@ pub async fn get_user_profile(
             .get(axum::http::header::ACCEPT)
             .and_then(|v| v.to_str().ok())
             .unwrap_or("");
-        if accept.contains("application/activity+json")
-            || accept.contains("application/ld+json")
-        {
+        if accept.contains("application/activity+json") || accept.contains("application/ld+json") {
             return match state
                 .ap_service
                 .actor_json(&profile_user_uuid.to_string())
@@ -667,8 +675,7 @@ pub async fn get_user_profile(
                 .entries
                 .as_ref()
                 .map(|e| {
-                    let has_more =
-                        (e.offset as u64).saturating_add(e.limit as u64) < e.total_count;
+                    let has_more = (e.offset as u64).saturating_add(e.limit as u64) < e.total_count;
                     (e.offset, has_more, e.limit)
                 })
                 .unwrap_or((0, false, super::DEFAULT_PAGE_LIMIT));
@@ -730,7 +737,11 @@ pub async fn follow_remote_user(
         Err(e) => {
             tracing::error!("follow error: {:?}", e);
             let msg = encode_error(&e.to_string());
-            let sep = if redirect_base.contains('?') { '&' } else { '?' };
+            let sep = if redirect_base.contains('?') {
+                '&'
+            } else {
+                '?'
+            };
             Redirect::to(&format!("{}{}error={}", redirect_base, sep, msg)).into_response()
         }
     }
@@ -755,8 +766,9 @@ pub async fn unfollow_remote_user(
         .unfollow(user_id.value(), &form.actor_url)
         .await
     {
-        Ok(()) => Redirect::to(&format!("/users/{}/following-list", profile_user_uuid))
-            .into_response(),
+        Ok(()) => {
+            Redirect::to(&format!("/users/{}/following-list", profile_user_uuid)).into_response()
+        }
         Err(e) => {
             let msg = encode_error(&e.to_string());
             Redirect::to(&format!(
@@ -945,8 +957,9 @@ pub async fn remove_follower(
         .remove_follower(user_id.value(), &form.actor_url)
         .await
     {
-        Ok(_) => Redirect::to(&format!("/users/{}/followers-list", profile_user_uuid))
-            .into_response(),
+        Ok(_) => {
+            Redirect::to(&format!("/users/{}/followers-list", profile_user_uuid)).into_response()
+        }
         Err(e) => {
             let msg = encode_error(&e.to_string());
             Redirect::to(&format!(
@@ -971,7 +984,11 @@ pub async fn get_movie_detail(
 
     match get_movie_social_page::execute(
         &state.app_ctx,
-        GetMovieSocialPageQuery { movie_id, limit, offset },
+        GetMovieSocialPageQuery {
+            movie_id,
+            limit,
+            offset,
+        },
     )
     .await
     {
@@ -982,13 +999,22 @@ pub async fn get_movie_detail(
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
         Ok(result) => {
-            let histogram_max = result.stats.rating_histogram.iter().copied().max().unwrap_or(1);
-            let has_more = result.reviews.offset + result.reviews.limit
-                < result.reviews.total_count as u32;
+            let histogram_max = result
+                .stats
+                .rating_histogram
+                .iter()
+                .copied()
+                .max()
+                .unwrap_or(1);
+            let has_more =
+                result.reviews.offset + result.reviews.limit < result.reviews.total_count as u32;
             let on_watchlist = match &user_id {
                 Some(uid) => is_on_watchlist::execute(
                     &state.app_ctx,
-                    IsOnWatchlistQuery { user_id: uid.value(), movie_id },
+                    IsOnWatchlistQuery {
+                        user_id: uid.value(),
+                        movie_id,
+                    },
                 )
                 .await
                 .unwrap_or(false),
@@ -1030,7 +1056,9 @@ pub async fn get_watchlist_page(
     let is_owner = viewer_id.map(|u| u.value() == owner_id).unwrap_or(false);
 
     // Try local user first
-    let local_user = state.app_ctx.user_repository
+    let local_user = state
+        .app_ctx
+        .user_repository
         .find_by_id(&domain::value_objects::UserId::from_uuid(owner_id))
         .await
         .ok()
@@ -1039,30 +1067,42 @@ pub async fn get_watchlist_page(
     let (display_entries, has_more, current_offset, page_limit) = if local_user.is_some() {
         match get_watchlist::execute(
             &state.app_ctx,
-            GetWatchlistQuery { user_id: owner_id, limit: Some(limit), offset: Some(offset) },
-        ).await {
+            GetWatchlistQuery {
+                user_id: owner_id,
+                limit: Some(limit),
+                offset: Some(offset),
+            },
+        )
+        .await
+        {
             Err(e) => {
                 tracing::error!("watchlist error: {:?}", e);
                 return StatusCode::INTERNAL_SERVER_ERROR.into_response();
             }
             Ok(entries) => {
                 let has_more = entries.offset + entries.limit < entries.total_count as u32;
-                let display: Vec<WatchlistDisplayEntry> = entries.items.iter().map(|w| {
-                    let remove_url = if is_owner {
-                        Some(format!("/watchlist/{}/remove", w.movie.id().value()))
-                    } else {
-                        None
-                    };
-                    WatchlistDisplayEntry {
-                        poster_url: w.movie.poster_path()
-                            .map(|p| format!("/images/{}", p.value())),
-                        movie_title: w.movie.title().value().to_string(),
-                        release_year: w.movie.release_year().value(),
-                        movie_url: Some(format!("/movies/{}", w.movie.id().value())),
-                        added_at: w.entry.added_at.format("%b %-d, %Y").to_string(),
-                        remove_url,
-                    }
-                }).collect();
+                let display: Vec<WatchlistDisplayEntry> = entries
+                    .items
+                    .iter()
+                    .map(|w| {
+                        let remove_url = if is_owner {
+                            Some(format!("/watchlist/{}/remove", w.movie.id().value()))
+                        } else {
+                            None
+                        };
+                        WatchlistDisplayEntry {
+                            poster_url: w
+                                .movie
+                                .poster_path()
+                                .map(|p| format!("/images/{}", p.value())),
+                            movie_title: w.movie.title().value().to_string(),
+                            release_year: w.movie.release_year().value(),
+                            movie_url: Some(format!("/movies/{}", w.movie.id().value())),
+                            added_at: w.entry.added_at.format("%b %-d, %Y").to_string(),
+                            remove_url,
+                        }
+                    })
+                    .collect();
                 (display, has_more, entries.offset, entries.limit)
             }
         }
@@ -1072,16 +1112,17 @@ pub async fn get_watchlist_page(
             let remote_entries = get_remote_watchlist::execute(&state.app_ctx, owner_id)
                 .await
                 .unwrap_or_default();
-            let display: Vec<WatchlistDisplayEntry> = remote_entries.into_iter().map(|e| {
-                WatchlistDisplayEntry {
+            let display: Vec<WatchlistDisplayEntry> = remote_entries
+                .into_iter()
+                .map(|e| WatchlistDisplayEntry {
                     poster_url: e.poster_url,
                     movie_title: e.movie_title,
                     release_year: e.release_year,
                     movie_url: None,
                     added_at: e.added_at.format("%b %-d, %Y").to_string(),
                     remove_url: None,
-                }
-            }).collect();
+                })
+                .collect();
             let len = display.len() as u32;
             (display, false, 0u32, len)
         }
@@ -1172,7 +1213,11 @@ pub async fn post_watchlist_add(
         Ok(()) => Redirect::to(&redirect_base).into_response(),
         Err(DomainError::NotFound(_)) => Redirect::to(&redirect_base).into_response(),
         Err(DomainError::ValidationError(msg)) => {
-            let sep = if redirect_base.contains('?') { '&' } else { '?' };
+            let sep = if redirect_base.contains('?') {
+                '&'
+            } else {
+                '?'
+            };
             let url = format!("{}{}error={}", redirect_base, sep, encode_error(&msg));
             Redirect::to(&url).into_response()
         }
@@ -1231,12 +1276,7 @@ pub async fn get_profile_settings(
     ctx.page_title = "Profile Settings — Movies Diary".to_string();
     ctx.canonical_url = format!("{}/settings/profile", state.app_ctx.config.base_url);
 
-    let user = match state
-        .app_ctx
-        .user_repository
-        .find_by_id(&user_id)
-        .await
-    {
+    let user = match state.app_ctx.user_repository.find_by_id(&user_id).await {
         Ok(Some(u)) => u,
         Ok(None) => return StatusCode::NOT_FOUND.into_response(),
         Err(e) => {
@@ -1253,7 +1293,9 @@ pub async fn get_profile_settings(
         .banner_path()
         .map(|path| format!("{}/images/{}", base_url, path));
 
-    let profile_fields = state.app_ctx.profile_fields_repository
+    let profile_fields = state
+        .app_ctx
+        .profile_fields_repository
         .get_fields(&user_id)
         .await
         .unwrap_or_default()
@@ -1319,7 +1361,11 @@ pub async fn get_blocked_domains_page(
         }
         Err(e) => {
             tracing::error!("get_blocked_domains error: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to load blocked domains").into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to load blocked domains",
+            )
+                .into_response()
         }
     }
 }
@@ -1335,7 +1381,11 @@ pub async fn post_blocked_domain(
         return StatusCode::FORBIDDEN.into_response();
     }
     let reason = form.reason.as_deref().filter(|s| !s.trim().is_empty());
-    match state.ap_service.add_blocked_domain(&form.domain, reason).await {
+    match state
+        .ap_service
+        .add_blocked_domain(&form.domain, reason)
+        .await
+    {
         Ok(()) => Redirect::to("/admin/blocked-domains").into_response(),
         Err(e) => {
             tracing::error!("add_blocked_domain error: {:?}", e);
@@ -1393,7 +1443,11 @@ pub async fn get_blocked_actors_page(
         }
         Err(e) => {
             tracing::error!("get_blocked_actors error: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to load blocked users").into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to load blocked users",
+            )
+                .into_response()
         }
     }
 }
@@ -1408,7 +1462,11 @@ pub async fn post_block_actor_html(
     if crate::csrf::mismatch(&csrf, &form.csrf_token) {
         return StatusCode::FORBIDDEN.into_response();
     }
-    match state.ap_service.block_actor(user_id.value(), &form.actor_url).await {
+    match state
+        .ap_service
+        .block_actor(user_id.value(), &form.actor_url)
+        .await
+    {
         Ok(()) => Redirect::to("/social/blocked").into_response(),
         Err(e) => {
             tracing::error!("block_actor html error: {:?}", e);
@@ -1427,7 +1485,11 @@ pub async fn post_unblock_actor(
     if crate::csrf::mismatch(&csrf, &form.csrf_token) {
         return StatusCode::FORBIDDEN.into_response();
     }
-    match state.ap_service.unblock_actor(user_id.value(), &form.actor_url).await {
+    match state
+        .ap_service
+        .unblock_actor(user_id.value(), &form.actor_url)
+        .await
+    {
         Ok(()) => Redirect::to("/social/blocked").into_response(),
         Err(e) => {
             tracing::error!("unblock_actor error: {:?}", e);
@@ -1447,13 +1509,19 @@ pub async fn post_profile_settings(
     let mut banner_bytes: Option<Vec<u8>> = None;
     let mut banner_content_type: Option<String> = None;
     let mut also_known_as: Option<String> = None;
-    let mut field_names: std::collections::HashMap<usize, String> = std::collections::HashMap::new();
-    let mut field_values: std::collections::HashMap<usize, String> = std::collections::HashMap::new();
+    let mut field_names: std::collections::HashMap<usize, String> =
+        std::collections::HashMap::new();
+    let mut field_values: std::collections::HashMap<usize, String> =
+        std::collections::HashMap::new();
 
     while let Ok(Some(field)) = multipart.next_field().await {
         let name = field.name().unwrap_or("").to_string();
         match name.as_str() {
-            "bio" => { if let Ok(text) = field.text().await { bio = Some(text); } }
+            "bio" => {
+                if let Ok(text) = field.text().await {
+                    bio = Some(text);
+                }
+            }
             "also_known_as" => {
                 if let Ok(text) = field.text().await {
                     also_known_as = Some(text).filter(|s| !s.is_empty());
@@ -1462,26 +1530,36 @@ pub async fn post_profile_settings(
             "avatar" => {
                 let ct = field.content_type().map(|s| s.to_string());
                 if let Ok(bytes) = field.bytes().await {
-                    if !bytes.is_empty() { avatar_bytes = Some(bytes.to_vec()); avatar_content_type = ct; }
+                    if !bytes.is_empty() {
+                        avatar_bytes = Some(bytes.to_vec());
+                        avatar_content_type = ct;
+                    }
                 }
             }
             "banner" => {
                 let ct = field.content_type().map(|s| s.to_string());
                 if let Ok(bytes) = field.bytes().await {
-                    if !bytes.is_empty() { banner_bytes = Some(bytes.to_vec()); banner_content_type = ct; }
+                    if !bytes.is_empty() {
+                        banner_bytes = Some(bytes.to_vec());
+                        banner_content_type = ct;
+                    }
                 }
             }
             n if n.starts_with("field_name_") => {
                 if let Ok(idx) = n["field_name_".len()..].parse::<usize>() {
                     if let Ok(text) = field.text().await {
-                        if !text.is_empty() { field_names.insert(idx, text); }
+                        if !text.is_empty() {
+                            field_names.insert(idx, text);
+                        }
                     }
                 }
             }
             n if n.starts_with("field_value_") => {
                 if let Ok(idx) = n["field_value_".len()..].parse::<usize>() {
                     if let Ok(text) = field.text().await {
-                        if !text.is_empty() { field_values.insert(idx, text); }
+                        if !text.is_empty() {
+                            field_values.insert(idx, text);
+                        }
                     }
                 }
             }
@@ -1502,10 +1580,12 @@ pub async fn post_profile_settings(
 
     let fields: Vec<domain::models::ProfileField> = (0..4)
         .filter_map(|i| {
-            field_names.get(&i).map(|name| domain::models::ProfileField {
-                name: name.clone(),
-                value: field_values.get(&i).cloned().unwrap_or_default(),
-            })
+            field_names
+                .get(&i)
+                .map(|name| domain::models::ProfileField {
+                    name: name.clone(),
+                    value: field_values.get(&i).cloned().unwrap_or_default(),
+                })
         })
         .collect();
 

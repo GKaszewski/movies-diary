@@ -4,7 +4,10 @@ use super::*;
 fn normalize_hashtag_strips_non_alphanumeric() {
     assert_eq!(normalize_hashtag("The Dark Knight"), "TheDarkKnight");
     assert_eq!(normalize_hashtag("Schindler's List"), "SchindlersList");
-    assert_eq!(normalize_hashtag("2001: A Space Odyssey"), "2001ASpaceOdyssey");
+    assert_eq!(
+        normalize_hashtag("2001: A Space Odyssey"),
+        "2001ASpaceOdyssey"
+    );
 }
 
 #[test]

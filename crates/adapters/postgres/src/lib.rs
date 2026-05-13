@@ -388,11 +388,15 @@ impl MovieRepository for PostgresRepository {
         &self,
         page: &domain::models::collections::PageParams,
         filter: &domain::models::MovieFilter,
-    ) -> Result<domain::models::collections::Paginated<domain::models::MovieSummary>, DomainError> {
+    ) -> Result<domain::models::collections::Paginated<domain::models::MovieSummary>, DomainError>
+    {
         use sqlx::Row;
         let limit = page.limit as i64;
         let offset = page.offset as i64;
-        let pattern = filter.search.as_deref().map(|s| format!("%{}%", s.to_lowercase()));
+        let pattern = filter
+            .search
+            .as_deref()
+            .map(|s| format!("%{}%", s.to_lowercase()));
         let genre = filter.genre.as_deref();
         let language = filter.language.as_deref();
 
@@ -612,8 +616,7 @@ impl DiaryRepository for PostgresRepository {
         }
 
         if let Some(f) = following {
-            let local_params: Vec<String> =
-                f.local_user_ids.iter().map(|_| next_param()).collect();
+            let local_params: Vec<String> = f.local_user_ids.iter().map(|_| next_param()).collect();
             let remote_params: Vec<String> =
                 f.remote_actor_urls.iter().map(|_| next_param()).collect();
 
@@ -691,10 +694,7 @@ impl DiaryRepository for PostgresRepository {
         }
 
         let count_q = bind_filter_params!(sqlx::query_scalar::<_, i64>(&count_sql));
-        let total = count_q
-            .fetch_one(&self.pool)
-            .await
-            .map_err(Self::map_err)?;
+        let total = count_q.fetch_one(&self.pool).await.map_err(Self::map_err)?;
 
         let rows_q = bind_filter_params!(sqlx::query_as::<_, FeedRow>(&select_sql));
         let rows = rows_q
@@ -800,13 +800,11 @@ impl DiaryRepository for PostgresRepository {
         let limit = page.limit as i64;
         let offset = page.offset as i64;
 
-        let total: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM reviews WHERE movie_id = $1",
-        )
-        .bind(&id_str)
-        .fetch_one(&self.pool)
-        .await
-        .map_err(Self::map_err)?;
+        let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM reviews WHERE movie_id = $1")
+            .bind(&id_str)
+            .fetch_one(&self.pool)
+            .await
+            .map_err(Self::map_err)?;
 
         let rows = sqlx::query_as::<_, FeedRow>(
             "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
@@ -845,12 +843,11 @@ impl DiaryRepository for PostgresRepository {
     }
 
     async fn count_local_posts(&self) -> Result<u64, DomainError> {
-        let count: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM reviews WHERE remote_actor_url IS NULL"
-        )
-        .fetch_one(&self.pool)
-        .await
-        .map_err(Self::map_err)?;
+        let count: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM reviews WHERE remote_actor_url IS NULL")
+                .fetch_one(&self.pool)
+                .await
+                .map_err(Self::map_err)?;
         Ok(count as u64)
     }
 }
@@ -939,7 +936,9 @@ pub fn create_profile_fields_repo(
     std::sync::Arc::new(profile_fields::PostgresProfileFieldsRepository::new(pool))
 }
 
-pub async fn wire(database_url: &str) -> anyhow::Result<(
+pub async fn wire(
+    database_url: &str,
+) -> anyhow::Result<(
     sqlx::PgPool,
     std::sync::Arc<dyn domain::ports::MovieRepository>,
     std::sync::Arc<dyn domain::ports::ReviewRepository>,
@@ -963,8 +962,10 @@ pub async fn wire(database_url: &str) -> anyhow::Result<(
         .map_err(|e| anyhow::anyhow!("{e}"))
         .context("Database migration failed")?;
 
-    let import_session_repo = std::sync::Arc::new(PostgresImportSessionRepository::new(pool.clone()));
-    let import_profile_repo = std::sync::Arc::new(PostgresImportProfileRepository::new(pool.clone()));
+    let import_session_repo =
+        std::sync::Arc::new(PostgresImportSessionRepository::new(pool.clone()));
+    let import_profile_repo =
+        std::sync::Arc::new(PostgresImportProfileRepository::new(pool.clone()));
     let movie_profile_repo = std::sync::Arc::new(PostgresMovieProfileRepository::new(pool.clone()));
     let watchlist_repo = std::sync::Arc::new(PostgresWatchlistRepository::new(pool.clone()));
 

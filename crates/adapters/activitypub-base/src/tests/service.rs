@@ -19,8 +19,14 @@ fn make_follower(inbox: &str, shared: Option<&str>) -> Follower {
 #[test]
 fn collect_inboxes_deduplicates_shared() {
     let followers = vec![
-        make_follower("https://mastodon.social/users/a/inbox", Some("https://mastodon.social/inbox")),
-        make_follower("https://mastodon.social/users/b/inbox", Some("https://mastodon.social/inbox")),
+        make_follower(
+            "https://mastodon.social/users/a/inbox",
+            Some("https://mastodon.social/inbox"),
+        ),
+        make_follower(
+            "https://mastodon.social/users/b/inbox",
+            Some("https://mastodon.social/inbox"),
+        ),
         make_follower("https://other.instance/users/c/inbox", None),
     ];
     let inboxes = collect_inboxes(&followers);
@@ -32,9 +38,7 @@ fn collect_inboxes_deduplicates_shared() {
 
 #[test]
 fn collect_inboxes_falls_back_to_individual_inbox() {
-    let followers = vec![
-        make_follower("https://example.com/users/x/inbox", None),
-    ];
+    let followers = vec![make_follower("https://example.com/users/x/inbox", None)];
     let inboxes = collect_inboxes(&followers);
     assert_eq!(inboxes.len(), 1);
     assert_eq!(inboxes[0].as_str(), "https://example.com/users/x/inbox");

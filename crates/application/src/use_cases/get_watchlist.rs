@@ -1,6 +1,9 @@
 use domain::{
     errors::DomainError,
-    models::{WatchlistWithMovie, collections::{PageParams, Paginated}},
+    models::{
+        WatchlistWithMovie,
+        collections::{PageParams, Paginated},
+    },
     value_objects::UserId,
 };
 

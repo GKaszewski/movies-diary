@@ -5,9 +5,7 @@ use serde::{Deserialize, Serialize};
 use url::Url;
 
 use activitypub_federation::{
-    config::Data,
-    fetch::object_id::ObjectId,
-    kinds::activity::CreateType,
+    config::Data, fetch::object_id::ObjectId, kinds::activity::CreateType,
     protocol::context::WithContext,
 };
 
@@ -83,8 +81,7 @@ pub async fn outbox_handler(
         let ordered_items: Vec<serde_json::Value> = items
             .into_iter()
             .map(|(ap_id, object, _)| {
-                let create_id =
-                    Url::parse(&format!("{}/activity", ap_id)).expect("valid url");
+                let create_id = Url::parse(&format!("{}/activity", ap_id)).expect("valid url");
                 serde_json::to_value(WithContext::new_default(CreateActivity {
                     id: create_id,
                     kind: CreateType::default(),
@@ -105,9 +102,7 @@ pub async fn outbox_handler(
         let next = if has_more {
             oldest_ts.map(|ts| {
                 // Use RFC 3339 with Z suffix (no + sign) to avoid percent-encoding
-                let ts_str = ts
-                    .format("%Y-%m-%dT%H:%M:%S%.3fZ")
-                    .to_string();
+                let ts_str = ts.format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string();
                 format!("{}?page=true&before={}", outbox_url, ts_str)
             })
         } else {

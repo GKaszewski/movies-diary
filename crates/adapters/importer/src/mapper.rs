@@ -3,10 +3,16 @@ use domain::models::{
 };
 
 pub fn apply_mapping(file: &ParsedFile, mappings: &[FieldMapping]) -> Vec<AnnotatedRow> {
-    file.rows.iter().map(|row| {
-        let result = map_row(row, &file.columns, mappings);
-        AnnotatedRow { result, is_duplicate: false }
-    }).collect()
+    file.rows
+        .iter()
+        .map(|row| {
+            let result = map_row(row, &file.columns, mappings);
+            AnnotatedRow {
+                result,
+                is_duplicate: false,
+            }
+        })
+        .collect()
 }
 
 fn map_row(row: &[String], columns: &[String], mappings: &[FieldMapping]) -> RowResult {
@@ -39,7 +45,8 @@ fn map_row(row: &[String], columns: &[String], mappings: &[FieldMapping]) -> Row
     if errors.is_empty() {
         RowResult::Valid(import_row)
     } else {
-        let raw = columns.iter()
+        let raw = columns
+            .iter()
             .zip(row.iter())
             .map(|(c, v)| (c.clone(), v.clone()))
             .collect();
@@ -51,15 +58,13 @@ fn apply_transform(value: &str, transform: &Transform, errors: &mut Vec<String>)
     match transform {
         Transform::Identity => Some(value.to_string()),
         Transform::DateFormat(_) => Some(value.to_string()),
-        Transform::RatingScale(factor) => {
-            match value.parse::<f64>() {
-                Ok(n) => Some((n * factor).round().to_string()),
-                Err(_) => {
-                    errors.push(format!("rating '{}' is not a number", value));
-                    None
-                }
+        Transform::RatingScale(factor) => match value.parse::<f64>() {
+            Ok(n) => Some((n * factor).round().to_string()),
+            Err(_) => {
+                errors.push(format!("rating '{}' is not a number", value));
+                None
             }
-        }
+        },
     }
 }
 

@@ -14,7 +14,10 @@ use domain::models::{
 
 mod filters {
     #[askama::filter_fn]
-    pub fn poster_src<T: std::fmt::Display>(path: T, _env: &dyn askama::Values) -> askama::Result<String> {
+    pub fn poster_src<T: std::fmt::Display>(
+        path: T,
+        _env: &dyn askama::Values,
+    ) -> askama::Result<String> {
         let p = path.to_string();
         if p.starts_with("http://") || p.starts_with("https://") {
             Ok(p)
@@ -142,7 +145,8 @@ impl<'a> ActivityFeedTemplate<'a> {
             format!("sort_by={}", self.sort_by),
         ];
         if !self.search.is_empty() {
-            let encoded = self.search
+            let encoded = self
+                .search
                 .replace(' ', "+")
                 .replace('#', "%23")
                 .replace('&', "%26")
@@ -217,7 +221,8 @@ impl<'a> ProfileTemplate<'a> {
             format!("sort_by={}", self.sort_by),
         ];
         if !self.search.is_empty() {
-            let encoded = self.search
+            let encoded = self
+                .search
                 .replace(' ', "+")
                 .replace('#', "%23")
                 .replace('&', "%26")
@@ -493,7 +498,8 @@ impl HtmlRenderer for AskamaHtmlRenderer {
                 }
             })
             .collect();
-        let remote_actors = data.remote_actors
+        let remote_actors = data
+            .remote_actors
             .into_iter()
             .map(|a| {
                 let name = a.display_name.unwrap_or_else(|| a.handle.clone());
@@ -543,9 +549,7 @@ impl HtmlRenderer for AskamaHtmlRenderer {
         let total_pages = data
             .entries
             .as_ref()
-            .map(|e| {
-                e.total_count.div_ceil(e.limit.max(1) as u64) as u32
-            })
+            .map(|e| e.total_count.div_ceil(e.limit.max(1) as u64) as u32)
             .unwrap_or(0);
         let current_page = data.current_offset.checked_div(data.limit).unwrap_or(0);
         let avg_rating_display = data

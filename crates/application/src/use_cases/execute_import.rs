@@ -6,7 +6,11 @@ use domain::{
 };
 use uuid::Uuid;
 
-use crate::{commands::{ExecuteImportCommand, LogReviewCommand, MovieInput}, context::AppContext, use_cases::log_review};
+use crate::{
+    commands::{ExecuteImportCommand, LogReviewCommand, MovieInput},
+    context::AppContext,
+    use_cases::log_review,
+};
 
 pub struct ImportSummary {
     pub imported: usize,
@@ -14,11 +18,15 @@ pub struct ImportSummary {
     pub failed: Vec<(usize, String)>,
 }
 
-pub async fn execute(ctx: &AppContext, cmd: ExecuteImportCommand) -> Result<ImportSummary, DomainError> {
+pub async fn execute(
+    ctx: &AppContext,
+    cmd: ExecuteImportCommand,
+) -> Result<ImportSummary, DomainError> {
     let user_id = UserId::from_uuid(cmd.user_id);
     let session_id = ImportSessionId::from_uuid(cmd.session_id);
     let confirmed_indices = cmd.confirmed_indices;
-    let session = ctx.import_session_repository
+    let session = ctx
+        .import_session_repository
         .get(&session_id, &user_id)
         .await?
         .ok_or_else(|| DomainError::NotFound("import session".into()))?;
@@ -36,17 +44,13 @@ pub async fn execute(ctx: &AppContext, cmd: ExecuteImportCommand) -> Result<Impo
             continue;
         }
         match annotated.result {
-            RowResult::Valid(row) => {
-                match row_to_command(&row, user_id.value()) {
-                    Ok(cmd) => {
-                        match log_review::execute(ctx, cmd).await {
-                            Ok(_) => imported += 1,
-                            Err(e) => failed.push((idx, e.to_string())),
-                        }
-                    }
-                    Err(e) => failed.push((idx, e)),
-                }
-            }
+            RowResult::Valid(row) => match row_to_command(&row, user_id.value()) {
+                Ok(cmd) => match log_review::execute(ctx, cmd).await {
+                    Ok(_) => imported += 1,
+                    Err(e) => failed.push((idx, e.to_string())),
+                },
+                Err(e) => failed.push((idx, e)),
+            },
             RowResult::Invalid { errors, .. } => {
                 failed.push((idx, errors.join("; ")));
             }
@@ -55,20 +59,27 @@ pub async fn execute(ctx: &AppContext, cmd: ExecuteImportCommand) -> Result<Impo
 
     ctx.import_session_repository.delete(&session_id).await?;
 
-    Ok(ImportSummary { imported, skipped_duplicates, failed })
+    Ok(ImportSummary {
+        imported,
+        skipped_duplicates,
+        failed,
+    })
 }
 
 fn row_to_command(row: &ImportRow, user_id: Uuid) -> Result<LogReviewCommand, String> {
-    let rating = row.rating.as_deref()
+    let rating = row
+        .rating
+        .as_deref()
         .ok_or("missing rating")?
         .parse::<u8>()
         .map_err(|_| "rating is not a valid u8".to_string())?;
 
     let watched_at_str = row.watched_at.as_deref().ok_or("missing watched_at")?;
-    let watched_at = NaiveDateTime::parse_from_str(&format!("{} 00:00:00", watched_at_str), "%Y-%m-%d %H:%M:%S")
-        .or_else(|_| NaiveDateTime::parse_from_str(watched_at_str, "%Y-%m-%d %H:%M:%S"))
-        .or_else(|_| NaiveDateTime::parse_from_str(watched_at_str, "%Y-%m-%dT%H:%M:%S"))
-        .map_err(|_| format!("cannot parse watched_at: '{}'", watched_at_str))?;
+    let watched_at =
+        NaiveDateTime::parse_from_str(&format!("{} 00:00:00", watched_at_str), "%Y-%m-%d %H:%M:%S")
+            .or_else(|_| NaiveDateTime::parse_from_str(watched_at_str, "%Y-%m-%d %H:%M:%S"))
+            .or_else(|_| NaiveDateTime::parse_from_str(watched_at_str, "%Y-%m-%dT%H:%M:%S"))
+            .map_err(|_| format!("cannot parse watched_at: '{}'", watched_at_str))?;
 
     Ok(LogReviewCommand {
         user_id,

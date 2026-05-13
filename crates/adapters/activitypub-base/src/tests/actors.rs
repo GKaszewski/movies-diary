@@ -4,7 +4,10 @@ use super::*;
 fn person_serializes_with_enriched_fields() {
     let person = Person {
         kind: Default::default(),
-        id: "https://example.com/users/1".parse::<url::Url>().unwrap().into(),
+        id: "https://example.com/users/1"
+            .parse::<url::Url>()
+            .unwrap()
+            .into(),
         preferred_username: "alice".to_string(),
         inbox: "https://example.com/users/1/inbox".parse().unwrap(),
         outbox: "https://example.com/users/1/outbox".parse().unwrap(),
@@ -39,5 +42,8 @@ fn person_serializes_with_enriched_fields() {
     assert_eq!(json["manuallyApprovesFollowers"], true);
     assert!(json.get("updated").is_some());
     assert!(json.get("endpoints").is_some());
-    assert_eq!(json["endpoints"]["sharedInbox"], "https://example.com/inbox");
+    assert_eq!(
+        json["endpoints"]["sharedInbox"],
+        "https://example.com/inbox"
+    );
 }

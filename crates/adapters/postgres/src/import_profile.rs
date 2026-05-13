@@ -14,12 +14,20 @@ use sqlx::PgPool;
 
 #[derive(Serialize, Deserialize)]
 enum DomainFieldJson {
-    Title, ReleaseYear, Director, Rating, WatchedAt, Comment, ExternalMetadataId,
+    Title,
+    ReleaseYear,
+    Director,
+    Rating,
+    WatchedAt,
+    Comment,
+    ExternalMetadataId,
 }
 
 #[derive(Serialize, Deserialize)]
 enum TransformJson {
-    RatingScale(f64), DateFormat(String), Identity,
+    RatingScale(f64),
+    DateFormat(String),
+    Identity,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -75,8 +83,8 @@ fn serialize_mappings(ms: &[FieldMapping]) -> Result<String, DomainError> {
 }
 
 fn deserialize_mappings(s: &str) -> Result<Vec<FieldMapping>, DomainError> {
-    let js: Vec<FieldMappingJson> = serde_json::from_str(s)
-        .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+    let js: Vec<FieldMappingJson> =
+        serde_json::from_str(s).map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
     Ok(js.into_iter().map(mapping_from_json).collect())
 }
 
@@ -85,7 +93,9 @@ pub struct PostgresImportProfileRepository {
 }
 
 impl PostgresImportProfileRepository {
-    pub fn new(pool: PgPool) -> Self { Self { pool } }
+    pub fn new(pool: PgPool) -> Self {
+        Self { pool }
+    }
 
     fn map_err(e: sqlx::Error) -> DomainError {
         tracing::error!("DB error: {:?}", e);
@@ -115,7 +125,13 @@ impl ImportProfileRepository for PostgresImportProfileRepository {
         let uid = user_id.value().to_string();
 
         #[derive(sqlx::FromRow)]
-        struct Row { id: String, user_id: String, name: String, field_mappings: String, created_at: NaiveDateTime }
+        struct Row {
+            id: String,
+            user_id: String,
+            name: String,
+            field_mappings: String,
+            created_at: NaiveDateTime,
+        }
 
         let rows = sqlx::query_as::<_, Row>(
             "SELECT id, user_id, name, field_mappings, created_at FROM import_profiles WHERE user_id = $1 ORDER BY created_at DESC",
@@ -125,25 +141,42 @@ impl ImportProfileRepository for PostgresImportProfileRepository {
         .await
         .map_err(Self::map_err)?;
 
-        rows.into_iter().map(|r| Ok(ImportProfile {
-            id: ImportProfileId::from_uuid(
-                r.id.parse::<uuid::Uuid>().map_err(|e| DomainError::InfrastructureError(e.to_string()))?
-            ),
-            user_id: UserId::from_uuid(
-                r.user_id.parse::<uuid::Uuid>().map_err(|e| DomainError::InfrastructureError(e.to_string()))?
-            ),
-            name: r.name,
-            field_mappings: deserialize_mappings(&r.field_mappings)?,
-            created_at: r.created_at,
-        })).collect()
+        rows.into_iter()
+            .map(|r| {
+                Ok(ImportProfile {
+                    id: ImportProfileId::from_uuid(
+                        r.id.parse::<uuid::Uuid>()
+                            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
+                    ),
+                    user_id: UserId::from_uuid(
+                        r.user_id
+                            .parse::<uuid::Uuid>()
+                            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
+                    ),
+                    name: r.name,
+                    field_mappings: deserialize_mappings(&r.field_mappings)?,
+                    created_at: r.created_at,
+                })
+            })
+            .collect()
     }
 
-    async fn get(&self, id: &ImportProfileId, user_id: &UserId) -> Result<Option<ImportProfile>, DomainError> {
+    async fn get(
+        &self,
+        id: &ImportProfileId,
+        user_id: &UserId,
+    ) -> Result<Option<ImportProfile>, DomainError> {
         let id_str = id.value().to_string();
         let uid_str = user_id.value().to_string();
 
         #[derive(sqlx::FromRow)]
-        struct Row { id: String, user_id: String, name: String, field_mappings: String, created_at: NaiveDateTime }
+        struct Row {
+            id: String,
+            user_id: String,
+            name: String,
+            field_mappings: String,
+            created_at: NaiveDateTime,
+        }
 
         let row = sqlx::query_as::<_, Row>(
             "SELECT id, user_id, name, field_mappings, created_at FROM import_profiles WHERE id = $1 AND user_id = $2",
@@ -153,17 +186,23 @@ impl ImportProfileRepository for PostgresImportProfileRepository {
         .await
         .map_err(Self::map_err)?;
 
-        row.map(|r| Ok(ImportProfile {
-            id: ImportProfileId::from_uuid(
-                r.id.parse::<uuid::Uuid>().map_err(|e| DomainError::InfrastructureError(e.to_string()))?
-            ),
-            user_id: UserId::from_uuid(
-                r.user_id.parse::<uuid::Uuid>().map_err(|e| DomainError::InfrastructureError(e.to_string()))?
-            ),
-            name: r.name,
-            field_mappings: deserialize_mappings(&r.field_mappings)?,
-            created_at: r.created_at,
-        })).transpose()
+        row.map(|r| {
+            Ok(ImportProfile {
+                id: ImportProfileId::from_uuid(
+                    r.id.parse::<uuid::Uuid>()
+                        .map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
+                ),
+                user_id: UserId::from_uuid(
+                    r.user_id
+                        .parse::<uuid::Uuid>()
+                        .map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
+                ),
+                name: r.name,
+                field_mappings: deserialize_mappings(&r.field_mappings)?,
+                created_at: r.created_at,
+            })
+        })
+        .transpose()
     }
 
     async fn delete(&self, id: &ImportProfileId) -> Result<(), DomainError> {

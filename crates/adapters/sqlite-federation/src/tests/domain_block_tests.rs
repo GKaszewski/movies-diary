@@ -13,7 +13,9 @@ async fn blocked_domain_is_detected() {
     let pool = test_pool().await;
     let repo = SqliteFederationRepository::new(pool);
     assert!(!repo.is_domain_blocked("mastodon.social").await.unwrap());
-    repo.add_blocked_domain("mastodon.social", Some("spam")).await.unwrap();
+    repo.add_blocked_domain("mastodon.social", Some("spam"))
+        .await
+        .unwrap();
     assert!(repo.is_domain_blocked("mastodon.social").await.unwrap());
 }
 
@@ -30,7 +32,9 @@ async fn remove_unblocks_domain() {
 async fn get_blocked_domains_returns_all() {
     let pool = test_pool().await;
     let repo = SqliteFederationRepository::new(pool);
-    repo.add_blocked_domain("a.com", Some("reason a")).await.unwrap();
+    repo.add_blocked_domain("a.com", Some("reason a"))
+        .await
+        .unwrap();
     repo.add_blocked_domain("b.com", None).await.unwrap();
     let domains = repo.get_blocked_domains().await.unwrap();
     assert_eq!(domains.len(), 2);

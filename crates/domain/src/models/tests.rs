@@ -19,7 +19,12 @@ fn make_user() -> User {
 #[test]
 fn update_profile_sets_fields() {
     let mut user = make_user();
-    user.update_profile(Some("My bio".to_string()), Some("avatars/abc".to_string()), None, None);
+    user.update_profile(
+        Some("My bio".to_string()),
+        Some("avatars/abc".to_string()),
+        None,
+        None,
+    );
     assert_eq!(user.bio(), Some("My bio"));
     assert_eq!(user.avatar_path(), Some("avatars/abc"));
 }
@@ -27,7 +32,12 @@ fn update_profile_sets_fields() {
 #[test]
 fn update_profile_clears_with_none() {
     let mut user = make_user();
-    user.update_profile(Some("bio".to_string()), Some("path".to_string()), None, None);
+    user.update_profile(
+        Some("bio".to_string()),
+        Some("path".to_string()),
+        None,
+        None,
+    );
     user.update_profile(None, None, None, None);
     assert_eq!(user.bio(), None);
     assert_eq!(user.avatar_path(), None);

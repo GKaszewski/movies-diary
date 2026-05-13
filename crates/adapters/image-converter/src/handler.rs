@@ -21,7 +21,11 @@ impl ImageConversionHandler {
         image_ref: Arc<dyn ImageRefCommand>,
         format: Format,
     ) -> Self {
-        Self { storage, image_ref, format }
+        Self {
+            storage,
+            image_ref,
+            format,
+        }
     }
 }
 
@@ -73,7 +77,12 @@ fn convert(bytes: Vec<u8>, format: Format) -> Result<Vec<u8>, String> {
             let height = rgba.height() as usize;
             let pixels: Vec<ravif::RGBA8> = rgba
                 .pixels()
-                .map(|p| ravif::RGBA8 { r: p.0[0], g: p.0[1], b: p.0[2], a: p.0[3] })
+                .map(|p| ravif::RGBA8 {
+                    r: p.0[0],
+                    g: p.0[1],
+                    b: p.0[2],
+                    a: p.0[3],
+                })
                 .collect();
             let result = ravif::Encoder::new()
                 .with_quality(80.0)

@@ -3,14 +3,13 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use domain::{
     errors::DomainError,
-    models::{
-        EntityType, IndexableDocument, MovieSearchHit, PersonSearchHit,
-        SearchQuery, SearchResults,
-        collections::Paginated,
-    },
     models::PersonId,
-    value_objects::MovieId,
+    models::{
+        collections::Paginated, EntityType, IndexableDocument, MovieSearchHit, PersonSearchHit,
+        SearchQuery, SearchResults,
+    },
     ports::{SearchCommand, SearchPort},
+    value_objects::MovieId,
 };
 use sqlx::PgPool;
 
@@ -26,7 +25,10 @@ impl PostgresSearchAdapter {
 
 pub fn create_search_adapter(pool: PgPool) -> (Arc<dyn SearchCommand>, Arc<dyn SearchPort>) {
     let adapter = Arc::new(PostgresSearchAdapter::new(pool));
-    (Arc::clone(&adapter) as Arc<dyn SearchCommand>, adapter as Arc<dyn SearchPort>)
+    (
+        Arc::clone(&adapter) as Arc<dyn SearchCommand>,
+        adapter as Arc<dyn SearchPort>,
+    )
 }
 
 fn map_err(e: sqlx::Error) -> DomainError {
@@ -41,17 +43,39 @@ impl SearchCommand for PostgresSearchAdapter {
                 let movie_id = id.value().to_string();
                 let title = movie.title().value().to_string();
                 let director = movie.director().unwrap_or("").to_string();
-                let (overview, genres, keywords, cast_names, crew_names) =
-                    match profile.as_deref() {
-                        Some(p) => (
-                            p.overview.clone().unwrap_or_default(),
-                            p.genres.iter().map(|g| g.name.as_str()).collect::<Vec<_>>().join(" "),
-                            p.keywords.iter().map(|k| k.name.as_str()).collect::<Vec<_>>().join(" "),
-                            p.cast.iter().map(|c| c.name.as_str()).collect::<Vec<_>>().join(" "),
-                            p.crew.iter().map(|c| c.name.as_str()).collect::<Vec<_>>().join(" "),
-                        ),
-                        None => (String::new(), String::new(), String::new(), String::new(), String::new()),
-                    };
+                let (overview, genres, keywords, cast_names, crew_names) = match profile.as_deref()
+                {
+                    Some(p) => (
+                        p.overview.clone().unwrap_or_default(),
+                        p.genres
+                            .iter()
+                            .map(|g| g.name.as_str())
+                            .collect::<Vec<_>>()
+                            .join(" "),
+                        p.keywords
+                            .iter()
+                            .map(|k| k.name.as_str())
+                            .collect::<Vec<_>>()
+                            .join(" "),
+                        p.cast
+                            .iter()
+                            .map(|c| c.name.as_str())
+                            .collect::<Vec<_>>()
+                            .join(" "),
+                        p.crew
+                            .iter()
+                            .map(|c| c.name.as_str())
+                            .collect::<Vec<_>>()
+                            .join(" "),
+                    ),
+                    None => (
+                        String::new(),
+                        String::new(),
+                        String::new(),
+                        String::new(),
+                        String::new(),
+                    ),
+                };
 
                 let fts_input = format!(
                     "{} {} {} {} {} {} {}",
@@ -127,7 +151,10 @@ impl SearchPort for PostgresSearchAdapter {
 }
 
 impl PostgresSearchAdapter {
-    async fn search_movies(&self, query: &SearchQuery) -> Result<Paginated<MovieSearchHit>, DomainError> {
+    async fn search_movies(
+        &self,
+        query: &SearchQuery,
+    ) -> Result<Paginated<MovieSearchHit>, DomainError> {
         let limit = query.page.limit as i64;
         let offset = query.page.offset as i64;
 
@@ -214,24 +241,36 @@ impl PostgresSearchAdapter {
             .map_err(map_err)?
         };
 
-        let items = rows.into_iter().map(|r| MovieSearchHit {
-            movie_id: MovieId::from_uuid(uuid::Uuid::parse_str(&r.id).unwrap_or_default()),
-            title: r.title,
-            release_year: r.release_year.map(|y| y as u16),
-            director: r.director,
-            poster_path: r.poster_path,
-            genres: r.genres
-                .unwrap_or_default()
-                .split(',')
-                .filter(|s| !s.is_empty())
-                .map(str::to_string)
-                .collect(),
-        }).collect::<Vec<_>>();
+        let items = rows
+            .into_iter()
+            .map(|r| MovieSearchHit {
+                movie_id: MovieId::from_uuid(uuid::Uuid::parse_str(&r.id).unwrap_or_default()),
+                title: r.title,
+                release_year: r.release_year.map(|y| y as u16),
+                director: r.director,
+                poster_path: r.poster_path,
+                genres: r
+                    .genres
+                    .unwrap_or_default()
+                    .split(',')
+                    .filter(|s| !s.is_empty())
+                    .map(str::to_string)
+                    .collect(),
+            })
+            .collect::<Vec<_>>();
 
-        Ok(Paginated { items, total_count: total, limit: query.page.limit, offset: query.page.offset })
+        Ok(Paginated {
+            items,
+            total_count: total,
+            limit: query.page.limit,
+            offset: query.page.offset,
+        })
     }
 
-    async fn search_people(&self, query: &SearchQuery) -> Result<Paginated<PersonSearchHit>, DomainError> {
+    async fn search_people(
+        &self,
+        query: &SearchQuery,
+    ) -> Result<Paginated<PersonSearchHit>, DomainError> {
         let Some(text) = &query.text else {
             return Ok(Paginated {
                 items: vec![],
@@ -299,7 +338,7 @@ impl PostgresSearchAdapter {
 
             items.push(PersonSearchHit {
                 person_id: PersonId::from_uuid(
-                    uuid::Uuid::parse_str(&row.person_id).unwrap_or_default()
+                    uuid::Uuid::parse_str(&row.person_id).unwrap_or_default(),
                 ),
                 name: row.name,
                 known_for_department: row.known_for_department,
@@ -308,6 +347,11 @@ impl PostgresSearchAdapter {
             });
         }
 
-        Ok(Paginated { items, total_count: total, limit: query.page.limit, offset: query.page.offset })
+        Ok(Paginated {
+            items,
+            total_count: total,
+            limit: query.page.limit,
+            offset: query.page.offset,
+        })
     }
 }

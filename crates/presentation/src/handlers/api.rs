@@ -10,54 +10,56 @@ use std::str::FromStr;
 
 use application::{
     commands::{
-        DeleteReviewCommand, MovieInput, RegisterCommand, SyncPosterCommand,
-        AddToWatchlistCommand, RemoveFromWatchlistCommand,
+        AddToWatchlistCommand, DeleteReviewCommand, MovieInput, RegisterCommand,
+        RemoveFromWatchlistCommand, SyncPosterCommand,
     },
     queries::{
         ExportQuery, GetActivityFeedQuery, GetMovieSocialPageQuery, GetMoviesQuery,
-        GetReviewHistoryQuery, GetUserProfileQuery, GetUsersQuery, LoginQuery,
-        GetWatchlistQuery, IsOnWatchlistQuery,
+        GetReviewHistoryQuery, GetUserProfileQuery, GetUsersQuery, GetWatchlistQuery,
+        IsOnWatchlistQuery, LoginQuery,
     },
     use_cases::{
-        delete_review, export_diary as export_diary_uc, get_activity_feed as get_feed_uc,
-        get_diary, get_movie_social_page, get_movies, get_review_history,
-        get_user_profile as get_user_profile_uc, get_users, log_review, login as login_uc,
-        register as register_uc, sync_poster, update_profile, update_profile_fields,
-        search as search_uc, get_person, get_person_credits,
-        add_to_watchlist, remove_from_watchlist, get_watchlist, is_on_watchlist,
+        add_to_watchlist, delete_review, export_diary as export_diary_uc,
+        get_activity_feed as get_feed_uc, get_diary, get_movie_social_page, get_movies, get_person,
+        get_person_credits, get_review_history, get_user_profile as get_user_profile_uc, get_users,
+        get_watchlist, is_on_watchlist, log_review, login as login_uc, register as register_uc,
+        remove_from_watchlist, search as search_uc, sync_poster, update_profile,
+        update_profile_fields,
     },
 };
 use domain::{
     errors::DomainError,
-    models::{DiaryEntry, ExportFormat, Movie, MovieSummary, Review, PersonId, collections::PageParams},
+    models::{
+        DiaryEntry, ExportFormat, Movie, MovieSummary, PersonId, Review, collections::PageParams,
+    },
     services::review_history::Trend,
     value_objects::{MovieId, UserId},
 };
 
+use crate::{
+    errors::ApiError,
+    extractors::AuthenticatedUser,
+    forms::{LogReviewData, to_diary_query},
+    state::AppState,
+};
+use api_types::search::{
+    CastCreditDto, CrewCreditDto, MovieSearchHitDto, PaginatedMovieHits, PaginatedPersonHits,
+    PersonCreditsDto, PersonDto, PersonSearchHitDto, SearchQueryParams, SearchResponse,
+};
+use api_types::{
+    ActivityFeedQueryParams, ActivityFeedResponse, AddToWatchlistRequest, CastMemberDto,
+    CrewMemberDto, DiaryEntryDto, DiaryQueryParams, DiaryResponse, DirectorStatDto,
+    ExportQueryParams, FeedEntryDto, GenreDto, KeywordDto, LogReviewRequest, LoginRequest,
+    LoginResponse, MonthActivityDto, MonthlyRatingDto, MovieDetailResponse, MovieDto,
+    MovieProfileResponse, MovieStatsDto, MoviesQueryParams, MoviesResponse, PaginationQueryParams,
+    ProfileResponse, RegisterRequest, ReviewDto, ReviewHistoryResponse, SocialFeedResponse,
+    SocialReviewDto, UserProfileQueryParams, UserProfileResponse, UserStatsDto, UserSummaryDto,
+    UserTrendsDto, UsersResponse, WatchlistEntryDto, WatchlistResponse, WatchlistStatusResponse,
+};
 #[cfg(feature = "federation")]
 use api_types::{
     ActorListResponse, ActorUrlRequest, AddBlockedDomainRequest, BlockedActorResponse,
     BlockedDomainResponse, FollowRequest, RemoteActorDto,
-};
-use api_types::{
-    ActivityFeedQueryParams, ActivityFeedResponse, CastMemberDto, CrewMemberDto, DiaryEntryDto,
-    DiaryQueryParams, DiaryResponse, DirectorStatDto, ExportQueryParams, FeedEntryDto,
-    GenreDto, KeywordDto, LogReviewRequest, LoginRequest, LoginResponse, MonthActivityDto,
-    MonthlyRatingDto, MovieDetailResponse, MovieDto, MovieProfileResponse, MovieStatsDto,
-    MoviesQueryParams, MoviesResponse, PaginationQueryParams, ProfileResponse, RegisterRequest,
-    ReviewDto, ReviewHistoryResponse, SocialFeedResponse, SocialReviewDto, UserProfileQueryParams,
-    UserProfileResponse, UserStatsDto, UserSummaryDto, UserTrendsDto, UsersResponse,
-    WatchlistResponse, WatchlistEntryDto, WatchlistStatusResponse, AddToWatchlistRequest,
-};
-use api_types::search::{
-    CastCreditDto, CrewCreditDto, MovieSearchHitDto, PersonCreditsDto, PersonDto,
-    PersonSearchHitDto, PaginatedMovieHits, PaginatedPersonHits, SearchQueryParams, SearchResponse,
-};
-use crate::{
-    errors::ApiError,
-    extractors::AuthenticatedUser,
-    forms::{to_diary_query, LogReviewData},
-    state::AppState,
 };
 
 #[utoipa::path(
@@ -307,7 +309,11 @@ pub async fn get_movie_detail(
 
     let result = get_movie_social_page::execute(
         &state.app_ctx,
-        GetMovieSocialPageQuery { movie_id, limit, offset },
+        GetMovieSocialPageQuery {
+            movie_id,
+            limit,
+            offset,
+        },
     )
     .await?;
 
@@ -320,13 +326,18 @@ pub async fn get_movie_detail(
             rating_histogram: result.stats.rating_histogram,
         },
         reviews: SocialFeedResponse {
-            items: result.reviews.items.iter().map(|e| SocialReviewDto {
-                user_display: e.user_display_name().to_string(),
-                rating: e.review().rating().value(),
-                comment: e.review().comment().map(|c| c.value().to_string()),
-                watched_at: e.review().watched_at().to_string(),
-                is_federated: e.review().is_remote(),
-            }).collect(),
+            items: result
+                .reviews
+                .items
+                .iter()
+                .map(|e| SocialReviewDto {
+                    user_display: e.user_display_name().to_string(),
+                    rating: e.review().rating().value(),
+                    comment: e.review().comment().map(|c| c.value().to_string()),
+                    watched_at: e.review().watched_at().to_string(),
+                    is_federated: e.review().is_remote(),
+                })
+                .collect(),
             total_count: result.reviews.total_count,
             limit: result.reviews.limit,
             offset: result.reviews.offset,
@@ -347,7 +358,12 @@ pub async fn get_movie_profile(
     Path(movie_id): Path<Uuid>,
 ) -> impl IntoResponse {
     let id = domain::value_objects::MovieId::from_uuid(movie_id);
-    match state.app_ctx.movie_profile_repository.get_by_movie_id(&id).await {
+    match state
+        .app_ctx
+        .movie_profile_repository
+        .get_by_movie_id(&id)
+        .await
+    {
         Ok(Some(p)) => Json(MovieProfileResponse {
             tmdb_id: p.tmdb_id,
             imdb_id: p.imdb_id,
@@ -360,18 +376,47 @@ pub async fn get_movie_profile(
             vote_count: p.vote_count,
             original_language: p.original_language,
             collection_name: p.collection_name,
-            genres: p.genres.into_iter().map(|g| GenreDto { tmdb_id: g.tmdb_id, name: g.name }).collect(),
-            keywords: p.keywords.into_iter().map(|k| KeywordDto { tmdb_id: k.tmdb_id, name: k.name }).collect(),
-            cast: p.cast.into_iter().map(|c| CastMemberDto {
-                tmdb_person_id: c.tmdb_person_id, name: c.name, character: c.character,
-                billing_order: c.billing_order, profile_path: c.profile_path,
-            }).collect(),
-            crew: p.crew.into_iter().map(|c| CrewMemberDto {
-                tmdb_person_id: c.tmdb_person_id, name: c.name, job: c.job,
-                department: c.department, profile_path: c.profile_path,
-            }).collect(),
+            genres: p
+                .genres
+                .into_iter()
+                .map(|g| GenreDto {
+                    tmdb_id: g.tmdb_id,
+                    name: g.name,
+                })
+                .collect(),
+            keywords: p
+                .keywords
+                .into_iter()
+                .map(|k| KeywordDto {
+                    tmdb_id: k.tmdb_id,
+                    name: k.name,
+                })
+                .collect(),
+            cast: p
+                .cast
+                .into_iter()
+                .map(|c| CastMemberDto {
+                    tmdb_person_id: c.tmdb_person_id,
+                    name: c.name,
+                    character: c.character,
+                    billing_order: c.billing_order,
+                    profile_path: c.profile_path,
+                })
+                .collect(),
+            crew: p
+                .crew
+                .into_iter()
+                .map(|c| CrewMemberDto {
+                    tmdb_person_id: c.tmdb_person_id,
+                    name: c.name,
+                    job: c.job,
+                    department: c.department,
+                    profile_path: c.profile_path,
+                })
+                .collect(),
             enriched_at: p.enriched_at.to_rfc3339(),
-        }).into_response(),
+        })
+        .into_response(),
         Ok(None) => StatusCode::NOT_FOUND.into_response(),
         Err(e) => {
             tracing::error!("get_movie_profile: {:?}", e);
@@ -440,7 +485,11 @@ pub async fn update_profile_handler(
     while let Ok(Some(field)) = multipart.next_field().await {
         let name = field.name().unwrap_or("").to_string();
         match name.as_str() {
-            "bio" => { if let Ok(text) = field.text().await { bio = Some(text); } }
+            "bio" => {
+                if let Ok(text) = field.text().await {
+                    bio = Some(text);
+                }
+            }
             "also_known_as" => {
                 if let Ok(text) = field.text().await {
                     also_known_as = Some(text).filter(|s| !s.is_empty());
@@ -449,13 +498,19 @@ pub async fn update_profile_handler(
             "avatar" => {
                 let ct = field.content_type().map(|s| s.to_string());
                 if let Ok(bytes) = field.bytes().await {
-                    if !bytes.is_empty() { avatar_bytes = Some(bytes.to_vec()); avatar_content_type = ct; }
+                    if !bytes.is_empty() {
+                        avatar_bytes = Some(bytes.to_vec());
+                        avatar_content_type = ct;
+                    }
                 }
             }
             "banner" => {
                 let ct = field.content_type().map(|s| s.to_string());
                 if let Ok(bytes) = field.bytes().await {
-                    if !bytes.is_empty() { banner_bytes = Some(bytes.to_vec()); banner_content_type = ct; }
+                    if !bytes.is_empty() {
+                        banner_bytes = Some(bytes.to_vec());
+                        banner_content_type = ct;
+                    }
                 }
             }
             _ => {}
@@ -613,7 +668,11 @@ pub async fn add_blocked_domain_admin(
     _admin: crate::extractors::AdminUser,
     axum::Json(body): axum::Json<AddBlockedDomainRequest>,
 ) -> impl IntoResponse {
-    match state.ap_service.add_blocked_domain(&body.domain, body.reason.as_deref()).await {
+    match state
+        .ap_service
+        .add_blocked_domain(&body.domain, body.reason.as_deref())
+        .await
+    {
         Ok(()) => StatusCode::CREATED.into_response(),
         Err(e) => ap_err(e).into_response(),
     }
@@ -656,7 +715,11 @@ pub async fn block_actor_api(
     user: AuthenticatedUser,
     axum::Json(body): axum::Json<ActorUrlRequest>,
 ) -> impl IntoResponse {
-    match state.ap_service.block_actor(user.0.value(), &body.actor_url).await {
+    match state
+        .ap_service
+        .block_actor(user.0.value(), &body.actor_url)
+        .await
+    {
         Ok(()) => StatusCode::NO_CONTENT.into_response(),
         Err(e) => ap_err(e).into_response(),
     }
@@ -677,7 +740,11 @@ pub async fn unblock_actor_api(
     user: AuthenticatedUser,
     axum::Json(body): axum::Json<ActorUrlRequest>,
 ) -> impl IntoResponse {
-    match state.ap_service.unblock_actor(user.0.value(), &body.actor_url).await {
+    match state
+        .ap_service
+        .unblock_actor(user.0.value(), &body.actor_url)
+        .await
+    {
         Ok(()) => StatusCode::NO_CONTENT.into_response(),
         Err(e) => ap_err(e).into_response(),
     }
@@ -972,9 +1039,7 @@ pub async fn get_activity_feed(
     get, path = "/api/v1/users",
     responses((status = 200, body = UsersResponse)),
 )]
-pub async fn list_users(
-    State(state): State<AppState>,
-) -> Result<Json<UsersResponse>, ApiError> {
+pub async fn list_users(State(state): State<AppState>) -> Result<Json<UsersResponse>, ApiError> {
     let users = get_users::execute(&state.app_ctx, GetUsersQuery).await?;
     Ok(Json(UsersResponse {
         users: users
@@ -1199,31 +1264,42 @@ pub async fn get_search(
     match search_uc::execute(&state.app_ctx, query).await {
         Ok(results) => axum::Json(SearchResponse {
             movies: PaginatedMovieHits {
-                items: results.movies.items.iter().map(|h| MovieSearchHitDto {
-                    movie_id: h.movie_id.value(),
-                    title: h.title.clone(),
-                    release_year: h.release_year,
-                    director: h.director.clone(),
-                    poster_path: h.poster_path.clone(),
-                    genres: h.genres.clone(),
-                }).collect(),
+                items: results
+                    .movies
+                    .items
+                    .iter()
+                    .map(|h| MovieSearchHitDto {
+                        movie_id: h.movie_id.value(),
+                        title: h.title.clone(),
+                        release_year: h.release_year,
+                        director: h.director.clone(),
+                        poster_path: h.poster_path.clone(),
+                        genres: h.genres.clone(),
+                    })
+                    .collect(),
                 total_count: results.movies.total_count,
                 limit: results.movies.limit,
                 offset: results.movies.offset,
             },
             people: PaginatedPersonHits {
-                items: results.people.items.iter().map(|h| PersonSearchHitDto {
-                    person_id: h.person_id.value(),
-                    name: h.name.clone(),
-                    known_for_department: h.known_for_department.clone(),
-                    profile_path: h.profile_path.clone(),
-                    known_for_titles: h.known_for_titles.clone(),
-                }).collect(),
+                items: results
+                    .people
+                    .items
+                    .iter()
+                    .map(|h| PersonSearchHitDto {
+                        person_id: h.person_id.value(),
+                        name: h.name.clone(),
+                        known_for_department: h.known_for_department.clone(),
+                        profile_path: h.profile_path.clone(),
+                        known_for_titles: h.known_for_titles.clone(),
+                    })
+                    .collect(),
                 total_count: results.people.total_count,
                 limit: results.people.limit,
                 offset: results.people.offset,
             },
-        }).into_response(),
+        })
+        .into_response(),
         Err(e) => {
             tracing::error!("search failed: {e}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
@@ -1251,7 +1327,8 @@ pub async fn get_person_handler(
             name: person.name().to_string(),
             known_for_department: person.known_for_department().map(str::to_string),
             profile_path: person.profile_path().map(str::to_string),
-        }).into_response(),
+        })
+        .into_response(),
         Ok(None) => StatusCode::NOT_FOUND.into_response(),
         Err(e) => {
             tracing::error!("get_person failed: {e}");
@@ -1282,22 +1359,31 @@ pub async fn get_person_credits_handler(
                 known_for_department: credits.person.known_for_department().map(str::to_string),
                 profile_path: credits.person.profile_path().map(str::to_string),
             },
-            cast: credits.cast.iter().map(|c| CastCreditDto {
-                movie_id: c.movie_id.value(),
-                title: c.title.clone(),
-                release_year: c.release_year,
-                character: c.character.clone(),
-                poster_path: c.poster_path.clone(),
-            }).collect(),
-            crew: credits.crew.iter().map(|c| CrewCreditDto {
-                movie_id: c.movie_id.value(),
-                title: c.title.clone(),
-                release_year: c.release_year,
-                job: c.job.clone(),
-                department: c.department.clone(),
-                poster_path: c.poster_path.clone(),
-            }).collect(),
-        }).into_response(),
+            cast: credits
+                .cast
+                .iter()
+                .map(|c| CastCreditDto {
+                    movie_id: c.movie_id.value(),
+                    title: c.title.clone(),
+                    release_year: c.release_year,
+                    character: c.character.clone(),
+                    poster_path: c.poster_path.clone(),
+                })
+                .collect(),
+            crew: credits
+                .crew
+                .iter()
+                .map(|c| CrewCreditDto {
+                    movie_id: c.movie_id.value(),
+                    title: c.title.clone(),
+                    release_year: c.release_year,
+                    job: c.job.clone(),
+                    department: c.department.clone(),
+                    poster_path: c.poster_path.clone(),
+                })
+                .collect(),
+        })
+        .into_response(),
         Err(DomainError::NotFound(_)) => StatusCode::NOT_FOUND.into_response(),
         Err(e) => {
             tracing::error!("get_person_credits failed: {e}");
@@ -1334,11 +1420,15 @@ pub async fn get_watchlist_handler(
     .await?;
 
     Ok(Json(WatchlistResponse {
-        items: page.items.into_iter().map(|w| WatchlistEntryDto {
-            id: w.entry.id.value(),
-            movie: movie_to_dto(&w.movie),
-            added_at: w.entry.added_at.to_string(),
-        }).collect(),
+        items: page
+            .items
+            .into_iter()
+            .map(|w| WatchlistEntryDto {
+                id: w.entry.id.value(),
+                movie: movie_to_dto(&w.movie),
+                added_at: w.entry.added_at.to_string(),
+            })
+            .collect(),
         total_count: page.total_count,
         limit: page.limit,
         offset: page.offset,
@@ -1394,7 +1484,10 @@ pub async fn delete_watchlist_entry(
 ) -> Result<impl IntoResponse, ApiError> {
     remove_from_watchlist::execute(
         &state.app_ctx,
-        RemoveFromWatchlistCommand { user_id: user.0.value(), movie_id },
+        RemoveFromWatchlistCommand {
+            user_id: user.0.value(),
+            movie_id,
+        },
     )
     .await?;
     Ok(StatusCode::NO_CONTENT)
@@ -1416,7 +1509,10 @@ pub async fn get_watchlist_status(
 ) -> Result<Json<WatchlistStatusResponse>, ApiError> {
     let on_watchlist = is_on_watchlist::execute(
         &state.app_ctx,
-        IsOnWatchlistQuery { user_id: user.0.value(), movie_id },
+        IsOnWatchlistQuery {
+            user_id: user.0.value(),
+            movie_id,
+        },
     )
     .await?;
     Ok(Json(WatchlistStatusResponse { on_watchlist }))

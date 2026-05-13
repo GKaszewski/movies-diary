@@ -31,10 +31,13 @@ pub async fn execute(ctx: &AppContext, cmd: AddToWatchlistCommand) -> Result<(),
         if is_new {
             ctx.movie_repository.upsert_movie(&movie).await?;
             if let Some(ext_id) = movie.external_metadata_id() {
-                let _ = ctx.event_publisher.publish(&DomainEvent::MovieDiscovered {
-                    movie_id: movie.id().clone(),
-                    external_metadata_id: ext_id.clone(),
-                }).await;
+                let _ = ctx
+                    .event_publisher
+                    .publish(&DomainEvent::MovieDiscovered {
+                        movie_id: movie.id().clone(),
+                        external_metadata_id: ext_id.clone(),
+                    })
+                    .await;
             }
         }
         movie
@@ -43,14 +46,17 @@ pub async fn execute(ctx: &AppContext, cmd: AddToWatchlistCommand) -> Result<(),
     let entry = WatchlistEntry::new(user_id.clone(), movie.id().clone());
     ctx.watchlist_repository.add(&entry).await?;
 
-    let _ = ctx.event_publisher.publish(&DomainEvent::WatchlistEntryAdded {
-        user_id,
-        movie_id: movie.id().clone(),
-        movie_title: movie.title().value().to_string(),
-        release_year: movie.release_year().value(),
-        external_metadata_id: movie.external_metadata_id().map(|e| e.value().to_string()),
-        added_at: entry.added_at,
-    }).await;
+    let _ = ctx
+        .event_publisher
+        .publish(&DomainEvent::WatchlistEntryAdded {
+            user_id,
+            movie_id: movie.id().clone(),
+            movie_title: movie.title().value().to_string(),
+            release_year: movie.release_year().value(),
+            external_metadata_id: movie.external_metadata_id().map(|e| e.value().to_string()),
+            added_at: entry.added_at,
+        })
+        .await;
 
     Ok(())
 }

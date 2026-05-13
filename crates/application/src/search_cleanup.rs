@@ -10,12 +10,15 @@ use domain::{
 
 pub struct SearchCleanupHandler {
     search_command: Arc<dyn SearchCommand>,
-    person_query:   Arc<dyn PersonQuery>,
+    person_query: Arc<dyn PersonQuery>,
 }
 
 impl SearchCleanupHandler {
     pub fn new(search_command: Arc<dyn SearchCommand>, person_query: Arc<dyn PersonQuery>) -> Self {
-        Self { search_command, person_query }
+        Self {
+            search_command,
+            person_query,
+        }
     }
 }
 
@@ -27,7 +30,11 @@ impl EventHandler for SearchCleanupHandler {
             _ => return Ok(()),
         };
 
-        if let Err(e) = self.search_command.remove(EntityType::Movie, &movie_id).await {
+        if let Err(e) = self
+            .search_command
+            .remove(EntityType::Movie, &movie_id)
+            .await
+        {
             tracing::warn!("search cleanup failed for movie {movie_id}: {e}");
         }
 
@@ -41,7 +48,9 @@ impl EventHandler for SearchCleanupHandler {
                     }
                 }
             }
-            Err(e) => tracing::warn!("failed to list orphaned persons after movie {movie_id} deletion: {e}"),
+            Err(e) => tracing::warn!(
+                "failed to list orphaned persons after movie {movie_id} deletion: {e}"
+            ),
         }
 
         Ok(())

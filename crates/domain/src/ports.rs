@@ -5,11 +5,12 @@ use crate::{
     errors::DomainError,
     events::{DomainEvent, EventEnvelope},
     models::{
-        AnnotatedRow, DiaryEntry, DiaryFilter, ExportFormat, FeedEntry, FieldMapping,
-        FileFormat, ImportError, ImportProfile, ImportSession, Movie, MovieFilter, MovieProfile,
-        MovieStats, MovieSummary, ParsedFile, Review, ReviewHistory, User, UserStats, UserSummary,
-        UserTrends, WatchlistEntry, WatchlistWithMovie, RemoteWatchlistEntry, EntityType, ExternalPersonId,
-        IndexableDocument, Person, PersonCredits, PersonId, SearchQuery, SearchResults,
+        AnnotatedRow, DiaryEntry, DiaryFilter, EntityType, ExportFormat, ExternalPersonId,
+        FeedEntry, FieldMapping, FileFormat, ImportError, ImportProfile, ImportSession,
+        IndexableDocument, Movie, MovieFilter, MovieProfile, MovieStats, MovieSummary, ParsedFile,
+        Person, PersonCredits, PersonId, RemoteWatchlistEntry, Review, ReviewHistory, SearchQuery,
+        SearchResults, User, UserStats, UserSummary, UserTrends, WatchlistEntry,
+        WatchlistWithMovie,
         collections::{self, PageParams, Paginated},
     },
     value_objects::{
@@ -66,9 +67,7 @@ pub trait SocialQueryPort: Send + Sync {
     ) -> Result<Vec<String>, DomainError>;
 
     /// Returns all distinct remote actors followed by any local user on this instance.
-    async fn list_all_followed_remote_actors(
-        &self,
-    ) -> Result<Vec<RemoteActorInfo>, DomainError>;
+    async fn list_all_followed_remote_actors(&self) -> Result<Vec<RemoteActorInfo>, DomainError>;
 }
 
 #[async_trait]
@@ -195,8 +194,15 @@ pub trait UserRepository: Send + Sync {
 
 #[async_trait]
 pub trait UserProfileFieldsRepository: Send + Sync {
-    async fn get_fields(&self, user_id: &UserId) -> Result<Vec<crate::models::ProfileField>, DomainError>;
-    async fn set_fields(&self, user_id: &UserId, fields: Vec<crate::models::ProfileField>) -> Result<(), DomainError>;
+    async fn get_fields(
+        &self,
+        user_id: &UserId,
+    ) -> Result<Vec<crate::models::ProfileField>, DomainError>;
+    async fn set_fields(
+        &self,
+        user_id: &UserId,
+        fields: Vec<crate::models::ProfileField>,
+    ) -> Result<(), DomainError>;
 }
 
 #[async_trait]
@@ -260,7 +266,11 @@ pub trait MovieEnrichmentClient: Send + Sync {
 #[async_trait]
 pub trait ImportSessionRepository: Send + Sync {
     async fn create(&self, session: &ImportSession) -> Result<(), DomainError>;
-    async fn get(&self, id: &ImportSessionId, user_id: &UserId) -> Result<Option<ImportSession>, DomainError>;
+    async fn get(
+        &self,
+        id: &ImportSessionId,
+        user_id: &UserId,
+    ) -> Result<Option<ImportSession>, DomainError>;
     async fn update(&self, session: &ImportSession) -> Result<(), DomainError>;
     async fn delete(&self, id: &ImportSessionId) -> Result<(), DomainError>;
     async fn delete_expired(&self) -> Result<u64, DomainError>;
@@ -271,7 +281,11 @@ pub trait ImportSessionRepository: Send + Sync {
 pub trait ImportProfileRepository: Send + Sync {
     async fn save(&self, profile: &ImportProfile) -> Result<(), DomainError>;
     async fn list_for_user(&self, user_id: &UserId) -> Result<Vec<ImportProfile>, DomainError>;
-    async fn get(&self, id: &ImportProfileId, user_id: &UserId) -> Result<Option<ImportProfile>, DomainError>;
+    async fn get(
+        &self,
+        id: &ImportProfileId,
+        user_id: &UserId,
+    ) -> Result<Option<ImportProfile>, DomainError>;
     async fn delete(&self, id: &ImportProfileId) -> Result<(), DomainError>;
 }
 
@@ -296,7 +310,10 @@ pub trait PersonCommand: Send + Sync {
 #[async_trait]
 pub trait PersonQuery: Send + Sync {
     async fn get_by_id(&self, id: &PersonId) -> Result<Option<Person>, DomainError>;
-    async fn get_by_external_id(&self, id: &ExternalPersonId) -> Result<Option<Person>, DomainError>;
+    async fn get_by_external_id(
+        &self,
+        id: &ExternalPersonId,
+    ) -> Result<Option<Person>, DomainError>;
     /// Returns the person's full cast and crew credit history across all indexed movies.
     async fn get_credits(&self, id: &PersonId) -> Result<PersonCredits, DomainError>;
     /// Returns persons who have no remaining entries in movie_cast or movie_crew.
@@ -340,19 +357,21 @@ pub trait WatchlistRepository: Send + Sync {
         page: &collections::PageParams,
     ) -> Result<collections::Paginated<WatchlistWithMovie>, DomainError>;
 
-    async fn contains(
-        &self,
-        user_id: &UserId,
-        movie_id: &MovieId,
-    ) -> Result<bool, DomainError>;
+    async fn contains(&self, user_id: &UserId, movie_id: &MovieId) -> Result<bool, DomainError>;
 }
 
 #[async_trait]
 pub trait RemoteWatchlistRepository: Send + Sync {
     async fn save(&self, entry: RemoteWatchlistEntry) -> Result<(), DomainError>;
     async fn remove_by_ap_id(&self, ap_id: &str, actor_url: &str) -> Result<(), DomainError>;
-    async fn get_by_actor_url(&self, actor_url: &str) -> Result<Vec<RemoteWatchlistEntry>, DomainError>;
+    async fn get_by_actor_url(
+        &self,
+        actor_url: &str,
+    ) -> Result<Vec<RemoteWatchlistEntry>, DomainError>;
     async fn remove_all_by_actor(&self, actor_url: &str) -> Result<(), DomainError>;
     /// Find entries for a remote actor whose URL hashes (v5 UUID) to the given UUID.
-    async fn get_by_derived_uuid(&self, uuid: uuid::Uuid) -> Result<Vec<RemoteWatchlistEntry>, DomainError>;
+    async fn get_by_derived_uuid(
+        &self,
+        uuid: uuid::Uuid,
+    ) -> Result<Vec<RemoteWatchlistEntry>, DomainError>;
 }

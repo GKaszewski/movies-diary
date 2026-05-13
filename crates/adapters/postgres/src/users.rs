@@ -46,8 +46,8 @@ impl PostgresUserRepository {
     ) -> Result<User, DomainError> {
         let id = uuid::Uuid::parse_str(&id_str)
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
-        let email = Email::new(email_str)
-            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        let email =
+            Email::new(email_str).map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
         let username = Username::new(username_str)
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
         let hash = PasswordHash::new(hash_str)
@@ -208,7 +208,10 @@ impl UserRepository for PostgresUserRepository {
         let Some(r) = row else { return Ok(None) };
 
         #[derive(sqlx::FromRow)]
-        struct FieldRow { name: String, value: String }
+        struct FieldRow {
+            name: String,
+            value: String,
+        }
         let field_rows = sqlx::query_as::<_, FieldRow>(
             "SELECT name, value FROM user_profile_fields WHERE user_id = $1 ORDER BY position ASC",
         )
@@ -217,7 +220,13 @@ impl UserRepository for PostgresUserRepository {
         .await
         .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
 
-        let profile_fields = field_rows.into_iter().map(|f| ProfileField { name: f.name, value: f.value }).collect();
+        let profile_fields = field_rows
+            .into_iter()
+            .map(|f| ProfileField {
+                name: f.name,
+                value: f.value,
+            })
+            .collect();
 
         Self::row_to_user(
             r.id,
@@ -230,7 +239,8 @@ impl UserRepository for PostgresUserRepository {
             r.banner_path,
             r.also_known_as,
             profile_fields,
-        ).map(Some)
+        )
+        .map(Some)
     }
 
     async fn update_profile(

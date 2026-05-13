@@ -72,7 +72,8 @@ impl Activity for FollowActivity {
         let _follower = self.actor.dereference(data).await?;
         let local_actor = self.object.dereference(data).await?;
 
-        if data.federation_repo
+        if data
+            .federation_repo
             .is_actor_blocked(local_actor.user_id, self.actor.inner().as_str())
             .await?
         {
@@ -246,7 +247,11 @@ impl Activity for UndoActivity {
             return Ok(());
         }
 
-        let obj_type = self.object.get("type").and_then(|t| t.as_str()).unwrap_or("");
+        let obj_type = self
+            .object
+            .get("type")
+            .and_then(|t| t.as_str())
+            .unwrap_or("");
 
         match obj_type {
             "Follow" => {
@@ -266,7 +271,8 @@ impl Activity for UndoActivity {
                 tracing::info!(actor = %self.actor.inner(), "unfollowed");
             }
             "Add" => {
-                let ap_id_str = self.object
+                let ap_id_str = self
+                    .object
                     .get("object")
                     .and_then(|o| o.get("id"))
                     .and_then(|id| id.as_str())

@@ -9,7 +9,10 @@ fn nodeinfo_well_known_serializes_correctly() {
         }],
     };
     let json = serde_json::to_value(&doc).unwrap();
-    assert_eq!(json["links"][0]["rel"], "http://nodeinfo.diaspora.software/ns/schema/2.0");
+    assert_eq!(
+        json["links"][0]["rel"],
+        "http://nodeinfo.diaspora.software/ns/schema/2.0"
+    );
     assert_eq!(json["links"][0]["href"], "https://example.com/nodeinfo/2.0");
 }
 

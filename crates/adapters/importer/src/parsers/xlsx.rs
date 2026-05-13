@@ -1,24 +1,27 @@
-use calamine::{Reader, open_workbook_from_rs, Xlsx, Data};
-use std::io::Cursor;
+use calamine::{Data, Reader, Xlsx, open_workbook_from_rs};
 use domain::models::{ImportError, ParsedFile};
+use std::io::Cursor;
 
 pub fn parse_xlsx(bytes: &[u8]) -> Result<ParsedFile, ImportError> {
     let cursor = Cursor::new(bytes);
     let mut workbook: Xlsx<_> = open_workbook_from_rs(cursor)
         .map_err(|e: calamine::XlsxError| ImportError::Xlsx(e.to_string()))?;
 
-    let sheet_name = workbook.sheet_names()
+    let sheet_name = workbook
+        .sheet_names()
         .first()
         .cloned()
         .ok_or(ImportError::Empty)?;
 
-    let range = workbook.worksheet_range(&sheet_name)
+    let range = workbook
+        .worksheet_range(&sheet_name)
         .map_err(|e| ImportError::Xlsx(e.to_string()))?;
 
     let mut iter = range.rows();
 
     let header = iter.next().ok_or(ImportError::NoHeader)?;
-    let columns: Vec<String> = header.iter()
+    let columns: Vec<String> = header
+        .iter()
         .map(|c| cell_to_string(c).trim().to_string())
         .collect();
 
@@ -46,7 +49,11 @@ fn cell_to_string(cell: &Data) -> String {
     match cell {
         Data::String(s) => s.clone(),
         Data::Float(f) => {
-            if f.fract() == 0.0 { format!("{}", *f as i64) } else { format!("{}", f) }
+            if f.fract() == 0.0 {
+                format!("{}", *f as i64)
+            } else {
+                format!("{}", f)
+            }
         }
         Data::Int(i) => i.to_string(),
         Data::Bool(b) => b.to_string(),

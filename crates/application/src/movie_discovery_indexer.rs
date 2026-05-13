@@ -13,12 +13,18 @@ use domain::{
 /// Enrichment will later overwrite this with the full document (cast, genres, etc.).
 pub struct MovieDiscoveryIndexer {
     movie_repository: Arc<dyn MovieRepository>,
-    search_command:   Arc<dyn SearchCommand>,
+    search_command: Arc<dyn SearchCommand>,
 }
 
 impl MovieDiscoveryIndexer {
-    pub fn new(movie_repository: Arc<dyn MovieRepository>, search_command: Arc<dyn SearchCommand>) -> Self {
-        Self { movie_repository, search_command }
+    pub fn new(
+        movie_repository: Arc<dyn MovieRepository>,
+        search_command: Arc<dyn SearchCommand>,
+    ) -> Self {
+        Self {
+            movie_repository,
+            search_command,
+        }
     }
 }
 
@@ -35,7 +41,8 @@ impl EventHandler for MovieDiscoveryIndexer {
             return Ok(());
         };
 
-        if let Err(e) = self.search_command
+        if let Err(e) = self
+            .search_command
             .index(IndexableDocument::Movie {
                 id: movie_id.clone(),
                 movie: Box::new(movie),

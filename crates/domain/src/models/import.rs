@@ -45,7 +45,10 @@ pub struct ImportRow {
 #[derive(Debug, Clone)]
 pub enum RowResult {
     Valid(ImportRow),
-    Invalid { errors: Vec<String>, raw: Vec<(String, String)> },
+    Invalid {
+        errors: Vec<String>,
+        raw: Vec<(String, String)>,
+    },
 }
 
 #[derive(Debug, Clone)]

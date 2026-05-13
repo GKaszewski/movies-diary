@@ -66,48 +66,80 @@ impl MovieProfileRepository for SqliteMovieProfileRepository {
 
         sqlx::query("DELETE FROM movie_genres WHERE movie_id = ?")
             .bind(&movie_id)
-            .execute(&mut *tx).await.map_err(Self::map_err)?;
+            .execute(&mut *tx)
+            .await
+            .map_err(Self::map_err)?;
         for g in &p.genres {
-            sqlx::query("INSERT OR IGNORE INTO movie_genres (movie_id, tmdb_id, name) VALUES (?,?,?)")
-                .bind(&movie_id).bind(g.tmdb_id as i64).bind(&g.name)
-                .execute(&mut *tx).await.map_err(Self::map_err)?;
+            sqlx::query(
+                "INSERT OR IGNORE INTO movie_genres (movie_id, tmdb_id, name) VALUES (?,?,?)",
+            )
+            .bind(&movie_id)
+            .bind(g.tmdb_id as i64)
+            .bind(&g.name)
+            .execute(&mut *tx)
+            .await
+            .map_err(Self::map_err)?;
         }
 
         sqlx::query("DELETE FROM movie_keywords WHERE movie_id = ?")
             .bind(&movie_id)
-            .execute(&mut *tx).await.map_err(Self::map_err)?;
+            .execute(&mut *tx)
+            .await
+            .map_err(Self::map_err)?;
         for k in &p.keywords {
-            sqlx::query("INSERT OR IGNORE INTO movie_keywords (movie_id, tmdb_id, name) VALUES (?,?,?)")
-                .bind(&movie_id).bind(k.tmdb_id as i64).bind(&k.name)
-                .execute(&mut *tx).await.map_err(Self::map_err)?;
+            sqlx::query(
+                "INSERT OR IGNORE INTO movie_keywords (movie_id, tmdb_id, name) VALUES (?,?,?)",
+            )
+            .bind(&movie_id)
+            .bind(k.tmdb_id as i64)
+            .bind(&k.name)
+            .execute(&mut *tx)
+            .await
+            .map_err(Self::map_err)?;
         }
 
         sqlx::query("DELETE FROM movie_cast WHERE movie_id = ?")
             .bind(&movie_id)
-            .execute(&mut *tx).await.map_err(Self::map_err)?;
+            .execute(&mut *tx)
+            .await
+            .map_err(Self::map_err)?;
         for c in &p.cast {
             sqlx::query(
                 "INSERT OR IGNORE INTO movie_cast \
                  (movie_id, tmdb_person_id, name, character, billing_order, profile_path) \
                  VALUES (?,?,?,?,?,?)",
             )
-            .bind(&movie_id).bind(c.tmdb_person_id as i64).bind(&c.name)
-            .bind(&c.character).bind(c.billing_order as i64).bind(&c.profile_path)
-            .execute(&mut *tx).await.map_err(Self::map_err)?;
+            .bind(&movie_id)
+            .bind(c.tmdb_person_id as i64)
+            .bind(&c.name)
+            .bind(&c.character)
+            .bind(c.billing_order as i64)
+            .bind(&c.profile_path)
+            .execute(&mut *tx)
+            .await
+            .map_err(Self::map_err)?;
         }
 
         sqlx::query("DELETE FROM movie_crew WHERE movie_id = ?")
             .bind(&movie_id)
-            .execute(&mut *tx).await.map_err(Self::map_err)?;
+            .execute(&mut *tx)
+            .await
+            .map_err(Self::map_err)?;
         for cr in &p.crew {
             sqlx::query(
                 "INSERT OR IGNORE INTO movie_crew \
                  (movie_id, tmdb_person_id, name, job, department, profile_path) \
                  VALUES (?,?,?,?,?,?)",
             )
-            .bind(&movie_id).bind(cr.tmdb_person_id as i64).bind(&cr.name)
-            .bind(&cr.job).bind(&cr.department).bind(&cr.profile_path)
-            .execute(&mut *tx).await.map_err(Self::map_err)?;
+            .bind(&movie_id)
+            .bind(cr.tmdb_person_id as i64)
+            .bind(&cr.name)
+            .bind(&cr.job)
+            .bind(&cr.department)
+            .bind(&cr.profile_path)
+            .execute(&mut *tx)
+            .await
+            .map_err(Self::map_err)?;
         }
 
         tx.commit().await.map_err(Self::map_err)
@@ -132,7 +164,8 @@ impl MovieProfileRepository for SqliteMovieProfileRepository {
             None => return Ok(None),
         };
 
-        let enriched_at_str: String = row.try_get("enriched_at")
+        let enriched_at_str: String = row
+            .try_get("enriched_at")
             .map_err(|_| DomainError::InfrastructureError("invalid enriched_at".into()))?;
         let enriched_at: DateTime<Utc> = enriched_at_str
             .parse()
@@ -140,7 +173,9 @@ impl MovieProfileRepository for SqliteMovieProfileRepository {
 
         let genres = sqlx::query("SELECT tmdb_id, name FROM movie_genres WHERE movie_id = ?")
             .bind(&movie_id)
-            .fetch_all(&self.pool).await.map_err(Self::map_err)?
+            .fetch_all(&self.pool)
+            .await
+            .map_err(Self::map_err)?
             .into_iter()
             .map(|r| Genre {
                 tmdb_id: r.try_get::<i64, _>("tmdb_id").unwrap_or(0) as u32,
@@ -150,7 +185,9 @@ impl MovieProfileRepository for SqliteMovieProfileRepository {
 
         let keywords = sqlx::query("SELECT tmdb_id, name FROM movie_keywords WHERE movie_id = ?")
             .bind(&movie_id)
-            .fetch_all(&self.pool).await.map_err(Self::map_err)?
+            .fetch_all(&self.pool)
+            .await
+            .map_err(Self::map_err)?
             .into_iter()
             .map(|r| Keyword {
                 tmdb_id: r.try_get::<i64, _>("tmdb_id").unwrap_or(0) as u32,
@@ -163,7 +200,9 @@ impl MovieProfileRepository for SqliteMovieProfileRepository {
              FROM movie_cast WHERE movie_id = ? ORDER BY billing_order",
         )
         .bind(&movie_id)
-        .fetch_all(&self.pool).await.map_err(Self::map_err)?
+        .fetch_all(&self.pool)
+        .await
+        .map_err(Self::map_err)?
         .into_iter()
         .map(|r| CastMember {
             tmdb_person_id: r.try_get::<i64, _>("tmdb_person_id").unwrap_or(0) as u64,
@@ -179,7 +218,9 @@ impl MovieProfileRepository for SqliteMovieProfileRepository {
              FROM movie_crew WHERE movie_id = ?",
         )
         .bind(&movie_id)
-        .fetch_all(&self.pool).await.map_err(Self::map_err)?
+        .fetch_all(&self.pool)
+        .await
+        .map_err(Self::map_err)?
         .into_iter()
         .map(|r| CrewMember {
             tmdb_person_id: r.try_get::<i64, _>("tmdb_person_id").unwrap_or(0) as u64,
@@ -196,11 +237,19 @@ impl MovieProfileRepository for SqliteMovieProfileRepository {
             imdb_id: row.try_get("imdb_id").ok(),
             overview: row.try_get("overview").ok(),
             tagline: row.try_get("tagline").ok(),
-            runtime_minutes: row.try_get::<Option<i64>, _>("runtime_minutes").ok().flatten().map(|v| v as u32),
+            runtime_minutes: row
+                .try_get::<Option<i64>, _>("runtime_minutes")
+                .ok()
+                .flatten()
+                .map(|v| v as u32),
             budget_usd: row.try_get("budget_usd").ok(),
             revenue_usd: row.try_get("revenue_usd").ok(),
             vote_average: row.try_get("vote_average").ok(),
-            vote_count: row.try_get::<Option<i64>, _>("vote_count").ok().flatten().map(|v| v as u32),
+            vote_count: row
+                .try_get::<Option<i64>, _>("vote_count")
+                .ok()
+                .flatten()
+                .map(|v| v as u32),
             original_language: row.try_get("original_language").ok(),
             collection_name: row.try_get("collection_name").ok(),
             genres,

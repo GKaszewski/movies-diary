@@ -24,13 +24,12 @@ pub fn parse_csv(bytes: &[u8]) -> Result<ParsedFile, ImportError> {
     let rows: Vec<Vec<String>> = rdr
         .records()
         .map(|r| {
-            r.map_err(|e| ImportError::Csv(e.to_string()))
-                .map(|rec| {
-                    let mut cells: Vec<String> = rec.iter().map(|f| f.trim().to_string()).collect();
-                    cells.resize(columns.len(), String::new());
-                    cells.truncate(columns.len());
-                    cells
-                })
+            r.map_err(|e| ImportError::Csv(e.to_string())).map(|rec| {
+                let mut cells: Vec<String> = rec.iter().map(|f| f.trim().to_string()).collect();
+                cells.resize(columns.len(), String::new());
+                cells.truncate(columns.len());
+                cells
+            })
         })
         .collect::<Result<_, _>>()?;
 

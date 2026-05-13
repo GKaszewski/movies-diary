@@ -51,8 +51,14 @@ fn log_review_request_includes_director_when_set() {
 fn api_client_builds_versioned_urls() {
     let client = ApiClient::new("http://localhost:3000");
     assert_eq!(client.api("/diary"), "http://localhost:3000/api/v1/diary");
-    assert_eq!(client.api("/auth/login"), "http://localhost:3000/api/v1/auth/login");
-    assert_eq!(client.api("/social/follow"), "http://localhost:3000/api/v1/social/follow");
+    assert_eq!(
+        client.api("/auth/login"),
+        "http://localhost:3000/api/v1/auth/login"
+    );
+    assert_eq!(
+        client.api("/social/follow"),
+        "http://localhost:3000/api/v1/social/follow"
+    );
 }
 
 #[test]

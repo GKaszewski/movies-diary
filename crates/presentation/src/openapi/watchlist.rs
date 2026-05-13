@@ -1,4 +1,6 @@
-use api_types::{AddToWatchlistRequest, WatchlistEntryDto, WatchlistResponse, WatchlistStatusResponse};
+use api_types::{
+    AddToWatchlistRequest, WatchlistEntryDto, WatchlistResponse, WatchlistStatusResponse,
+};
 use utoipa::OpenApi;
 
 #[derive(OpenApi)]

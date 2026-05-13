@@ -18,7 +18,9 @@ struct MockPublisher {
 
 impl MockPublisher {
     fn new() -> Arc<Self> {
-        Arc::new(Self { emitted: Mutex::new(vec![]) })
+        Arc::new(Self {
+            emitted: Mutex::new(vec![]),
+        })
     }
 
     fn emitted(&self) -> Vec<String> {
@@ -42,10 +44,8 @@ async fn emits_image_stored_for_unconverted_keys() {
         keys: vec!["avatars/u1".into(), "posters/m1".into()],
     });
     let publisher = MockPublisher::new();
-    let job = ConversionBackfillJob::new(
-        image_ref,
-        Arc::clone(&publisher) as Arc<dyn EventPublisher>,
-    );
+    let job =
+        ConversionBackfillJob::new(image_ref, Arc::clone(&publisher) as Arc<dyn EventPublisher>);
 
     job.run().await.unwrap();
 
@@ -64,10 +64,8 @@ async fn skips_already_converted_keys() {
         ],
     });
     let publisher = MockPublisher::new();
-    let job = ConversionBackfillJob::new(
-        image_ref,
-        Arc::clone(&publisher) as Arc<dyn EventPublisher>,
-    );
+    let job =
+        ConversionBackfillJob::new(image_ref, Arc::clone(&publisher) as Arc<dyn EventPublisher>);
 
     job.run().await.unwrap();
 
@@ -78,10 +76,8 @@ async fn skips_already_converted_keys() {
 async fn empty_keys_emits_nothing() {
     let image_ref = Arc::new(MockImageRef { keys: vec![] });
     let publisher = MockPublisher::new();
-    let job = ConversionBackfillJob::new(
-        image_ref,
-        Arc::clone(&publisher) as Arc<dyn EventPublisher>,
-    );
+    let job =
+        ConversionBackfillJob::new(image_ref, Arc::clone(&publisher) as Arc<dyn EventPublisher>);
 
     job.run().await.unwrap();
 

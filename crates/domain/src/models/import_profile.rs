@@ -1,8 +1,8 @@
-use chrono::NaiveDateTime;
 use crate::{
     models::FieldMapping,
     value_objects::{ImportProfileId, UserId},
 };
+use chrono::NaiveDateTime;
 
 #[derive(Debug, Clone)]
 pub struct ImportProfile {
@@ -21,6 +21,12 @@ impl ImportProfile {
         field_mappings: Vec<FieldMapping>,
         created_at: NaiveDateTime,
     ) -> Self {
-        Self { id, user_id, name, field_mappings, created_at }
+        Self {
+            id,
+            user_id,
+            name,
+            field_mappings,
+            created_at,
+        }
     }
 }

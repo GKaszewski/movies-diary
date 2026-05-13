@@ -22,6 +22,6 @@ use utoipa::OpenApi;
         ApplyMappingRequest,
         ConfirmRequest,
         SaveProfileRequest,
-    )),
+    ))
 )]
 pub struct ImportDoc;

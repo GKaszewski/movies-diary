@@ -1,4 +1,6 @@
-use api_types::{ProfileResponse, UserProfileResponse, UserStatsDto, UserSummaryDto, UsersResponse};
+use api_types::{
+    ProfileResponse, UserProfileResponse, UserStatsDto, UserSummaryDto, UsersResponse,
+};
 use utoipa::OpenApi;
 
 #[derive(OpenApi)]
@@ -15,6 +17,6 @@ use utoipa::OpenApi;
         UserProfileResponse,
         UserStatsDto,
         ProfileResponse,
-    )),
+    ))
 )]
 pub struct UsersDoc;

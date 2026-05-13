@@ -43,8 +43,12 @@ struct NoopAck;
 
 #[async_trait]
 impl AckHandle for NoopAck {
-    async fn ack(&self) -> Result<(), DomainError> { Ok(()) }
-    async fn nack(&self) -> Result<(), DomainError> { Ok(()) }
+    async fn ack(&self) -> Result<(), DomainError> {
+        Ok(())
+    }
+    async fn nack(&self) -> Result<(), DomainError> {
+        Ok(())
+    }
 }
 
 pub struct ChannelEventConsumer {

@@ -2,9 +2,7 @@ use async_trait::async_trait;
 use sqlx::SqlitePool;
 
 use domain::{
-    errors::DomainError,
-    models::ProfileField,
-    ports::UserProfileFieldsRepository,
+    errors::DomainError, models::ProfileField, ports::UserProfileFieldsRepository,
     value_objects::UserId,
 };
 
@@ -30,10 +28,20 @@ impl UserProfileFieldsRepository for SqliteProfileFieldsRepository {
         .await
         .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
 
-        Ok(rows.into_iter().map(|r| ProfileField { name: r.name, value: r.value }).collect())
+        Ok(rows
+            .into_iter()
+            .map(|r| ProfileField {
+                name: r.name,
+                value: r.value,
+            })
+            .collect())
     }
 
-    async fn set_fields(&self, user_id: &UserId, fields: Vec<ProfileField>) -> Result<(), DomainError> {
+    async fn set_fields(
+        &self,
+        user_id: &UserId,
+        fields: Vec<ProfileField>,
+    ) -> Result<(), DomainError> {
         let id_str = user_id.value().to_string();
 
         sqlx::query!("DELETE FROM user_profile_fields WHERE user_id = ?", id_str)

@@ -222,14 +222,18 @@ impl Object for DbActor {
         });
         let profile_url = self.profile_url;
         let also_known_as: Vec<String> = self.also_known_as.into_iter().collect();
-        let attachment: Vec<ProfileFieldObject> = self.attachment.into_iter().map(|f| ProfileFieldObject {
-            kind: "PropertyValue".to_string(),
-            name: f.name,
-            value: f.value,
-        }).collect();
+        let attachment: Vec<ProfileFieldObject> = self
+            .attachment
+            .into_iter()
+            .map(|f| ProfileFieldObject {
+                kind: "PropertyValue".to_string(),
+                name: f.name,
+                value: f.value,
+            })
+            .collect();
 
-        let shared_inbox = Url::parse(&format!("{}/inbox", data.base_url))
-            .expect("base_url is always valid");
+        let shared_inbox =
+            Url::parse(&format!("{}/inbox", data.base_url)).expect("base_url is always valid");
 
         Ok(Person {
             kind: Default::default(),

@@ -13,11 +13,17 @@ pub struct CreateSessionResult {
     pub sample_rows: Vec<Vec<String>>,
 }
 
-pub async fn execute(ctx: &AppContext, cmd: CreateImportSessionCommand) -> Result<CreateSessionResult, DomainError> {
+pub async fn execute(
+    ctx: &AppContext,
+    cmd: CreateImportSessionCommand,
+) -> Result<CreateSessionResult, DomainError> {
     let user_id = UserId::from_uuid(cmd.user_id);
-    ctx.import_session_repository.delete_expired_for_user(&user_id).await?;
+    ctx.import_session_repository
+        .delete_expired_for_user(&user_id)
+        .await?;
 
-    let parsed = ctx.document_parser
+    let parsed = ctx
+        .document_parser
         .parse(&cmd.bytes, cmd.format)
         .map_err(|e| DomainError::ValidationError(e.to_string()))?;
 
@@ -31,5 +37,9 @@ pub async fn execute(ctx: &AppContext, cmd: CreateImportSessionCommand) -> Resul
 
     ctx.import_session_repository.create(&session).await?;
 
-    Ok(CreateSessionResult { session_id, columns, sample_rows })
+    Ok(CreateSessionResult {
+        session_id,
+        columns,
+        sample_rows,
+    })
 }

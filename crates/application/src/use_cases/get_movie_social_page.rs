@@ -1,6 +1,9 @@
 use domain::{
     errors::DomainError,
-    models::{FeedEntry, Movie, MovieProfile, MovieStats, collections::{PageParams, Paginated}},
+    models::{
+        FeedEntry, Movie, MovieProfile, MovieStats,
+        collections::{PageParams, Paginated},
+    },
     value_objects::MovieId,
 };
 
@@ -32,5 +35,10 @@ pub async fn execute(
         ctx.movie_profile_repository.get_by_movie_id(&movie_id),
     )?;
 
-    Ok(MovieSocialPageResult { movie, stats, reviews, profile })
+    Ok(MovieSocialPageResult {
+        movie,
+        stats,
+        reviews,
+        profile,
+    })
 }

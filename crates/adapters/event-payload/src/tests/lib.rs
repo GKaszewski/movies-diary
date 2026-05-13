@@ -1,7 +1,9 @@
 use super::*;
 
 fn fixed_dt() -> NaiveDateTime {
-    chrono::DateTime::from_timestamp(1_700_000_000, 0).unwrap().naive_utc()
+    chrono::DateTime::from_timestamp(1_700_000_000, 0)
+        .unwrap()
+        .naive_utc()
 }
 
 fn review_logged() -> DomainEvent {
@@ -64,14 +66,25 @@ fn serialized_format_is_tagged() {
 
 #[test]
 fn event_type_strings() {
-    assert_eq!(EventPayload::from(&review_logged()).event_type(), "ReviewLogged");
-    assert_eq!(EventPayload::from(&review_updated()).event_type(), "ReviewUpdated");
-    assert_eq!(EventPayload::from(&movie_discovered()).event_type(), "MovieDiscovered");
+    assert_eq!(
+        EventPayload::from(&review_logged()).event_type(),
+        "ReviewLogged"
+    );
+    assert_eq!(
+        EventPayload::from(&review_updated()).event_type(),
+        "ReviewUpdated"
+    );
+    assert_eq!(
+        EventPayload::from(&movie_discovered()).event_type(),
+        "MovieDiscovered"
+    );
 }
 
 #[test]
 fn round_trip_image_stored() {
-    let event = DomainEvent::ImageStored { key: "avatars/abc123".into() };
+    let event = DomainEvent::ImageStored {
+        key: "avatars/abc123".into(),
+    };
     let payload = EventPayload::from(&event);
     let json = serde_json::to_string(&payload).unwrap();
     let back: EventPayload = serde_json::from_str(&json).unwrap();
@@ -81,6 +94,8 @@ fn round_trip_image_stored() {
 
 #[test]
 fn image_stored_event_type() {
-    let payload = EventPayload::from(&DomainEvent::ImageStored { key: "posters/x".into() });
+    let payload = EventPayload::from(&DomainEvent::ImageStored {
+        key: "posters/x".into(),
+    });
     assert_eq!(payload.event_type(), "ImageStored");
 }

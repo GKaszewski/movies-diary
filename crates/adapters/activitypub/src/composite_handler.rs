@@ -27,7 +27,9 @@ impl ApObjectHandler for CompositeObjectHandler {
         before: Option<DateTime<Utc>>,
         limit: usize,
     ) -> anyhow::Result<Vec<(Url, serde_json::Value, DateTime<Utc>)>> {
-        self.review.get_local_objects_page(user_id, before, limit).await
+        self.review
+            .get_local_objects_page(user_id, before, limit)
+            .await
     }
 
     async fn on_create(

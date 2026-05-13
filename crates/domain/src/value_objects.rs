@@ -80,9 +80,10 @@ impl MovieTitle {
                 "Movie title cannot be empty".into(),
             ))
         } else if trimmed.len() > Self::MAX_LENGTH {
-            Err(DomainError::ValidationError(
-                format!("Movie title exceeds {} characters", Self::MAX_LENGTH),
-            ))
+            Err(DomainError::ValidationError(format!(
+                "Movie title exceeds {} characters",
+                Self::MAX_LENGTH
+            )))
         } else {
             Ok(Self(trimmed.to_string()))
         }
@@ -102,9 +103,10 @@ impl Comment {
     pub fn new(comment: String) -> Result<Self, DomainError> {
         let trimmed = comment.trim();
         if trimmed.len() > Self::MAX_LENGTH {
-            Err(DomainError::ValidationError(
-                format!("Comment exceeds {} characters", Self::MAX_LENGTH),
-            ))
+            Err(DomainError::ValidationError(format!(
+                "Comment exceeds {} characters",
+                Self::MAX_LENGTH
+            )))
         } else {
             Ok(Self(trimmed.to_string()))
         }
@@ -186,13 +188,11 @@ impl Username {
     pub fn new(raw: String) -> Result<Self, DomainError> {
         let s = raw.trim().to_lowercase();
         if s.len() < Self::MIN_LENGTH || s.len() > Self::MAX_LENGTH {
-            return Err(DomainError::ValidationError(
-                format!(
-                    "Username must be {}–{} characters",
-                    Self::MIN_LENGTH,
-                    Self::MAX_LENGTH
-                ),
-            ));
+            return Err(DomainError::ValidationError(format!(
+                "Username must be {}–{} characters",
+                Self::MIN_LENGTH,
+                Self::MAX_LENGTH
+            )));
         }
         if !s
             .chars()

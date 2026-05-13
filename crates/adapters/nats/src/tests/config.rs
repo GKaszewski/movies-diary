@@ -17,11 +17,14 @@ fn defaults_with_only_url() {
 
 #[test]
 fn core_mode_parsed() {
-    let cfg = NatsConfig::from_vars(Some("nats://test:4222"), Some("core"), None, None, None).unwrap();
+    let cfg =
+        NatsConfig::from_vars(Some("nats://test:4222"), Some("core"), None, None, None).unwrap();
     assert_eq!(cfg.mode, NatsMode::Core);
 }
 
 #[test]
 fn invalid_mode_errors() {
-    assert!(NatsConfig::from_vars(Some("nats://test:4222"), Some("kafka"), None, None, None).is_err());
+    assert!(
+        NatsConfig::from_vars(Some("nats://test:4222"), Some("kafka"), None, None, None).is_err()
+    );
 }

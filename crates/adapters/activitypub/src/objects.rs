@@ -74,8 +74,7 @@ pub fn review_to_ap_object(
     let tag = vec![
         ApHashtag {
             kind: "Hashtag".to_string(),
-            href: Url::parse(&format!("{}/tags/moviesdiary", base_url))
-                .expect("valid base_url"),
+            href: Url::parse(&format!("{}/tags/moviesdiary", base_url)).expect("valid base_url"),
             name: "#MoviesDiary".to_string(),
         },
         ApHashtag {
@@ -152,8 +151,7 @@ pub fn watchlist_to_ap_object(
     let tag = vec![
         ApHashtag {
             kind: "Hashtag".to_string(),
-            href: Url::parse(&format!("{}/tags/moviesdiary", base_url))
-                .expect("valid base_url"),
+            href: Url::parse(&format!("{}/tags/moviesdiary", base_url)).expect("valid base_url"),
             name: "#MoviesDiary".to_string(),
         },
         ApHashtag {

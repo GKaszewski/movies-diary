@@ -74,9 +74,7 @@ impl TmdbProvider {
         }
 
         let url = self.base(&format!("/movie/{}", tmdb_id));
-        let d: Details = self
-            .get(&url, &[("append_to_response", "credits")])
-            .await?;
+        let d: Details = self.get(&url, &[("append_to_response", "credits")]).await?;
 
         let year: u16 = d
             .release_date
@@ -98,8 +96,8 @@ impl TmdbProvider {
 
         let imdb_id = ExternalMetadataId::new(raw_id)
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
-        let title =
-            MovieTitle::new(d.title).map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        let title = MovieTitle::new(d.title)
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
         let release_year =
             ReleaseYear::new(year).map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
 
@@ -110,10 +108,7 @@ impl TmdbProvider {
             .find(|c| c.job == "Director")
             .map(|c| c.name);
 
-        let poster_url = d
-            .poster_path
-            .as_deref()
-            .and_then(|p| self.poster_url(p));
+        let poster_url = d.poster_path.as_deref().and_then(|p| self.poster_url(p));
 
         Ok(ProviderMovie {
             imdb_id,
@@ -139,12 +134,13 @@ impl MetadataProvider for TmdbProvider {
                     movie_results: Vec<FindResult>,
                 }
                 let url = self.base(&format!("/find/{}", id.value()));
-                let resp: FindResponse =
-                    self.get(&url, &[("external_source", "imdb_id")]).await?;
+                let resp: FindResponse = self.get(&url, &[("external_source", "imdb_id")]).await?;
                 resp.movie_results
                     .into_iter()
                     .next()
-                    .ok_or_else(|| DomainError::NotFound(format!("TMDB: no movie for {}", id.value())))?
+                    .ok_or_else(|| {
+                        DomainError::NotFound(format!("TMDB: no movie for {}", id.value()))
+                    })?
                     .id
             }
             MetadataSearchCriteria::Title { title, year } => {

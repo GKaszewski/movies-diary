@@ -1,13 +1,16 @@
 use async_trait::async_trait;
 use domain::{
     errors::DomainError,
-    models::{WatchlistEntry, WatchlistWithMovie, collections::{PageParams, Paginated}},
+    models::{
+        WatchlistEntry, WatchlistWithMovie,
+        collections::{PageParams, Paginated},
+    },
     ports::WatchlistRepository,
     value_objects::{MovieId, UserId, WatchlistEntryId},
 };
 use sqlx::{PgPool, Row};
 
-use crate::models::{parse_uuid, parse_datetime, MovieRow};
+use crate::models::{MovieRow, parse_datetime, parse_uuid};
 
 pub struct PostgresWatchlistRepository {
     pool: PgPool,
@@ -52,14 +55,13 @@ impl WatchlistRepository for PostgresWatchlistRepository {
         let uid = user_id.value().to_string();
         let mid = movie_id.value().to_string();
 
-        let result = sqlx::query(
-            "DELETE FROM watchlist_entries WHERE user_id = $1 AND movie_id = $2",
-        )
-        .bind(&uid)
-        .bind(&mid)
-        .execute(&self.pool)
-        .await
-        .map_err(Self::map_err)?;
+        let result =
+            sqlx::query("DELETE FROM watchlist_entries WHERE user_id = $1 AND movie_id = $2")
+                .bind(&uid)
+                .bind(&mid)
+                .execute(&self.pool)
+                .await
+                .map_err(Self::map_err)?;
 
         if result.rows_affected() == 0 {
             return Err(DomainError::NotFound(format!(
@@ -77,14 +79,13 @@ impl WatchlistRepository for PostgresWatchlistRepository {
     ) -> Result<bool, DomainError> {
         let uid = user_id.value().to_string();
         let mid = movie_id.value().to_string();
-        let result = sqlx::query(
-            "DELETE FROM watchlist_entries WHERE user_id = $1 AND movie_id = $2",
-        )
-        .bind(&uid)
-        .bind(&mid)
-        .execute(&self.pool)
-        .await
-        .map_err(Self::map_err)?;
+        let result =
+            sqlx::query("DELETE FROM watchlist_entries WHERE user_id = $1 AND movie_id = $2")
+                .bind(&uid)
+                .bind(&mid)
+                .execute(&self.pool)
+                .await
+                .map_err(Self::map_err)?;
         Ok(result.rows_affected() > 0)
     }
 
@@ -115,30 +116,53 @@ impl WatchlistRepository for PostgresWatchlistRepository {
         .await
         .map_err(Self::map_err)?;
 
-        let total: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM watchlist_entries WHERE user_id = $1",
-        )
-        .bind(&uid)
-        .fetch_one(&self.pool)
-        .await
-        .map_err(Self::map_err)?;
+        let total: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM watchlist_entries WHERE user_id = $1")
+                .bind(&uid)
+                .fetch_one(&self.pool)
+                .await
+                .map_err(Self::map_err)?;
 
         let items = rows
             .into_iter()
             .map(|row| {
                 let entry = WatchlistEntry {
-                    id: WatchlistEntryId::from_uuid(parse_uuid(&row.try_get::<String, _>("id").map_err(|e| DomainError::InfrastructureError(e.to_string()))?)?),
-                    user_id: UserId::from_uuid(parse_uuid(&row.try_get::<String, _>("user_id").map_err(|e| DomainError::InfrastructureError(e.to_string()))?)?),
-                    movie_id: MovieId::from_uuid(parse_uuid(&row.try_get::<String, _>("movie_id").map_err(|e| DomainError::InfrastructureError(e.to_string()))?)?),
-                    added_at: parse_datetime(&row.try_get::<String, _>("added_at").map_err(|e| DomainError::InfrastructureError(e.to_string()))?)?,
+                    id: WatchlistEntryId::from_uuid(parse_uuid(
+                        &row.try_get::<String, _>("id")
+                            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
+                    )?),
+                    user_id: UserId::from_uuid(parse_uuid(
+                        &row.try_get::<String, _>("user_id")
+                            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
+                    )?),
+                    movie_id: MovieId::from_uuid(parse_uuid(
+                        &row.try_get::<String, _>("movie_id")
+                            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
+                    )?),
+                    added_at: parse_datetime(
+                        &row.try_get::<String, _>("added_at")
+                            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
+                    )?,
                 };
                 let movie = MovieRow {
-                    id: row.try_get("m_id").map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
-                    external_metadata_id: row.try_get("external_metadata_id").map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
-                    title: row.try_get("title").map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
-                    release_year: row.try_get("release_year").map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
-                    director: row.try_get("director").map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
-                    poster_path: row.try_get("poster_path").map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
+                    id: row
+                        .try_get("m_id")
+                        .map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
+                    external_metadata_id: row
+                        .try_get("external_metadata_id")
+                        .map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
+                    title: row
+                        .try_get("title")
+                        .map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
+                    release_year: row
+                        .try_get("release_year")
+                        .map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
+                    director: row
+                        .try_get("director")
+                        .map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
+                    poster_path: row
+                        .try_get("poster_path")
+                        .map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
                 }
                 .into_domain()?;
                 Ok(WatchlistWithMovie { entry, movie })

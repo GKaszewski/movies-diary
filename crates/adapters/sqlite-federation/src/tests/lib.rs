@@ -14,7 +14,14 @@ async fn test_pool() -> SqlitePool {
 async fn add_announce_stores_and_counts() {
     let pool = test_pool().await;
     let repo = SqliteFederationRepository::new(pool);
-    repo.add_announce("https://remote/ann/1", "https://local/r/1", "https://remote/u/1", Utc::now()).await.unwrap();
+    repo.add_announce(
+        "https://remote/ann/1",
+        "https://local/r/1",
+        "https://remote/u/1",
+        Utc::now(),
+    )
+    .await
+    .unwrap();
     assert_eq!(repo.count_announces("https://local/r/1").await.unwrap(), 1);
 }
 
@@ -22,8 +29,22 @@ async fn add_announce_stores_and_counts() {
 async fn duplicate_announce_is_ignored() {
     let pool = test_pool().await;
     let repo = SqliteFederationRepository::new(pool);
-    repo.add_announce("https://remote/ann/1", "https://local/r/1", "https://remote/u/1", Utc::now()).await.unwrap();
-    repo.add_announce("https://remote/ann/1", "https://local/r/1", "https://remote/u/1", Utc::now()).await.unwrap();
+    repo.add_announce(
+        "https://remote/ann/1",
+        "https://local/r/1",
+        "https://remote/u/1",
+        Utc::now(),
+    )
+    .await
+    .unwrap();
+    repo.add_announce(
+        "https://remote/ann/1",
+        "https://local/r/1",
+        "https://remote/u/1",
+        Utc::now(),
+    )
+    .await
+    .unwrap();
     assert_eq!(repo.count_announces("https://local/r/1").await.unwrap(), 1);
 }
 

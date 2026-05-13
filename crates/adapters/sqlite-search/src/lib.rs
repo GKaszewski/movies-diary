@@ -3,14 +3,13 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use domain::{
     errors::DomainError,
-    models::{
-        EntityType, IndexableDocument, MovieSearchHit, PersonSearchHit,
-        SearchQuery, SearchResults,
-        collections::Paginated,
-    },
     models::PersonId,
-    value_objects::MovieId,
+    models::{
+        collections::Paginated, EntityType, IndexableDocument, MovieSearchHit, PersonSearchHit,
+        SearchQuery, SearchResults,
+    },
     ports::{SearchCommand, SearchPort},
+    value_objects::MovieId,
 };
 use sqlx::SqlitePool;
 
@@ -26,7 +25,10 @@ impl SqliteSearchAdapter {
 
 pub fn create_search_adapter(pool: SqlitePool) -> (Arc<dyn SearchCommand>, Arc<dyn SearchPort>) {
     let adapter = Arc::new(SqliteSearchAdapter::new(pool));
-    (Arc::clone(&adapter) as Arc<dyn SearchCommand>, adapter as Arc<dyn SearchPort>)
+    (
+        Arc::clone(&adapter) as Arc<dyn SearchCommand>,
+        adapter as Arc<dyn SearchPort>,
+    )
 }
 
 fn map_err(e: sqlx::Error) -> DomainError {
@@ -46,13 +48,36 @@ impl SearchCommand for SqliteSearchAdapter {
                     match profile.as_deref() {
                         Some(p) => (
                             p.overview.clone().unwrap_or_default(),
-                            p.genres.iter().map(|g| g.name.as_str()).collect::<Vec<_>>().join(" "),
-                            p.keywords.iter().map(|k| k.name.as_str()).collect::<Vec<_>>().join(" "),
-                            p.cast.iter().map(|c| c.name.as_str()).collect::<Vec<_>>().join(" "),
-                            p.crew.iter().map(|c| c.name.as_str()).collect::<Vec<_>>().join(" "),
+                            p.genres
+                                .iter()
+                                .map(|g| g.name.as_str())
+                                .collect::<Vec<_>>()
+                                .join(" "),
+                            p.keywords
+                                .iter()
+                                .map(|k| k.name.as_str())
+                                .collect::<Vec<_>>()
+                                .join(" "),
+                            p.cast
+                                .iter()
+                                .map(|c| c.name.as_str())
+                                .collect::<Vec<_>>()
+                                .join(" "),
+                            p.crew
+                                .iter()
+                                .map(|c| c.name.as_str())
+                                .collect::<Vec<_>>()
+                                .join(" "),
                             p.original_language.clone().unwrap_or_default(),
                         ),
-                        None => (String::new(), String::new(), String::new(), String::new(), String::new(), String::new()),
+                        None => (
+                            String::new(),
+                            String::new(),
+                            String::new(),
+                            String::new(),
+                            String::new(),
+                            String::new(),
+                        ),
                     };
 
                 sqlx::query(
@@ -145,7 +170,10 @@ impl SearchPort for SqliteSearchAdapter {
 }
 
 impl SqliteSearchAdapter {
-    async fn search_movies(&self, query: &SearchQuery) -> Result<Paginated<MovieSearchHit>, DomainError> {
+    async fn search_movies(
+        &self,
+        query: &SearchQuery,
+    ) -> Result<Paginated<MovieSearchHit>, DomainError> {
         let limit = query.page.limit as i64;
         let offset = query.page.offset as i64;
 
@@ -244,24 +272,36 @@ impl SqliteSearchAdapter {
             .await
             .map_err(map_err)?
         };
-        let items = rows.into_iter().map(|r| MovieSearchHit {
-            movie_id: MovieId::from_uuid(uuid::Uuid::parse_str(&r.id).unwrap_or_default()),
-            title: r.title,
-            release_year: r.release_year.map(|y| y as u16),
-            director: r.director,
-            poster_path: r.poster_path,
-            genres: r.genres
-                .unwrap_or_default()
-                .split(',')
-                .filter(|s| !s.is_empty())
-                .map(str::to_string)
-                .collect(),
-        }).collect::<Vec<_>>();
+        let items = rows
+            .into_iter()
+            .map(|r| MovieSearchHit {
+                movie_id: MovieId::from_uuid(uuid::Uuid::parse_str(&r.id).unwrap_or_default()),
+                title: r.title,
+                release_year: r.release_year.map(|y| y as u16),
+                director: r.director,
+                poster_path: r.poster_path,
+                genres: r
+                    .genres
+                    .unwrap_or_default()
+                    .split(',')
+                    .filter(|s| !s.is_empty())
+                    .map(str::to_string)
+                    .collect(),
+            })
+            .collect::<Vec<_>>();
 
-        Ok(Paginated { items, total_count: total, limit: query.page.limit, offset: query.page.offset })
+        Ok(Paginated {
+            items,
+            total_count: total,
+            limit: query.page.limit,
+            offset: query.page.offset,
+        })
     }
 
-    async fn search_people(&self, query: &SearchQuery) -> Result<Paginated<PersonSearchHit>, DomainError> {
+    async fn search_people(
+        &self,
+        query: &SearchQuery,
+    ) -> Result<Paginated<PersonSearchHit>, DomainError> {
         let Some(text) = &query.text else {
             return Ok(Paginated {
                 items: vec![],
@@ -276,13 +316,12 @@ impl SqliteSearchAdapter {
         let fts_query = format!("{}*", text.replace(['"', '*'], ""));
 
         let total: u64 = {
-            let count: i64 = sqlx::query_scalar(
-                "SELECT COUNT(*) FROM people_fts WHERE people_fts MATCH ?",
-            )
-            .bind(&fts_query)
-            .fetch_one(&self.pool)
-            .await
-            .map_err(map_err)?;
+            let count: i64 =
+                sqlx::query_scalar("SELECT COUNT(*) FROM people_fts WHERE people_fts MATCH ?")
+                    .bind(&fts_query)
+                    .fetch_one(&self.pool)
+                    .await
+                    .map_err(map_err)?;
             count as u64
         };
 
@@ -311,14 +350,13 @@ impl SqliteSearchAdapter {
 
         let mut items = Vec::with_capacity(rows.len());
         for row in rows {
-            let tmdb_id: Option<i64> = sqlx::query_scalar(
-                "SELECT tmdb_person_id FROM persons WHERE id = ?",
-            )
-            .bind(&row.person_id)
-            .fetch_optional(&self.pool)
-            .await
-            .map_err(map_err)?
-            .flatten();
+            let tmdb_id: Option<i64> =
+                sqlx::query_scalar("SELECT tmdb_person_id FROM persons WHERE id = ?")
+                    .bind(&row.person_id)
+                    .fetch_optional(&self.pool)
+                    .await
+                    .map_err(map_err)?
+                    .flatten();
 
             let known_for_titles = if let Some(tid) = tmdb_id {
                 sqlx::query_scalar::<_, String>(
@@ -338,7 +376,7 @@ impl SqliteSearchAdapter {
 
             items.push(PersonSearchHit {
                 person_id: PersonId::from_uuid(
-                    uuid::Uuid::parse_str(&row.person_id).unwrap_or_default()
+                    uuid::Uuid::parse_str(&row.person_id).unwrap_or_default(),
                 ),
                 name: row.name,
                 known_for_department: row.known_for_department,
@@ -347,7 +385,12 @@ impl SqliteSearchAdapter {
             });
         }
 
-        Ok(Paginated { items, total_count: total, limit: query.page.limit, offset: query.page.offset })
+        Ok(Paginated {
+            items,
+            total_count: total,
+            limit: query.page.limit,
+            offset: query.page.offset,
+        })
     }
 }
 

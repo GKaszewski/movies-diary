@@ -49,9 +49,10 @@ impl MovieResolver {
     ) -> Result<(Movie, bool), DomainError> {
         for strategy in &self.strategies {
             if strategy.can_handle(input)
-                && let Some(result) = strategy.resolve(input, deps).await? {
-                    return Ok(result);
-                }
+                && let Some(result) = strategy.resolve(input, deps).await?
+            {
+                return Ok(result);
+            }
         }
         Err(DomainError::ValidationError(
             "Manual title required if TMDB fetch fails or is omitted".into(),
@@ -108,13 +109,17 @@ impl ResolutionStrategy for TitleSearchStrategy {
         let title = input.manual_title.as_deref().unwrap();
         let criteria = MetadataSearchCriteria::Title {
             title: MovieTitle::new(title.to_string())?,
-            year: input.manual_release_year.map(ReleaseYear::new).transpose()?,
+            year: input
+                .manual_release_year
+                .map(ReleaseYear::new)
+                .transpose()?,
         };
         match deps.metadata_client.fetch_movie_metadata(&criteria).await {
             Ok(m) => {
                 // Movie may already exist in DB under this external_metadata_id
                 if let Some(ext_id) = m.external_metadata_id() {
-                    if let Some(existing) = deps.repository.get_movie_by_external_id(ext_id).await? {
+                    if let Some(existing) = deps.repository.get_movie_by_external_id(ext_id).await?
+                    {
                         return Ok(Some((existing, false)));
                     }
                 }
@@ -164,8 +169,13 @@ impl ResolutionStrategy for ManualMovieStrategy {
         if let Some(existing) = matched {
             Ok(Some((existing, false)))
         } else {
-            let new_movie =
-                Movie::new(None, title, release_year, input.manual_director.clone(), None);
+            let new_movie = Movie::new(
+                None,
+                title,
+                release_year,
+                input.manual_director.clone(),
+                None,
+            );
             Ok(Some((new_movie, true)))
         }
     }

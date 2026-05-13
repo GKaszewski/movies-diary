@@ -61,9 +61,7 @@ async fn csv_has_header_and_one_row() {
         .unwrap();
     let text = String::from_utf8(bytes).unwrap();
     assert!(
-        text.starts_with(
-            "title,year,director,rating,comment,watched_at,external_metadata_id\n"
-        )
+        text.starts_with("title,year,director,rating,comment,watched_at,external_metadata_id\n")
     );
     assert!(text.contains("Inception"));
     assert!(text.contains("2010"));

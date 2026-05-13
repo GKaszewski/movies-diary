@@ -1,4 +1,4 @@
-use async_nats::{jetstream, Client};
+use async_nats::{Client, jetstream};
 use async_trait::async_trait;
 use domain::{errors::DomainError, events::DomainEvent, ports::EventPublisher};
 
@@ -16,11 +16,17 @@ pub struct NatsEventPublisher {
 
 impl NatsEventPublisher {
     pub fn new_core(client: Client, subject_prefix: String) -> Self {
-        Self { mode: PublisherMode::Core(client), subject_prefix }
+        Self {
+            mode: PublisherMode::Core(client),
+            subject_prefix,
+        }
     }
 
     pub fn new_jetstream(client: Client, subject_prefix: String) -> Self {
-        Self { mode: PublisherMode::JetStream(jetstream::new(client)), subject_prefix }
+        Self {
+            mode: PublisherMode::JetStream(jetstream::new(client)),
+            subject_prefix,
+        }
     }
 }
 

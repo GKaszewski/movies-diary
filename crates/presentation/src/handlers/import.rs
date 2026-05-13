@@ -1,12 +1,12 @@
+use api_types::{
+    ApplyMappingRequest, ConfirmRequest, SaveProfileRequest, SessionCreatedResponse,
+    SessionStateResponse,
+};
 use axum::{
     Extension, Form,
     extract::{Multipart, Path, State},
     http::StatusCode,
     response::{Html, IntoResponse, Redirect},
-};
-use api_types::{
-    ApplyMappingRequest, ConfirmRequest, SaveProfileRequest, SessionCreatedResponse,
-    SessionStateResponse,
 };
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -25,7 +25,10 @@ use application::{
         list_import_profiles, save_import_profile,
     },
 };
-use domain::models::{AnnotatedRow, FieldMapping, FileFormat, import::{DomainField, RowResult, Transform}};
+use domain::models::{
+    AnnotatedRow, FieldMapping, FileFormat,
+    import::{DomainField, RowResult, Transform},
+};
 use domain::value_objects::ImportSessionId;
 
 use crate::{
@@ -196,11 +199,10 @@ pub async fn post_upload(
     )
     .await
     {
-        Ok(r) => {
-            Redirect::to(&format!("/import/{}/mapping", r.session_id.value())).into_response()
+        Ok(r) => Redirect::to(&format!("/import/{}/mapping", r.session_id.value())).into_response(),
+        Err(e) => {
+            Redirect::to(&format!("/import?error={}", encode_error(&e.to_string()))).into_response()
         }
-        Err(e) => Redirect::to(&format!("/import?error={}", encode_error(&e.to_string())))
-            .into_response(),
     }
 }
 
@@ -408,8 +410,9 @@ pub async fn post_confirm(
             summary.failed.len()
         ))
         .into_response(),
-        Err(e) => Redirect::to(&format!("/import?error={}", encode_error(&e.to_string())))
-            .into_response(),
+        Err(e) => {
+            Redirect::to(&format!("/import?error={}", encode_error(&e.to_string()))).into_response()
+        }
     }
 }
 

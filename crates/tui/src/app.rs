@@ -1,5 +1,5 @@
-use api_types::{DiaryEntryDto, LogReviewRequest, ReviewHistoryResponse};
 use crate::config::Config;
+use api_types::{DiaryEntryDto, LogReviewRequest, ReviewHistoryResponse};
 use uuid::Uuid;
 
 // ── Screens ───────────────────────────────────────────────────────────────────
@@ -352,9 +352,17 @@ pub fn parse_csv(content: &str) -> Vec<ParsedRow> {
                 },
                 manual_title: if title.is_empty() { None } else { Some(title) },
                 manual_release_year,
-                manual_director: if director.is_empty() { None } else { Some(director) },
+                manual_director: if director.is_empty() {
+                    None
+                } else {
+                    Some(director)
+                },
                 rating,
-                comment: if comment.is_empty() { None } else { Some(comment) },
+                comment: if comment.is_empty() {
+                    None
+                } else {
+                    Some(comment)
+                },
                 watched_at,
             }),
         });
@@ -645,20 +653,22 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
 
         Action::ScrollUp => {
             if let Screen::Main(m) = &mut app.screen
-                && m.diary.selected > 0 {
-                    m.diary.selected -= 1;
-                    m.diary.history = None;
-                }
+                && m.diary.selected > 0
+            {
+                m.diary.selected -= 1;
+                m.diary.history = None;
+            }
             vec![]
         }
 
         Action::OpenHistory => {
             if let Screen::Main(m) = &mut app.screen
-                && let Some(entry) = m.diary.entries.get(m.diary.selected) {
-                    let movie_id = entry.movie.id;
-                    app.loading = true;
-                    return vec![Command::LoadHistory { movie_id }];
-                }
+                && let Some(entry) = m.diary.entries.get(m.diary.selected)
+            {
+                let movie_id = entry.movie.id;
+                app.loading = true;
+                return vec![Command::LoadHistory { movie_id }];
+            }
             vec![]
         }
 
@@ -675,11 +685,12 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
 
         Action::LoadPrev => {
             if let Screen::Main(m) = &mut app.screen
-                && m.diary.offset > 0 {
-                    let prev = m.diary.offset.saturating_sub(20);
-                    m.diary.offset = prev;
-                    return vec![Command::LoadDiary { offset: prev }];
-                }
+                && m.diary.offset > 0
+            {
+                let prev = m.diary.offset.saturating_sub(20);
+                m.diary.offset = prev;
+                return vec![Command::LoadDiary { offset: prev }];
+            }
             vec![]
         }
 
@@ -730,17 +741,19 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
 
         Action::DeleteInit => {
             if let Screen::Main(m) = &mut app.screen
-                && let Some(entry) = m.diary.entries.get(m.diary.selected) {
-                    m.diary.delete_pending = Some(entry.review.id);
-                }
+                && let Some(entry) = m.diary.entries.get(m.diary.selected)
+            {
+                m.diary.delete_pending = Some(entry.review.id);
+            }
             vec![]
         }
 
         Action::DeleteConfirm => {
             if let Screen::Main(m) = &mut app.screen
-                && let Some(review_id) = m.diary.delete_pending.take() {
-                    return vec![Command::DeleteReview(review_id)];
-                }
+                && let Some(review_id) = m.diary.delete_pending.take()
+            {
+                return vec![Command::DeleteReview(review_id)];
+            }
             vec![]
         }
 
@@ -778,72 +791,75 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
         // ── Add Review ────────────────────────────────────────────────────────
         Action::RatingUp => {
             if let Screen::Main(m) = &mut app.screen
-                && m.add_review.rating < 5 {
-                    m.add_review.rating += 1;
-                }
+                && m.add_review.rating < 5
+            {
+                m.add_review.rating += 1;
+            }
             vec![]
         }
 
         Action::RatingDown => {
             if let Screen::Main(m) = &mut app.screen
-                && m.add_review.rating > 0 {
-                    m.add_review.rating -= 1;
-                }
+                && m.add_review.rating > 0
+            {
+                m.add_review.rating -= 1;
+            }
             vec![]
         }
 
         Action::ReviewSubmit => {
             if let Screen::Main(m) = &app.screen
-                && m.tab == Tab::AddReview {
-                    let f = &m.add_review;
-                    let has_ext = !f.external_id.is_empty();
-                    let has_title = !f.title.is_empty();
-                    let has_watched = !f.watched_at.is_empty();
-                    let ext_id = if has_ext {
-                        Some(f.external_id.clone())
-                    } else {
-                        None
-                    };
-                    let title = if has_title {
-                        Some(f.title.clone())
-                    } else {
-                        None
-                    };
-                    let year: Option<u16> = f.year.parse().ok();
-                    let rating = f.rating;
-                    let comment = if f.comment.is_empty() {
-                        None
-                    } else {
-                        Some(f.comment.clone())
-                    };
-                    let watched_at = f.watched_at.clone();
+                && m.tab == Tab::AddReview
+            {
+                let f = &m.add_review;
+                let has_ext = !f.external_id.is_empty();
+                let has_title = !f.title.is_empty();
+                let has_watched = !f.watched_at.is_empty();
+                let ext_id = if has_ext {
+                    Some(f.external_id.clone())
+                } else {
+                    None
+                };
+                let title = if has_title {
+                    Some(f.title.clone())
+                } else {
+                    None
+                };
+                let year: Option<u16> = f.year.parse().ok();
+                let rating = f.rating;
+                let comment = if f.comment.is_empty() {
+                    None
+                } else {
+                    Some(f.comment.clone())
+                };
+                let watched_at = f.watched_at.clone();
 
-                    if !has_ext && !has_title {
-                        app.status = Some(StatusMsg {
-                            text: "Title or external ID required".into(),
-                            is_error: true,
-                        });
-                        return vec![];
-                    }
-                    if !has_watched {
-                        app.status = Some(StatusMsg {
-                            text: "Watched-at date required".into(),
-                            is_error: true,
-                        });
-                        return vec![];
-                    }
-                    let req = LogReviewRequest {
-                        external_metadata_id: ext_id,
-                        manual_title: title,
-                        manual_release_year: year,
-                        manual_director: None,
-                        rating,
-                        comment,
-                        watched_at,
-                    };
-                    app.loading = true;
-                    return vec![Command::CreateReview(req)];
+                if !has_ext && !has_title {
+                    app.status = Some(StatusMsg {
+                        text: "Title or external ID required".into(),
+                        is_error: true,
+                    });
+                    return vec![];
                 }
+                if !has_watched {
+                    app.status = Some(StatusMsg {
+                        text: "Watched-at date required".into(),
+                        is_error: true,
+                    });
+                    return vec![];
+                }
+                let req = LogReviewRequest {
+                    external_metadata_id: ext_id,
+                    manual_title: title,
+                    manual_release_year: year,
+                    manual_director: None,
+                    rating,
+                    comment,
+                    watched_at,
+                };
+                app.loading = true;
+                return vec![Command::CreateReview(req)];
+            }
             vec![]
         }
 
@@ -871,45 +887,49 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
         // ── Bulk Import ───────────────────────────────────────────────────────
         Action::BulkParseFile => {
             if let Screen::Main(m) = &mut app.screen
-                && m.tab == Tab::BulkImport && m.bulk_import.stage == BulkImportStage::EnterPath {
-                    let path = m.bulk_import.file_path.trim().to_string();
-                    match std::fs::read_to_string(&path) {
-                        Ok(content) => {
-                            m.bulk_import.parsed = parse_csv(&content);
-                            m.bulk_import.stage = BulkImportStage::Preview;
-                        }
-                        Err(e) => {
-                            app.status = Some(StatusMsg {
-                                text: format!("Cannot read file: {e}"),
-                                is_error: true,
-                            });
-                        }
+                && m.tab == Tab::BulkImport
+                && m.bulk_import.stage == BulkImportStage::EnterPath
+            {
+                let path = m.bulk_import.file_path.trim().to_string();
+                match std::fs::read_to_string(&path) {
+                    Ok(content) => {
+                        m.bulk_import.parsed = parse_csv(&content);
+                        m.bulk_import.stage = BulkImportStage::Preview;
+                    }
+                    Err(e) => {
+                        app.status = Some(StatusMsg {
+                            text: format!("Cannot read file: {e}"),
+                            is_error: true,
+                        });
                     }
                 }
+            }
             vec![]
         }
 
         Action::BulkImportAll => {
             if let Screen::Main(m) = &mut app.screen
-                && m.tab == Tab::BulkImport && m.bulk_import.stage == BulkImportStage::Preview {
-                    let valid: Vec<LogReviewRequest> = m
-                        .bulk_import
-                        .parsed
-                        .iter()
-                        .filter_map(|r| r.result.as_ref().ok().cloned())
-                        .collect();
-                    if valid.is_empty() {
-                        app.status = Some(StatusMsg {
-                            text: "No valid rows to import".into(),
-                            is_error: true,
-                        });
-                        return vec![];
-                    }
-                    m.bulk_import.results = vec![None; valid.len()];
-                    m.bulk_import.valid_requests = valid;
-                    m.bulk_import.stage = BulkImportStage::Importing { done: 0 };
-                    return vec![Command::ImportNext(0)];
+                && m.tab == Tab::BulkImport
+                && m.bulk_import.stage == BulkImportStage::Preview
+            {
+                let valid: Vec<LogReviewRequest> = m
+                    .bulk_import
+                    .parsed
+                    .iter()
+                    .filter_map(|r| r.result.as_ref().ok().cloned())
+                    .collect();
+                if valid.is_empty() {
+                    app.status = Some(StatusMsg {
+                        text: "No valid rows to import".into(),
+                        is_error: true,
+                    });
+                    return vec![];
                 }
+                m.bulk_import.results = vec![None; valid.len()];
+                m.bulk_import.valid_requests = valid;
+                m.bulk_import.stage = BulkImportStage::Importing { done: 0 };
+                return vec![Command::ImportNext(0)];
+            }
             vec![]
         }
 

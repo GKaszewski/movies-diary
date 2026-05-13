@@ -1,8 +1,8 @@
-use chrono::NaiveDateTime;
 use crate::{
     models::{AnnotatedRow, FieldMapping, ParsedFile},
     value_objects::{ImportSessionId, UserId},
 };
+use chrono::NaiveDateTime;
 
 #[derive(Debug, Clone)]
 pub struct ImportSession {

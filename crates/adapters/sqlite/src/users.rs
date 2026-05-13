@@ -177,7 +177,13 @@ impl UserRepository for SqliteUserRepository {
         .await
         .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
 
-        let profile_fields = field_rows.into_iter().map(|f| ProfileField { name: f.name, value: f.value }).collect();
+        let profile_fields = field_rows
+            .into_iter()
+            .map(|f| ProfileField {
+                name: f.name,
+                value: f.value,
+            })
+            .collect();
 
         Self::row_to_user(
             r.id.unwrap_or_default(),
@@ -190,7 +196,8 @@ impl UserRepository for SqliteUserRepository {
             r.banner_path,
             r.also_known_as,
             profile_fields,
-        ).map(Some)
+        )
+        .map(Some)
     }
 
     async fn update_profile(

@@ -52,8 +52,17 @@ impl MovieRepository for RepoWithExternalMovie {
     async fn upsert_movie(&self, _: &Movie) -> Result<(), DomainError> {
         panic!("unexpected")
     }
-    async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> { panic!("unexpected") }
-    async fn list_movies(&self, _: &domain::models::collections::PageParams, _: &domain::models::MovieFilter) -> Result<domain::models::collections::Paginated<domain::models::MovieSummary>, DomainError> { panic!("unexpected") }
+    async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> {
+        panic!("unexpected")
+    }
+    async fn list_movies(
+        &self,
+        _: &domain::models::collections::PageParams,
+        _: &domain::models::MovieFilter,
+    ) -> Result<domain::models::collections::Paginated<domain::models::MovieSummary>, DomainError>
+    {
+        panic!("unexpected")
+    }
 }
 
 #[async_trait::async_trait]
@@ -74,9 +83,20 @@ impl MovieRepository for RepoEmpty {
     ) -> Result<Vec<Movie>, DomainError> {
         Ok(vec![])
     }
-    async fn upsert_movie(&self, _: &Movie) -> Result<(), DomainError> { panic!("unexpected") }
-    async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> { panic!("unexpected") }
-    async fn list_movies(&self, _: &domain::models::collections::PageParams, _: &domain::models::MovieFilter) -> Result<domain::models::collections::Paginated<domain::models::MovieSummary>, DomainError> { panic!("unexpected") }
+    async fn upsert_movie(&self, _: &Movie) -> Result<(), DomainError> {
+        panic!("unexpected")
+    }
+    async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> {
+        panic!("unexpected")
+    }
+    async fn list_movies(
+        &self,
+        _: &domain::models::collections::PageParams,
+        _: &domain::models::MovieFilter,
+    ) -> Result<domain::models::collections::Paginated<domain::models::MovieSummary>, DomainError>
+    {
+        panic!("unexpected")
+    }
 }
 
 #[async_trait::async_trait]
@@ -97,9 +117,20 @@ impl MovieRepository for RepoWithTitleMatch {
     ) -> Result<Vec<Movie>, DomainError> {
         Ok(vec![self.0.clone()])
     }
-    async fn upsert_movie(&self, _: &Movie) -> Result<(), DomainError> { panic!("unexpected") }
-    async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> { panic!("unexpected") }
-    async fn list_movies(&self, _: &domain::models::collections::PageParams, _: &domain::models::MovieFilter) -> Result<domain::models::collections::Paginated<domain::models::MovieSummary>, DomainError> { panic!("unexpected") }
+    async fn upsert_movie(&self, _: &Movie) -> Result<(), DomainError> {
+        panic!("unexpected")
+    }
+    async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> {
+        panic!("unexpected")
+    }
+    async fn list_movies(
+        &self,
+        _: &domain::models::collections::PageParams,
+        _: &domain::models::MovieFilter,
+    ) -> Result<domain::models::collections::Paginated<domain::models::MovieSummary>, DomainError>
+    {
+        panic!("unexpected")
+    }
 }
 
 struct MetaReturnsMovie(Movie);
@@ -107,10 +138,7 @@ struct MetaErrors;
 
 #[async_trait::async_trait]
 impl MetadataClient for MetaReturnsMovie {
-    async fn fetch_movie_metadata(
-        &self,
-        _: &MetadataSearchCriteria,
-    ) -> Result<Movie, DomainError> {
+    async fn fetch_movie_metadata(&self, _: &MetadataSearchCriteria) -> Result<Movie, DomainError> {
         Ok(self.0.clone())
     }
     async fn get_poster_url(
@@ -123,10 +151,7 @@ impl MetadataClient for MetaReturnsMovie {
 
 #[async_trait::async_trait]
 impl MetadataClient for MetaErrors {
-    async fn fetch_movie_metadata(
-        &self,
-        _: &MetadataSearchCriteria,
-    ) -> Result<Movie, DomainError> {
+    async fn fetch_movie_metadata(&self, _: &MetadataSearchCriteria) -> Result<Movie, DomainError> {
         Err(DomainError::InfrastructureError(
             "metadata unavailable".into(),
         ))
@@ -299,7 +324,9 @@ async fn resolver_returns_error_when_no_strategy_matches() {
         metadata_client: &meta,
     };
     let input = make_input(None, None, None);
-    let result = MovieResolver::default_pipeline().resolve(&input, &deps).await;
+    let result = MovieResolver::default_pipeline()
+        .resolve(&input, &deps)
+        .await;
     assert!(result.is_err());
 }
 

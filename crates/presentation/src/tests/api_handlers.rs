@@ -1,4 +1,4 @@
-use super::extractors::{make_test_state, Panic};
+use super::extractors::{Panic, make_test_state};
 use axum::{
     Router,
     body::Body,
@@ -14,7 +14,10 @@ use uuid::Uuid;
 struct SearchPortStub;
 #[async_trait::async_trait]
 impl domain::ports::SearchPort for SearchPortStub {
-    async fn search(&self, _: &domain::models::SearchQuery) -> Result<domain::models::SearchResults, DomainError> {
+    async fn search(
+        &self,
+        _: &domain::models::SearchQuery,
+    ) -> Result<domain::models::SearchResults, DomainError> {
         Ok(domain::models::SearchResults {
             movies: domain::models::collections::Paginated {
                 items: vec![],
@@ -36,13 +39,22 @@ impl domain::ports::SearchPort for SearchPortStub {
 struct PersonQueryStub;
 #[async_trait::async_trait]
 impl domain::ports::PersonQuery for PersonQueryStub {
-    async fn get_by_id(&self, _: &domain::models::PersonId) -> Result<Option<domain::models::Person>, DomainError> {
-        Ok(None)  // Return None to trigger 404
+    async fn get_by_id(
+        &self,
+        _: &domain::models::PersonId,
+    ) -> Result<Option<domain::models::Person>, DomainError> {
+        Ok(None) // Return None to trigger 404
     }
-    async fn get_by_external_id(&self, _: &domain::models::ExternalPersonId) -> Result<Option<domain::models::Person>, DomainError> {
+    async fn get_by_external_id(
+        &self,
+        _: &domain::models::ExternalPersonId,
+    ) -> Result<Option<domain::models::Person>, DomainError> {
         Ok(None)
     }
-    async fn get_credits(&self, _: &domain::models::PersonId) -> Result<domain::models::PersonCredits, DomainError> {
+    async fn get_credits(
+        &self,
+        _: &domain::models::PersonId,
+    ) -> Result<domain::models::PersonCredits, DomainError> {
         Err(DomainError::NotFound("Person not found".into()))
     }
     async fn list_orphaned_persons(&self) -> Result<Vec<domain::models::PersonId>, DomainError> {
@@ -104,7 +116,10 @@ async fn person_endpoint_returns_404_for_unknown_id() {
     // Override the person_query with our stub
     state.app_ctx.person_query = Arc::new(PersonQueryStub);
     let app = Router::new()
-        .route("/api/v1/people/{id}", get(crate::handlers::api::get_person_handler))
+        .route(
+            "/api/v1/people/{id}",
+            get(crate::handlers::api::get_person_handler),
+        )
         .with_state(state);
 
     let unknown_id = Uuid::new_v4();
@@ -127,7 +142,10 @@ async fn person_credits_endpoint_returns_404_for_unknown_id() {
     // Override the person_query with our stub
     state.app_ctx.person_query = Arc::new(PersonQueryStub);
     let app = Router::new()
-        .route("/api/v1/people/{id}/credits", get(crate::handlers::api::get_person_credits_handler))
+        .route(
+            "/api/v1/people/{id}/credits",
+            get(crate::handlers::api::get_person_credits_handler),
+        )
         .with_state(state);
 
     let unknown_id = Uuid::new_v4();
@@ -150,7 +168,10 @@ async fn person_credits_endpoint_returns_404_for_unknown_id() {
 async fn get_watchlist_requires_auth() {
     let state = make_test_state(Arc::new(Panic));
     let app = Router::new()
-        .route("/api/v1/watchlist", get(crate::handlers::api::get_watchlist_handler))
+        .route(
+            "/api/v1/watchlist",
+            get(crate::handlers::api::get_watchlist_handler),
+        )
         .with_state(state);
 
     let resp = app

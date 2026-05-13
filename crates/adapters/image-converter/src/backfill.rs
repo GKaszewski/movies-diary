@@ -17,7 +17,10 @@ impl ConversionBackfillJob {
         image_ref: Arc<dyn ImageRefQuery>,
         event_publisher: Arc<dyn EventPublisher>,
     ) -> Self {
-        Self { image_ref, event_publisher }
+        Self {
+            image_ref,
+            event_publisher,
+        }
     }
 }
 
@@ -34,7 +37,8 @@ impl PeriodicJob for ConversionBackfillJob {
             if key.ends_with(".avif") || key.ends_with(".webp") {
                 continue;
             }
-            if let Err(e) = self.event_publisher
+            if let Err(e) = self
+                .event_publisher
                 .publish(&DomainEvent::ImageStored { key: key.clone() })
                 .await
             {

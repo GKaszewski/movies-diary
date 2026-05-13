@@ -38,8 +38,12 @@ pub async fn execute(ctx: &AppContext, cmd: DeleteReviewCommand) -> Result<(), D
         let poster_path = history.movie().poster_path().cloned();
         ctx.movie_repository.delete_movie(&movie_id).await?;
         // best-effort: movie is already deleted, so publish failure is non-fatal
-        if let Err(e) = ctx.event_publisher
-            .publish(&DomainEvent::MovieDeleted { movie_id, poster_path })
+        if let Err(e) = ctx
+            .event_publisher
+            .publish(&DomainEvent::MovieDeleted {
+                movie_id,
+                poster_path,
+            })
             .await
         {
             tracing::warn!("failed to publish MovieDeleted event: {e}");

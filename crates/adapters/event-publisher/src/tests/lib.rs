@@ -22,7 +22,10 @@ async fn consumer_yields_published_events() {
 
     let mut stream = consumer.consume();
     let envelope = stream.next().await.unwrap().unwrap();
-    assert!(matches!(envelope.event, DomainEvent::MovieDiscovered { .. }));
+    assert!(matches!(
+        envelope.event,
+        DomainEvent::MovieDiscovered { .. }
+    ));
     assert!(stream.next().await.is_none());
 }
 

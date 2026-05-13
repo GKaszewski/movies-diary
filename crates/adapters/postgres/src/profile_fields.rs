@@ -2,9 +2,7 @@ use async_trait::async_trait;
 use sqlx::PgPool;
 
 use domain::{
-    errors::DomainError,
-    models::ProfileField,
-    ports::UserProfileFieldsRepository,
+    errors::DomainError, models::ProfileField, ports::UserProfileFieldsRepository,
     value_objects::UserId,
 };
 

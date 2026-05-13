@@ -224,10 +224,8 @@ pub trait HtmlRenderer: Send + Sync {
     fn render_import_upload_page(&self, data: ImportUploadPageData) -> Result<String, String>;
     fn render_import_mapping_page(&self, data: ImportMappingPageData) -> Result<String, String>;
     fn render_import_preview_page(&self, data: ImportPreviewPageData) -> Result<String, String>;
-    fn render_profile_settings_page(
-        &self,
-        data: ProfileSettingsPageData,
-    ) -> Result<String, String>;
+    fn render_profile_settings_page(&self, data: ProfileSettingsPageData)
+    -> Result<String, String>;
     fn render_blocked_domains_page(&self, data: BlockedDomainsPageData) -> Result<String, String>;
     fn render_blocked_actors_page(&self, data: BlockedActorsPageData) -> Result<String, String>;
     fn render_watchlist_page(&self, data: WatchlistPageData) -> Result<String, String>;

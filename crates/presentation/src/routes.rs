@@ -60,7 +60,10 @@ fn html_routes(rate_limit: u64) -> Router<AppState> {
     let base = Router::new()
         .route("/", routing::get(handlers::html::get_activity_feed))
         .route("/users", routing::get(handlers::html::get_users_list))
-        .route("/u/{username}", routing::get(handlers::html::get_user_by_username))
+        .route(
+            "/u/{username}",
+            routing::get(handlers::html::get_user_by_username),
+        )
         .route(
             "/users/{id}",
             routing::get(handlers::html::get_user_profile),
@@ -79,24 +82,41 @@ fn html_routes(rate_limit: u64) -> Router<AppState> {
             "/reviews/{id}/delete",
             routing::post(handlers::html::post_delete_review),
         )
-        .route(
-            "/images/{*key}",
-            routing::get(handlers::images::get_image),
-        )
+        .route("/images/{*key}", routing::get(handlers::images::get_image))
         .route(
             "/posters/{path}",
-            routing::get(|axum::extract::Path(p): axum::extract::Path<String>| async move {
-                axum::response::Redirect::permanent(&format!("/images/{}", p))
-            }),
+            routing::get(
+                |axum::extract::Path(p): axum::extract::Path<String>| async move {
+                    axum::response::Redirect::permanent(&format!("/images/{}", p))
+                },
+            ),
         )
         .route("/diary/export", routing::get(handlers::html::get_export))
         .route("/import", routing::get(handlers::import::get_import_page))
-        .route("/import/upload", routing::post(handlers::import::post_upload))
-        .route("/import/{id}/mapping", routing::get(handlers::import::get_mapping_page).post(handlers::import::post_mapping))
-        .route("/import/{id}/preview", routing::get(handlers::import::get_preview_page))
-        .route("/import/{id}/confirm", routing::post(handlers::import::post_confirm))
-        .route("/import/done", routing::get(handlers::import::get_import_done))
-        .route("/import/profiles/{profile_id}/delete", routing::post(handlers::import::post_delete_profile))
+        .route(
+            "/import/upload",
+            routing::post(handlers::import::post_upload),
+        )
+        .route(
+            "/import/{id}/mapping",
+            routing::get(handlers::import::get_mapping_page).post(handlers::import::post_mapping),
+        )
+        .route(
+            "/import/{id}/preview",
+            routing::get(handlers::import::get_preview_page),
+        )
+        .route(
+            "/import/{id}/confirm",
+            routing::post(handlers::import::post_confirm),
+        )
+        .route(
+            "/import/done",
+            routing::get(handlers::import::get_import_done),
+        )
+        .route(
+            "/import/profiles/{profile_id}/delete",
+            routing::post(handlers::import::post_delete_profile),
+        )
         .route("/feed.rss", routing::get(handlers::rss::get_feed))
         .route(
             "/users/{id}/feed.rss",
@@ -171,8 +191,14 @@ fn federation_html_routes() -> Router<AppState> {
             "/social/blocked",
             routing::get(handlers::html::get_blocked_actors_page),
         )
-        .route("/social/block", routing::post(handlers::html::post_block_actor_html))
-        .route("/social/unblock", routing::post(handlers::html::post_unblock_actor))
+        .route(
+            "/social/block",
+            routing::post(handlers::html::post_block_actor_html),
+        )
+        .route(
+            "/social/unblock",
+            routing::post(handlers::html::post_unblock_actor),
+        )
 }
 
 fn api_routes(rate_limit: u64) -> Router<AppState> {
@@ -216,17 +242,48 @@ fn api_routes(rate_limit: u64) -> Router<AppState> {
         )
         .route("/users", routing::get(handlers::api::list_users))
         .route("/users/{id}", routing::get(handlers::api::get_user_profile))
-        .route("/import/sessions", routing::post(handlers::import::api_post_session))
-        .route("/import/sessions/{id}", routing::get(handlers::import::api_get_session))
-        .route("/import/sessions/{id}/mapping", routing::put(handlers::import::api_put_mapping))
-        .route("/import/sessions/{id}/confirm", routing::post(handlers::import::api_post_confirm))
-        .route("/import/profiles", routing::get(handlers::import::api_get_profiles).post(handlers::import::api_post_profile))
-        .route("/import/profiles/{id}", routing::delete(handlers::import::api_delete_profile))
-        .route("/profile", routing::get(handlers::api::get_profile).put(handlers::api::update_profile_handler))
-        .route("/profile/fields", routing::put(handlers::api::update_profile_fields_handler))
+        .route(
+            "/import/sessions",
+            routing::post(handlers::import::api_post_session),
+        )
+        .route(
+            "/import/sessions/{id}",
+            routing::get(handlers::import::api_get_session),
+        )
+        .route(
+            "/import/sessions/{id}/mapping",
+            routing::put(handlers::import::api_put_mapping),
+        )
+        .route(
+            "/import/sessions/{id}/confirm",
+            routing::post(handlers::import::api_post_confirm),
+        )
+        .route(
+            "/import/profiles",
+            routing::get(handlers::import::api_get_profiles)
+                .post(handlers::import::api_post_profile),
+        )
+        .route(
+            "/import/profiles/{id}",
+            routing::delete(handlers::import::api_delete_profile),
+        )
+        .route(
+            "/profile",
+            routing::get(handlers::api::get_profile).put(handlers::api::update_profile_handler),
+        )
+        .route(
+            "/profile/fields",
+            routing::put(handlers::api::update_profile_fields_handler),
+        )
         .route("/search", routing::get(handlers::api::get_search))
-        .route("/people/{id}", routing::get(handlers::api::get_person_handler))
-        .route("/people/{id}/credits", routing::get(handlers::api::get_person_credits_handler))
+        .route(
+            "/people/{id}",
+            routing::get(handlers::api::get_person_handler),
+        )
+        .route(
+            "/people/{id}/credits",
+            routing::get(handlers::api::get_person_credits_handler),
+        )
         .route(
             "/watchlist",
             routing::get(handlers::api::get_watchlist_handler)
@@ -282,7 +339,16 @@ fn federation_api_routes() -> Router<AppState> {
             "/admin/blocked-domains/{domain}",
             routing::delete(handlers::api::remove_blocked_domain_admin),
         )
-        .route("/social/block", routing::post(handlers::api::block_actor_api))
-        .route("/social/unblock", routing::post(handlers::api::unblock_actor_api))
-        .route("/social/blocked", routing::get(handlers::api::get_blocked_actors_api))
+        .route(
+            "/social/block",
+            routing::post(handlers::api::block_actor_api),
+        )
+        .route(
+            "/social/unblock",
+            routing::post(handlers::api::unblock_actor_api),
+        )
+        .route(
+            "/social/blocked",
+            routing::get(handlers::api::get_blocked_actors_api),
+        )
 }

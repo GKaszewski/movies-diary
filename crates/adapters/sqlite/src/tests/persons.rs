@@ -61,11 +61,16 @@ async fn upsert_batch_inserts_persons() {
     let pool = pool_with_schema().await;
     let adapter = SqlitePersonAdapter::new(pool.clone());
 
-    let persons = vec![make_person(1, "Alice", Some("Acting")), make_person(2, "Bob", Some("Directing"))];
+    let persons = vec![
+        make_person(1, "Alice", Some("Acting")),
+        make_person(2, "Bob", Some("Directing")),
+    ];
     adapter.upsert_batch(&persons).await.unwrap();
 
     let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM persons")
-        .fetch_one(&pool).await.unwrap();
+        .fetch_one(&pool)
+        .await
+        .unwrap();
     assert_eq!(count.0, 2);
 }
 
@@ -79,7 +84,9 @@ async fn upsert_batch_is_idempotent() {
     adapter.upsert_batch(&persons).await.unwrap();
 
     let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM persons")
-        .fetch_one(&pool).await.unwrap();
+        .fetch_one(&pool)
+        .await
+        .unwrap();
     assert_eq!(count.0, 1);
 }
 
@@ -114,9 +121,13 @@ async fn get_credits_returns_cast_and_crew() {
     adapter.upsert_batch(&[p.clone()]).await.unwrap();
 
     sqlx::query("INSERT INTO movies VALUES ('m1', 'The Film', 2020, 'Dir', NULL, NULL)")
-        .execute(&pool).await.unwrap();
+        .execute(&pool)
+        .await
+        .unwrap();
     sqlx::query("INSERT INTO movie_cast VALUES ('m1', 7, 'Diana', 'Hero', 1, NULL)")
-        .execute(&pool).await.unwrap();
+        .execute(&pool)
+        .await
+        .unwrap();
 
     let credits = adapter.get_credits(p.id()).await.unwrap();
     assert_eq!(credits.person.name(), "Diana");

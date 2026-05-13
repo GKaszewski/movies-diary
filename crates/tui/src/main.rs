@@ -42,21 +42,22 @@ async fn run() -> anyhow::Result<()> {
 
     // If we start directly in Main (saved token), trigger an initial diary load
     if matches!(app.screen, Screen::Main(_))
-        && let Some(token) = &saved_token {
-            let c = client.clone();
-            let t = token.clone();
-            let tx2 = tx.clone();
-            tokio::spawn(async move {
-                let action = match c.get_diary(&t, 0, 20).await {
-                    Ok(r) => Action::DiaryLoaded {
-                        entries: r.items,
-                        total: r.total_count,
-                    },
-                    Err(e) => Action::DiaryLoadFailed(e.to_string()),
-                };
-                let _ = tx2.send(action).await;
-            });
-        }
+        && let Some(token) = &saved_token
+    {
+        let c = client.clone();
+        let t = token.clone();
+        let tx2 = tx.clone();
+        tokio::spawn(async move {
+            let action = match c.get_diary(&t, 0, 20).await {
+                Ok(r) => Action::DiaryLoaded {
+                    entries: r.items,
+                    total: r.total_count,
+                },
+                Err(e) => Action::DiaryLoadFailed(e.to_string()),
+            };
+            let _ = tx2.send(action).await;
+        });
+    }
 
     let result = async {
         loop {
@@ -64,20 +65,21 @@ async fn run() -> anyhow::Result<()> {
 
             // Poll keyboard — non-blocking with short timeout
             if event::poll(Duration::from_millis(50))?
-                && let Event::Key(key) = event::read()? {
-                    if key.kind != ratatui::crossterm::event::KeyEventKind::Press {
-                        continue;
+                && let Event::Key(key) = event::read()?
+            {
+                if key.kind != ratatui::crossterm::event::KeyEventKind::Press {
+                    continue;
+                }
+                if let Some(action) = key_to_action(&app, key) {
+                    if matches!(action, Action::Quit) {
+                        break;
                     }
-                    if let Some(action) = key_to_action(&app, key) {
-                        if matches!(action, Action::Quit) {
-                            break;
-                        }
-                        let cmds = app::update(&mut app, action);
-                        for cmd in cmds {
-                            handle_command(cmd, &app, &client, &tx);
-                        }
+                    let cmds = app::update(&mut app, action);
+                    for cmd in cmds {
+                        handle_command(cmd, &app, &client, &tx);
                     }
                 }
+            }
 
             // Drain async results
             while let Ok(action) = rx.try_recv() {

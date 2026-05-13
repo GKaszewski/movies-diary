@@ -14,9 +14,21 @@ fn sample_file() -> ParsedFile {
 
 fn full_mappings() -> Vec<FieldMapping> {
     vec![
-        FieldMapping { source_column: "Name".into(), domain_field: DomainField::Title, transform: Transform::Identity },
-        FieldMapping { source_column: "Stars".into(), domain_field: DomainField::Rating, transform: Transform::RatingScale(0.5) },
-        FieldMapping { source_column: "Date".into(), domain_field: DomainField::WatchedAt, transform: Transform::Identity },
+        FieldMapping {
+            source_column: "Name".into(),
+            domain_field: DomainField::Title,
+            transform: Transform::Identity,
+        },
+        FieldMapping {
+            source_column: "Stars".into(),
+            domain_field: DomainField::Rating,
+            transform: Transform::RatingScale(0.5),
+        },
+        FieldMapping {
+            source_column: "Date".into(),
+            domain_field: DomainField::WatchedAt,
+            transform: Transform::Identity,
+        },
     ]
 }
 
@@ -51,9 +63,11 @@ fn marks_missing_required_fields_invalid() {
 
 #[test]
 fn ignores_unmapped_columns() {
-    let mappings = vec![
-        FieldMapping { source_column: "Name".into(), domain_field: DomainField::Title, transform: Transform::Identity },
-    ];
+    let mappings = vec![FieldMapping {
+        source_column: "Name".into(),
+        domain_field: DomainField::Title,
+        transform: Transform::Identity,
+    }];
     let file = ParsedFile {
         columns: vec!["Name".into(), "Extra".into()],
         rows: vec![vec!["Inception".into(), "ignored".into()]],
@@ -66,9 +80,11 @@ fn ignores_unmapped_columns() {
 
 #[test]
 fn nonexistent_source_column_skipped() {
-    let mappings = vec![
-        FieldMapping { source_column: "DoesNotExist".into(), domain_field: DomainField::Title, transform: Transform::Identity },
-    ];
+    let mappings = vec![FieldMapping {
+        source_column: "DoesNotExist".into(),
+        domain_field: DomainField::Title,
+        transform: Transform::Identity,
+    }];
     let file = ParsedFile {
         columns: vec!["Name".into()],
         rows: vec![vec!["Inception".into()]],
@@ -81,8 +97,16 @@ fn nonexistent_source_column_skipped() {
 #[test]
 fn collects_all_errors_not_just_first() {
     let mappings = vec![
-        FieldMapping { source_column: "Name".into(), domain_field: DomainField::Title, transform: Transform::Identity },
-        FieldMapping { source_column: "Stars".into(), domain_field: DomainField::Rating, transform: Transform::RatingScale(0.5) },
+        FieldMapping {
+            source_column: "Name".into(),
+            domain_field: DomainField::Title,
+            transform: Transform::Identity,
+        },
+        FieldMapping {
+            source_column: "Stars".into(),
+            domain_field: DomainField::Rating,
+            transform: Transform::RatingScale(0.5),
+        },
         // no watched_at mapping
     ];
     let file = ParsedFile {
@@ -91,8 +115,16 @@ fn collects_all_errors_not_just_first() {
     };
     let results = apply_mapping(&file, &mappings);
     if let RowResult::Invalid { errors, .. } = &results[0].result {
-        assert!(errors.iter().any(|e| e.contains("not a number")), "expected rating error, got: {:?}", errors);
-        assert!(errors.iter().any(|e| e.contains("watched_at")), "expected watched_at error, got: {:?}", errors);
+        assert!(
+            errors.iter().any(|e| e.contains("not a number")),
+            "expected rating error, got: {:?}",
+            errors
+        );
+        assert!(
+            errors.iter().any(|e| e.contains("watched_at")),
+            "expected watched_at error, got: {:?}",
+            errors
+        );
     } else {
         panic!("expected Invalid");
     }
@@ -101,9 +133,21 @@ fn collects_all_errors_not_just_first() {
 #[test]
 fn non_numeric_rating_produces_error_in_row() {
     let mappings = vec![
-        FieldMapping { source_column: "Name".into(), domain_field: DomainField::Title, transform: Transform::Identity },
-        FieldMapping { source_column: "Stars".into(), domain_field: DomainField::Rating, transform: Transform::RatingScale(0.5) },
-        FieldMapping { source_column: "Date".into(), domain_field: DomainField::WatchedAt, transform: Transform::Identity },
+        FieldMapping {
+            source_column: "Name".into(),
+            domain_field: DomainField::Title,
+            transform: Transform::Identity,
+        },
+        FieldMapping {
+            source_column: "Stars".into(),
+            domain_field: DomainField::Rating,
+            transform: Transform::RatingScale(0.5),
+        },
+        FieldMapping {
+            source_column: "Date".into(),
+            domain_field: DomainField::WatchedAt,
+            transform: Transform::Identity,
+        },
     ];
     let file = ParsedFile {
         columns: vec!["Name".into(), "Stars".into(), "Date".into()],

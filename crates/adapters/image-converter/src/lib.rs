@@ -6,8 +6,10 @@ pub use backfill::ConversionBackfillJob;
 pub use config::{ConversionConfig, Format};
 pub use handler::ImageConversionHandler;
 
+use domain::ports::{
+    EventHandler, EventPublisher, ImageRefCommand, ImageRefQuery, ImageStorage, PeriodicJob,
+};
 use std::sync::Arc;
-use domain::ports::{EventHandler, EventPublisher, ImageRefCommand, ImageRefQuery, ImageStorage, PeriodicJob};
 
 pub fn build(
     image_storage: Arc<dyn ImageStorage>,

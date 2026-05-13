@@ -23,9 +23,9 @@ impl EventBusBackend {
             #[cfg(feature = "nats")]
             "nats" => Ok(Self::Nats),
             #[cfg(not(feature = "nats"))]
-            "nats" => anyhow::bail!(
-                "EVENT_BUS_BACKEND=nats requires the nats feature to be compiled in"
-            ),
+            "nats" => {
+                anyhow::bail!("EVENT_BUS_BACKEND=nats requires the nats feature to be compiled in")
+            }
             other => anyhow::bail!("unknown EVENT_BUS_BACKEND={other}, expected 'db' or 'nats'"),
         }
     }
@@ -39,9 +39,9 @@ pub async fn create(
             tracing::info!("event bus: DB queue");
             match db_pool {
                 #[cfg(feature = "postgres")]
-                DbPool::Postgres(pool) => {
-                    Ok(postgres_event_queue::PostgresEventQueue::create_channel(pool.clone()).await?)
-                }
+                DbPool::Postgres(pool) => Ok(
+                    postgres_event_queue::PostgresEventQueue::create_channel(pool.clone()).await?,
+                ),
                 #[cfg(feature = "sqlite")]
                 DbPool::Sqlite(pool) => {
                     Ok(sqlite_event_queue::SqliteEventQueue::create_channel(pool.clone()).await?)

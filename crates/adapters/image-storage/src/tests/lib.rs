@@ -39,7 +39,10 @@ async fn delete_missing_returns_ok() {
 
 #[tokio::test]
 async fn cleanup_handler_deletes_on_movie_deleted() {
-    use domain::{events::DomainEvent, value_objects::{MovieId, PosterPath}};
+    use domain::{
+        events::DomainEvent,
+        value_objects::{MovieId, PosterPath},
+    };
     let inner = Arc::new(adapter());
     inner.store("some-uuid", b"img").await.unwrap();
     let path = PosterPath::new("some-uuid".to_string()).unwrap();
@@ -51,5 +54,8 @@ async fn cleanup_handler_deletes_on_movie_deleted() {
         })
         .await
         .unwrap();
-    assert!(matches!(inner.get("some-uuid").await, Err(DomainError::NotFound(_))));
+    assert!(matches!(
+        inner.get("some-uuid").await,
+        Err(DomainError::NotFound(_))
+    ));
 }

@@ -15,9 +15,13 @@ impl DocumentParser for ImporterDocumentParser {
             FileFormat::Json => parsers::parse_json(bytes),
             FileFormat::Xlsx => {
                 #[cfg(feature = "xlsx")]
-                { parsers::parse_xlsx(bytes) }
+                {
+                    parsers::parse_xlsx(bytes)
+                }
                 #[cfg(not(feature = "xlsx"))]
-                { Err(ImportError::Xlsx("XLSX support not compiled in".into())) }
+                {
+                    Err(ImportError::Xlsx("XLSX support not compiled in".into()))
+                }
             }
         }
     }

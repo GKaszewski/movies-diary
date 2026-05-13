@@ -1,4 +1,6 @@
-use api_types::{ActivityFeedResponse, DiaryEntryDto, DiaryResponse, FeedEntryDto, LogReviewRequest, ReviewDto};
+use api_types::{
+    ActivityFeedResponse, DiaryEntryDto, DiaryResponse, FeedEntryDto, LogReviewRequest, ReviewDto,
+};
 use utoipa::OpenApi;
 
 #[derive(OpenApi)]
@@ -17,6 +19,6 @@ use utoipa::OpenApi;
         LogReviewRequest,
         ActivityFeedResponse,
         FeedEntryDto,
-    )),
+    ))
 )]
 pub struct DiaryDoc;

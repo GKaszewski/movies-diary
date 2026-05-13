@@ -2,15 +2,15 @@ use domain::events::DomainEvent;
 
 pub fn event_to_subject(prefix: &str, event: &DomainEvent) -> String {
     let suffix = match event {
-        DomainEvent::ReviewLogged { .. }    => "review.logged",
-        DomainEvent::ReviewUpdated { .. }   => "review.updated",
-        DomainEvent::ReviewDeleted { .. }   => "review.deleted",
+        DomainEvent::ReviewLogged { .. } => "review.logged",
+        DomainEvent::ReviewUpdated { .. } => "review.updated",
+        DomainEvent::ReviewDeleted { .. } => "review.deleted",
         DomainEvent::MovieDiscovered { .. } => "movie.discovered",
-        DomainEvent::MovieDeleted { .. }              => "movie.deleted",
-        DomainEvent::UserUpdated { .. }               => "user.updated",
-        DomainEvent::MovieEnrichmentRequested { .. }  => "movie.enrichment.requested",
-        DomainEvent::ImageStored { .. }              => "image.stored",
-        DomainEvent::WatchlistEntryAdded { .. }   => "watchlist.entry.added",
+        DomainEvent::MovieDeleted { .. } => "movie.deleted",
+        DomainEvent::UserUpdated { .. } => "user.updated",
+        DomainEvent::MovieEnrichmentRequested { .. } => "movie.enrichment.requested",
+        DomainEvent::ImageStored { .. } => "image.stored",
+        DomainEvent::WatchlistEntryAdded { .. } => "watchlist.entry.added",
         DomainEvent::WatchlistEntryRemoved { .. } => "watchlist.entry.removed",
         DomainEvent::FollowAccepted { .. } => "follow.accepted",
     };

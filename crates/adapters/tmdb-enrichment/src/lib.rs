@@ -1,13 +1,16 @@
 use std::sync::Arc;
 
+use application::{commands::EnrichMovieCommand, use_cases::enrich_movie};
 use async_trait::async_trait;
 use chrono::Utc;
-use application::{commands::EnrichMovieCommand, use_cases::enrich_movie};
 use domain::{
     errors::DomainError,
     events::DomainEvent,
     models::{CastMember, CrewMember, Genre, Keyword, MovieProfile},
-    ports::{EventHandler, MovieEnrichmentClient, MovieProfileRepository, MovieRepository, PersonCommand, SearchCommand},
+    ports::{
+        EventHandler, MovieEnrichmentClient, MovieProfileRepository, MovieRepository,
+        PersonCommand, SearchCommand,
+    },
     value_objects::MovieId,
 };
 use serde::Deserialize;
@@ -21,40 +24,56 @@ pub struct TmdbEnrichmentClient {
 
 impl TmdbEnrichmentClient {
     pub fn from_env() -> Result<Self, DomainError> {
-        let api_key = std::env::var("TMDB_API_KEY").map_err(|_| {
-            DomainError::InfrastructureError("TMDB_API_KEY is not set".into())
-        })?;
-        Ok(Self { api_key, http: reqwest::Client::new() })
+        let api_key = std::env::var("TMDB_API_KEY")
+            .map_err(|_| DomainError::InfrastructureError("TMDB_API_KEY is not set".into()))?;
+        Ok(Self {
+            api_key,
+            http: reqwest::Client::new(),
+        })
     }
 
     fn base(&self, path: &str) -> String {
         format!("https://api.themoviedb.org/3{}", path)
     }
 
-    async fn get<T: for<'de> Deserialize<'de>>(&self, url: &str, extra: &[(&str, &str)]) -> Result<T, DomainError> {
-        let mut req = self.http.get(url).query(&[("api_key", self.api_key.as_str())]);
+    async fn get<T: for<'de> Deserialize<'de>>(
+        &self,
+        url: &str,
+        extra: &[(&str, &str)],
+    ) -> Result<T, DomainError> {
+        let mut req = self
+            .http
+            .get(url)
+            .query(&[("api_key", self.api_key.as_str())]);
         for (k, v) in extra {
             req = req.query(&[(k, v)]);
         }
-        req.send().await
+        req.send()
+            .await
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?
             .error_for_status()
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?
-            .json::<T>().await
+            .json::<T>()
+            .await
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))
     }
 
     async fn resolve_tmdb_id(&self, external_id: &str) -> Result<u64, DomainError> {
         if let Some(numeric) = external_id.strip_prefix("tmdb:") {
-            return numeric.parse::<u64>()
-                .map_err(|_| DomainError::InfrastructureError(format!("Invalid tmdb id: {numeric}")));
+            return numeric.parse::<u64>().map_err(|_| {
+                DomainError::InfrastructureError(format!("Invalid tmdb id: {numeric}"))
+            });
         }
 
         // Assume IMDb ID (tt…) — use /find
         #[derive(Deserialize)]
-        struct FindResult { id: u64 }
+        struct FindResult {
+            id: u64,
+        }
         #[derive(Deserialize)]
-        struct FindResponse { movie_results: Vec<FindResult> }
+        struct FindResponse {
+            movie_results: Vec<FindResult>,
+        }
 
         let url = self.base(&format!("/find/{}", external_id));
         let resp: FindResponse = self.get(&url, &[("external_source", "imdb_id")]).await?;
@@ -68,14 +87,23 @@ impl TmdbEnrichmentClient {
 
 #[async_trait]
 impl MovieEnrichmentClient for TmdbEnrichmentClient {
-    async fn fetch_profile(&self, movie_id: MovieId, external_metadata_id: &str) -> Result<MovieProfile, DomainError> {
+    async fn fetch_profile(
+        &self,
+        movie_id: MovieId,
+        external_metadata_id: &str,
+    ) -> Result<MovieProfile, DomainError> {
         let tmdb_id = self.resolve_tmdb_id(external_metadata_id).await?;
 
         #[derive(Deserialize)]
-        struct GenreDto { id: u32, name: String }
+        struct GenreDto {
+            id: u32,
+            name: String,
+        }
 
         #[derive(Deserialize)]
-        struct CollectionDto { name: String }
+        struct CollectionDto {
+            name: String,
+        }
 
         #[derive(Deserialize)]
         struct CastDto {
@@ -96,13 +124,21 @@ impl MovieEnrichmentClient for TmdbEnrichmentClient {
         }
 
         #[derive(Deserialize)]
-        struct Credits { cast: Vec<CastDto>, crew: Vec<CrewDto> }
+        struct Credits {
+            cast: Vec<CastDto>,
+            crew: Vec<CrewDto>,
+        }
 
         #[derive(Deserialize)]
-        struct KeywordDto { id: u32, name: String }
+        struct KeywordDto {
+            id: u32,
+            name: String,
+        }
 
         #[derive(Deserialize)]
-        struct Keywords { keywords: Vec<KeywordDto> }
+        struct Keywords {
+            keywords: Vec<KeywordDto>,
+        }
 
         #[derive(Deserialize)]
         struct Details {
@@ -122,7 +158,9 @@ impl MovieEnrichmentClient for TmdbEnrichmentClient {
         }
 
         let url = self.base(&format!("/movie/{}", tmdb_id));
-        let d: Details = self.get(&url, &[("append_to_response", "credits,keywords")]).await?;
+        let d: Details = self
+            .get(&url, &[("append_to_response", "credits,keywords")])
+            .await?;
 
         Ok(MovieProfile {
             movie_id,
@@ -137,24 +175,47 @@ impl MovieEnrichmentClient for TmdbEnrichmentClient {
             vote_count: d.vote_count,
             original_language: d.original_language,
             collection_name: d.belongs_to_collection.map(|c| c.name),
-            genres: d.genres.into_iter().map(|g| Genre { tmdb_id: g.id, name: g.name }).collect(),
-            keywords: d.keywords.keywords.into_iter()
-                .map(|k| Keyword { tmdb_id: k.id, name: k.name })
+            genres: d
+                .genres
+                .into_iter()
+                .map(|g| Genre {
+                    tmdb_id: g.id,
+                    name: g.name,
+                })
                 .collect(),
-            cast: d.credits.cast.into_iter().map(|c| CastMember {
-                tmdb_person_id: c.id,
-                name: c.name,
-                character: c.character,
-                billing_order: c.order,
-                profile_path: c.profile_path,
-            }).collect(),
-            crew: d.credits.crew.into_iter().map(|c| CrewMember {
-                tmdb_person_id: c.id,
-                name: c.name,
-                job: c.job,
-                department: c.department,
-                profile_path: c.profile_path,
-            }).collect(),
+            keywords: d
+                .keywords
+                .keywords
+                .into_iter()
+                .map(|k| Keyword {
+                    tmdb_id: k.id,
+                    name: k.name,
+                })
+                .collect(),
+            cast: d
+                .credits
+                .cast
+                .into_iter()
+                .map(|c| CastMember {
+                    tmdb_person_id: c.id,
+                    name: c.name,
+                    character: c.character,
+                    billing_order: c.order,
+                    profile_path: c.profile_path,
+                })
+                .collect(),
+            crew: d
+                .credits
+                .crew
+                .into_iter()
+                .map(|c| CrewMember {
+                    tmdb_person_id: c.id,
+                    name: c.name,
+                    job: c.job,
+                    department: c.department,
+                    profile_path: c.profile_path,
+                })
+                .collect(),
             enriched_at: Utc::now(),
         })
     }
@@ -164,19 +225,20 @@ impl MovieEnrichmentClient for TmdbEnrichmentClient {
 
 pub struct EnrichmentHandler {
     pub enrichment_client: Arc<dyn MovieEnrichmentClient>,
-    pub movie_repository:  Arc<dyn MovieRepository>,
-    pub profile_repo:      Arc<dyn MovieProfileRepository>,
-    pub person_command:    Arc<dyn PersonCommand>,
-    pub search_command:    Arc<dyn SearchCommand>,
+    pub movie_repository: Arc<dyn MovieRepository>,
+    pub profile_repo: Arc<dyn MovieProfileRepository>,
+    pub person_command: Arc<dyn PersonCommand>,
+    pub search_command: Arc<dyn SearchCommand>,
 }
 
 #[async_trait]
 impl EventHandler for EnrichmentHandler {
     async fn handle(&self, event: &DomainEvent) -> Result<(), DomainError> {
         let (movie_id, external_metadata_id) = match event {
-            DomainEvent::MovieEnrichmentRequested { movie_id, external_metadata_id } => {
-                (movie_id.clone(), external_metadata_id.clone())
-            }
+            DomainEvent::MovieEnrichmentRequested {
+                movie_id,
+                external_metadata_id,
+            } => (movie_id.clone(), external_metadata_id.clone()),
             _ => return Ok(()),
         };
 
@@ -195,7 +257,11 @@ impl EventHandler for EnrichmentHandler {
 
         tracing::info!(movie_id = %movie_id.value(), external_id = %external_metadata_id, "enriching movie");
 
-        match self.enrichment_client.fetch_profile(movie_id.clone(), &external_metadata_id).await {
+        match self
+            .enrichment_client
+            .fetch_profile(movie_id.clone(), &external_metadata_id)
+            .await
+        {
             Ok(profile) => {
                 enrich_movie::execute(
                     &self.movie_repository,

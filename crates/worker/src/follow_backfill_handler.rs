@@ -10,7 +10,12 @@ pub struct FollowBackfillHandler {
 #[async_trait]
 impl EventHandler for FollowBackfillHandler {
     async fn handle(&self, event: &DomainEvent) -> Result<(), DomainError> {
-        let DomainEvent::FollowAccepted { remote_actor_url, outbox_url, .. } = event else {
+        let DomainEvent::FollowAccepted {
+            remote_actor_url,
+            outbox_url,
+            ..
+        } = event
+        else {
             return Ok(());
         };
         tracing::info!(actor = %remote_actor_url, outbox = %outbox_url, "starting outbox backfill");

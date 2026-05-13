@@ -40,11 +40,15 @@ impl ActivityPubEventHandler {
 impl EventHandler for ActivityPubEventHandler {
     async fn handle(&self, event: &DomainEvent) -> Result<(), DomainError> {
         match event {
-            DomainEvent::ReviewLogged { review_id, user_id, .. } => self
+            DomainEvent::ReviewLogged {
+                review_id, user_id, ..
+            } => self
                 .on_review_logged(user_id, review_id)
                 .await
                 .map_err(|e| DomainError::InfrastructureError(e.to_string())),
-            DomainEvent::ReviewUpdated { review_id, user_id, .. } => self
+            DomainEvent::ReviewUpdated {
+                review_id, user_id, ..
+            } => self
                 .on_review_updated(user_id, review_id)
                 .await
                 .map_err(|e| DomainError::InfrastructureError(e.to_string())),
@@ -65,7 +69,14 @@ impl EventHandler for ActivityPubEventHandler {
                 external_metadata_id,
                 added_at,
             } => self
-                .on_watchlist_added(user_id, movie_id, movie_title, *release_year, external_metadata_id, added_at)
+                .on_watchlist_added(
+                    user_id,
+                    movie_id,
+                    movie_title,
+                    *release_year,
+                    external_metadata_id,
+                    added_at,
+                )
                 .await
                 .map_err(|e| DomainError::InfrastructureError(e.to_string())),
             DomainEvent::WatchlistEntryRemoved { user_id, movie_id } => self
@@ -124,7 +135,11 @@ impl ActivityPubEventHandler {
         Ok(())
     }
 
-    async fn on_review_updated(&self, user_id: &UserId, review_id: &ReviewId) -> anyhow::Result<()> {
+    async fn on_review_updated(
+        &self,
+        user_id: &UserId,
+        review_id: &ReviewId,
+    ) -> anyhow::Result<()> {
         let review = match self.review_repository.get_review_by_id(review_id).await? {
             Some(r) => r,
             None => return Ok(()),
@@ -170,7 +185,11 @@ impl ActivityPubEventHandler {
         Ok(())
     }
 
-    async fn on_review_deleted(&self, user_id: &UserId, review_id: &ReviewId) -> anyhow::Result<()> {
+    async fn on_review_deleted(
+        &self,
+        user_id: &UserId,
+        review_id: &ReviewId,
+    ) -> anyhow::Result<()> {
         let ap_id = review_url(&self.base_url, review_id);
         self.ap_service
             .broadcast_delete_to_followers(user_id.value(), ap_id)
@@ -197,7 +216,10 @@ impl ActivityPubEventHandler {
             .await
             .ok()
             .flatten()
-            .and_then(|m| m.poster_path().map(|p| format!("{}/images/{}", self.base_url, p.value())));
+            .and_then(|m| {
+                m.poster_path()
+                    .map(|p| format!("{}/images/{}", self.base_url, p.value()))
+            });
 
         let added_at_utc =
             chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(*added_at, chrono::Utc);

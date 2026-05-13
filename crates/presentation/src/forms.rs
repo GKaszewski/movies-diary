@@ -2,7 +2,10 @@ use chrono::NaiveDateTime;
 use serde::Deserialize;
 use uuid::Uuid;
 
-use application::{commands::{LogReviewCommand, MovieInput}, queries::GetDiaryQuery};
+use application::{
+    commands::{LogReviewCommand, MovieInput},
+    queries::GetDiaryQuery,
+};
 use domain::{errors::DomainError, models::SortDirection};
 
 use api_types::{DiaryQueryParams, LogReviewRequest};

@@ -36,7 +36,7 @@ async fn find_by_id_returns_user_when_found() {
     let (pool, repo) = setup().await;
     let id = uuid::Uuid::new_v4();
     sqlx::query(
-        "INSERT INTO users (id, email, username, password_hash, created_at) VALUES (?, ?, ?, ?, ?)"
+        "INSERT INTO users (id, email, username, password_hash, created_at) VALUES (?, ?, ?, ?, ?)",
     )
     .bind(id.to_string())
     .bind("test@example.com")
@@ -88,10 +88,18 @@ async fn update_profile_clears_fields_with_none() {
         UserRole::Standard,
     );
     repo.save(&user).await.unwrap();
-    repo.update_profile(user.id(), Some("bio".to_string()), Some("path".to_string()), None, None)
+    repo.update_profile(
+        user.id(),
+        Some("bio".to_string()),
+        Some("path".to_string()),
+        None,
+        None,
+    )
+    .await
+    .unwrap();
+    repo.update_profile(user.id(), None, None, None, None)
         .await
         .unwrap();
-    repo.update_profile(user.id(), None, None, None, None).await.unwrap();
 
     let found = repo.find_by_id(user.id()).await.unwrap().unwrap();
     assert_eq!(found.bio(), None);

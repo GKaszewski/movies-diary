@@ -10,8 +10,8 @@ use crate::{
 };
 pub mod collections;
 pub mod import;
-pub mod import_session;
 pub mod import_profile;
+pub mod import_session;
 pub mod person;
 pub mod search;
 pub mod watchlist;
@@ -20,15 +20,15 @@ pub mod remote_watchlist;
 pub use remote_watchlist::RemoteWatchlistEntry;
 
 pub use import::{
-    AnnotatedRow, DomainField, FieldMapping, FileFormat, ImportError,
-    ImportRow, ParsedFile, RowResult, Transform,
+    AnnotatedRow, DomainField, FieldMapping, FileFormat, ImportError, ImportRow, ParsedFile,
+    RowResult, Transform,
 };
-pub use import_session::ImportSession;
 pub use import_profile::ImportProfile;
+pub use import_session::ImportSession;
 pub use person::{CastCredit, CrewCredit, ExternalPersonId, Person, PersonCredits, PersonId};
 pub use search::{
-    EntityType, IndexableDocument, MovieSearchHit, PersonSearchHit,
-    SearchFilters, SearchQuery, SearchResults,
+    EntityType, IndexableDocument, MovieSearchHit, PersonSearchHit, SearchFilters, SearchQuery,
+    SearchResults,
 };
 
 #[derive(Clone, Debug, Default)]
@@ -158,7 +158,9 @@ impl Movie {
 pub enum ReviewSource {
     #[default]
     Local,
-    Remote { actor_url: String },
+    Remote {
+        actor_url: String,
+    },
 }
 
 #[derive(Clone, Debug)]
@@ -377,7 +379,13 @@ impl User {
         self.password_hash = new_hash;
     }
 
-    pub fn update_profile(&mut self, bio: Option<String>, avatar_path: Option<String>, banner_path: Option<String>, also_known_as: Option<String>) {
+    pub fn update_profile(
+        &mut self,
+        bio: Option<String>,
+        avatar_path: Option<String>,
+        banner_path: Option<String>,
+        also_known_as: Option<String>,
+    ) {
         self.bio = bio;
         self.avatar_path = avatar_path;
         self.banner_path = banner_path;

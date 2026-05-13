@@ -11,10 +11,10 @@ pub async fn execute(ctx: &AppContext, cmd: RemoveFromWatchlistCommand) -> Resul
     let movie_id = MovieId::from_uuid(cmd.movie_id);
     ctx.watchlist_repository.remove(&user_id, &movie_id).await?;
 
-    let _ = ctx.event_publisher.publish(&DomainEvent::WatchlistEntryRemoved {
-        user_id,
-        movie_id,
-    }).await;
+    let _ = ctx
+        .event_publisher
+        .publish(&DomainEvent::WatchlistEntryRemoved { user_id, movie_id })
+        .await;
 
     Ok(())
 }

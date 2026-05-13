@@ -38,5 +38,7 @@ impl PosterFetcherClient for ReqwestPosterFetcher {
 }
 
 pub fn create() -> anyhow::Result<std::sync::Arc<dyn domain::ports::PosterFetcherClient>> {
-    Ok(std::sync::Arc::new(ReqwestPosterFetcher::new(PosterFetcherConfig::from_env())?))
+    Ok(std::sync::Arc::new(ReqwestPosterFetcher::new(
+        PosterFetcherConfig::from_env(),
+    )?))
 }

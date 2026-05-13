@@ -56,7 +56,13 @@ impl Person {
         known_for_department: Option<String>,
         profile_path: Option<String>,
     ) -> Self {
-        Self { id, external_id, name, known_for_department, profile_path }
+        Self {
+            id,
+            external_id,
+            name,
+            known_for_department,
+            profile_path,
+        }
     }
 
     pub fn id(&self) -> &PersonId {

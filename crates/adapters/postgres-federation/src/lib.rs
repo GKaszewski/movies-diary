@@ -7,7 +7,7 @@ use activitypub::RemoteReviewRepository;
 use activitypub_base::{
     BlockedDomain, FederationRepository, Follower, FollowerStatus, FollowingStatus, RemoteActor,
 };
-use domain::models::{Review, ReviewSource, RemoteWatchlistEntry};
+use domain::models::{RemoteWatchlistEntry, Review, ReviewSource};
 use domain::ports::RemoteWatchlistRepository;
 
 fn datetime_to_str(dt: &NaiveDateTime) -> String {
@@ -112,19 +112,31 @@ impl FederationRepository for PostgresFederationRepository {
         .bind(&uid)
         .fetch_all(&self.pool)
         .await?;
-        Ok(rows.into_iter().map(|row| {
-            let url: String = row.get("remote_actor_url");
-            let status_str: String = row.get("status");
-            let handle: String = row.try_get("handle").unwrap_or_default();
-            let inbox_url: String = row.try_get("inbox_url").unwrap_or_default();
-            let shared_inbox_url: Option<String> = row.try_get("shared_inbox_url").ok().flatten();
-            let display_name: Option<String> = row.try_get("display_name").ok().flatten();
-            let avatar_url: Option<String> = row.try_get("avatar_url").ok().flatten();
-            Follower {
-                actor: RemoteActor { url, handle, inbox_url, shared_inbox_url, display_name, avatar_url, outbox_url: row.try_get("outbox_url").ok().flatten() },
-                status: str_to_status(&status_str),
-            }
-        }).collect())
+        Ok(rows
+            .into_iter()
+            .map(|row| {
+                let url: String = row.get("remote_actor_url");
+                let status_str: String = row.get("status");
+                let handle: String = row.try_get("handle").unwrap_or_default();
+                let inbox_url: String = row.try_get("inbox_url").unwrap_or_default();
+                let shared_inbox_url: Option<String> =
+                    row.try_get("shared_inbox_url").ok().flatten();
+                let display_name: Option<String> = row.try_get("display_name").ok().flatten();
+                let avatar_url: Option<String> = row.try_get("avatar_url").ok().flatten();
+                Follower {
+                    actor: RemoteActor {
+                        url,
+                        handle,
+                        inbox_url,
+                        shared_inbox_url,
+                        display_name,
+                        avatar_url,
+                        outbox_url: row.try_get("outbox_url").ok().flatten(),
+                    },
+                    status: str_to_status(&status_str),
+                }
+            })
+            .collect())
     }
 
     async fn get_followers_page(
@@ -152,22 +164,31 @@ impl FederationRepository for PostgresFederationRepository {
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(rows.into_iter().map(|row| {
-            let url: String = row.get("remote_actor_url");
-            let status_str: String = row.get("status");
-            let handle: String = row.try_get("handle").unwrap_or_default();
-            let inbox_url: String = row.try_get("inbox_url").unwrap_or_default();
-            let shared_inbox_url: Option<String> = row.try_get("shared_inbox_url").ok().flatten();
-            let display_name: Option<String> = row.try_get("display_name").ok().flatten();
-            let avatar_url: Option<String> = row.try_get("avatar_url").ok().flatten();
-            Follower {
-                actor: RemoteActor {
-                    url, handle, inbox_url, shared_inbox_url, display_name, avatar_url,
-                    outbox_url: row.try_get("outbox_url").ok().flatten(),
-                },
-                status: str_to_status(&status_str),
-            }
-        }).collect())
+        Ok(rows
+            .into_iter()
+            .map(|row| {
+                let url: String = row.get("remote_actor_url");
+                let status_str: String = row.get("status");
+                let handle: String = row.try_get("handle").unwrap_or_default();
+                let inbox_url: String = row.try_get("inbox_url").unwrap_or_default();
+                let shared_inbox_url: Option<String> =
+                    row.try_get("shared_inbox_url").ok().flatten();
+                let display_name: Option<String> = row.try_get("display_name").ok().flatten();
+                let avatar_url: Option<String> = row.try_get("avatar_url").ok().flatten();
+                Follower {
+                    actor: RemoteActor {
+                        url,
+                        handle,
+                        inbox_url,
+                        shared_inbox_url,
+                        display_name,
+                        avatar_url,
+                        outbox_url: row.try_get("outbox_url").ok().flatten(),
+                    },
+                    status: str_to_status(&status_str),
+                }
+            })
+            .collect())
     }
 
     async fn count_followers(&self, local_user_id: uuid::Uuid) -> Result<usize> {
@@ -264,15 +285,18 @@ impl FederationRepository for PostgresFederationRepository {
         .bind(&uid)
         .fetch_all(&self.pool)
         .await?;
-        Ok(rows.into_iter().map(|row| RemoteActor {
-            url: row.get("url"),
-            handle: row.get("handle"),
-            inbox_url: row.get("inbox_url"),
-            shared_inbox_url: row.try_get("shared_inbox_url").ok().flatten(),
-            display_name: row.try_get("display_name").ok().flatten(),
-            avatar_url: row.try_get("avatar_url").ok().flatten(),
-            outbox_url: row.try_get("outbox_url").ok().flatten(),
-        }).collect())
+        Ok(rows
+            .into_iter()
+            .map(|row| RemoteActor {
+                url: row.get("url"),
+                handle: row.get("handle"),
+                inbox_url: row.get("inbox_url"),
+                shared_inbox_url: row.try_get("shared_inbox_url").ok().flatten(),
+                display_name: row.try_get("display_name").ok().flatten(),
+                avatar_url: row.try_get("avatar_url").ok().flatten(),
+                outbox_url: row.try_get("outbox_url").ok().flatten(),
+            })
+            .collect())
     }
 
     async fn count_following(&self, local_user_id: uuid::Uuid) -> Result<usize> {
@@ -310,15 +334,18 @@ impl FederationRepository for PostgresFederationRepository {
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(rows.into_iter().map(|row| RemoteActor {
-            url: row.get("url"),
-            handle: row.get("handle"),
-            inbox_url: row.get("inbox_url"),
-            shared_inbox_url: row.try_get("shared_inbox_url").ok().flatten(),
-            display_name: row.try_get("display_name").ok().flatten(),
-            avatar_url: row.try_get("avatar_url").ok().flatten(),
-            outbox_url: row.try_get("outbox_url").ok().flatten(),
-        }).collect())
+        Ok(rows
+            .into_iter()
+            .map(|row| RemoteActor {
+                url: row.get("url"),
+                handle: row.get("handle"),
+                inbox_url: row.get("inbox_url"),
+                shared_inbox_url: row.try_get("shared_inbox_url").ok().flatten(),
+                display_name: row.try_get("display_name").ok().flatten(),
+                avatar_url: row.try_get("avatar_url").ok().flatten(),
+                outbox_url: row.try_get("outbox_url").ok().flatten(),
+            })
+            .collect())
     }
 
     async fn upsert_remote_actor(&self, actor: RemoteActor) -> Result<()> {
@@ -368,12 +395,16 @@ impl FederationRepository for PostgresFederationRepository {
         }))
     }
 
-    async fn get_local_actor_keypair(&self, user_id: uuid::Uuid) -> Result<Option<(String, String)>> {
+    async fn get_local_actor_keypair(
+        &self,
+        user_id: uuid::Uuid,
+    ) -> Result<Option<(String, String)>> {
         let uid = user_id.to_string();
-        let row = sqlx::query("SELECT public_key, private_key FROM ap_local_actors WHERE user_id = $1")
-            .bind(&uid)
-            .fetch_optional(&self.pool)
-            .await?;
+        let row =
+            sqlx::query("SELECT public_key, private_key FROM ap_local_actors WHERE user_id = $1")
+                .bind(&uid)
+                .fetch_optional(&self.pool)
+                .await?;
         Ok(row.map(|r| (r.get("public_key"), r.get("private_key"))))
     }
 
@@ -413,15 +444,18 @@ impl FederationRepository for PostgresFederationRepository {
         .bind(&uid)
         .fetch_all(&self.pool)
         .await?;
-        Ok(rows.into_iter().map(|row| RemoteActor {
-            url: row.get("remote_actor_url"),
-            handle: row.try_get("handle").unwrap_or_default(),
-            inbox_url: row.try_get("inbox_url").unwrap_or_default(),
-            shared_inbox_url: row.try_get("shared_inbox_url").ok().flatten(),
-            display_name: row.try_get("display_name").ok().flatten(),
-            avatar_url: row.try_get("avatar_url").ok().flatten(),
-            outbox_url: row.try_get("outbox_url").ok().flatten(),
-        }).collect())
+        Ok(rows
+            .into_iter()
+            .map(|row| RemoteActor {
+                url: row.get("remote_actor_url"),
+                handle: row.try_get("handle").unwrap_or_default(),
+                inbox_url: row.try_get("inbox_url").unwrap_or_default(),
+                shared_inbox_url: row.try_get("shared_inbox_url").ok().flatten(),
+                display_name: row.try_get("display_name").ok().flatten(),
+                avatar_url: row.try_get("avatar_url").ok().flatten(),
+                outbox_url: row.try_get("outbox_url").ok().flatten(),
+            })
+            .collect())
     }
 
     async fn update_following_status(
@@ -536,12 +570,11 @@ impl FederationRepository for PostgresFederationRepository {
     }
 
     async fn is_domain_blocked(&self, domain: &str) -> Result<bool> {
-        let count: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM blocked_domains WHERE domain = $1",
-        )
-        .bind(domain)
-        .fetch_one(&self.pool)
-        .await?;
+        let count: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM blocked_domains WHERE domain = $1")
+                .bind(domain)
+                .fetch_one(&self.pool)
+                .await?;
         Ok(count > 0)
     }
 
@@ -581,7 +614,10 @@ impl FederationRepository for PostgresFederationRepository {
         .bind(&uid)
         .fetch_all(&self.pool)
         .await?;
-        Ok(rows.iter().map(|r| r.get::<String, _>("remote_actor_url")).collect())
+        Ok(rows
+            .iter()
+            .map(|r| r.get::<String, _>("remote_actor_url"))
+            .collect())
     }
 
     async fn is_actor_blocked(&self, local_user_id: uuid::Uuid, actor_url: &str) -> Result<bool> {
@@ -609,7 +645,9 @@ impl RemoteReviewRepository for PostgresFederationRepository {
     ) -> Result<()> {
         let actor_url = match review.source() {
             ReviewSource::Remote { actor_url } => actor_url.clone(),
-            ReviewSource::Local => return Err(anyhow!("save_remote_review called with a local review")),
+            ReviewSource::Local => {
+                return Err(anyhow!("save_remote_review called with a local review"));
+            }
         };
         let movie_id = review.movie_id().value().to_string();
         sqlx::query(
@@ -719,7 +757,16 @@ impl domain::ports::SocialQueryPort for PostgresFederationRepository {
         .fetch_all(&self.pool)
         .await
         .map_err(|e| domain::errors::DomainError::InfrastructureError(e.to_string()))?;
-        Ok(rows.into_iter().map(|(url, handle, display_name)| domain::ports::RemoteActorInfo { url, handle, display_name }).collect())
+        Ok(rows
+            .into_iter()
+            .map(
+                |(url, handle, display_name)| domain::ports::RemoteActorInfo {
+                    url,
+                    handle,
+                    display_name,
+                },
+            )
+            .collect())
     }
 }
 
@@ -747,19 +794,24 @@ impl RemoteWatchlistRepository for PostgresFederationRepository {
         Ok(())
     }
 
-    async fn remove_by_ap_id(&self, ap_id: &str, actor_url: &str) -> Result<(), domain::errors::DomainError> {
-        sqlx::query(
-            "DELETE FROM ap_remote_watchlist_entries WHERE ap_id = $1 AND actor_url = $2",
-        )
-        .bind(ap_id)
-        .bind(actor_url)
-        .execute(&self.pool)
-        .await
-        .map_err(|e| domain::errors::DomainError::InfrastructureError(e.to_string()))?;
+    async fn remove_by_ap_id(
+        &self,
+        ap_id: &str,
+        actor_url: &str,
+    ) -> Result<(), domain::errors::DomainError> {
+        sqlx::query("DELETE FROM ap_remote_watchlist_entries WHERE ap_id = $1 AND actor_url = $2")
+            .bind(ap_id)
+            .bind(actor_url)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| domain::errors::DomainError::InfrastructureError(e.to_string()))?;
         Ok(())
     }
 
-    async fn get_by_actor_url(&self, actor_url: &str) -> Result<Vec<RemoteWatchlistEntry>, domain::errors::DomainError> {
+    async fn get_by_actor_url(
+        &self,
+        actor_url: &str,
+    ) -> Result<Vec<RemoteWatchlistEntry>, domain::errors::DomainError> {
         let rows = sqlx::query(
             "SELECT ap_id, actor_url, movie_title, release_year, external_metadata_id, poster_url, added_at \
              FROM ap_remote_watchlist_entries WHERE actor_url = $1 ORDER BY added_at DESC",
@@ -769,21 +821,27 @@ impl RemoteWatchlistRepository for PostgresFederationRepository {
         .await
         .map_err(|e| domain::errors::DomainError::InfrastructureError(e.to_string()))?;
 
-        rows.into_iter().map(|row| {
-            Ok(RemoteWatchlistEntry {
-                ap_id: row.try_get("ap_id").unwrap_or_default(),
-                actor_url: row.try_get("actor_url").unwrap_or_default(),
-                movie_title: row.try_get("movie_title").unwrap_or_default(),
-                release_year: row.try_get::<i32, _>("release_year").unwrap_or(0) as u16,
-                external_metadata_id: row.try_get("external_metadata_id").ok().flatten(),
-                poster_url: row.try_get("poster_url").ok().flatten(),
-                added_at: row.try_get::<chrono::DateTime<chrono::Utc>, _>("added_at")
-                    .unwrap_or_else(|_| chrono::Utc::now()),
+        rows.into_iter()
+            .map(|row| {
+                Ok(RemoteWatchlistEntry {
+                    ap_id: row.try_get("ap_id").unwrap_or_default(),
+                    actor_url: row.try_get("actor_url").unwrap_or_default(),
+                    movie_title: row.try_get("movie_title").unwrap_or_default(),
+                    release_year: row.try_get::<i32, _>("release_year").unwrap_or(0) as u16,
+                    external_metadata_id: row.try_get("external_metadata_id").ok().flatten(),
+                    poster_url: row.try_get("poster_url").ok().flatten(),
+                    added_at: row
+                        .try_get::<chrono::DateTime<chrono::Utc>, _>("added_at")
+                        .unwrap_or_else(|_| chrono::Utc::now()),
+                })
             })
-        }).collect()
+            .collect()
     }
 
-    async fn remove_all_by_actor(&self, actor_url: &str) -> Result<(), domain::errors::DomainError> {
+    async fn remove_all_by_actor(
+        &self,
+        actor_url: &str,
+    ) -> Result<(), domain::errors::DomainError> {
         sqlx::query("DELETE FROM ap_remote_watchlist_entries WHERE actor_url = $1")
             .bind(actor_url)
             .execute(&self.pool)
@@ -792,18 +850,22 @@ impl RemoteWatchlistRepository for PostgresFederationRepository {
         Ok(())
     }
 
-    async fn get_by_derived_uuid(&self, uuid: uuid::Uuid) -> Result<Vec<RemoteWatchlistEntry>, domain::errors::DomainError> {
-        let actors: Vec<String> = sqlx::query("SELECT DISTINCT actor_url FROM ap_remote_watchlist_entries")
-            .fetch_all(&self.pool)
-            .await
-            .map_err(|e| domain::errors::DomainError::InfrastructureError(e.to_string()))?
-            .into_iter()
-            .filter_map(|row| row.try_get::<String, _>("actor_url").ok())
-            .collect();
+    async fn get_by_derived_uuid(
+        &self,
+        uuid: uuid::Uuid,
+    ) -> Result<Vec<RemoteWatchlistEntry>, domain::errors::DomainError> {
+        let actors: Vec<String> =
+            sqlx::query("SELECT DISTINCT actor_url FROM ap_remote_watchlist_entries")
+                .fetch_all(&self.pool)
+                .await
+                .map_err(|e| domain::errors::DomainError::InfrastructureError(e.to_string()))?
+                .into_iter()
+                .filter_map(|row| row.try_get::<String, _>("actor_url").ok())
+                .collect();
 
-        let target = actors.into_iter().find(|url| {
-            uuid::Uuid::new_v5(&uuid::Uuid::NAMESPACE_URL, url.as_bytes()) == uuid
-        });
+        let target = actors
+            .into_iter()
+            .find(|url| uuid::Uuid::new_v5(&uuid::Uuid::NAMESPACE_URL, url.as_bytes()) == uuid);
 
         match target {
             None => Ok(vec![]),
@@ -812,7 +874,9 @@ impl RemoteWatchlistRepository for PostgresFederationRepository {
     }
 }
 
-pub fn wire(pool: sqlx::PgPool) -> (
+pub fn wire(
+    pool: sqlx::PgPool,
+) -> (
     std::sync::Arc<dyn activitypub::FederationRepository>,
     std::sync::Arc<dyn domain::ports::SocialQueryPort>,
     std::sync::Arc<dyn activitypub::RemoteReviewRepository>,

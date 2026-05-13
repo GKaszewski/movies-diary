@@ -101,9 +101,10 @@ impl ApObjectHandler for ReviewObjectHandler {
                 chrono::DateTime::from_naive_utc_and_offset(*review.watched_at(), chrono::Utc);
 
             if let Some(cutoff) = before
-                && published >= cutoff {
-                    continue;
-                }
+                && published >= cutoff
+            {
+                continue;
+            }
 
             let ap_id = review_url(&self.base_url, review.id());
             let actor_url = actor_url(&self.base_url, user_id);
@@ -118,7 +119,10 @@ impl ApObjectHandler for ReviewObjectHandler {
                 .as_ref()
                 .map(|m| m.title().value().to_string())
                 .unwrap_or_else(|| "Unknown".to_string());
-            let release_year = movie.as_ref().map(|m| m.release_year().value()).unwrap_or(0);
+            let release_year = movie
+                .as_ref()
+                .map(|m| m.release_year().value())
+                .unwrap_or(0);
             let poster_url = movie
                 .as_ref()
                 .and_then(|m| m.poster_path())

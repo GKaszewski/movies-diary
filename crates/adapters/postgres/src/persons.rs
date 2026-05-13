@@ -20,7 +20,10 @@ impl PostgresPersonAdapter {
 
 pub fn create_person_adapter(pool: PgPool) -> (Arc<dyn PersonCommand>, Arc<dyn PersonQuery>) {
     let adapter = Arc::new(PostgresPersonAdapter::new(pool));
-    (Arc::clone(&adapter) as Arc<dyn PersonCommand>, adapter as Arc<dyn PersonQuery>)
+    (
+        Arc::clone(&adapter) as Arc<dyn PersonCommand>,
+        adapter as Arc<dyn PersonQuery>,
+    )
 }
 
 fn map_err(e: sqlx::Error) -> DomainError {
@@ -88,7 +91,10 @@ impl PersonQuery for PostgresPersonAdapter {
         }))
     }
 
-    async fn get_by_external_id(&self, id: &ExternalPersonId) -> Result<Option<Person>, DomainError> {
+    async fn get_by_external_id(
+        &self,
+        id: &ExternalPersonId,
+    ) -> Result<Option<Person>, DomainError> {
         #[derive(sqlx::FromRow)]
         struct Row {
             id: String,
@@ -119,21 +125,25 @@ impl PersonQuery for PostgresPersonAdapter {
     }
 
     async fn get_credits(&self, id: &PersonId) -> Result<PersonCredits, DomainError> {
-        let person = self.get_by_id(id).await?.ok_or_else(|| {
-            DomainError::NotFound(format!("Person {} not found", id.value()))
-        })?;
+        let person = self
+            .get_by_id(id)
+            .await?
+            .ok_or_else(|| DomainError::NotFound(format!("Person {} not found", id.value())))?;
 
-        let tmdb_id: Option<i64> = sqlx::query_scalar(
-            "SELECT tmdb_person_id FROM persons WHERE id = $1",
-        )
-        .bind(id.value().to_string())
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(map_err)?
-        .flatten();
+        let tmdb_id: Option<i64> =
+            sqlx::query_scalar("SELECT tmdb_person_id FROM persons WHERE id = $1")
+                .bind(id.value().to_string())
+                .fetch_optional(&self.pool)
+                .await
+                .map_err(map_err)?
+                .flatten();
 
         let Some(tmdb_id) = tmdb_id else {
-            return Ok(PersonCredits { person, cast: vec![], crew: vec![] });
+            return Ok(PersonCredits {
+                person,
+                cast: vec![],
+                crew: vec![],
+            });
         };
 
         #[derive(sqlx::FromRow)]

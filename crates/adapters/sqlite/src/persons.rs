@@ -20,7 +20,10 @@ impl SqlitePersonAdapter {
 
 pub fn create_person_adapter(pool: SqlitePool) -> (Arc<dyn PersonCommand>, Arc<dyn PersonQuery>) {
     let adapter = Arc::new(SqlitePersonAdapter::new(pool));
-    (Arc::clone(&adapter) as Arc<dyn PersonCommand>, adapter as Arc<dyn PersonQuery>)
+    (
+        Arc::clone(&adapter) as Arc<dyn PersonCommand>,
+        adapter as Arc<dyn PersonQuery>,
+    )
 }
 
 fn map_err(e: sqlx::Error) -> DomainError {
@@ -70,7 +73,10 @@ impl PersonQuery for SqlitePersonAdapter {
         Ok(row.map(PersonRow::into_person))
     }
 
-    async fn get_by_external_id(&self, id: &ExternalPersonId) -> Result<Option<Person>, DomainError> {
+    async fn get_by_external_id(
+        &self,
+        id: &ExternalPersonId,
+    ) -> Result<Option<Person>, DomainError> {
         let row = sqlx::query_as::<_, PersonRow>(
             "SELECT id, external_id, name, known_for_department, profile_path FROM persons WHERE external_id = ?",
         )
@@ -83,21 +89,25 @@ impl PersonQuery for SqlitePersonAdapter {
     }
 
     async fn get_credits(&self, id: &PersonId) -> Result<PersonCredits, DomainError> {
-        let person = self.get_by_id(id).await?.ok_or_else(|| {
-            DomainError::NotFound(format!("Person {} not found", id.value()))
-        })?;
+        let person = self
+            .get_by_id(id)
+            .await?
+            .ok_or_else(|| DomainError::NotFound(format!("Person {} not found", id.value())))?;
 
-        let tmdb_id: Option<i64> = sqlx::query_scalar(
-            "SELECT tmdb_person_id FROM persons WHERE id = ?",
-        )
-        .bind(id.value().to_string())
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(map_err)?
-        .flatten();
+        let tmdb_id: Option<i64> =
+            sqlx::query_scalar("SELECT tmdb_person_id FROM persons WHERE id = ?")
+                .bind(id.value().to_string())
+                .fetch_optional(&self.pool)
+                .await
+                .map_err(map_err)?
+                .flatten();
 
         let Some(tmdb_id) = tmdb_id else {
-            return Ok(PersonCredits { person, cast: vec![], crew: vec![] });
+            return Ok(PersonCredits {
+                person,
+                cast: vec![],
+                crew: vec![],
+            });
         };
 
         let cast = sqlx::query_as::<_, CastRow>(

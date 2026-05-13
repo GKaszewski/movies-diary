@@ -1,7 +1,10 @@
 use chrono::NaiveDateTime;
 use domain::{
     errors::DomainError,
-    models::{DiaryEntry, FeedEntry, Movie, MovieSummary, Review, ReviewSource, UserSummary, WatchlistEntry, WatchlistWithMovie},
+    models::{
+        DiaryEntry, FeedEntry, Movie, MovieSummary, Review, ReviewSource, UserSummary,
+        WatchlistEntry, WatchlistWithMovie,
+    },
     value_objects::{
         Comment, Email, ExternalMetadataId, MovieId, MovieTitle, PosterPath, Rating, ReleaseYear,
         ReviewId, UserId, WatchlistEntryId,

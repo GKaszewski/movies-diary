@@ -51,10 +51,12 @@ impl PeriodicJob for EnrichmentStalenessJob {
         }
         tracing::info!("enrichment scan: {} stale movies", stale.len());
         for (movie_id, external_metadata_id) in stale {
-            let event = DomainEvent::MovieEnrichmentRequested { movie_id, external_metadata_id };
+            let event = DomainEvent::MovieEnrichmentRequested {
+                movie_id,
+                external_metadata_id,
+            };
             self.ctx.event_publisher.publish(&event).await?;
         }
         Ok(())
     }
 }
-

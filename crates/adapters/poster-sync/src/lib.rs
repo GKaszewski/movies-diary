@@ -4,7 +4,10 @@ use async_trait::async_trait;
 use domain::{
     errors::DomainError,
     events::DomainEvent,
-    ports::{EventHandler, EventPublisher, ImageStorage, MetadataClient, MovieRepository, PosterFetcherClient},
+    ports::{
+        EventHandler, EventPublisher, ImageStorage, MetadataClient, MovieRepository,
+        PosterFetcherClient,
+    },
     value_objects::{ExternalMetadataId, MovieId, PosterPath},
 };
 
@@ -26,10 +29,21 @@ impl PosterSyncHandler {
         event_publisher: Arc<dyn EventPublisher>,
         max_retries: u32,
     ) -> Self {
-        Self { movie_repository, metadata_client, poster_fetcher, image_storage, event_publisher, max_retries }
+        Self {
+            movie_repository,
+            metadata_client,
+            poster_fetcher,
+            image_storage,
+            event_publisher,
+            max_retries,
+        }
     }
 
-    async fn sync(&self, movie_id: MovieId, external_metadata_id: ExternalMetadataId) -> Result<(), DomainError> {
+    async fn sync(
+        &self,
+        movie_id: MovieId,
+        external_metadata_id: ExternalMetadataId,
+    ) -> Result<(), DomainError> {
         let mut movie = match self.movie_repository.get_movie_by_id(&movie_id).await? {
             Some(m) => m,
             None => {
@@ -38,7 +52,11 @@ impl PosterSyncHandler {
             }
         };
 
-        let poster_url = match self.metadata_client.get_poster_url(&external_metadata_id).await {
+        let poster_url = match self
+            .metadata_client
+            .get_poster_url(&external_metadata_id)
+            .await
+        {
             Ok(Some(url)) => url,
             Ok(None) => return Ok(()),
             Err(e) => {
@@ -48,9 +66,15 @@ impl PosterSyncHandler {
         };
 
         let image_bytes = self.poster_fetcher.fetch_poster_bytes(&poster_url).await?;
-        let stored_path = self.image_storage.store(&movie_id.value().to_string(), &image_bytes).await?;
-        if let Err(e) = self.event_publisher
-            .publish(&DomainEvent::ImageStored { key: stored_path.clone() })
+        let stored_path = self
+            .image_storage
+            .store(&movie_id.value().to_string(), &image_bytes)
+            .await?;
+        if let Err(e) = self
+            .event_publisher
+            .publish(&DomainEvent::ImageStored {
+                key: stored_path.clone(),
+            })
             .await
         {
             tracing::warn!("failed to emit ImageStored for {stored_path}: {e}");
@@ -66,10 +90,14 @@ impl PosterSyncHandler {
 impl EventHandler for PosterSyncHandler {
     async fn handle(&self, event: &DomainEvent) -> Result<(), DomainError> {
         let (movie_id, external_metadata_id) = match event {
-            DomainEvent::MovieDiscovered { movie_id, external_metadata_id } => {
-                (movie_id.value(), external_metadata_id.value().to_owned())
-            }
-            DomainEvent::MovieEnrichmentRequested { movie_id, external_metadata_id } => {
+            DomainEvent::MovieDiscovered {
+                movie_id,
+                external_metadata_id,
+            } => (movie_id.value(), external_metadata_id.value().to_owned()),
+            DomainEvent::MovieEnrichmentRequested {
+                movie_id,
+                external_metadata_id,
+            } => {
                 // Only sync poster if the movie doesn't have one yet
                 let already_has_poster = self
                     .movie_repository
@@ -90,7 +118,10 @@ impl EventHandler for PosterSyncHandler {
 
         let mut last_err: Option<DomainError> = None;
         for attempt in 0..=self.max_retries {
-            match self.sync(movie_id.clone(), external_metadata_id.clone()).await {
+            match self
+                .sync(movie_id.clone(), external_metadata_id.clone())
+                .await
+            {
                 Ok(()) => return Ok(()),
                 Err(e) => {
                     if attempt < self.max_retries {
@@ -109,7 +140,10 @@ impl EventHandler for PosterSyncHandler {
         }
 
         let err = last_err.expect("loop runs at least once");
-        tracing::error!(attempts = self.max_retries + 1, "poster sync failed after all attempts: {err}");
+        tracing::error!(
+            attempts = self.max_retries + 1,
+            "poster sync failed after all attempts: {err}"
+        );
         Err(err)
     }
 }

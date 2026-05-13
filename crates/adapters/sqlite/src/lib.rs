@@ -402,11 +402,15 @@ impl MovieRepository for SqliteMovieRepository {
         &self,
         page: &domain::models::collections::PageParams,
         filter: &domain::models::MovieFilter,
-    ) -> Result<domain::models::collections::Paginated<domain::models::MovieSummary>, DomainError> {
+    ) -> Result<domain::models::collections::Paginated<domain::models::MovieSummary>, DomainError>
+    {
         use sqlx::Row;
         let limit = page.limit as i64;
         let offset = page.offset as i64;
-        let pattern = filter.search.as_deref().map(|s| format!("%{}%", s.to_lowercase()));
+        let pattern = filter
+            .search
+            .as_deref()
+            .map(|s| format!("%{}%", s.to_lowercase()));
         let genre = filter.genre.as_deref();
         let language = filter.language.as_deref();
 
@@ -694,10 +698,7 @@ impl DiaryRepository for SqliteMovieRepository {
         }
 
         let count_q = bind_filter_params!(sqlx::query_scalar::<_, i64>(&count_sql));
-        let total = count_q
-            .fetch_one(&self.pool)
-            .await
-            .map_err(Self::map_err)?;
+        let total = count_q.fetch_one(&self.pool).await.map_err(Self::map_err)?;
 
         let rows_q = bind_filter_params!(sqlx::query_as::<_, FeedRow>(&select_sql));
         let rows = rows_q
@@ -800,13 +801,10 @@ impl DiaryRepository for SqliteMovieRepository {
         let limit = page.limit as i64;
         let offset = page.offset as i64;
 
-        let total = sqlx::query_scalar!(
-            "SELECT COUNT(*) FROM reviews WHERE movie_id = ?",
-            id_str
-        )
-        .fetch_one(&self.pool)
-        .await
-        .map_err(Self::map_err)?;
+        let total = sqlx::query_scalar!("SELECT COUNT(*) FROM reviews WHERE movie_id = ?", id_str)
+            .fetch_one(&self.pool)
+            .await
+            .map_err(Self::map_err)?;
 
         let rows = sqlx::query_as::<_, FeedRow>(
             "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
@@ -843,12 +841,11 @@ impl DiaryRepository for SqliteMovieRepository {
     }
 
     async fn count_local_posts(&self) -> Result<u64, DomainError> {
-        let count: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM reviews WHERE remote_actor_url IS NULL"
-        )
-        .fetch_one(&self.pool)
-        .await
-        .map_err(Self::map_err)?;
+        let count: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM reviews WHERE remote_actor_url IS NULL")
+                .fetch_one(&self.pool)
+                .await
+                .map_err(Self::map_err)?;
         Ok(count as u64)
     }
 }
@@ -934,7 +931,9 @@ impl StatsRepository for SqliteMovieRepository {
     }
 }
 
-pub async fn wire(database_url: &str) -> anyhow::Result<(
+pub async fn wire(
+    database_url: &str,
+) -> anyhow::Result<(
     sqlx::SqlitePool,
     std::sync::Arc<dyn domain::ports::MovieRepository>,
     std::sync::Arc<dyn domain::ports::ReviewRepository>,
@@ -946,9 +945,9 @@ pub async fn wire(database_url: &str) -> anyhow::Result<(
     std::sync::Arc<dyn domain::ports::MovieProfileRepository>,
     std::sync::Arc<dyn domain::ports::WatchlistRepository>,
 )> {
-    use std::str::FromStr;
     use anyhow::Context;
     use sqlx::sqlite::SqliteConnectOptions;
+    use std::str::FromStr;
 
     let opts = SqliteConnectOptions::from_str(database_url)
         .context("Invalid DATABASE_URL")?
@@ -1073,8 +1072,9 @@ mod feed_filter_tests {
         let repo = SqliteMovieRepository::new(pool);
 
         let filter = FollowingFilter {
-            local_user_ids: vec![uuid::Uuid::parse_str("11111111-1111-1111-1111-111111111111")
-                .unwrap()],
+            local_user_ids: vec![
+                uuid::Uuid::parse_str("11111111-1111-1111-1111-111111111111").unwrap(),
+            ],
             remote_actor_urls: vec!["https://remote.social/users/carol".to_string()],
         };
         let page = PageParams::new(Some(10), Some(0)).unwrap();
@@ -1147,7 +1147,10 @@ mod feed_filter_tests {
         assert_eq!(result.total_count, 1);
         assert_eq!(result.items.len(), 1);
         assert!(result.items[0].review().is_remote());
-        assert_eq!(result.items[0].user_email(), "https://remote.social/users/carol");
+        assert_eq!(
+            result.items[0].user_email(),
+            "https://remote.social/users/carol"
+        );
     }
 
     #[tokio::test]
@@ -1209,8 +1212,12 @@ mod diary_count_tests {
             .bind(&user_id).bind("a@b.com").bind("hash").bind("2024-01-01 00:00:00").bind("alice")
             .execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO movies (id, title, release_year) VALUES (?, ?, ?)")
-            .bind(&movie_id).bind("Test Movie").bind(2024i32)
-            .execute(&pool).await.unwrap();
+            .bind(&movie_id)
+            .bind("Test Movie")
+            .bind(2024i32)
+            .execute(&pool)
+            .await
+            .unwrap();
 
         // Local review (remote_actor_url IS NULL)
         let r1 = uuid::Uuid::new_v4().to_string();

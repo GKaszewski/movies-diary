@@ -97,11 +97,7 @@ impl ApiClient {
         Ok(check_status(resp).await?.json().await?)
     }
 
-    pub async fn export_diary(
-        &self,
-        token: &str,
-        format: &str,
-    ) -> Result<Vec<u8>, ApiError> {
+    pub async fn export_diary(&self, token: &str, format: &str) -> Result<Vec<u8>, ApiError> {
         let resp = self
             .http
             .get(self.api("/diary/export"))
@@ -178,7 +174,9 @@ impl ApiClient {
             .http
             .post(self.api("/social/follow"))
             .bearer_auth(token)
-            .json(&FollowRequest { handle: handle.into() })
+            .json(&FollowRequest {
+                handle: handle.into(),
+            })
             .send()
             .await?;
         check_status(resp).await?;
@@ -190,7 +188,9 @@ impl ApiClient {
             .http
             .post(self.api("/social/unfollow"))
             .bearer_auth(token)
-            .json(&ActorUrlRequest { actor_url: actor_url.into() })
+            .json(&ActorUrlRequest {
+                actor_url: actor_url.into(),
+            })
             .send()
             .await?;
         check_status(resp).await?;
@@ -202,7 +202,9 @@ impl ApiClient {
             .http
             .post(self.api("/social/followers/accept"))
             .bearer_auth(token)
-            .json(&ActorUrlRequest { actor_url: actor_url.into() })
+            .json(&ActorUrlRequest {
+                actor_url: actor_url.into(),
+            })
             .send()
             .await?;
         check_status(resp).await?;
@@ -214,7 +216,9 @@ impl ApiClient {
             .http
             .post(self.api("/social/followers/reject"))
             .bearer_auth(token)
-            .json(&ActorUrlRequest { actor_url: actor_url.into() })
+            .json(&ActorUrlRequest {
+                actor_url: actor_url.into(),
+            })
             .send()
             .await?;
         check_status(resp).await?;
@@ -226,7 +230,9 @@ impl ApiClient {
             .http
             .post(self.api("/social/followers/remove"))
             .bearer_auth(token)
-            .json(&ActorUrlRequest { actor_url: actor_url.into() })
+            .json(&ActorUrlRequest {
+                actor_url: actor_url.into(),
+            })
             .send()
             .await?;
         check_status(resp).await?;

@@ -3,9 +3,7 @@ use std::sync::Arc;
 
 use domain::{
     errors::DomainError,
-    models::{
-        CastMember, CrewMember, ExternalPersonId, IndexableDocument, Person, PersonId,
-    },
+    models::{CastMember, CrewMember, ExternalPersonId, IndexableDocument, Person, PersonId},
     ports::{MovieProfileRepository, MovieRepository, PersonCommand, SearchCommand},
 };
 

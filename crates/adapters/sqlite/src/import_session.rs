@@ -22,7 +22,13 @@ struct ParsedFileJson {
 
 #[derive(Serialize, Deserialize)]
 enum DomainFieldJson {
-    Title, ReleaseYear, Director, Rating, WatchedAt, Comment, ExternalMetadataId,
+    Title,
+    ReleaseYear,
+    Director,
+    Rating,
+    WatchedAt,
+    Comment,
+    ExternalMetadataId,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -41,19 +47,29 @@ struct FieldMappingJson {
 
 #[derive(Serialize, Deserialize, Default)]
 struct ImportRowJson {
-    #[serde(skip_serializing_if = "Option::is_none")] title: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")] release_year: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")] director: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")] rating: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")] watched_at: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")] comment: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")] external_metadata_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    title: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    release_year: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    director: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    rating: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    watched_at: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    comment: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    external_metadata_id: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
 enum RowResultJson {
     Valid(ImportRowJson),
-    Invalid { errors: Vec<String>, raw: Vec<(String, String)> },
+    Invalid {
+        errors: Vec<String>,
+        raw: Vec<(String, String)>,
+    },
 }
 
 #[derive(Serialize, Deserialize)]
@@ -182,7 +198,9 @@ pub struct SqliteImportSessionRepository {
 }
 
 impl SqliteImportSessionRepository {
-    pub fn new(pool: SqlitePool) -> Self { Self { pool } }
+    pub fn new(pool: SqlitePool) -> Self {
+        Self { pool }
+    }
 
     fn map_err(e: sqlx::Error) -> DomainError {
         tracing::error!("DB error: {:?}", e);
@@ -192,18 +210,33 @@ impl SqliteImportSessionRepository {
     fn parse_dt(s: &str) -> Result<NaiveDateTime, DomainError> {
         NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S")
             .or_else(|_| NaiveDateTime::parse_from_str(s, "%Y-%m-%dT%H:%M:%S"))
-            .map_err(|e| DomainError::InfrastructureError(format!("invalid datetime '{}': {}", s, e)))
+            .map_err(|e| {
+                DomainError::InfrastructureError(format!("invalid datetime '{}': {}", s, e))
+            })
     }
 
-    fn serialize_session(s: &ImportSession) -> Result<(String, Option<String>, Option<String>), DomainError> {
-        let parsed = s.parsed_file.as_ref()
-            .map(|f| ser(&ParsedFileJson { columns: f.columns.clone(), rows: f.rows.clone() }))
+    fn serialize_session(
+        s: &ImportSession,
+    ) -> Result<(String, Option<String>, Option<String>), DomainError> {
+        let parsed = s
+            .parsed_file
+            .as_ref()
+            .map(|f| {
+                ser(&ParsedFileJson {
+                    columns: f.columns.clone(),
+                    rows: f.rows.clone(),
+                })
+            })
             .transpose()?
             .unwrap_or_default();
-        let mappings = s.field_mappings.as_ref()
+        let mappings = s
+            .field_mappings
+            .as_ref()
             .map(|ms| ser(&ms.iter().map(mapping_to_json).collect::<Vec<_>>()))
             .transpose()?;
-        let results = s.row_results.as_ref()
+        let results = s
+            .row_results
+            .as_ref()
             .map(|rs| ser(&rs.iter().map(annotated_to_json).collect::<Vec<_>>()))
             .transpose()?;
         Ok((parsed, mappings, results))
@@ -222,15 +255,20 @@ impl SqliteImportSessionRepository {
             None
         } else {
             let j: ParsedFileJson = de(&parsed_data)?;
-            Some(ParsedFile { columns: j.columns, rows: j.rows })
+            Some(ParsedFile {
+                columns: j.columns,
+                rows: j.rows,
+            })
         };
-        let field_mappings = field_mappings.as_deref()
+        let field_mappings = field_mappings
+            .as_deref()
             .map(|s| -> Result<Vec<FieldMapping>, DomainError> {
                 let js: Vec<FieldMappingJson> = de(s)?;
                 Ok(js.into_iter().map(mapping_from_json).collect())
             })
             .transpose()?;
-        let row_results = row_results.as_deref()
+        let row_results = row_results
+            .as_deref()
             .map(|s| -> Result<Vec<AnnotatedRow>, DomainError> {
                 let js: Vec<AnnotatedRowJson> = de(s)?;
                 Ok(js.into_iter().map(annotated_from_json).collect())
@@ -239,10 +277,13 @@ impl SqliteImportSessionRepository {
 
         Ok(ImportSession {
             id: ImportSessionId::from_uuid(
-                id.parse::<uuid::Uuid>().map_err(|e| DomainError::InfrastructureError(e.to_string()))?
+                id.parse::<uuid::Uuid>()
+                    .map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
             ),
             user_id: UserId::from_uuid(
-                user_id.parse::<uuid::Uuid>().map_err(|e| DomainError::InfrastructureError(e.to_string()))?
+                user_id
+                    .parse::<uuid::Uuid>()
+                    .map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
             ),
             parsed_file,
             field_mappings,
@@ -272,22 +313,35 @@ impl ImportSessionRepository for SqliteImportSessionRepository {
         .map_err(Self::map_err)
     }
 
-    async fn get(&self, id: &ImportSessionId, user_id: &UserId) -> Result<Option<ImportSession>, DomainError> {
+    async fn get(
+        &self,
+        id: &ImportSessionId,
+        user_id: &UserId,
+    ) -> Result<Option<ImportSession>, DomainError> {
         let id_str = id.value().to_string();
         let uid_str = user_id.value().to_string();
         let row = sqlx::query!(
             "SELECT id, user_id, parsed_data, field_mappings, row_results, created_at, expires_at
              FROM import_sessions WHERE id = ? AND user_id = ?",
-            id_str, uid_str
+            id_str,
+            uid_str
         )
         .fetch_optional(&self.pool)
         .await
         .map_err(Self::map_err)?;
 
-        row.map(|r| Self::deserialize_session(
-            r.id, r.user_id, r.parsed_data, r.field_mappings, r.row_results,
-            &r.created_at, &r.expires_at,
-        )).transpose()
+        row.map(|r| {
+            Self::deserialize_session(
+                r.id,
+                r.user_id,
+                r.parsed_data,
+                r.field_mappings,
+                r.row_results,
+                &r.created_at,
+                &r.expires_at,
+            )
+        })
+        .transpose()
     }
 
     async fn update(&self, s: &ImportSession) -> Result<(), DomainError> {
@@ -295,7 +349,9 @@ impl ImportSessionRepository for SqliteImportSessionRepository {
         let (_, field_mappings, row_results) = Self::serialize_session(s)?;
         sqlx::query!(
             "UPDATE import_sessions SET field_mappings = ?, row_results = ? WHERE id = ?",
-            field_mappings, row_results, id
+            field_mappings,
+            row_results,
+            id
         )
         .execute(&self.pool)
         .await
@@ -322,10 +378,13 @@ impl ImportSessionRepository for SqliteImportSessionRepository {
 
     async fn delete_expired_for_user(&self, user_id: &UserId) -> Result<(), DomainError> {
         let uid = user_id.value().to_string();
-        sqlx::query!("DELETE FROM import_sessions WHERE user_id = ? AND expires_at < datetime('now')", uid)
-            .execute(&self.pool)
-            .await
-            .map(|_| ())
-            .map_err(Self::map_err)
+        sqlx::query!(
+            "DELETE FROM import_sessions WHERE user_id = ? AND expires_at < datetime('now')",
+            uid
+        )
+        .execute(&self.pool)
+        .await
+        .map(|_| ())
+        .map_err(Self::map_err)
     }
 }

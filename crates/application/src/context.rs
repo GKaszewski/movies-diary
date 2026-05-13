@@ -1,16 +1,14 @@
 use std::sync::Arc;
 
-use domain::ports::{
-    AuthService, DiaryExporter, DiaryRepository, DocumentParser, EventPublisher,
-    ImageStorage,
-    ImportProfileRepository, ImportSessionRepository,
-    MetadataClient, MovieProfileRepository, MovieRepository, PasswordHasher, PosterFetcherClient,
-    PersonCommand, PersonQuery, SearchCommand, SearchPort,
-    ReviewRepository, StatsRepository, UserProfileFieldsRepository, UserRepository,
-    WatchlistRepository,
-};
 #[cfg(feature = "federation")]
 use domain::ports::RemoteWatchlistRepository;
+use domain::ports::{
+    AuthService, DiaryExporter, DiaryRepository, DocumentParser, EventPublisher, ImageStorage,
+    ImportProfileRepository, ImportSessionRepository, MetadataClient, MovieProfileRepository,
+    MovieRepository, PasswordHasher, PersonCommand, PersonQuery, PosterFetcherClient,
+    ReviewRepository, SearchCommand, SearchPort, StatsRepository, UserProfileFieldsRepository,
+    UserRepository, WatchlistRepository,
+};
 
 use crate::config::AppConfig;
 

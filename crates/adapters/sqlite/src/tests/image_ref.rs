@@ -40,7 +40,9 @@ async fn list_keys_returns_both_avatar_and_poster_paths() {
     sqlx::query("INSERT INTO users VALUES ('u1','e@e.com','u','h','2024-01-01','standard',NULL,'avatars/u1')")
         .execute(&pool).await.unwrap();
     sqlx::query("INSERT INTO movies VALUES ('m1','tt1','Title',2020,'Dir','posters/m1')")
-        .execute(&pool).await.unwrap();
+        .execute(&pool)
+        .await
+        .unwrap();
 
     let adapter = SqliteImageRefAdapter::new(pool);
     let mut keys = adapter.list_keys().await.unwrap();
@@ -54,8 +56,12 @@ async fn list_keys_excludes_nulls() {
     let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
     setup(&pool).await;
 
-    sqlx::query("INSERT INTO users VALUES ('u1','e@e.com','u','h','2024-01-01','standard',NULL,NULL)")
-        .execute(&pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO users VALUES ('u1','e@e.com','u','h','2024-01-01','standard',NULL,NULL)",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
 
     let adapter = SqliteImageRefAdapter::new(pool);
     assert_eq!(adapter.list_keys().await.unwrap(), Vec::<String>::new());
@@ -73,7 +79,9 @@ async fn swap_updates_avatar_path() {
     adapter.swap("avatars/u1", "avatars/u1.avif").await.unwrap();
 
     let row: (Option<String>,) = sqlx::query_as("SELECT avatar_path FROM users WHERE id='u1'")
-        .fetch_one(&pool).await.unwrap();
+        .fetch_one(&pool)
+        .await
+        .unwrap();
     assert_eq!(row.0.as_deref(), Some("avatars/u1.avif"));
 }
 
@@ -83,13 +91,17 @@ async fn swap_updates_poster_path() {
     setup(&pool).await;
 
     sqlx::query("INSERT INTO movies VALUES ('m1','tt1','Title',2020,'Dir','posters/m1')")
-        .execute(&pool).await.unwrap();
+        .execute(&pool)
+        .await
+        .unwrap();
 
     let adapter = SqliteImageRefAdapter::new(pool.clone());
     adapter.swap("posters/m1", "posters/m1.avif").await.unwrap();
 
     let row: (Option<String>,) = sqlx::query_as("SELECT poster_path FROM movies WHERE id='m1'")
-        .fetch_one(&pool).await.unwrap();
+        .fetch_one(&pool)
+        .await
+        .unwrap();
     assert_eq!(row.0.as_deref(), Some("posters/m1.avif"));
 }
 
@@ -99,5 +111,8 @@ async fn swap_noop_when_key_not_found() {
     setup(&pool).await;
 
     let adapter = SqliteImageRefAdapter::new(pool);
-    adapter.swap("missing/key", "missing/key.avif").await.unwrap();
+    adapter
+        .swap("missing/key", "missing/key.avif")
+        .await
+        .unwrap();
 }

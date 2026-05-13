@@ -1,7 +1,10 @@
 use async_trait::async_trait;
 use domain::{
     errors::DomainError,
-    models::{WatchlistEntry, WatchlistWithMovie, collections::{PageParams, Paginated}},
+    models::{
+        WatchlistEntry, WatchlistWithMovie,
+        collections::{PageParams, Paginated},
+    },
     ports::WatchlistRepository,
     value_objects::{MovieId, UserId},
 };
@@ -51,14 +54,13 @@ impl WatchlistRepository for SqliteWatchlistRepository {
         let uid = user_id.value().to_string();
         let mid = movie_id.value().to_string();
 
-        let result = sqlx::query(
-            "DELETE FROM watchlist_entries WHERE user_id = ? AND movie_id = ?",
-        )
-        .bind(&uid)
-        .bind(&mid)
-        .execute(&self.pool)
-        .await
-        .map_err(Self::map_err)?;
+        let result =
+            sqlx::query("DELETE FROM watchlist_entries WHERE user_id = ? AND movie_id = ?")
+                .bind(&uid)
+                .bind(&mid)
+                .execute(&self.pool)
+                .await
+                .map_err(Self::map_err)?;
 
         if result.rows_affected() == 0 {
             return Err(DomainError::NotFound(format!(
@@ -76,14 +78,13 @@ impl WatchlistRepository for SqliteWatchlistRepository {
     ) -> Result<bool, DomainError> {
         let uid = user_id.value().to_string();
         let mid = movie_id.value().to_string();
-        let result = sqlx::query(
-            "DELETE FROM watchlist_entries WHERE user_id = ? AND movie_id = ?",
-        )
-        .bind(&uid)
-        .bind(&mid)
-        .execute(&self.pool)
-        .await
-        .map_err(Self::map_err)?;
+        let result =
+            sqlx::query("DELETE FROM watchlist_entries WHERE user_id = ? AND movie_id = ?")
+                .bind(&uid)
+                .bind(&mid)
+                .execute(&self.pool)
+                .await
+                .map_err(Self::map_err)?;
         Ok(result.rows_affected() > 0)
     }
 
@@ -113,15 +114,13 @@ impl WatchlistRepository for SqliteWatchlistRepository {
         .await
         .map_err(Self::map_err)?;
 
-        let total: i64 = sqlx::query(
-            "SELECT COUNT(*) FROM watchlist_entries WHERE user_id = ?",
-        )
-        .bind(&uid)
-        .fetch_one(&self.pool)
-        .await
-        .map_err(Self::map_err)?
-        .try_get(0)
-        .unwrap_or(0);
+        let total: i64 = sqlx::query("SELECT COUNT(*) FROM watchlist_entries WHERE user_id = ?")
+            .bind(&uid)
+            .fetch_one(&self.pool)
+            .await
+            .map_err(Self::map_err)?
+            .try_get(0)
+            .unwrap_or(0);
 
         let items = rows
             .into_iter()

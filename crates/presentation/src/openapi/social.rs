@@ -33,6 +33,6 @@ use utoipa::OpenApi;
         BlockedDomainResponse,
         AddBlockedDomainRequest,
         BlockedActorResponse,
-    )),
+    ))
 )]
 pub struct SocialDoc;

@@ -4,7 +4,9 @@ use domain::value_objects::{ExternalMetadataId, MovieId, Rating, ReviewId, UserI
 use uuid::Uuid;
 
 fn dt() -> NaiveDateTime {
-    chrono::DateTime::from_timestamp(1_700_000_000, 0).unwrap().naive_utc()
+    chrono::DateTime::from_timestamp(1_700_000_000, 0)
+        .unwrap()
+        .naive_utc()
 }
 
 #[test]

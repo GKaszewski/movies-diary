@@ -10,21 +10,20 @@ use domain::{
     errors::DomainError,
     events::DomainEvent,
     models::{
-        DiaryEntry, DiaryFilter, FeedEntry, Movie, Review, ReviewHistory, UserStats,
+        DiaryEntry, DiaryFilter, EntityType, FeedEntry, IndexableDocument, Movie, Person,
+        PersonCredits, PersonId, Review, ReviewHistory, SearchQuery, SearchResults, UserStats,
         UserTrends,
         collections::{PageParams, Paginated},
-        PersonId, EntityType, IndexableDocument, Person, PersonCredits,
-        SearchQuery, SearchResults,
     },
     ports::{
-        AuthService, DiaryRepository, EventPublisher, GeneratedToken, ImageStorage,
-        MetadataClient, MovieRepository, PasswordHasher, PosterFetcherClient, ReviewRepository,
-        StatsRepository, UserRepository, WatchlistRepository,
-        PersonCommand, PersonQuery, SearchPort, SearchCommand,
+        AuthService, DiaryRepository, EventPublisher, GeneratedToken, ImageStorage, MetadataClient,
+        MovieRepository, PasswordHasher, PersonCommand, PersonQuery, PosterFetcherClient,
+        ReviewRepository, SearchCommand, SearchPort, StatsRepository, UserRepository,
+        WatchlistRepository,
     },
     value_objects::{
-        Email, ExternalMetadataId, MovieId, MovieTitle, PasswordHash, PosterUrl,
-        ReleaseYear, ReviewId, UserId,
+        Email, ExternalMetadataId, MovieId, MovieTitle, PasswordHash, PosterUrl, ReleaseYear,
+        ReviewId, UserId,
     },
 };
 use std::sync::Arc;
@@ -58,7 +57,12 @@ impl MovieRepository for Panic {
     async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> {
         panic!()
     }
-    async fn list_movies(&self, _: &domain::models::collections::PageParams, _: &domain::models::MovieFilter) -> Result<domain::models::collections::Paginated<domain::models::MovieSummary>, DomainError> {
+    async fn list_movies(
+        &self,
+        _: &domain::models::collections::PageParams,
+        _: &domain::models::MovieFilter,
+    ) -> Result<domain::models::collections::Paginated<domain::models::MovieSummary>, DomainError>
+    {
         panic!()
     }
 }
@@ -123,10 +127,7 @@ impl DiaryRepository for Panic {
 #[cfg(feature = "federation")]
 #[async_trait::async_trait]
 impl domain::ports::SocialQueryPort for Panic {
-    async fn get_accepted_following_urls(
-        &self,
-        _: uuid::Uuid,
-    ) -> Result<Vec<String>, DomainError> {
+    async fn get_accepted_following_urls(&self, _: uuid::Uuid) -> Result<Vec<String>, DomainError> {
         panic!()
     }
     async fn list_all_followed_remote_actors(
@@ -167,9 +168,15 @@ impl PosterFetcherClient for Panic {
 }
 #[async_trait::async_trait]
 impl ImageStorage for Panic {
-    async fn store(&self, _: &str, _: &[u8]) -> Result<String, DomainError> { panic!() }
-    async fn get(&self, _: &str) -> Result<Vec<u8>, DomainError> { panic!() }
-    async fn delete(&self, _: &str) -> Result<(), DomainError> { panic!() }
+    async fn store(&self, _: &str, _: &[u8]) -> Result<String, DomainError> {
+        panic!()
+    }
+    async fn get(&self, _: &str) -> Result<Vec<u8>, DomainError> {
+        panic!()
+    }
+    async fn delete(&self, _: &str) -> Result<(), DomainError> {
+        panic!()
+    }
 }
 #[async_trait::async_trait]
 impl AuthService for Panic {
@@ -191,19 +198,13 @@ impl PasswordHasher for Panic {
 }
 #[async_trait::async_trait]
 impl UserRepository for Panic {
-    async fn find_by_email(
-        &self,
-        _: &Email,
-    ) -> Result<Option<domain::models::User>, DomainError> {
+    async fn find_by_email(&self, _: &Email) -> Result<Option<domain::models::User>, DomainError> {
         panic!()
     }
     async fn save(&self, _: &domain::models::User) -> Result<(), DomainError> {
         panic!()
     }
-    async fn find_by_id(
-        &self,
-        _: &UserId,
-    ) -> Result<Option<domain::models::User>, DomainError> {
+    async fn find_by_id(&self, _: &UserId) -> Result<Option<domain::models::User>, DomainError> {
         panic!()
     }
     async fn find_by_username(
@@ -215,14 +216,32 @@ impl UserRepository for Panic {
     async fn list_with_stats(&self) -> Result<Vec<domain::models::UserSummary>, DomainError> {
         panic!()
     }
-    async fn update_profile(&self, _: &UserId, _: Option<String>, _: Option<String>, _: Option<String>, _: Option<String>) -> Result<(), DomainError> {
+    async fn update_profile(
+        &self,
+        _: &UserId,
+        _: Option<String>,
+        _: Option<String>,
+        _: Option<String>,
+        _: Option<String>,
+    ) -> Result<(), DomainError> {
         panic!()
     }
 }
 #[async_trait::async_trait]
 impl domain::ports::UserProfileFieldsRepository for Panic {
-    async fn get_fields(&self, _: &UserId) -> Result<Vec<domain::models::ProfileField>, DomainError> { panic!() }
-    async fn set_fields(&self, _: &UserId, _: Vec<domain::models::ProfileField>) -> Result<(), DomainError> { panic!() }
+    async fn get_fields(
+        &self,
+        _: &UserId,
+    ) -> Result<Vec<domain::models::ProfileField>, DomainError> {
+        panic!()
+    }
+    async fn set_fields(
+        &self,
+        _: &UserId,
+        _: Vec<domain::models::ProfileField>,
+    ) -> Result<(), DomainError> {
+        panic!()
+    }
 }
 #[async_trait::async_trait]
 impl EventPublisher for Panic {
@@ -232,33 +251,104 @@ impl EventPublisher for Panic {
 }
 #[async_trait::async_trait]
 impl domain::ports::ImportSessionRepository for Panic {
-    async fn create(&self, _: &domain::models::ImportSession) -> Result<(), DomainError> { panic!() }
-    async fn get(&self, _: &domain::value_objects::ImportSessionId, _: &UserId) -> Result<Option<domain::models::ImportSession>, DomainError> { panic!() }
-    async fn update(&self, _: &domain::models::ImportSession) -> Result<(), DomainError> { panic!() }
-    async fn delete(&self, _: &domain::value_objects::ImportSessionId) -> Result<(), DomainError> { panic!() }
-    async fn delete_expired(&self) -> Result<u64, DomainError> { panic!() }
-    async fn delete_expired_for_user(&self, _: &UserId) -> Result<(), DomainError> { panic!() }
+    async fn create(&self, _: &domain::models::ImportSession) -> Result<(), DomainError> {
+        panic!()
+    }
+    async fn get(
+        &self,
+        _: &domain::value_objects::ImportSessionId,
+        _: &UserId,
+    ) -> Result<Option<domain::models::ImportSession>, DomainError> {
+        panic!()
+    }
+    async fn update(&self, _: &domain::models::ImportSession) -> Result<(), DomainError> {
+        panic!()
+    }
+    async fn delete(&self, _: &domain::value_objects::ImportSessionId) -> Result<(), DomainError> {
+        panic!()
+    }
+    async fn delete_expired(&self) -> Result<u64, DomainError> {
+        panic!()
+    }
+    async fn delete_expired_for_user(&self, _: &UserId) -> Result<(), DomainError> {
+        panic!()
+    }
 }
 #[async_trait::async_trait]
 impl domain::ports::ImportProfileRepository for Panic {
-    async fn save(&self, _: &domain::models::ImportProfile) -> Result<(), DomainError> { panic!() }
-    async fn list_for_user(&self, _: &UserId) -> Result<Vec<domain::models::ImportProfile>, DomainError> { panic!() }
-    async fn get(&self, _: &domain::value_objects::ImportProfileId, _: &UserId) -> Result<Option<domain::models::ImportProfile>, DomainError> { panic!() }
-    async fn delete(&self, _: &domain::value_objects::ImportProfileId) -> Result<(), DomainError> { panic!() }
+    async fn save(&self, _: &domain::models::ImportProfile) -> Result<(), DomainError> {
+        panic!()
+    }
+    async fn list_for_user(
+        &self,
+        _: &UserId,
+    ) -> Result<Vec<domain::models::ImportProfile>, DomainError> {
+        panic!()
+    }
+    async fn get(
+        &self,
+        _: &domain::value_objects::ImportProfileId,
+        _: &UserId,
+    ) -> Result<Option<domain::models::ImportProfile>, DomainError> {
+        panic!()
+    }
+    async fn delete(&self, _: &domain::value_objects::ImportProfileId) -> Result<(), DomainError> {
+        panic!()
+    }
 }
 #[async_trait::async_trait]
 impl WatchlistRepository for Panic {
-    async fn add(&self, _: &domain::models::WatchlistEntry) -> Result<(), DomainError> { panic!() }
-    async fn remove(&self, _: &domain::value_objects::UserId, _: &domain::value_objects::MovieId) -> Result<(), DomainError> { panic!() }
-    async fn remove_if_present(&self, _: &domain::value_objects::UserId, _: &domain::value_objects::MovieId) -> Result<bool, DomainError> { Ok(false) }
-    async fn get_for_user(&self, _: &domain::value_objects::UserId, _: &domain::models::collections::PageParams) -> Result<domain::models::collections::Paginated<domain::models::WatchlistWithMovie>, DomainError> { panic!() }
-    async fn contains(&self, _: &domain::value_objects::UserId, _: &domain::value_objects::MovieId) -> Result<bool, DomainError> { Ok(false) }
+    async fn add(&self, _: &domain::models::WatchlistEntry) -> Result<(), DomainError> {
+        panic!()
+    }
+    async fn remove(
+        &self,
+        _: &domain::value_objects::UserId,
+        _: &domain::value_objects::MovieId,
+    ) -> Result<(), DomainError> {
+        panic!()
+    }
+    async fn remove_if_present(
+        &self,
+        _: &domain::value_objects::UserId,
+        _: &domain::value_objects::MovieId,
+    ) -> Result<bool, DomainError> {
+        Ok(false)
+    }
+    async fn get_for_user(
+        &self,
+        _: &domain::value_objects::UserId,
+        _: &domain::models::collections::PageParams,
+    ) -> Result<
+        domain::models::collections::Paginated<domain::models::WatchlistWithMovie>,
+        DomainError,
+    > {
+        panic!()
+    }
+    async fn contains(
+        &self,
+        _: &domain::value_objects::UserId,
+        _: &domain::value_objects::MovieId,
+    ) -> Result<bool, DomainError> {
+        Ok(false)
+    }
 }
 #[async_trait::async_trait]
 impl domain::ports::MovieProfileRepository for Panic {
-    async fn upsert(&self, _: &domain::models::MovieProfile) -> Result<(), DomainError> { panic!() }
-    async fn get_by_movie_id(&self, _: &domain::value_objects::MovieId) -> Result<Option<domain::models::MovieProfile>, DomainError> { Ok(None) }
-    async fn list_stale(&self) -> Result<Vec<(domain::value_objects::MovieId, String)>, DomainError> { Ok(vec![]) }
+    async fn upsert(&self, _: &domain::models::MovieProfile) -> Result<(), DomainError> {
+        panic!()
+    }
+    async fn get_by_movie_id(
+        &self,
+        _: &domain::value_objects::MovieId,
+    ) -> Result<Option<domain::models::MovieProfile>, DomainError> {
+        Ok(None)
+    }
+    async fn list_stale(
+        &self,
+    ) -> Result<Vec<(domain::value_objects::MovieId, String)>, DomainError> {
+        Ok(vec![])
+    }
 }
 #[async_trait::async_trait]
 impl domain::ports::DiaryExporter for Panic {
@@ -272,10 +362,18 @@ impl domain::ports::DiaryExporter for Panic {
 }
 
 impl domain::ports::DocumentParser for Panic {
-    fn parse(&self, _: &[u8], _: domain::models::FileFormat) -> Result<domain::models::ParsedFile, domain::models::ImportError> {
+    fn parse(
+        &self,
+        _: &[u8],
+        _: domain::models::FileFormat,
+    ) -> Result<domain::models::ParsedFile, domain::models::ImportError> {
         panic!()
     }
-    fn apply_mapping(&self, _: &domain::models::ParsedFile, _: &[domain::models::FieldMapping]) -> Vec<domain::models::AnnotatedRow> {
+    fn apply_mapping(
+        &self,
+        _: &domain::models::ParsedFile,
+        _: &[domain::models::FieldMapping],
+    ) -> Vec<domain::models::AnnotatedRow> {
         panic!()
     }
 }
@@ -312,10 +410,7 @@ impl crate::ports::HtmlRenderer for Panic {
     ) -> Result<String, String> {
         panic!()
     }
-    fn render_users_page(
-        &self,
-        _: application::ports::UsersPageData,
-    ) -> Result<String, String> {
+    fn render_users_page(&self, _: application::ports::UsersPageData) -> Result<String, String> {
         panic!()
     }
     fn render_profile_page(
@@ -342,13 +437,48 @@ impl crate::ports::HtmlRenderer for Panic {
     ) -> Result<String, String> {
         panic!()
     }
-    fn render_import_upload_page(&self, _: application::ports::ImportUploadPageData) -> Result<String, String> { panic!() }
-    fn render_import_mapping_page(&self, _: application::ports::ImportMappingPageData) -> Result<String, String> { panic!() }
-    fn render_import_preview_page(&self, _: application::ports::ImportPreviewPageData) -> Result<String, String> { panic!() }
-    fn render_profile_settings_page(&self, _: application::ports::ProfileSettingsPageData) -> Result<String, String> { panic!() }
-    fn render_blocked_domains_page(&self, _: application::ports::BlockedDomainsPageData) -> Result<String, String> { panic!() }
-    fn render_blocked_actors_page(&self, _: application::ports::BlockedActorsPageData) -> Result<String, String> { panic!() }
-    fn render_watchlist_page(&self, _: application::ports::WatchlistPageData) -> Result<String, String> { panic!() }
+    fn render_import_upload_page(
+        &self,
+        _: application::ports::ImportUploadPageData,
+    ) -> Result<String, String> {
+        panic!()
+    }
+    fn render_import_mapping_page(
+        &self,
+        _: application::ports::ImportMappingPageData,
+    ) -> Result<String, String> {
+        panic!()
+    }
+    fn render_import_preview_page(
+        &self,
+        _: application::ports::ImportPreviewPageData,
+    ) -> Result<String, String> {
+        panic!()
+    }
+    fn render_profile_settings_page(
+        &self,
+        _: application::ports::ProfileSettingsPageData,
+    ) -> Result<String, String> {
+        panic!()
+    }
+    fn render_blocked_domains_page(
+        &self,
+        _: application::ports::BlockedDomainsPageData,
+    ) -> Result<String, String> {
+        panic!()
+    }
+    fn render_blocked_actors_page(
+        &self,
+        _: application::ports::BlockedActorsPageData,
+    ) -> Result<String, String> {
+        panic!()
+    }
+    fn render_watchlist_page(
+        &self,
+        _: application::ports::WatchlistPageData,
+    ) -> Result<String, String> {
+        panic!()
+    }
 }
 impl crate::ports::RssFeedRenderer for Panic {
     fn render_feed(&self, _: &[DiaryEntry], _: &str) -> Result<String, String> {
@@ -369,32 +499,67 @@ impl AuthService for RejectingAuth {
 
 #[async_trait::async_trait]
 impl PersonCommand for Panic {
-    async fn upsert_batch(&self, _: &[Person]) -> Result<(), DomainError> { panic!() }
+    async fn upsert_batch(&self, _: &[Person]) -> Result<(), DomainError> {
+        panic!()
+    }
 }
 #[async_trait::async_trait]
 impl PersonQuery for Panic {
-    async fn get_by_id(&self, _: &PersonId) -> Result<Option<Person>, DomainError> { panic!() }
-    async fn get_by_external_id(&self, _: &domain::models::ExternalPersonId) -> Result<Option<Person>, DomainError> { panic!() }
-    async fn get_credits(&self, _: &PersonId) -> Result<PersonCredits, DomainError> { panic!() }
-    async fn list_orphaned_persons(&self) -> Result<Vec<PersonId>, DomainError> { panic!() }
+    async fn get_by_id(&self, _: &PersonId) -> Result<Option<Person>, DomainError> {
+        panic!()
+    }
+    async fn get_by_external_id(
+        &self,
+        _: &domain::models::ExternalPersonId,
+    ) -> Result<Option<Person>, DomainError> {
+        panic!()
+    }
+    async fn get_credits(&self, _: &PersonId) -> Result<PersonCredits, DomainError> {
+        panic!()
+    }
+    async fn list_orphaned_persons(&self) -> Result<Vec<PersonId>, DomainError> {
+        panic!()
+    }
 }
 #[async_trait::async_trait]
 impl SearchPort for Panic {
-    async fn search(&self, _: &SearchQuery) -> Result<SearchResults, DomainError> { panic!() }
+    async fn search(&self, _: &SearchQuery) -> Result<SearchResults, DomainError> {
+        panic!()
+    }
 }
 #[async_trait::async_trait]
 impl SearchCommand for Panic {
-    async fn index(&self, _: IndexableDocument) -> Result<(), DomainError> { panic!() }
-    async fn remove(&self, _: EntityType, _: &str) -> Result<(), DomainError> { panic!() }
+    async fn index(&self, _: IndexableDocument) -> Result<(), DomainError> {
+        panic!()
+    }
+    async fn remove(&self, _: EntityType, _: &str) -> Result<(), DomainError> {
+        panic!()
+    }
 }
 #[cfg(feature = "federation")]
 #[async_trait::async_trait]
 impl domain::ports::RemoteWatchlistRepository for Panic {
-    async fn save(&self, _: domain::models::RemoteWatchlistEntry) -> Result<(), DomainError> { Ok(()) }
-    async fn remove_by_ap_id(&self, _: &str, _: &str) -> Result<(), DomainError> { Ok(()) }
-    async fn get_by_actor_url(&self, _: &str) -> Result<Vec<domain::models::RemoteWatchlistEntry>, DomainError> { Ok(vec![]) }
-    async fn remove_all_by_actor(&self, _: &str) -> Result<(), DomainError> { Ok(()) }
-    async fn get_by_derived_uuid(&self, _: uuid::Uuid) -> Result<Vec<domain::models::RemoteWatchlistEntry>, DomainError> { Ok(vec![]) }
+    async fn save(&self, _: domain::models::RemoteWatchlistEntry) -> Result<(), DomainError> {
+        Ok(())
+    }
+    async fn remove_by_ap_id(&self, _: &str, _: &str) -> Result<(), DomainError> {
+        Ok(())
+    }
+    async fn get_by_actor_url(
+        &self,
+        _: &str,
+    ) -> Result<Vec<domain::models::RemoteWatchlistEntry>, DomainError> {
+        Ok(vec![])
+    }
+    async fn remove_all_by_actor(&self, _: &str) -> Result<(), DomainError> {
+        Ok(())
+    }
+    async fn get_by_derived_uuid(
+        &self,
+        _: uuid::Uuid,
+    ) -> Result<Vec<domain::models::RemoteWatchlistEntry>, DomainError> {
+        Ok(vec![])
+    }
 }
 
 // --- Single state factory — only auth_service varies ---
