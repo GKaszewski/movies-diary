@@ -13,6 +13,7 @@ use url::Url;
 use crate::data::FederationData;
 use crate::error::Error;
 use crate::repository::RemoteActor;
+use crate::user::ApProfileField;
 
 #[derive(Debug, Clone)]
 pub struct DbActor {
@@ -31,7 +32,7 @@ pub struct DbActor {
     pub banner_url: Option<Url>,
     pub also_known_as: Option<String>,
     pub profile_url: Option<Url>,
-    pub attachment: Vec<domain::models::ProfileField>,
+    pub attachment: Vec<ApProfileField>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

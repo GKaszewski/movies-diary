@@ -323,6 +323,7 @@ pub struct User {
     avatar_path: Option<String>,
     banner_path: Option<String>,
     also_known_as: Option<String>,
+    profile_fields: Vec<ProfileField>,
 }
 
 impl User {
@@ -342,6 +343,7 @@ impl User {
             avatar_path: None,
             banner_path: None,
             also_known_as: None,
+            profile_fields: vec![],
         }
     }
 
@@ -355,6 +357,7 @@ impl User {
         avatar_path: Option<String>,
         banner_path: Option<String>,
         also_known_as: Option<String>,
+        profile_fields: Vec<ProfileField>,
     ) -> Self {
         Self {
             id,
@@ -366,6 +369,7 @@ impl User {
             avatar_path,
             banner_path,
             also_known_as,
+            profile_fields,
         }
     }
 
@@ -409,6 +413,10 @@ impl User {
 
     pub fn also_known_as(&self) -> Option<&str> {
         self.also_known_as.as_deref()
+    }
+
+    pub fn profile_fields(&self) -> &[ProfileField] {
+        &self.profile_fields
     }
 }
 

@@ -11,6 +11,12 @@ async fn setup() -> (SqlitePool, SqliteUserRepository) {
     .execute(&pool)
     .await
     .unwrap();
+    sqlx::query(
+        "CREATE TABLE user_profile_fields (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, name TEXT NOT NULL, value TEXT NOT NULL, position INTEGER NOT NULL DEFAULT 0)"
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
     let repo = SqliteUserRepository::new(pool.clone());
     (pool, repo)
 }

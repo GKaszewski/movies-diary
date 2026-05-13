@@ -5,7 +5,7 @@ use sqlx::SqlitePool;
 use super::models::UserSummaryRow;
 use domain::{
     errors::DomainError,
-    models::{User, UserRole},
+    models::{ProfileField, User, UserRole},
     ports::UserRepository,
     value_objects::{Email, PasswordHash, UserId, Username},
 };
@@ -41,6 +41,7 @@ impl SqliteUserRepository {
         avatar_path: Option<String>,
         banner_path: Option<String>,
         also_known_as: Option<String>,
+        profile_fields: Vec<ProfileField>,
     ) -> Result<User, DomainError> {
         let id = uuid::Uuid::parse_str(&id_str)
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
@@ -60,6 +61,7 @@ impl SqliteUserRepository {
             avatar_path,
             banner_path,
             also_known_as,
+            profile_fields,
         ))
     }
 }
@@ -87,6 +89,7 @@ impl UserRepository for SqliteUserRepository {
                 r.avatar_path,
                 r.banner_path,
                 r.also_known_as,
+                vec![],
             )
         })
         .transpose()
@@ -113,6 +116,7 @@ impl UserRepository for SqliteUserRepository {
                 r.avatar_path,
                 r.banner_path,
                 r.also_known_as,
+                vec![],
             )
         })
         .transpose()
@@ -163,20 +167,30 @@ impl UserRepository for SqliteUserRepository {
         .await
         .map_err(Self::map_err)?;
 
-        row.map(|r| {
-            Self::row_to_user(
-                r.id.unwrap_or_default(),
-                r.email,
-                r.username,
-                r.password_hash,
-                Self::parse_role(&r.role),
-                r.bio,
-                r.avatar_path,
-                r.banner_path,
-                r.also_known_as,
-            )
-        })
-        .transpose()
+        let Some(r) = row else { return Ok(None) };
+
+        let field_rows = sqlx::query!(
+            "SELECT name, value FROM user_profile_fields WHERE user_id = ? ORDER BY position ASC",
+            id_str
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+
+        let profile_fields = field_rows.into_iter().map(|f| ProfileField { name: f.name, value: f.value }).collect();
+
+        Self::row_to_user(
+            r.id.unwrap_or_default(),
+            r.email,
+            r.username,
+            r.password_hash,
+            Self::parse_role(&r.role),
+            r.bio,
+            r.avatar_path,
+            r.banner_path,
+            r.also_known_as,
+            profile_fields,
+        ).map(Some)
     }
 
     async fn update_profile(

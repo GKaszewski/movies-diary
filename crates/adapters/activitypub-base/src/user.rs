@@ -2,6 +2,12 @@ use async_trait::async_trait;
 use url::Url;
 
 #[derive(Debug, Clone)]
+pub struct ApProfileField {
+    pub name: String,
+    pub value: String,
+}
+
+#[derive(Debug, Clone)]
 pub struct ApUser {
     pub id: uuid::Uuid,
     pub username: String,
@@ -10,7 +16,7 @@ pub struct ApUser {
     pub banner_url: Option<Url>,
     pub also_known_as: Option<String>,
     pub profile_url: Option<Url>,
-    pub attachment: Vec<domain::models::ProfileField>,
+    pub attachment: Vec<ApProfileField>,
 }
 
 #[async_trait]
