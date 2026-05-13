@@ -270,10 +270,11 @@ impl UserRepository for PostgresUserRepository {
         sqlx::query_as::<_, UserSummaryRow>(
             r#"SELECT u.id, u.email,
                       COUNT(DISTINCT r.movie_id) AS total_movies,
-                      AVG(r.rating::float) AS avg_rating
+                      AVG(r.rating::float) AS avg_rating,
+                      u.avatar_path
                FROM users u
                LEFT JOIN reviews r ON r.user_id = u.id AND r.remote_actor_url IS NULL
-               GROUP BY u.id, u.email
+               GROUP BY u.id, u.email, u.avatar_path
                ORDER BY u.email ASC"#,
         )
         .fetch_all(&self.pool)

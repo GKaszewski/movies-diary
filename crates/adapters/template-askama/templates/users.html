@@ -12,7 +12,11 @@
   {% endif %}
   {% for user in users %}
   <div class="user-row">
+    {% if let Some(url) = &user.avatar_url %}
+    <img class="user-avatar user-avatar-img" src="{{ url }}" alt="{{ user.initial }}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">
+    {% else %}
     <div class="user-avatar">{{ user.initial }}</div>
+    {% endif %}
     <div class="user-info">
       <div class="user-name">{{ user.display_name }}</div>
       <div class="user-meta">{{ user.total_movies }} movies · avg {{ user.avg_rating_display }}★</div>

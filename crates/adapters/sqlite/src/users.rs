@@ -229,10 +229,11 @@ impl UserRepository for SqliteUserRepository {
             r#"SELECT u.id AS "id!: String",
                       u.email AS "email!: String",
                       COUNT(DISTINCT r.movie_id) AS "total_movies!: i64",
-                      AVG(CAST(r.rating AS REAL)) AS avg_rating
+                      AVG(CAST(r.rating AS REAL)) AS avg_rating,
+                      u.avatar_path
                FROM users u
                LEFT JOIN reviews r ON r.user_id = u.id AND r.remote_actor_url IS NULL
-               GROUP BY u.id, u.email
+               GROUP BY u.id, u.email, u.avatar_path
                ORDER BY u.email ASC"#
         )
         .fetch_all(&self.pool)

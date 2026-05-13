@@ -170,6 +170,7 @@ struct UserSummaryView {
     initial: char,
     avg_rating_display: String,
     total_movies: i64,
+    avatar_url: Option<String>,
 }
 
 #[derive(Template)]
@@ -495,6 +496,7 @@ impl HtmlRenderer for AskamaHtmlRenderer {
                     initial,
                     avg_rating_display,
                     total_movies: u.total_movies,
+                    avatar_url: u.avatar_path.as_ref().map(|p| format!("/images/{}", p)),
                 }
             })
             .collect();

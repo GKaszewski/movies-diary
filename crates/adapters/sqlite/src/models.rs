@@ -240,6 +240,7 @@ pub(crate) struct UserSummaryRow {
     pub email: String,
     pub total_movies: i64,
     pub avg_rating: Option<f64>,
+    pub avatar_path: Option<String>,
 }
 
 impl UserSummaryRow {
@@ -249,6 +250,7 @@ impl UserSummaryRow {
             Email::new(self.email)?,
             self.total_movies,
             self.avg_rating,
+            self.avatar_path,
         ))
     }
 }

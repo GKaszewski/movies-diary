@@ -461,15 +461,23 @@ pub struct UserSummary {
     email: Email,
     pub total_movies: i64,
     pub avg_rating: Option<f64>,
+    pub avatar_path: Option<String>,
 }
 
 impl UserSummary {
-    pub fn new(user_id: UserId, email: Email, total_movies: i64, avg_rating: Option<f64>) -> Self {
+    pub fn new(
+        user_id: UserId,
+        email: Email,
+        total_movies: i64,
+        avg_rating: Option<f64>,
+        avatar_path: Option<String>,
+    ) -> Self {
         Self {
             user_id,
             email,
             total_movies,
             avg_rating,
+            avatar_path,
         }
     }
     pub fn email(&self) -> &str {
