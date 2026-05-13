@@ -5,7 +5,7 @@
   <article class="entry">
     {% if let Some(poster) = entry.movie().poster_path() %}
     <div class="poster">
-      <img src="/posters/{{ poster.value() }}" alt="">
+      <img src="{{ poster.value()|poster_src }}" alt="">
     </div>
     {% endif %}
     <div class="entry-body">

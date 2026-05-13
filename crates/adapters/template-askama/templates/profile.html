@@ -115,7 +115,7 @@
       {% for entry in month.entries %}
       <article class="entry">
         {% if let Some(poster) = entry.movie().poster_path() %}
-        <div class="poster"><img src="/posters/{{ poster.value() }}" alt=""></div>
+        <div class="poster"><img src="{{ poster.value()|poster_src }}" alt=""></div>
         {% endif %}
         <div class="entry-body">
           <div class="entry-title"><a href="/movies/{{ entry.movie().id().value() }}" class="movie-title-link">{{ entry.movie().title().value() }}</a> <span class="year">({{ entry.movie().release_year().value() }})</span></div>
@@ -183,7 +183,7 @@
     <article class="entry">
       {% if let Some(poster) = entry.movie().poster_path() %}
       <div class="poster">
-        <img src="/posters/{{ poster.value() }}" alt="">
+        <img src="{{ poster.value()|poster_src }}" alt="">
       </div>
       {% endif %}
       <div class="entry-body">

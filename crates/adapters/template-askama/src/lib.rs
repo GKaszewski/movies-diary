@@ -12,6 +12,18 @@ use domain::models::{
     collections::Paginated,
 };
 
+mod filters {
+    #[askama::filter_fn]
+    pub fn poster_src<T: std::fmt::Display>(path: T, _env: &dyn askama::Values) -> askama::Result<String> {
+        let p = path.to_string();
+        if p.starts_with("http://") || p.starts_with("https://") {
+            Ok(p)
+        } else {
+            Ok(format!("/images/{}", p))
+        }
+    }
+}
+
 struct PageItem {
     number: u32,
     is_current: bool,
