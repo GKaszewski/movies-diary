@@ -10,4 +10,4 @@ xlsx = ["dep:calamine"]
 domain = { workspace = true }
 serde_json = { workspace = true }
 csv = { workspace = true }
-calamine = { version = "0.26", optional = true }
+calamine = { version = "0.35", optional = true }
