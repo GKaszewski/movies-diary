@@ -10,5 +10,8 @@ pub mod search_cleanup;
 pub mod use_cases;
 pub mod worker;
 
+#[cfg(test)]
+pub mod test_helpers;
+
 pub use movie_discovery_indexer::MovieDiscoveryIndexer;
 pub use search_cleanup::SearchCleanupHandler;

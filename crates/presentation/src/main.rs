@@ -11,11 +11,9 @@ use importer::ImporterDocumentParser;
 use rss::RssAdapter;
 use template_askama::AskamaHtmlRenderer;
 
-use presentation::{openapi, routes, state::AppState};
+use presentation::{factory, openapi, routes, state::AppState};
 
-use domain::ports::{
-    DiaryExporter, DocumentParser, EventPublisher, ImportProfileRepository, ImportSessionRepository,
-};
+use domain::ports::{DiaryExporter, DocumentParser, EventPublisher};
 
 #[cfg(feature = "postgres")]
 use postgres_search;
@@ -55,85 +53,28 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
     let database_url = std::env::var("DATABASE_URL").context("DATABASE_URL must be set")?;
     let backend = std::env::var("DATABASE_BACKEND").unwrap_or_else(|_| "sqlite".to_string());
 
-    let (auth_service, password_hasher) = auth::create()?;
-    let metadata_client = metadata::create()?;
-    let poster_fetcher = poster_fetcher::create()?;
-    let image_storage = image_storage::create()?;
+    let (auth_service, password_hasher) = factory::build_auth_adapters()?;
+    let metadata_client = factory::build_metadata_client()?;
+    let poster_fetcher = factory::build_poster_fetcher()?;
+    let image_storage = factory::build_image_storage()?;
 
-    let (
-        movie_repository,
-        review_repository,
-        diary_repository,
-        stats_repository,
-        user_repository,
-        import_session_repository,
-        import_profile_repository,
-        movie_profile_repository,
-        watchlist_repository,
-        person_command,
-        person_query,
-        search_command,
-        search_port,
-        db_pool,
-    ) = match backend.as_str() {
-        #[cfg(feature = "postgres")]
-        "postgres" => {
-            let (pool, m, r, d, s, u, is, ip, mp, wl) = postgres::wire(&database_url).await?;
-            let (pc, pq) = postgres::create_person_adapter(pool.clone());
-            let (sc, sp) = postgres_search::create_search_adapter(pool.clone());
-            (
-                m,
-                r,
-                d,
-                s,
-                u,
-                is,
-                ip,
-                mp,
-                wl,
-                pc,
-                pq,
-                sc,
-                sp,
-                DbPool::Postgres(pool),
-            )
-        }
-        #[cfg(feature = "sqlite")]
-        _ => {
-            let (pool, m, r, d, s, u, is, ip, mp, wl) = sqlite::wire(&database_url).await?;
-            let (pc, pq) = sqlite::create_person_adapter(pool.clone());
-            let (sc, sp) = sqlite_search::create_search_adapter(pool.clone());
-            (
-                m,
-                r,
-                d,
-                s,
-                u,
-                is,
-                ip,
-                mp,
-                wl,
-                pc,
-                pq,
-                sc,
-                sp,
-                DbPool::Sqlite(pool),
-            )
-        }
-        #[cfg(not(feature = "sqlite"))]
-        _ => anyhow::bail!(
-            "DATABASE_BACKEND={backend} is not supported by this build (sqlite feature is not enabled)"
-        ),
-    };
+    let db = factory::build_database_adapters(&backend, &database_url).await?;
 
-    let profile_fields_repo = match &db_pool {
-        #[cfg(feature = "postgres")]
-        DbPool::Postgres(pool) => postgres::create_profile_fields_repo(pool.clone()),
-        #[cfg(feature = "sqlite")]
-        DbPool::Sqlite(pool) => sqlite::create_profile_fields_repo(pool.clone()),
-        #[cfg(not(feature = "sqlite"))]
-        _ => anyhow::bail!("no profile fields repo for this backend"),
-    };
+    let movie_repository = db.movie_repo;
+    let review_repository = db.review_repo;
+    let diary_repository = db.diary_repo;
+    let stats_repository = db.stats_repo;
+    let user_repository = db.user_repo;
+    let import_session_repository = db.import_session_repo;
+    let import_profile_repository = db.import_profile_repo;
+    let movie_profile_repository = db.movie_profile_repo;
+    let watchlist_repository = db.watchlist_repo;
+    let person_command = db.person_command;
+    let person_query = db.person_query;
+    let search_port = db.search_port;
+    let search_command = db.search_command;
+    let profile_fields_repo = db.profile_fields_repo;
+    let db_pool = db.db_pool;
 
     // Wire up event channel, federation service, and ap_router
     let event_bus = EventBusBackend::from_env()?;
@@ -143,9 +84,9 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
         let (federation_repo, social_query_arc, review_store, remote_watchlist_repo) =
             match &db_pool {
                 #[cfg(feature = "postgres-federation")]
-                DbPool::Postgres(pool) => postgres_federation::wire(pool.clone()),
+                factory::DbPool::Postgres(pool) => postgres_federation::wire(pool.clone()),
                 #[cfg(feature = "sqlite-federation")]
-                DbPool::Sqlite(pool) => sqlite_federation::wire(pool.clone()),
+                factory::DbPool::Sqlite(pool) => sqlite_federation::wire(pool.clone()),
                 #[cfg(not(feature = "sqlite-federation"))]
                 _ => anyhow::bail!(
                     "DATABASE_BACKEND={backend} federation is not supported by this build"
@@ -157,12 +98,12 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
                 tracing::info!("event bus: DB queue");
                 match &db_pool {
                     #[cfg(feature = "postgres")]
-                    DbPool::Postgres(pool) => {
+                    factory::DbPool::Postgres(pool) => {
                         postgres_event_queue::PostgresEventQueue::create_publisher(pool.clone())
                             .await?
                     }
                     #[cfg(feature = "sqlite")]
-                    DbPool::Sqlite(pool) => {
+                    factory::DbPool::Sqlite(pool) => {
                         sqlite_event_queue::SqliteEventQueue::create_publisher(pool.clone()).await?
                     }
                 }
@@ -207,11 +148,11 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
             tracing::info!("event bus: DB queue");
             match &db_pool {
                 #[cfg(feature = "postgres")]
-                DbPool::Postgres(pool) => {
+                factory::DbPool::Postgres(pool) => {
                     postgres_event_queue::PostgresEventQueue::create_publisher(pool.clone()).await?
                 }
                 #[cfg(feature = "sqlite")]
-                DbPool::Sqlite(pool) => {
+                factory::DbPool::Sqlite(pool) => {
                     sqlite_event_queue::SqliteEventQueue::create_publisher(pool.clone()).await?
                 }
                 #[cfg(not(feature = "sqlite"))]
@@ -245,8 +186,8 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
         auth_service,
         password_hasher,
         user_repository,
-        import_session_repository: import_session_repository as Arc<dyn ImportSessionRepository>,
-        import_profile_repository: import_profile_repository as Arc<dyn ImportProfileRepository>,
+        import_session_repository,
+        import_profile_repository,
         movie_profile_repository,
         watchlist_repository,
         profile_fields_repository: profile_fields_repo,
@@ -271,13 +212,6 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
         social_query,
     };
     Ok((state, ap_router))
-}
-
-enum DbPool {
-    #[cfg(feature = "sqlite")]
-    Sqlite(sqlx::SqlitePool),
-    #[cfg(feature = "postgres")]
-    Postgres(sqlx::PgPool),
 }
 
 #[derive(Clone, Copy)]

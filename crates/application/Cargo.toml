@@ -18,3 +18,4 @@ federation = []
 
 [dev-dependencies]
 tokio = { workspace = true }
+domain = { workspace = true, features = ["test-helpers"] }

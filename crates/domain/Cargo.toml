@@ -11,3 +11,6 @@ thiserror = { workspace = true }
 futures = { workspace = true }
 
 email_address = "0.2.9"
+
+[features]
+test-helpers = []

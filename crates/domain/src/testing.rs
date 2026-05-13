@@ -1,0 +1,689 @@
+#![cfg(any(test, feature = "test-helpers"))]
+
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+
+use async_trait::async_trait;
+use chrono::Utc;
+use uuid::Uuid;
+
+use crate::{
+    errors::DomainError,
+    events::DomainEvent,
+    models::{
+        DiaryEntry, DiaryFilter, ExportFormat, FeedEntry, FieldMapping, FileFormat, ImportError,
+        ImportProfile, ImportSession, IndexableDocument, Movie, MovieFilter, MovieProfile,
+        MovieStats, MovieSummary, ParsedFile, Person, PersonCredits, PersonId, ExternalPersonId,
+        Review, ReviewHistory, SearchQuery, SearchResults, User, UserStats, UserSummary,
+        UserTrends, WatchlistEntry, WatchlistWithMovie, AnnotatedRow, EntityType,
+        collections::{PageParams, Paginated},
+    },
+    ports::{
+        AuthService, DiaryExporter, DiaryRepository, DocumentParser, EventPublisher,
+        FeedSortBy, FollowingFilter, GeneratedToken, ImageStorage, ImportProfileRepository,
+        ImportSessionRepository, MetadataClient, MetadataSearchCriteria, MovieProfileRepository,
+        MovieRepository, PasswordHasher, PersonCommand, PersonQuery, PosterFetcherClient,
+        ReviewRepository, SearchCommand, SearchPort, StatsRepository, UserProfileFieldsRepository,
+        UserRepository, WatchlistRepository,
+    },
+    value_objects::{
+        Email, ExternalMetadataId, ImportProfileId, ImportSessionId, MovieId, MovieTitle,
+        PasswordHash, PosterUrl, ReleaseYear, ReviewId, UserId, Username,
+    },
+};
+
+// ── InMemoryMovieRepository ───────────────────────────────────────────────────
+
+pub struct InMemoryMovieRepository {
+    pub store: Mutex<HashMap<Uuid, Movie>>,
+}
+
+impl InMemoryMovieRepository {
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self { store: Mutex::new(HashMap::new()) })
+    }
+
+    pub fn count(&self) -> usize {
+        self.store.lock().unwrap().len()
+    }
+}
+
+#[async_trait]
+impl MovieRepository for InMemoryMovieRepository {
+    async fn get_movie_by_external_id(
+        &self,
+        external_metadata_id: &ExternalMetadataId,
+    ) -> Result<Option<Movie>, DomainError> {
+        let store = self.store.lock().unwrap();
+        Ok(store.values().find(|m| {
+            m.external_metadata_id()
+                .map(|e| e.value() == external_metadata_id.value())
+                .unwrap_or(false)
+        }).cloned())
+    }
+
+    async fn get_movie_by_id(&self, movie_id: &MovieId) -> Result<Option<Movie>, DomainError> {
+        Ok(self.store.lock().unwrap().get(&movie_id.value()).cloned())
+    }
+
+    async fn get_movies_by_title_and_year(
+        &self,
+        title: &MovieTitle,
+        year: &ReleaseYear,
+    ) -> Result<Vec<Movie>, DomainError> {
+        let store = self.store.lock().unwrap();
+        Ok(store.values().filter(|m| m.title() == title && m.release_year() == year).cloned().collect())
+    }
+
+    async fn upsert_movie(&self, movie: &Movie) -> Result<(), DomainError> {
+        self.store.lock().unwrap().insert(movie.id().value(), movie.clone());
+        Ok(())
+    }
+
+    async fn delete_movie(&self, movie_id: &MovieId) -> Result<(), DomainError> {
+        self.store.lock().unwrap().remove(&movie_id.value());
+        Ok(())
+    }
+
+    async fn list_movies(
+        &self,
+        _page: &crate::models::collections::PageParams,
+        _filter: &MovieFilter,
+    ) -> Result<Paginated<MovieSummary>, DomainError> {
+        Ok(Paginated { items: vec![], total_count: 0, limit: 10, offset: 0 })
+    }
+}
+
+// ── InMemoryReviewRepository ──────────────────────────────────────────────────
+
+pub struct InMemoryReviewRepository {
+    store: Mutex<HashMap<Uuid, Review>>,
+}
+
+impl InMemoryReviewRepository {
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self { store: Mutex::new(HashMap::new()) })
+    }
+
+    pub fn count(&self) -> usize {
+        self.store.lock().unwrap().len()
+    }
+}
+
+#[async_trait]
+impl ReviewRepository for InMemoryReviewRepository {
+    async fn save_review(&self, review: &Review) -> Result<DomainEvent, DomainError> {
+        self.store.lock().unwrap().insert(review.id().value(), review.clone());
+        Ok(DomainEvent::ReviewLogged {
+            review_id: review.id().clone(),
+            movie_id: review.movie_id().clone(),
+            user_id: review.user_id().clone(),
+            rating: review.rating().clone(),
+            watched_at: *review.watched_at(),
+        })
+    }
+
+    async fn get_review_by_id(&self, review_id: &ReviewId) -> Result<Option<Review>, DomainError> {
+        Ok(self.store.lock().unwrap().get(&review_id.value()).cloned())
+    }
+
+    async fn delete_review(&self, review_id: &ReviewId) -> Result<(), DomainError> {
+        self.store.lock().unwrap().remove(&review_id.value());
+        Ok(())
+    }
+
+    async fn get_all_reviews_for_user(&self, user_id: &UserId) -> Result<Vec<Review>, DomainError> {
+        let store = self.store.lock().unwrap();
+        Ok(store.values().filter(|r| r.user_id() == user_id).cloned().collect())
+    }
+}
+
+// ── InMemoryUserRepository ────────────────────────────────────────────────────
+
+pub struct InMemoryUserRepository {
+    pub store: Mutex<HashMap<Uuid, User>>,
+}
+
+impl InMemoryUserRepository {
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self { store: Mutex::new(HashMap::new()) })
+    }
+
+    pub fn count(&self) -> usize {
+        self.store.lock().unwrap().len()
+    }
+}
+
+#[async_trait]
+impl UserRepository for InMemoryUserRepository {
+    async fn find_by_email(&self, email: &Email) -> Result<Option<User>, DomainError> {
+        let store = self.store.lock().unwrap();
+        Ok(store.values().find(|u| u.email().value() == email.value()).cloned())
+    }
+
+    async fn find_by_username(&self, username: &Username) -> Result<Option<User>, DomainError> {
+        let store = self.store.lock().unwrap();
+        Ok(store.values().find(|u| u.username().value() == username.value()).cloned())
+    }
+
+    async fn save(&self, user: &User) -> Result<(), DomainError> {
+        self.store.lock().unwrap().insert(user.id().value(), user.clone());
+        Ok(())
+    }
+
+    async fn find_by_id(&self, id: &UserId) -> Result<Option<User>, DomainError> {
+        Ok(self.store.lock().unwrap().get(&id.value()).cloned())
+    }
+
+    async fn list_with_stats(&self) -> Result<Vec<UserSummary>, DomainError> {
+        Ok(vec![])
+    }
+
+    async fn update_profile(
+        &self,
+        _user_id: &UserId,
+        _bio: Option<String>,
+        _avatar_path: Option<String>,
+        _banner_path: Option<String>,
+        _also_known_as: Option<String>,
+    ) -> Result<(), DomainError> {
+        Ok(())
+    }
+}
+
+// ── InMemoryWatchlistRepository ───────────────────────────────────────────────
+
+pub struct InMemoryWatchlistRepository {
+    store: Mutex<HashMap<(Uuid, Uuid), WatchlistEntry>>,
+}
+
+impl InMemoryWatchlistRepository {
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self { store: Mutex::new(HashMap::new()) })
+    }
+
+    pub fn count(&self) -> usize {
+        self.store.lock().unwrap().len()
+    }
+}
+
+#[async_trait]
+impl WatchlistRepository for InMemoryWatchlistRepository {
+    async fn add(&self, entry: &WatchlistEntry) -> Result<(), DomainError> {
+        let key = (entry.user_id.value(), entry.movie_id.value());
+        self.store.lock().unwrap().entry(key).or_insert_with(|| entry.clone());
+        Ok(())
+    }
+
+    async fn remove(&self, user_id: &UserId, movie_id: &MovieId) -> Result<(), DomainError> {
+        let key = (user_id.value(), movie_id.value());
+        self.store.lock().unwrap().remove(&key)
+            .ok_or_else(|| DomainError::NotFound("watchlist entry".into()))?;
+        Ok(())
+    }
+
+    async fn remove_if_present(
+        &self,
+        user_id: &UserId,
+        movie_id: &MovieId,
+    ) -> Result<bool, DomainError> {
+        let key = (user_id.value(), movie_id.value());
+        Ok(self.store.lock().unwrap().remove(&key).is_some())
+    }
+
+    async fn get_for_user(
+        &self,
+        _user_id: &UserId,
+        _page: &PageParams,
+    ) -> Result<Paginated<WatchlistWithMovie>, DomainError> {
+        Ok(Paginated { items: vec![], total_count: 0, limit: 10, offset: 0 })
+    }
+
+    async fn contains(&self, user_id: &UserId, movie_id: &MovieId) -> Result<bool, DomainError> {
+        let key = (user_id.value(), movie_id.value());
+        Ok(self.store.lock().unwrap().contains_key(&key))
+    }
+}
+
+// ── NoopEventPublisher ────────────────────────────────────────────────────────
+
+pub struct NoopEventPublisher {
+    pub events: Mutex<Vec<DomainEvent>>,
+}
+
+impl NoopEventPublisher {
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self { events: Mutex::new(vec![]) })
+    }
+
+    pub fn published(&self) -> Vec<DomainEvent> {
+        self.events.lock().unwrap().clone()
+    }
+}
+
+#[async_trait]
+impl EventPublisher for NoopEventPublisher {
+    async fn publish(&self, event: &DomainEvent) -> Result<(), DomainError> {
+        self.events.lock().unwrap().push(event.clone());
+        Ok(())
+    }
+}
+
+// ── NoopImageStorage ──────────────────────────────────────────────────────────
+
+pub struct NoopImageStorage;
+
+#[async_trait]
+impl ImageStorage for NoopImageStorage {
+    async fn store(&self, key: &str, _image_bytes: &[u8]) -> Result<String, DomainError> {
+        Ok(format!("noop://{key}"))
+    }
+
+    async fn get(&self, _key: &str) -> Result<Vec<u8>, DomainError> {
+        Ok(vec![])
+    }
+
+    async fn delete(&self, _key: &str) -> Result<(), DomainError> {
+        Ok(())
+    }
+}
+
+// ── FakeAuthService ───────────────────────────────────────────────────────────
+
+pub struct FakeAuthService;
+
+#[async_trait]
+impl AuthService for FakeAuthService {
+    async fn generate_token(&self, user_id: &UserId) -> Result<GeneratedToken, DomainError> {
+        Ok(GeneratedToken {
+            token: user_id.value().to_string(),
+            expires_at: Utc::now() + chrono::Duration::hours(24),
+        })
+    }
+
+    async fn validate_token(&self, token: &str) -> Result<UserId, DomainError> {
+        Uuid::parse_str(token)
+            .map(UserId::from_uuid)
+            .map_err(|_| DomainError::Unauthorized("invalid token".into()))
+    }
+}
+
+// ── FakePasswordHasher ────────────────────────────────────────────────────────
+
+pub struct FakePasswordHasher;
+
+#[async_trait]
+impl PasswordHasher for FakePasswordHasher {
+    async fn hash(&self, plain_password: &str) -> Result<PasswordHash, DomainError> {
+        PasswordHash::new(format!("hashed:{plain_password}"))
+    }
+
+    async fn verify(&self, plain_password: &str, hash: &PasswordHash) -> Result<bool, DomainError> {
+        Ok(hash.value() == format!("hashed:{plain_password}"))
+    }
+}
+
+// ── FakeMetadataClient ────────────────────────────────────────────────────────
+
+pub struct FakeMetadataClient;
+
+#[async_trait]
+impl MetadataClient for FakeMetadataClient {
+    async fn fetch_movie_metadata(
+        &self,
+        _criteria: &MetadataSearchCriteria,
+    ) -> Result<Movie, DomainError> {
+        Err(DomainError::InfrastructureError("fake metadata client".into()))
+    }
+
+    async fn get_poster_url(
+        &self,
+        _external_metadata_id: &ExternalMetadataId,
+    ) -> Result<Option<PosterUrl>, DomainError> {
+        Ok(None)
+    }
+}
+
+// ── FakeDiaryRepository ───────────────────────────────────────────────────────
+
+pub struct FakeDiaryRepository {
+    histories: Mutex<HashMap<Uuid, (Movie, Vec<Review>)>>,
+}
+
+impl FakeDiaryRepository {
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self { histories: Mutex::new(HashMap::new()) })
+    }
+
+    pub fn seed_history(&self, movie: Movie, reviews: Vec<Review>) {
+        self.histories.lock().unwrap().insert(movie.id().value(), (movie, reviews));
+    }
+}
+
+#[async_trait]
+impl DiaryRepository for FakeDiaryRepository {
+    async fn query_diary(&self, _filter: &DiaryFilter) -> Result<Paginated<DiaryEntry>, DomainError> {
+        unimplemented!("FakeDiaryRepository::query_diary")
+    }
+
+    async fn query_activity_feed(
+        &self,
+        _page: &PageParams,
+    ) -> Result<Paginated<FeedEntry>, DomainError> {
+        unimplemented!("FakeDiaryRepository::query_activity_feed")
+    }
+
+    async fn query_activity_feed_filtered(
+        &self,
+        _page: &PageParams,
+        _sort_by: &FeedSortBy,
+        _search: Option<&str>,
+        _following: Option<&FollowingFilter>,
+    ) -> Result<Paginated<FeedEntry>, DomainError> {
+        unimplemented!("FakeDiaryRepository::query_activity_feed_filtered")
+    }
+
+    async fn get_review_history(&self, movie_id: &MovieId) -> Result<ReviewHistory, DomainError> {
+        let histories = self.histories.lock().unwrap();
+        let (movie, reviews) = histories
+            .get(&movie_id.value())
+            .ok_or_else(|| DomainError::NotFound(format!("movie {}", movie_id.value())))?;
+        Ok(ReviewHistory::new(movie.clone(), reviews.clone()))
+    }
+
+    async fn get_user_history(&self, _user_id: &UserId) -> Result<Vec<DiaryEntry>, DomainError> {
+        unimplemented!("FakeDiaryRepository::get_user_history")
+    }
+
+    async fn get_movie_stats(&self, _movie_id: &MovieId) -> Result<MovieStats, DomainError> {
+        unimplemented!("FakeDiaryRepository::get_movie_stats")
+    }
+
+    async fn get_movie_social_feed(
+        &self,
+        _movie_id: &MovieId,
+        _page: &PageParams,
+    ) -> Result<Paginated<FeedEntry>, DomainError> {
+        unimplemented!("FakeDiaryRepository::get_movie_social_feed")
+    }
+
+    async fn count_local_posts(&self) -> Result<u64, DomainError> {
+        unimplemented!("FakeDiaryRepository::count_local_posts")
+    }
+}
+
+// ── PanicDiaryRepository ──────────────────────────────────────────────────────
+
+pub struct PanicDiaryRepository;
+
+#[async_trait]
+impl DiaryRepository for PanicDiaryRepository {
+    async fn query_diary(&self, _filter: &DiaryFilter) -> Result<Paginated<DiaryEntry>, DomainError> {
+        panic!("PanicDiaryRepository called")
+    }
+
+    async fn query_activity_feed(
+        &self,
+        _page: &PageParams,
+    ) -> Result<Paginated<FeedEntry>, DomainError> {
+        panic!("PanicDiaryRepository called")
+    }
+
+    async fn query_activity_feed_filtered(
+        &self,
+        _page: &PageParams,
+        _sort_by: &FeedSortBy,
+        _search: Option<&str>,
+        _following: Option<&FollowingFilter>,
+    ) -> Result<Paginated<FeedEntry>, DomainError> {
+        panic!("PanicDiaryRepository called")
+    }
+
+    async fn get_review_history(&self, _movie_id: &MovieId) -> Result<ReviewHistory, DomainError> {
+        panic!("PanicDiaryRepository called")
+    }
+
+    async fn get_user_history(&self, _user_id: &UserId) -> Result<Vec<DiaryEntry>, DomainError> {
+        panic!("PanicDiaryRepository called")
+    }
+
+    async fn get_movie_stats(&self, _movie_id: &MovieId) -> Result<MovieStats, DomainError> {
+        panic!("PanicDiaryRepository called")
+    }
+
+    async fn get_movie_social_feed(
+        &self,
+        _movie_id: &MovieId,
+        _page: &PageParams,
+    ) -> Result<Paginated<FeedEntry>, DomainError> {
+        panic!("PanicDiaryRepository called")
+    }
+
+    async fn count_local_posts(&self) -> Result<u64, DomainError> {
+        panic!("PanicDiaryRepository called")
+    }
+}
+
+// ── PanicStatsRepository ──────────────────────────────────────────────────────
+
+pub struct PanicStatsRepository;
+
+#[async_trait]
+impl StatsRepository for PanicStatsRepository {
+    async fn get_user_stats(&self, _user_id: &UserId) -> Result<UserStats, DomainError> {
+        panic!("PanicStatsRepository called")
+    }
+
+    async fn get_user_trends(&self, _user_id: &UserId) -> Result<UserTrends, DomainError> {
+        panic!("PanicStatsRepository called")
+    }
+}
+
+// ── PanicImportSessionRepository ──────────────────────────────────────────────
+
+pub struct PanicImportSessionRepository;
+
+#[async_trait]
+impl ImportSessionRepository for PanicImportSessionRepository {
+    async fn create(&self, _session: &ImportSession) -> Result<(), DomainError> {
+        panic!("PanicImportSessionRepository called")
+    }
+
+    async fn get(
+        &self,
+        _id: &ImportSessionId,
+        _user_id: &UserId,
+    ) -> Result<Option<ImportSession>, DomainError> {
+        panic!("PanicImportSessionRepository called")
+    }
+
+    async fn update(&self, _session: &ImportSession) -> Result<(), DomainError> {
+        panic!("PanicImportSessionRepository called")
+    }
+
+    async fn delete(&self, _id: &ImportSessionId) -> Result<(), DomainError> {
+        panic!("PanicImportSessionRepository called")
+    }
+
+    async fn delete_expired(&self) -> Result<u64, DomainError> {
+        panic!("PanicImportSessionRepository called")
+    }
+
+    async fn delete_expired_for_user(&self, _user_id: &UserId) -> Result<(), DomainError> {
+        panic!("PanicImportSessionRepository called")
+    }
+}
+
+// ── PanicImportProfileRepository ──────────────────────────────────────────────
+
+pub struct PanicImportProfileRepository;
+
+#[async_trait]
+impl ImportProfileRepository for PanicImportProfileRepository {
+    async fn save(&self, _profile: &ImportProfile) -> Result<(), DomainError> {
+        panic!("PanicImportProfileRepository called")
+    }
+
+    async fn list_for_user(&self, _user_id: &UserId) -> Result<Vec<ImportProfile>, DomainError> {
+        panic!("PanicImportProfileRepository called")
+    }
+
+    async fn get(
+        &self,
+        _id: &ImportProfileId,
+        _user_id: &UserId,
+    ) -> Result<Option<ImportProfile>, DomainError> {
+        panic!("PanicImportProfileRepository called")
+    }
+
+    async fn delete(&self, _id: &ImportProfileId) -> Result<(), DomainError> {
+        panic!("PanicImportProfileRepository called")
+    }
+}
+
+// ── PanicMovieProfileRepository ───────────────────────────────────────────────
+
+pub struct PanicMovieProfileRepository;
+
+#[async_trait]
+impl MovieProfileRepository for PanicMovieProfileRepository {
+    async fn upsert(&self, _profile: &MovieProfile) -> Result<(), DomainError> {
+        panic!("PanicMovieProfileRepository called")
+    }
+
+    async fn get_by_movie_id(&self, _id: &MovieId) -> Result<Option<MovieProfile>, DomainError> {
+        panic!("PanicMovieProfileRepository called")
+    }
+
+    async fn list_stale(&self) -> Result<Vec<(MovieId, String)>, DomainError> {
+        panic!("PanicMovieProfileRepository called")
+    }
+}
+
+// ── PanicPersonCommand ────────────────────────────────────────────────────────
+
+pub struct PanicPersonCommand;
+
+#[async_trait]
+impl PersonCommand for PanicPersonCommand {
+    async fn upsert_batch(&self, _persons: &[Person]) -> Result<(), DomainError> {
+        panic!("PanicPersonCommand called")
+    }
+}
+
+// ── PanicPersonQuery ──────────────────────────────────────────────────────────
+
+pub struct PanicPersonQuery;
+
+#[async_trait]
+impl PersonQuery for PanicPersonQuery {
+    async fn get_by_id(&self, _id: &PersonId) -> Result<Option<Person>, DomainError> {
+        panic!("PanicPersonQuery called")
+    }
+
+    async fn get_by_external_id(
+        &self,
+        _id: &ExternalPersonId,
+    ) -> Result<Option<Person>, DomainError> {
+        panic!("PanicPersonQuery called")
+    }
+
+    async fn get_credits(&self, _id: &PersonId) -> Result<PersonCredits, DomainError> {
+        panic!("PanicPersonQuery called")
+    }
+
+    async fn list_orphaned_persons(&self) -> Result<Vec<PersonId>, DomainError> {
+        panic!("PanicPersonQuery called")
+    }
+}
+
+// ── PanicSearchPort ───────────────────────────────────────────────────────────
+
+pub struct PanicSearchPort;
+
+#[async_trait]
+impl SearchPort for PanicSearchPort {
+    async fn search(&self, _query: &SearchQuery) -> Result<SearchResults, DomainError> {
+        Ok(SearchResults {
+            movies: Paginated { items: vec![], total_count: 0, limit: 10, offset: 0 },
+            people: Paginated { items: vec![], total_count: 0, limit: 10, offset: 0 },
+        })
+    }
+}
+
+// ── PanicSearchCommand ────────────────────────────────────────────────────────
+
+pub struct PanicSearchCommand;
+
+#[async_trait]
+impl SearchCommand for PanicSearchCommand {
+    async fn index(&self, _doc: IndexableDocument) -> Result<(), DomainError> {
+        panic!("PanicSearchCommand called")
+    }
+
+    async fn remove(&self, _entity_type: EntityType, _id: &str) -> Result<(), DomainError> {
+        panic!("PanicSearchCommand called")
+    }
+}
+
+// ── PanicPosterFetcher ────────────────────────────────────────────────────────
+
+pub struct PanicPosterFetcher;
+
+#[async_trait]
+impl PosterFetcherClient for PanicPosterFetcher {
+    async fn fetch_poster_bytes(&self, _poster_url: &PosterUrl) -> Result<Vec<u8>, DomainError> {
+        panic!("PanicPosterFetcher called")
+    }
+}
+
+// ── PanicDiaryExporter ────────────────────────────────────────────────────────
+
+pub struct PanicDiaryExporter;
+
+#[async_trait]
+impl DiaryExporter for PanicDiaryExporter {
+    async fn serialize_entries(
+        &self,
+        _entries: &[crate::models::DiaryEntry],
+        _format: ExportFormat,
+    ) -> Result<Vec<u8>, DomainError> {
+        panic!("PanicDiaryExporter called")
+    }
+}
+
+// ── PanicDocumentParser ───────────────────────────────────────────────────────
+
+pub struct PanicDocumentParser;
+
+impl DocumentParser for PanicDocumentParser {
+    fn parse(&self, _bytes: &[u8], _format: FileFormat) -> Result<ParsedFile, ImportError> {
+        panic!("PanicDocumentParser called")
+    }
+
+    fn apply_mapping(&self, _file: &ParsedFile, _mappings: &[FieldMapping]) -> Vec<AnnotatedRow> {
+        panic!("PanicDocumentParser called")
+    }
+}
+
+// ── PanicProfileFieldsRepo ────────────────────────────────────────────────────
+
+pub struct PanicProfileFieldsRepo;
+
+#[async_trait]
+impl UserProfileFieldsRepository for PanicProfileFieldsRepo {
+    async fn get_fields(
+        &self,
+        _user_id: &UserId,
+    ) -> Result<Vec<crate::models::ProfileField>, DomainError> {
+        panic!("PanicProfileFieldsRepo called")
+    }
+
+    async fn set_fields(
+        &self,
+        _user_id: &UserId,
+        _fields: Vec<crate::models::ProfileField>,
+    ) -> Result<(), DomainError> {
+        panic!("PanicProfileFieldsRepo called")
+    }
+}

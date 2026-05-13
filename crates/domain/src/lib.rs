@@ -4,3 +4,6 @@ pub mod models;
 pub mod ports;
 pub mod services;
 pub mod value_objects;
+
+#[cfg(any(test, feature = "test-helpers"))]
+pub mod testing;
