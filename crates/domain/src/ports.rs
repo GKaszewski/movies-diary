@@ -188,7 +188,15 @@ pub trait UserRepository: Send + Sync {
         user_id: &UserId,
         bio: Option<String>,
         avatar_path: Option<String>,
+        banner_path: Option<String>,
+        also_known_as: Option<String>,
     ) -> Result<(), DomainError>;
+}
+
+#[async_trait]
+pub trait UserProfileFieldsRepository: Send + Sync {
+    async fn get_fields(&self, user_id: &UserId) -> Result<Vec<crate::models::ProfileField>, DomainError>;
+    async fn set_fields(&self, user_id: &UserId, fields: Vec<crate::models::ProfileField>) -> Result<(), DomainError>;
 }
 
 #[async_trait]

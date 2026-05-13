@@ -6,7 +6,7 @@ use sqlx::SqlitePool;
 async fn setup() -> (SqlitePool, SqliteUserRepository) {
     let pool = SqlitePool::connect(":memory:").await.unwrap();
     sqlx::query(
-        "CREATE TABLE users (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, username TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, created_at TEXT NOT NULL, role TEXT NOT NULL DEFAULT 'standard', bio TEXT, avatar_path TEXT)"
+        "CREATE TABLE users (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, username TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, created_at TEXT NOT NULL, role TEXT NOT NULL DEFAULT 'standard', bio TEXT, avatar_path TEXT, banner_path TEXT, also_known_as TEXT)"
     )
     .execute(&pool)
     .await
@@ -61,6 +61,8 @@ async fn update_profile_persists_bio_and_avatar() {
         user.id(),
         Some("My biography".to_string()),
         Some("avatars/user1".to_string()),
+        None,
+        None,
     )
     .await
     .unwrap();
@@ -80,10 +82,10 @@ async fn update_profile_clears_fields_with_none() {
         UserRole::Standard,
     );
     repo.save(&user).await.unwrap();
-    repo.update_profile(user.id(), Some("bio".to_string()), Some("path".to_string()))
+    repo.update_profile(user.id(), Some("bio".to_string()), Some("path".to_string()), None, None)
         .await
         .unwrap();
-    repo.update_profile(user.id(), None, None).await.unwrap();
+    repo.update_profile(user.id(), None, None, None, None).await.unwrap();
 
     let found = repo.find_by_id(user.id()).await.unwrap().unwrap();
     assert_eq!(found.bio(), None);

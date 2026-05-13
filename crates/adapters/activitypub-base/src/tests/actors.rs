@@ -23,11 +23,21 @@ fn person_serializes_with_enriched_fields() {
         }),
         url: Some("https://example.com/u/alice".parse().unwrap()),
         discoverable: Some(true),
-        manually_approves_followers: false,
+        manually_approves_followers: true,
+        updated: Some(Utc::now()),
+        endpoints: Some(Endpoints {
+            shared_inbox: "https://example.com/inbox".parse().unwrap(),
+        }),
+        image: None,
+        also_known_as: vec![],
+        attachment: vec![],
     };
     let json = serde_json::to_value(&person).unwrap();
     assert_eq!(json["discoverable"], true);
     assert_eq!(json["summary"], "Bio text");
     assert_eq!(json["icon"]["type"], "Image");
-    assert!(json.get("manuallyApprovesFollowers").is_some());
+    assert_eq!(json["manuallyApprovesFollowers"], true);
+    assert!(json.get("updated").is_some());
+    assert!(json.get("endpoints").is_some());
+    assert_eq!(json["endpoints"]["sharedInbox"], "https://example.com/inbox");
 }

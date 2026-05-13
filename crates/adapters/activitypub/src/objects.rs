@@ -1,3 +1,4 @@
+use activitypub_base::AS_PUBLIC;
 use activitypub_federation::kinds::object::NoteType;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -36,6 +37,10 @@ pub struct ReviewObject {
     pub(crate) watched_at: DateTime<Utc>,
     #[serde(default)]
     pub(crate) tag: Vec<ApHashtag>,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub(crate) to: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub(crate) cc: Vec<String>,
 }
 
 /// Serialize a local Review into a ReviewObject for AP delivery.
@@ -84,7 +89,7 @@ pub fn review_to_ap_object(
     ReviewObject {
         kind: NoteType::default(),
         id: ap_id,
-        attributed_to: actor_url,
+        attributed_to: actor_url.clone(),
         content,
         published: DateTime::from_naive_utc_and_offset(*review.created_at(), Utc),
         movie_title,
@@ -94,6 +99,8 @@ pub fn review_to_ap_object(
         comment: comment_text,
         watched_at: DateTime::from_naive_utc_and_offset(*review.watched_at(), Utc),
         tag,
+        to: vec![AS_PUBLIC.to_string()],
+        cc: vec![format!("{}/followers", actor_url)],
     }
 }
 
@@ -119,6 +126,10 @@ pub struct WatchlistObject {
     /// Non-Movies-Diary apps ignore unknown fields.
     #[serde(default)]
     pub(crate) watchlist_entry: bool,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub(crate) to: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub(crate) cc: Vec<String>,
 }
 
 pub fn watchlist_to_ap_object(
@@ -156,7 +167,7 @@ pub fn watchlist_to_ap_object(
     WatchlistObject {
         kind: NoteType::default(),
         id: ap_id,
-        attributed_to: actor_url,
+        attributed_to: actor_url.clone(),
         content,
         published: added_at,
         movie_title,
@@ -165,6 +176,8 @@ pub fn watchlist_to_ap_object(
         poster_url,
         tag,
         watchlist_entry: true,
+        to: vec![AS_PUBLIC.to_string()],
+        cc: vec![format!("{}/followers", actor_url)],
     }
 }
 

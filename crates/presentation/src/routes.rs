@@ -223,6 +223,7 @@ fn api_routes(rate_limit: u64) -> Router<AppState> {
         .route("/import/profiles", routing::get(handlers::import::api_get_profiles).post(handlers::import::api_post_profile))
         .route("/import/profiles/{id}", routing::delete(handlers::import::api_delete_profile))
         .route("/profile", routing::get(handlers::api::get_profile).put(handlers::api::update_profile_handler))
+        .route("/profile/fields", routing::put(handlers::api::update_profile_fields_handler))
         .route("/search", routing::get(handlers::api::get_search))
         .route("/people/{id}", routing::get(handlers::api::get_person_handler))
         .route("/people/{id}/credits", routing::get(handlers::api::get_person_credits_handler))

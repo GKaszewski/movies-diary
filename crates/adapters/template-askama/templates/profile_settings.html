@@ -6,10 +6,17 @@
 {% endif %}
 <form method="post" action="/settings/profile" enctype="multipart/form-data">
   <input type="hidden" name="_csrf" value="{{ ctx.csrf_token }}">
+
   <label>
     Bio<br>
     <textarea name="bio">{% if let Some(b) = bio %}{{ b }}{% endif %}</textarea>
   </label>
+
+  <label>
+    Also known as (actor URL for account migration)<br>
+    <input type="text" name="also_known_as" value="{% if let Some(v) = also_known_as %}{{ v }}{% endif %}">
+  </label>
+
   {% if let Some(url) = avatar_url %}
   <div>
     <p>Current avatar:</p>
@@ -20,6 +27,30 @@
     Avatar image<br>
     <input type="file" name="avatar" accept="image/jpeg,image/png,image/webp">
   </label>
+
+  {% if let Some(url) = banner_url %}
+  <div>
+    <p>Current banner:</p>
+    <img src="{{ url }}" alt="Current banner" style="max-width:600px;max-height:200px;">
+  </div>
+  {% endif %}
+  <label>
+    Banner image<br>
+    <input type="file" name="banner" accept="image/jpeg,image/png,image/webp">
+  </label>
+
+  <fieldset>
+    <legend>Profile fields (max 4)</legend>
+    {% for i in 0..4usize %}
+    <div>
+      <input type="text" name="field_name_{{ i }}" placeholder="Label"
+             value="{% if let Some((n, _)) = profile_fields.get(*i) %}{{ n }}{% endif %}">
+      <input type="text" name="field_value_{{ i }}" placeholder="Value"
+             value="{% if let Some((_, v)) = profile_fields.get(*i) %}{{ v }}{% endif %}">
+    </div>
+    {% endfor %}
+  </fieldset>
+
   <button type="submit">Save</button>
 </form>
 {% endblock %}

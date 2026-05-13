@@ -4,7 +4,8 @@ use anyhow::Context;
 use domain::ports::{
     DiaryRepository, ImageRefCommand, ImageRefQuery, ImportProfileRepository,
     ImportSessionRepository, MovieProfileRepository, MovieRepository, PersonCommand, PersonQuery,
-    ReviewRepository, SearchCommand, SearchPort, StatsRepository, UserRepository, WatchlistRepository,
+    ReviewRepository, SearchCommand, SearchPort, StatsRepository, UserProfileFieldsRepository,
+    UserRepository, WatchlistRepository,
 };
 
 pub enum DbPool {
@@ -30,6 +31,7 @@ pub struct Repos {
     pub person_query:      Arc<dyn PersonQuery>,
     pub search_command:    Arc<dyn SearchCommand>,
     pub search_port:       Arc<dyn SearchPort>,
+    pub profile_fields:    Arc<dyn UserProfileFieldsRepository>,
 }
 
 pub async fn connect(database_url: &str, backend: &str) -> anyhow::Result<(Repos, DbPool)> {
@@ -41,10 +43,12 @@ pub async fn connect(database_url: &str, backend: &str) -> anyhow::Result<(Repos
             let (image_ref_command, image_ref_query) = postgres::create_image_ref(pool.clone());
             let (person_command, person_query) = postgres::create_person_adapter(pool.clone());
             let (search_command, search_port)  = postgres_search::create_search_adapter(pool.clone());
+            let pf = postgres::create_profile_fields_repo(pool.clone());
             Ok((Repos { movie: m, review: r, diary: d, stats: s, user: u,
                         import_session: is, import_profile: ip, movie_profile: mp, watchlist: wl,
                         image_ref_command, image_ref_query,
-                        person_command, person_query, search_command, search_port },
+                        person_command, person_query, search_command, search_port,
+                        profile_fields: pf },
                 DbPool::Postgres(pool)))
         }
         #[cfg(feature = "sqlite")]
@@ -54,10 +58,12 @@ pub async fn connect(database_url: &str, backend: &str) -> anyhow::Result<(Repos
             let (image_ref_command, image_ref_query) = sqlite::create_image_ref(pool.clone());
             let (person_command, person_query) = sqlite::create_person_adapter(pool.clone());
             let (search_command, search_port)  = sqlite_search::create_search_adapter(pool.clone());
+            let pf = sqlite::create_profile_fields_repo(pool.clone());
             Ok((Repos { movie: m, review: r, diary: d, stats: s, user: u,
                         import_session: is, import_profile: ip, movie_profile: mp, watchlist: wl,
                         image_ref_command, image_ref_query,
-                        person_command, person_query, search_command, search_port },
+                        person_command, person_query, search_command, search_port,
+                        profile_fields: pf },
                 DbPool::Sqlite(pool)))
         }
         #[cfg(not(feature = "sqlite"))]

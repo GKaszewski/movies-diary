@@ -121,6 +121,7 @@ impl ActivityPubService {
             .route("/.well-known/nodeinfo", get(nodeinfo_well_known_handler))
             .route("/nodeinfo/2.0", get(nodeinfo_handler))
             .route("/.well-known/webfinger", get(webfinger_handler))
+            .route("/inbox", post(inbox_handler))
             .route("/users/{id}/inbox", post(inbox_handler))
             .route("/users/{id}/outbox", get(outbox_handler))
             .route("/users/{id}/followers", get(followers_handler))
@@ -487,6 +488,8 @@ impl ActivityPubService {
             kind: Default::default(),
             actor: ObjectId::from(local_actor.ap_id.clone()),
             object,
+            to: vec![crate::urls::AS_PUBLIC.to_string()],
+            cc: vec![local_actor.followers_url.to_string()],
         };
         let create_with_ctx = WithContext::new_default(create);
 
@@ -554,6 +557,8 @@ impl ActivityPubService {
             kind: Default::default(),
             actor: ObjectId::from(local_actor.ap_id.clone()),
             object: ap_id,
+            to: vec![crate::urls::AS_PUBLIC.to_string()],
+            cc: vec![local_actor.followers_url.to_string()],
         };
         let delete_with_ctx = WithContext::new_default(delete);
         let inboxes = collect_inboxes(&accepted);
@@ -617,6 +622,8 @@ impl ActivityPubService {
             kind: Default::default(),
             actor: ObjectId::from(local_actor.ap_id.clone()),
             object,
+            to: vec![crate::urls::AS_PUBLIC.to_string()],
+            cc: vec![local_actor.followers_url.to_string()],
         };
         let add_with_ctx = WithContext::new_default(add);
         let inboxes = collect_inboxes(&accepted);
@@ -746,6 +753,8 @@ impl ActivityPubService {
             kind: Default::default(),
             actor: ObjectId::from(local_actor.ap_id.clone()),
             object,
+            to: vec![crate::urls::AS_PUBLIC.to_string()],
+            cc: vec![local_actor.followers_url.to_string()],
         };
         let update_with_ctx = WithContext::new_default(update);
         let inboxes = collect_inboxes(&accepted);
@@ -771,7 +780,8 @@ impl ActivityPubService {
 
         let person = local_actor.clone().into_json(&data).await
             .map_err(|e| anyhow::anyhow!("{e}"))?;
-        let person_json = serde_json::to_value(&person)?;
+        // Wrap with @context so Mastodon's JSON-LD processor can resolve field names.
+        let person_json = serde_json::to_value(&WithContext::new_default(person))?;
 
         let update_id = Url::parse(&format!(
             "{}/activities/update/{}",
@@ -784,6 +794,8 @@ impl ActivityPubService {
             kind: Default::default(),
             actor: ObjectId::from(local_actor.ap_id.clone()),
             object: person_json,
+            to: vec![crate::urls::AS_PUBLIC.to_string()],
+            cc: vec![local_actor.followers_url.to_string()],
         };
 
         let followers = data.federation_repo.get_followers(user_id).await?;
@@ -793,10 +805,19 @@ impl ActivityPubService {
             .collect();
 
         if accepted.is_empty() {
+            tracing::info!(user_id = %user_id, "no accepted followers, skipping actor update broadcast");
             return Ok(());
         }
 
         let inboxes = collect_inboxes(&accepted);
+        tracing::info!(
+            user_id = %user_id,
+            follower_count = accepted.len(),
+            inbox_count = inboxes.len(),
+            inboxes = ?inboxes,
+            "broadcasting actor update"
+        );
+
         let sends = SendActivityTask::prepare(
             &WithContext::new_default(update),
             &local_actor,
@@ -807,8 +828,13 @@ impl ActivityPubService {
 
         let failures = send_with_retry(sends, &data).await;
         if !failures.is_empty() {
-            tracing::warn!(count = failures.len(), "actor update delivery failures");
+            return Err(anyhow::anyhow!(
+                "actor update delivery failed for {} inbox(es): {}",
+                failures.len(),
+                failures.iter().map(|e| e.to_string()).collect::<Vec<_>>().join("; ")
+            ));
         }
+        tracing::info!(user_id = %user_id, "actor update broadcast complete");
         Ok(())
     }
 
@@ -1115,6 +1141,8 @@ impl ActivityPubService {
                     kind: Default::default(),
                     actor: ObjectId::from(local_actor.ap_id.clone()),
                     object: object_json.clone(),
+                    to: vec![],
+                    cc: vec![],
                 };
 
                 let sends = SendActivityTask::prepare(

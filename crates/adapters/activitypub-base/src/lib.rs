@@ -12,6 +12,7 @@ pub mod outbox;
 pub mod repository;
 pub mod service;
 pub(crate) mod urls;
+pub use urls::AS_PUBLIC;
 pub mod user;
 pub mod webfinger;
 

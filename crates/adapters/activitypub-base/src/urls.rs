@@ -2,6 +2,8 @@ use url::Url;
 
 use crate::error::Error;
 
+pub const AS_PUBLIC: &str = "https://www.w3.org/ns/activitystreams#Public";
+
 pub fn extract_user_id_from_url(url: &Url) -> Option<uuid::Uuid> {
     let path = url.path();
     path.strip_prefix("/users/")

@@ -18,6 +18,7 @@ mod import_session;
 mod models;
 mod persons;
 mod profile;
+mod profile_fields;
 mod users;
 mod watchlist;
 
@@ -31,6 +32,7 @@ pub use import_profile::PostgresImportProfileRepository;
 pub use import_session::PostgresImportSessionRepository;
 pub use persons::{PostgresPersonAdapter, create_person_adapter};
 pub use profile::PostgresMovieProfileRepository;
+pub use profile_fields::PostgresProfileFieldsRepository;
 pub use users::PostgresUserRepository;
 pub use watchlist::PostgresWatchlistRepository;
 
@@ -929,6 +931,12 @@ impl StatsRepository for PostgresRepository {
             max_director_count,
         })
     }
+}
+
+pub fn create_profile_fields_repo(
+    pool: sqlx::PgPool,
+) -> std::sync::Arc<dyn domain::ports::UserProfileFieldsRepository> {
+    std::sync::Arc::new(profile_fields::PostgresProfileFieldsRepository::new(pool))
 }
 
 pub async fn wire(database_url: &str) -> anyhow::Result<(

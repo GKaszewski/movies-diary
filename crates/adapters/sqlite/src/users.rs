@@ -39,6 +39,8 @@ impl SqliteUserRepository {
         role: UserRole,
         bio: Option<String>,
         avatar_path: Option<String>,
+        banner_path: Option<String>,
+        also_known_as: Option<String>,
     ) -> Result<User, DomainError> {
         let id = uuid::Uuid::parse_str(&id_str)
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
@@ -56,6 +58,8 @@ impl SqliteUserRepository {
             role,
             bio,
             avatar_path,
+            banner_path,
+            also_known_as,
         ))
     }
 }
@@ -65,7 +69,7 @@ impl UserRepository for SqliteUserRepository {
     async fn find_by_email(&self, email: &Email) -> Result<Option<User>, DomainError> {
         let email_str = email.value();
         let row = sqlx::query!(
-            "SELECT id, email, username, password_hash, role, bio, avatar_path FROM users WHERE email = ?",
+            "SELECT id, email, username, password_hash, role, bio, avatar_path, banner_path, also_known_as FROM users WHERE email = ?",
             email_str
         )
         .fetch_optional(&self.pool)
@@ -81,6 +85,8 @@ impl UserRepository for SqliteUserRepository {
                 Self::parse_role(&r.role),
                 r.bio,
                 r.avatar_path,
+                r.banner_path,
+                r.also_known_as,
             )
         })
         .transpose()
@@ -89,7 +95,7 @@ impl UserRepository for SqliteUserRepository {
     async fn find_by_username(&self, username: &Username) -> Result<Option<User>, DomainError> {
         let username_str = username.value();
         let row = sqlx::query!(
-            "SELECT id, email, username, password_hash, role, bio, avatar_path FROM users WHERE username = ?",
+            "SELECT id, email, username, password_hash, role, bio, avatar_path, banner_path, also_known_as FROM users WHERE username = ?",
             username_str
         )
         .fetch_optional(&self.pool)
@@ -105,6 +111,8 @@ impl UserRepository for SqliteUserRepository {
                 Self::parse_role(&r.role),
                 r.bio,
                 r.avatar_path,
+                r.banner_path,
+                r.also_known_as,
             )
         })
         .transpose()
@@ -148,7 +156,7 @@ impl UserRepository for SqliteUserRepository {
     async fn find_by_id(&self, id: &UserId) -> Result<Option<User>, DomainError> {
         let id_str = id.value().to_string();
         let row = sqlx::query!(
-            "SELECT id, email, username, password_hash, role, bio, avatar_path FROM users WHERE id = ?",
+            "SELECT id, email, username, password_hash, role, bio, avatar_path, banner_path, also_known_as FROM users WHERE id = ?",
             id_str
         )
         .fetch_optional(&self.pool)
@@ -164,6 +172,8 @@ impl UserRepository for SqliteUserRepository {
                 Self::parse_role(&r.role),
                 r.bio,
                 r.avatar_path,
+                r.banner_path,
+                r.also_known_as,
             )
         })
         .transpose()
@@ -174,15 +184,21 @@ impl UserRepository for SqliteUserRepository {
         user_id: &UserId,
         bio: Option<String>,
         avatar_path: Option<String>,
+        banner_path: Option<String>,
+        also_known_as: Option<String>,
     ) -> Result<(), DomainError> {
         let id_str = user_id.value().to_string();
-        sqlx::query("UPDATE users SET bio = ?, avatar_path = ? WHERE id = ?")
-            .bind(&bio)
-            .bind(&avatar_path)
-            .bind(&id_str)
-            .execute(&self.pool)
-            .await
-            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        sqlx::query(
+            "UPDATE users SET bio = ?, avatar_path = ?, banner_path = ?, also_known_as = ? WHERE id = ?",
+        )
+        .bind(&bio)
+        .bind(&avatar_path)
+        .bind(&banner_path)
+        .bind(&also_known_as)
+        .bind(&id_str)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
         Ok(())
     }
 

@@ -28,7 +28,7 @@ use application::{
     use_cases::{
         add_to_watchlist, delete_review, export_diary as export_diary_uc, get_movie_social_page,
         get_watchlist, is_on_watchlist, log_review, login as login_uc, register as register_uc,
-        remove_from_watchlist, update_profile,
+        remove_from_watchlist, update_profile, update_profile_fields,
     },
 };
 use domain::models::ExportFormat;
@@ -1249,6 +1249,17 @@ pub async fn get_profile_settings(
     let avatar_url = user
         .avatar_path()
         .map(|path| format!("{}/images/{}", base_url, path));
+    let banner_url = user
+        .banner_path()
+        .map(|path| format!("{}/images/{}", base_url, path));
+
+    let profile_fields = state.app_ctx.profile_fields_repository
+        .get_fields(&user_id)
+        .await
+        .unwrap_or_default()
+        .into_iter()
+        .map(|f| (f.name, f.value))
+        .collect();
 
     let saved = params.saved.as_deref() == Some("1");
 
@@ -1256,6 +1267,9 @@ pub async fn get_profile_settings(
         ctx,
         bio: user.bio().map(|s| s.to_string()),
         avatar_url,
+        banner_url,
+        also_known_as: user.also_known_as().map(|s| s.to_string()),
+        profile_fields,
         saved,
     };
 
@@ -1430,22 +1444,46 @@ pub async fn post_profile_settings(
     let mut bio: Option<String> = None;
     let mut avatar_bytes: Option<Vec<u8>> = None;
     let mut avatar_content_type: Option<String> = None;
+    let mut banner_bytes: Option<Vec<u8>> = None;
+    let mut banner_content_type: Option<String> = None;
+    let mut also_known_as: Option<String> = None;
+    let mut field_names: std::collections::HashMap<usize, String> = std::collections::HashMap::new();
+    let mut field_values: std::collections::HashMap<usize, String> = std::collections::HashMap::new();
 
     while let Ok(Some(field)) = multipart.next_field().await {
         let name = field.name().unwrap_or("").to_string();
         match name.as_str() {
-            "bio" => {
+            "bio" => { if let Ok(text) = field.text().await { bio = Some(text); } }
+            "also_known_as" => {
                 if let Ok(text) = field.text().await {
-                    bio = Some(text);
+                    also_known_as = Some(text).filter(|s| !s.is_empty());
                 }
             }
             "avatar" => {
-                let content_type = field.content_type().map(|s| s.to_string());
-                if let Ok(bytes) = field.bytes().await
-                    && !bytes.is_empty() {
-                        avatar_bytes = Some(bytes.to_vec());
-                        avatar_content_type = content_type;
+                let ct = field.content_type().map(|s| s.to_string());
+                if let Ok(bytes) = field.bytes().await {
+                    if !bytes.is_empty() { avatar_bytes = Some(bytes.to_vec()); avatar_content_type = ct; }
+                }
+            }
+            "banner" => {
+                let ct = field.content_type().map(|s| s.to_string());
+                if let Ok(bytes) = field.bytes().await {
+                    if !bytes.is_empty() { banner_bytes = Some(bytes.to_vec()); banner_content_type = ct; }
+                }
+            }
+            n if n.starts_with("field_name_") => {
+                if let Ok(idx) = n["field_name_".len()..].parse::<usize>() {
+                    if let Ok(text) = field.text().await {
+                        if !text.is_empty() { field_names.insert(idx, text); }
                     }
+                }
+            }
+            n if n.starts_with("field_value_") => {
+                if let Ok(idx) = n["field_value_".len()..].parse::<usize>() {
+                    if let Ok(text) = field.text().await {
+                        if !text.is_empty() { field_values.insert(idx, text); }
+                    }
+                }
             }
             _ => {}
         }
@@ -1456,9 +1494,26 @@ pub async fn post_profile_settings(
         bio,
         avatar_bytes,
         avatar_content_type,
+        banner_bytes,
+        banner_content_type,
+        also_known_as,
     };
-
     let _ = update_profile::execute(&state.app_ctx, cmd).await;
+
+    let fields: Vec<domain::models::ProfileField> = (0..4)
+        .filter_map(|i| {
+            field_names.get(&i).map(|name| domain::models::ProfileField {
+                name: name.clone(),
+                value: field_values.get(&i).cloned().unwrap_or_default(),
+            })
+        })
+        .collect();
+
+    let fields_cmd = application::commands::UpdateProfileFieldsCommand {
+        user_id: user_id.value(),
+        fields,
+    };
+    let _ = update_profile_fields::execute(&state.app_ctx, fields_cmd).await;
 
     Redirect::to("/settings/profile?saved=1").into_response()
 }

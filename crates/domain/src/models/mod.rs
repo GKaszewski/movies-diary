@@ -306,6 +306,12 @@ pub enum UserRole {
     Admin,
 }
 
+#[derive(Debug, Clone)]
+pub struct ProfileField {
+    pub name: String,
+    pub value: String,
+}
+
 #[derive(Clone, Debug)]
 pub struct User {
     id: UserId,
@@ -315,6 +321,8 @@ pub struct User {
     role: UserRole,
     bio: Option<String>,
     avatar_path: Option<String>,
+    banner_path: Option<String>,
+    also_known_as: Option<String>,
 }
 
 impl User {
@@ -332,6 +340,8 @@ impl User {
             role,
             bio: None,
             avatar_path: None,
+            banner_path: None,
+            also_known_as: None,
         }
     }
 
@@ -343,6 +353,8 @@ impl User {
         role: UserRole,
         bio: Option<String>,
         avatar_path: Option<String>,
+        banner_path: Option<String>,
+        also_known_as: Option<String>,
     ) -> Self {
         Self {
             id,
@@ -352,6 +364,8 @@ impl User {
             role,
             bio,
             avatar_path,
+            banner_path,
+            also_known_as,
         }
     }
 
@@ -359,9 +373,11 @@ impl User {
         self.password_hash = new_hash;
     }
 
-    pub fn update_profile(&mut self, bio: Option<String>, avatar_path: Option<String>) {
+    pub fn update_profile(&mut self, bio: Option<String>, avatar_path: Option<String>, banner_path: Option<String>, also_known_as: Option<String>) {
         self.bio = bio;
         self.avatar_path = avatar_path;
+        self.banner_path = banner_path;
+        self.also_known_as = also_known_as;
     }
 
     pub fn email(&self) -> &Email {
@@ -385,6 +401,14 @@ impl User {
 
     pub fn avatar_path(&self) -> Option<&str> {
         self.avatar_path.as_deref()
+    }
+
+    pub fn banner_path(&self) -> Option<&str> {
+        self.banner_path.as_deref()
+    }
+
+    pub fn also_known_as(&self) -> Option<&str> {
+        self.also_known_as.as_deref()
     }
 }
 

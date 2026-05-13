@@ -58,6 +58,19 @@ pub trait FederationRepository: Send + Sync {
         remote_actor_url: &str,
     ) -> Result<()>;
     async fn get_followers(&self, local_user_id: uuid::Uuid) -> Result<Vec<Follower>>;
+    async fn get_followers_page(
+        &self,
+        local_user_id: uuid::Uuid,
+        offset: u32,
+        limit: usize,
+    ) -> Result<Vec<Follower>>;
+    async fn count_followers(&self, local_user_id: uuid::Uuid) -> Result<usize>;
+    async fn get_following_page(
+        &self,
+        local_user_id: uuid::Uuid,
+        offset: u32,
+        limit: usize,
+    ) -> Result<Vec<RemoteActor>>;
     async fn update_follower_status(
         &self,
         local_user_id: uuid::Uuid,

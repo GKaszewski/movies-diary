@@ -28,7 +28,10 @@ pub struct DbActor {
     pub last_refreshed_at: DateTime<Utc>,
     pub bio: Option<String>,
     pub avatar_url: Option<Url>,
+    pub banner_url: Option<Url>,
+    pub also_known_as: Option<String>,
     pub profile_url: Option<Url>,
+    pub attachment: Vec<domain::models::ProfileField>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -36,6 +39,20 @@ pub struct ApImageObject {
     #[serde(rename = "type")]
     pub kind: String,
     pub url: Url,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Endpoints {
+    pub shared_inbox: Url,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProfileFieldObject {
+    #[serde(rename = "type")]
+    pub kind: String,
+    pub name: String,
+    pub value: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -60,6 +77,16 @@ pub struct Person {
     #[serde(skip_serializing_if = "Option::is_none")]
     discoverable: Option<bool>,
     manually_approves_followers: bool,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    updated: Option<DateTime<Utc>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    endpoints: Option<Endpoints>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    image: Option<ApImageObject>,
+    #[serde(rename = "alsoKnownAs", skip_serializing_if = "Vec::is_empty", default)]
+    also_known_as: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    attachment: Vec<ProfileFieldObject>,
 }
 
 pub async fn get_local_actor(
@@ -107,7 +134,10 @@ pub async fn get_local_actor(
         last_refreshed_at: Utc::now(),
         bio: user.bio,
         avatar_url: user.avatar_url,
+        banner_url: user.banner_url,
+        also_known_as: user.also_known_as,
         profile_url: user.profile_url,
+        attachment: user.attachment,
     })
 }
 
@@ -167,11 +197,14 @@ impl Object for DbActor {
             last_refreshed_at: Utc::now(),
             bio: None,
             avatar_url: None,
+            banner_url: None,
+            also_known_as: None,
             profile_url: None,
+            attachment: vec![],
         }))
     }
 
-    async fn into_json(self, _data: &Data<Self::DataType>) -> Result<Self::Kind, Self::Error> {
+    async fn into_json(self, data: &Data<Self::DataType>) -> Result<Self::Kind, Self::Error> {
         let public_key = PublicKey {
             id: format!("{}#main-key", &self.ap_id),
             owner: self.ap_id.clone(),
@@ -182,7 +215,20 @@ impl Object for DbActor {
             kind: "Image".to_string(),
             url,
         });
+        let image = self.banner_url.map(|url| ApImageObject {
+            kind: "Image".to_string(),
+            url,
+        });
         let profile_url = self.profile_url;
+        let also_known_as: Vec<String> = self.also_known_as.into_iter().collect();
+        let attachment: Vec<ProfileFieldObject> = self.attachment.into_iter().map(|f| ProfileFieldObject {
+            kind: "PropertyValue".to_string(),
+            name: f.name,
+            value: f.value,
+        }).collect();
+
+        let shared_inbox = Url::parse(&format!("{}/inbox", data.base_url))
+            .expect("base_url is always valid");
 
         Ok(Person {
             kind: Default::default(),
@@ -198,7 +244,12 @@ impl Object for DbActor {
             icon,
             url: profile_url,
             discoverable: Some(true),
-            manually_approves_followers: false,
+            manually_approves_followers: true,
+            updated: Some(self.last_refreshed_at),
+            endpoints: Some(Endpoints { shared_inbox }),
+            image,
+            also_known_as,
+            attachment,
         })
     }
 
@@ -244,7 +295,10 @@ impl Object for DbActor {
             last_refreshed_at: Utc::now(),
             bio: None,
             avatar_url: None,
+            banner_url: None,
+            also_known_as: None,
             profile_url: None,
+            attachment: vec![],
         })
     }
 }

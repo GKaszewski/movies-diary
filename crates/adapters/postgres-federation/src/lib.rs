@@ -127,6 +127,60 @@ impl FederationRepository for PostgresFederationRepository {
         }).collect())
     }
 
+    async fn get_followers_page(
+        &self,
+        local_user_id: uuid::Uuid,
+        offset: u32,
+        limit: usize,
+    ) -> Result<Vec<Follower>> {
+        let uid = local_user_id.to_string();
+        let limit_i64 = limit as i64;
+        let offset_i64 = offset as i64;
+
+        let rows = sqlx::query(
+            "SELECT f.remote_actor_url, f.status,
+                    a.handle, a.inbox_url, a.shared_inbox_url, a.display_name, a.avatar_url
+             FROM ap_followers f
+             LEFT JOIN ap_remote_actors a ON a.url = f.remote_actor_url
+             WHERE f.local_user_id = $1 AND f.status = 'accepted'
+             ORDER BY f.created_at ASC
+             LIMIT $2 OFFSET $3",
+        )
+        .bind(&uid)
+        .bind(limit_i64)
+        .bind(offset_i64)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows.into_iter().map(|row| {
+            let url: String = row.get("remote_actor_url");
+            let status_str: String = row.get("status");
+            let handle: String = row.try_get("handle").unwrap_or_default();
+            let inbox_url: String = row.try_get("inbox_url").unwrap_or_default();
+            let shared_inbox_url: Option<String> = row.try_get("shared_inbox_url").ok().flatten();
+            let display_name: Option<String> = row.try_get("display_name").ok().flatten();
+            let avatar_url: Option<String> = row.try_get("avatar_url").ok().flatten();
+            Follower {
+                actor: RemoteActor {
+                    url, handle, inbox_url, shared_inbox_url, display_name, avatar_url,
+                    outbox_url: row.try_get("outbox_url").ok().flatten(),
+                },
+                status: str_to_status(&status_str),
+            }
+        }).collect())
+    }
+
+    async fn count_followers(&self, local_user_id: uuid::Uuid) -> Result<usize> {
+        let uid = local_user_id.to_string();
+        let count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM ap_followers WHERE local_user_id = $1 AND status = 'accepted'",
+        )
+        .bind(&uid)
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(count as usize)
+    }
+
     async fn update_follower_status(
         &self,
         local_user_id: uuid::Uuid,
@@ -230,6 +284,41 @@ impl FederationRepository for PostgresFederationRepository {
         .fetch_one(&self.pool)
         .await?;
         Ok(count as usize)
+    }
+
+    async fn get_following_page(
+        &self,
+        local_user_id: uuid::Uuid,
+        offset: u32,
+        limit: usize,
+    ) -> Result<Vec<RemoteActor>> {
+        let uid = local_user_id.to_string();
+        let limit_i64 = limit as i64;
+        let offset_i64 = offset as i64;
+
+        let rows = sqlx::query(
+            "SELECT a.url, a.handle, a.inbox_url, a.shared_inbox_url, a.display_name, a.avatar_url
+             FROM ap_following f
+             INNER JOIN ap_remote_actors a ON a.url = f.remote_actor_url
+             WHERE f.local_user_id = $1 AND f.status = 'accepted'
+             ORDER BY f.created_at ASC
+             LIMIT $2 OFFSET $3",
+        )
+        .bind(&uid)
+        .bind(limit_i64)
+        .bind(offset_i64)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows.into_iter().map(|row| RemoteActor {
+            url: row.get("url"),
+            handle: row.get("handle"),
+            inbox_url: row.get("inbox_url"),
+            shared_inbox_url: row.try_get("shared_inbox_url").ok().flatten(),
+            display_name: row.try_get("display_name").ok().flatten(),
+            avatar_url: row.try_get("avatar_url").ok().flatten(),
+            outbox_url: row.try_get("outbox_url").ok().flatten(),
+        }).collect())
     }
 
     async fn upsert_remote_actor(&self, actor: RemoteActor) -> Result<()> {

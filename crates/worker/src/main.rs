@@ -32,20 +32,22 @@ async fn main() -> anyhow::Result<()> {
     let (repos, db_pool) = db::connect(&database_url, &backend).await?;
     let (event_publisher_arc, consumer_arc) = event_bus::create(&db_pool).await?;
 
-    let image_ref_command = Arc::clone(&repos.image_ref_command);
-    let image_ref_query   = Arc::clone(&repos.image_ref_query);
-    let person_command    = Arc::clone(&repos.person_command);
-    let person_query      = Arc::clone(&repos.person_query);
-    let search_command    = Arc::clone(&repos.search_command);
-    let search_port       = Arc::clone(&repos.search_port);
+    let image_ref_command   = Arc::clone(&repos.image_ref_command);
+    let image_ref_query     = Arc::clone(&repos.image_ref_query);
+    let person_command      = Arc::clone(&repos.person_command);
+    let person_query        = Arc::clone(&repos.person_query);
+    let search_command      = Arc::clone(&repos.search_command);
+    let search_port         = Arc::clone(&repos.search_port);
+    let profile_fields_repo = Arc::clone(&repos.profile_fields);
 
     // Clone refs federation handler needs before ctx consumes them.
     #[cfg(feature = "federation")]
-    let (fed_movie_repo, fed_review_repo, fed_diary_repo, fed_user_repo, base_url, allow_registration) = (
+    let (fed_movie_repo, fed_review_repo, fed_diary_repo, fed_user_repo, fed_profile_fields_repo, base_url, allow_registration) = (
         Arc::clone(&repos.movie),
         Arc::clone(&repos.review),
         Arc::clone(&repos.diary),
         Arc::clone(&repos.user),
+        Arc::clone(&repos.profile_fields),
         app_config.base_url.clone(),
         app_config.allow_registration,
     );
@@ -76,6 +78,7 @@ async fn main() -> anyhow::Result<()> {
         import_profile_repository: repos.import_profile,
         movie_profile_repository:  repos.movie_profile,
         watchlist_repository:      repos.watchlist,
+        profile_fields_repository: Arc::clone(&profile_fields_repo),
         #[cfg(feature = "federation")]
         remote_watchlist_repository: fed_remote_watchlist_repo.clone(),
         person_command:            Arc::clone(&person_command),
@@ -172,6 +175,7 @@ async fn main() -> anyhow::Result<()> {
                 fed_review_store,
                 fed_remote_watchlist_repo,
                 fed_user_repo,
+                fed_profile_fields_repo,
                 fed_movie_repo,
                 fed_review_repo,
                 fed_diary_repo,
@@ -207,7 +211,7 @@ async fn main() -> anyhow::Result<()> {
 
 fn init_tracing() {
     let filter = std::env::var("RUST_LOG")
-        .unwrap_or_else(|_| "worker=info,application=info".to_string());
+        .unwrap_or_else(|_| "worker=info,application=info,activitypub_base=info".to_string());
     tracing_subscriber::registry()
         .with(tracing_subscriber::EnvFilter::new(filter))
         .with(tracing_subscriber::fmt::layer())

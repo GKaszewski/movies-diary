@@ -40,6 +40,8 @@ impl PostgresUserRepository {
         role: UserRole,
         bio: Option<String>,
         avatar_path: Option<String>,
+        banner_path: Option<String>,
+        also_known_as: Option<String>,
     ) -> Result<User, DomainError> {
         let id = uuid::Uuid::parse_str(&id_str)
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
@@ -57,6 +59,8 @@ impl PostgresUserRepository {
             role,
             bio,
             avatar_path,
+            banner_path,
+            also_known_as,
         ))
     }
 }
@@ -74,9 +78,11 @@ impl UserRepository for PostgresUserRepository {
             role: String,
             bio: Option<String>,
             avatar_path: Option<String>,
+            banner_path: Option<String>,
+            also_known_as: Option<String>,
         }
         let row = sqlx::query_as::<_, Row>(
-            "SELECT id, email, username, password_hash, role, bio, avatar_path FROM users WHERE email = $1",
+            "SELECT id, email, username, password_hash, role, bio, avatar_path, banner_path, also_known_as FROM users WHERE email = $1",
         )
         .bind(email_str)
         .fetch_optional(&self.pool)
@@ -91,6 +97,8 @@ impl UserRepository for PostgresUserRepository {
                 Self::parse_role(&r.role),
                 r.bio,
                 r.avatar_path,
+                r.banner_path,
+                r.also_known_as,
             )
         })
         .transpose()
@@ -107,9 +115,11 @@ impl UserRepository for PostgresUserRepository {
             role: String,
             bio: Option<String>,
             avatar_path: Option<String>,
+            banner_path: Option<String>,
+            also_known_as: Option<String>,
         }
         let row = sqlx::query_as::<_, Row>(
-            "SELECT id, email, username, password_hash, role, bio, avatar_path FROM users WHERE username = $1",
+            "SELECT id, email, username, password_hash, role, bio, avatar_path, banner_path, also_known_as FROM users WHERE username = $1",
         )
         .bind(username_str)
         .fetch_optional(&self.pool)
@@ -124,6 +134,8 @@ impl UserRepository for PostgresUserRepository {
                 Self::parse_role(&r.role),
                 r.bio,
                 r.avatar_path,
+                r.banner_path,
+                r.also_known_as,
             )
         })
         .transpose()
@@ -178,9 +190,11 @@ impl UserRepository for PostgresUserRepository {
             role: String,
             bio: Option<String>,
             avatar_path: Option<String>,
+            banner_path: Option<String>,
+            also_known_as: Option<String>,
         }
         let row = sqlx::query_as::<_, Row>(
-            "SELECT id, email, username, password_hash, role, bio, avatar_path FROM users WHERE id = $1",
+            "SELECT id, email, username, password_hash, role, bio, avatar_path, banner_path, also_known_as FROM users WHERE id = $1",
         )
         .bind(&id_str)
         .fetch_optional(&self.pool)
@@ -195,6 +209,8 @@ impl UserRepository for PostgresUserRepository {
                 Self::parse_role(&r.role),
                 r.bio,
                 r.avatar_path,
+                r.banner_path,
+                r.also_known_as,
             )
         })
         .transpose()
@@ -205,15 +221,21 @@ impl UserRepository for PostgresUserRepository {
         user_id: &UserId,
         bio: Option<String>,
         avatar_path: Option<String>,
+        banner_path: Option<String>,
+        also_known_as: Option<String>,
     ) -> Result<(), DomainError> {
         let id_str = user_id.value().to_string();
-        sqlx::query("UPDATE users SET bio = $1, avatar_path = $2 WHERE id = $3")
-            .bind(&bio)
-            .bind(&avatar_path)
-            .bind(&id_str)
-            .execute(&self.pool)
-            .await
-            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        sqlx::query(
+            "UPDATE users SET bio = $1, avatar_path = $2, banner_path = $3, also_known_as = $4 WHERE id = $5",
+        )
+        .bind(&bio)
+        .bind(&avatar_path)
+        .bind(&banner_path)
+        .bind(&also_known_as)
+        .bind(&id_str)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
         Ok(())
     }
 

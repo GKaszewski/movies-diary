@@ -72,6 +72,15 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
             _ => anyhow::bail!("DATABASE_BACKEND={backend} is not supported by this build (sqlite feature is not enabled)"),
         };
 
+    let profile_fields_repo = match &db_pool {
+        #[cfg(feature = "postgres")]
+        DbPool::Postgres(pool) => postgres::create_profile_fields_repo(pool.clone()),
+        #[cfg(feature = "sqlite")]
+        DbPool::Sqlite(pool) => sqlite::create_profile_fields_repo(pool.clone()),
+        #[cfg(not(feature = "sqlite"))]
+        _ => anyhow::bail!("no profile fields repo for this backend"),
+    };
+
     // Wire up event channel, federation service, and ap_router
     let event_bus = EventBusBackend::from_env()?;
 
@@ -114,6 +123,7 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
             review_store,
             remote_watchlist_repo.clone(),
             Arc::clone(&user_repository),
+            Arc::clone(&profile_fields_repo),
             Arc::clone(&movie_repository),
             Arc::clone(&review_repository),
             Arc::clone(&diary_repository),
@@ -173,6 +183,7 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
         import_profile_repository: import_profile_repository as Arc<dyn ImportProfileRepository>,
         movie_profile_repository,
         watchlist_repository,
+        profile_fields_repository: profile_fields_repo,
         #[cfg(feature = "federation")]
         remote_watchlist_repository: remote_watchlist_repo,
         person_command,

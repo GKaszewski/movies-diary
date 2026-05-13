@@ -6,7 +6,7 @@ use domain::ports::{
     ImportProfileRepository, ImportSessionRepository,
     MetadataClient, MovieProfileRepository, MovieRepository, PasswordHasher, PosterFetcherClient,
     PersonCommand, PersonQuery, SearchCommand, SearchPort,
-    ReviewRepository, StatsRepository, UserRepository,
+    ReviewRepository, StatsRepository, UserProfileFieldsRepository, UserRepository,
     WatchlistRepository,
 };
 #[cfg(feature = "federation")]
@@ -37,6 +37,7 @@ pub struct AppContext {
     pub search_port: Arc<dyn SearchPort>,
     pub search_command: Arc<dyn SearchCommand>,
     pub watchlist_repository: Arc<dyn WatchlistRepository>,
+    pub profile_fields_repository: Arc<dyn UserProfileFieldsRepository>,
     #[cfg(feature = "federation")]
     pub remote_watchlist_repository: Arc<dyn RemoteWatchlistRepository>,
     pub config: AppConfig,

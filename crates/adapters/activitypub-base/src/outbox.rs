@@ -4,7 +4,12 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use activitypub_federation::{config::Data, fetch::object_id::ObjectId, kinds::activity::CreateType};
+use activitypub_federation::{
+    config::Data,
+    fetch::object_id::ObjectId,
+    kinds::activity::CreateType,
+    protocol::context::WithContext,
+};
 
 use crate::{activities::CreateActivity, data::FederationData, error::Error};
 
@@ -74,17 +79,20 @@ pub async fn outbox_handler(
         let has_more = items.len() == PAGE_SIZE;
         let oldest_ts = items.last().map(|(_, _, ts)| *ts);
 
+        let followers_url = format!("{}/followers", actor_url);
         let ordered_items: Vec<serde_json::Value> = items
             .into_iter()
             .map(|(ap_id, object, _)| {
                 let create_id =
                     Url::parse(&format!("{}/activity", ap_id)).expect("valid url");
-                serde_json::to_value(CreateActivity {
+                serde_json::to_value(WithContext::new_default(CreateActivity {
                     id: create_id,
                     kind: CreateType::default(),
                     actor: ObjectId::from(actor_url.clone()),
                     object,
-                })
+                    to: vec![crate::urls::AS_PUBLIC.to_string()],
+                    cc: vec![followers_url.clone()],
+                }))
                 .expect("serializable")
             })
             .collect();

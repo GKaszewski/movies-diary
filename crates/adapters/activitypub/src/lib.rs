@@ -31,6 +31,7 @@ pub async fn wire(
     review_store:          std::sync::Arc<dyn RemoteReviewRepository>,
     remote_watchlist_repo: std::sync::Arc<dyn domain::ports::RemoteWatchlistRepository>,
     user_repo:             std::sync::Arc<dyn domain::ports::UserRepository>,
+    profile_fields_repo:   std::sync::Arc<dyn domain::ports::UserProfileFieldsRepository>,
     movie_repo:            std::sync::Arc<dyn domain::ports::MovieRepository>,
     review_repo:           std::sync::Arc<dyn domain::ports::ReviewRepository>,
     diary_repo:            std::sync::Arc<dyn domain::ports::DiaryRepository>,
@@ -52,15 +53,26 @@ pub async fn wire(
         watchlist: watchlist_handler,
     });
 
+    let federation_debug = std::env::var("FEDERATION_DEBUG")
+        .map(|v| v == "true" || v == "1")
+        .unwrap_or(false);
+
+    if federation_debug {
+        tracing::warn!(
+            "federation running in DEBUG mode — PermissiveVerifier active, \
+             no URL/signature validation. Do NOT use in production."
+        );
+    }
+
     let concrete = std::sync::Arc::new(
         ActivityPubService::new(
             federation_repo,
-            std::sync::Arc::new(DomainUserRepoAdapter::new(user_repo, base_url.clone())),
+            std::sync::Arc::new(DomainUserRepoAdapter::new(user_repo, profile_fields_repo, base_url.clone())),
             composite,
             base_url.clone(),
             allow_registration,
             "movies-diary".to_string(),
-            cfg!(debug_assertions),
+            federation_debug,
             Some(event_publisher),
         )
         .await?,

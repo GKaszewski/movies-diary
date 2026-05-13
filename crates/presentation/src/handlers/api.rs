@@ -22,7 +22,7 @@ use application::{
         delete_review, export_diary as export_diary_uc, get_activity_feed as get_feed_uc,
         get_diary, get_movie_social_page, get_movies, get_review_history,
         get_user_profile as get_user_profile_uc, get_users, log_review, login as login_uc,
-        register as register_uc, sync_poster, update_profile,
+        register as register_uc, sync_poster, update_profile, update_profile_fields,
         search as search_uc, get_person, get_person_credits,
         add_to_watchlist, remove_from_watchlist, get_watchlist, is_on_watchlist,
     },
@@ -433,22 +433,30 @@ pub async fn update_profile_handler(
     let mut bio: Option<String> = None;
     let mut avatar_bytes: Option<Vec<u8>> = None;
     let mut avatar_content_type: Option<String> = None;
+    let mut banner_bytes: Option<Vec<u8>> = None;
+    let mut banner_content_type: Option<String> = None;
+    let mut also_known_as: Option<String> = None;
 
     while let Ok(Some(field)) = multipart.next_field().await {
         let name = field.name().unwrap_or("").to_string();
         match name.as_str() {
-            "bio" => {
+            "bio" => { if let Ok(text) = field.text().await { bio = Some(text); } }
+            "also_known_as" => {
                 if let Ok(text) = field.text().await {
-                    bio = Some(text);
+                    also_known_as = Some(text).filter(|s| !s.is_empty());
                 }
             }
             "avatar" => {
-                let content_type = field.content_type().map(|s| s.to_string());
-                if let Ok(bytes) = field.bytes().await
-                    && !bytes.is_empty() {
-                        avatar_bytes = Some(bytes.to_vec());
-                        avatar_content_type = content_type;
-                    }
+                let ct = field.content_type().map(|s| s.to_string());
+                if let Ok(bytes) = field.bytes().await {
+                    if !bytes.is_empty() { avatar_bytes = Some(bytes.to_vec()); avatar_content_type = ct; }
+                }
+            }
+            "banner" => {
+                let ct = field.content_type().map(|s| s.to_string());
+                if let Ok(bytes) = field.bytes().await {
+                    if !bytes.is_empty() { banner_bytes = Some(bytes.to_vec()); banner_content_type = ct; }
+                }
             }
             _ => {}
         }
@@ -459,6 +467,9 @@ pub async fn update_profile_handler(
         bio,
         avatar_bytes,
         avatar_content_type,
+        banner_bytes,
+        banner_content_type,
+        also_known_as,
     };
 
     match update_profile::execute(&state.app_ctx, cmd).await {
@@ -469,6 +480,42 @@ pub async fn update_profile_handler(
         }
         Err(e) => {
             tracing::error!("update_profile error: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+pub async fn update_profile_fields_handler(
+    State(state): State<AppState>,
+    AuthenticatedUser(user_id): AuthenticatedUser,
+    axum::Json(body): axum::Json<serde_json::Value>,
+) -> impl IntoResponse {
+    let raw_fields = match body.get("fields").and_then(|f| f.as_array()) {
+        Some(arr) => arr.clone(),
+        None => return StatusCode::BAD_REQUEST.into_response(),
+    };
+
+    let fields: Vec<domain::models::ProfileField> = raw_fields
+        .iter()
+        .filter_map(|f| {
+            let name = f.get("name").and_then(|n| n.as_str())?.to_string();
+            let value = f.get("value").and_then(|v| v.as_str())?.to_string();
+            Some(domain::models::ProfileField { name, value })
+        })
+        .collect();
+
+    let cmd = application::commands::UpdateProfileFieldsCommand {
+        user_id: user_id.value(),
+        fields,
+    };
+
+    match update_profile_fields::execute(&state.app_ctx, cmd).await {
+        Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Err(domain::errors::DomainError::ValidationError(msg)) => {
+            (StatusCode::BAD_REQUEST, msg).into_response()
+        }
+        Err(e) => {
+            tracing::error!("update_profile_fields error: {:?}", e);
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
     }

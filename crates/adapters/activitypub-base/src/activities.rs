@@ -301,6 +301,10 @@ pub struct CreateActivity {
     pub(crate) kind: CreateType,
     pub(crate) actor: ObjectId<DbActor>,
     pub(crate) object: serde_json::Value,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub(crate) to: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub(crate) cc: Vec<String>,
 }
 
 #[async_trait::async_trait]
@@ -347,6 +351,10 @@ pub struct DeleteActivity {
     pub(crate) kind: DeleteType,
     pub(crate) actor: ObjectId<DbActor>,
     pub(crate) object: Url,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub(crate) to: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub(crate) cc: Vec<String>,
 }
 
 #[async_trait::async_trait]
@@ -392,6 +400,10 @@ pub struct UpdateActivity {
     pub(crate) kind: UpdateType,
     pub(crate) actor: ObjectId<DbActor>,
     pub(crate) object: serde_json::Value,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub(crate) to: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub(crate) cc: Vec<String>,
 }
 
 #[async_trait::async_trait]
@@ -495,6 +507,10 @@ pub struct AddActivity {
     pub(crate) kind: AddType,
     pub(crate) actor: ObjectId<DbActor>,
     pub(crate) object: serde_json::Value,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub(crate) to: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub(crate) cc: Vec<String>,
 }
 
 #[async_trait::async_trait]

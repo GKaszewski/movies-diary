@@ -177,6 +177,9 @@ pub struct ProfileSettingsPageData {
     pub ctx: HtmlPageContext,
     pub bio: Option<String>,
     pub avatar_url: Option<String>,
+    pub banner_url: Option<String>,
+    pub also_known_as: Option<String>,
+    pub profile_fields: Vec<(String, String)>,
     pub saved: bool,
 }
 

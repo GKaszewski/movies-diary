@@ -7,7 +7,10 @@ pub struct ApUser {
     pub username: String,
     pub bio: Option<String>,
     pub avatar_url: Option<Url>,
+    pub banner_url: Option<Url>,
+    pub also_known_as: Option<String>,
     pub profile_url: Option<Url>,
+    pub attachment: Vec<domain::models::ProfileField>,
 }
 
 #[async_trait]

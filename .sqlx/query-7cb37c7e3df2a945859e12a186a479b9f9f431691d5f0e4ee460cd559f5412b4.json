@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id, email, username, password_hash, role, bio, avatar_path FROM users WHERE id = ?",
+  "query": "SELECT id, email, username, password_hash, role, bio, avatar_path, banner_path, also_known_as FROM users WHERE email = ?",
   "describe": {
     "columns": [
       {
@@ -37,6 +37,16 @@
         "name": "avatar_path",
         "ordinal": 6,
         "type_info": "Text"
+      },
+      {
+        "name": "banner_path",
+        "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "also_known_as",
+        "ordinal": 8,
+        "type_info": "Text"
       }
     ],
     "parameters": {
@@ -49,8 +59,10 @@
       false,
       false,
       true,
+      true,
+      true,
       true
     ]
   },
-  "hash": "d6c6b579a18fb106e62148f5f85b8071fceefea51909ace939ae1d09c4597c43"
+  "hash": "7cb37c7e3df2a945859e12a186a479b9f9f431691d5f0e4ee460cd559f5412b4"
 }

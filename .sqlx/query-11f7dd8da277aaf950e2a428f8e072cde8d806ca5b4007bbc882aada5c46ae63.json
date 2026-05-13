@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM user_profile_fields WHERE user_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "11f7dd8da277aaf950e2a428f8e072cde8d806ca5b4007bbc882aada5c46ae63"
+}

@@ -19,6 +19,7 @@ mod migrations;
 mod models;
 mod persons;
 mod profile;
+mod profile_fields;
 mod users;
 mod watchlist;
 
@@ -32,8 +33,15 @@ pub use import_profile::SqliteImportProfileRepository;
 pub use import_session::SqliteImportSessionRepository;
 pub use persons::{SqlitePersonAdapter, create_person_adapter};
 pub use profile::SqliteMovieProfileRepository;
+pub use profile_fields::SqliteProfileFieldsRepository;
 pub use users::SqliteUserRepository;
 pub use watchlist::SqliteWatchlistRepository;
+
+pub fn create_profile_fields_repo(
+    pool: sqlx::SqlitePool,
+) -> std::sync::Arc<dyn domain::ports::UserProfileFieldsRepository> {
+    std::sync::Arc::new(SqliteProfileFieldsRepository::new(pool))
+}
 
 fn format_year_month(ym: &str) -> String {
     let parts: Vec<&str> = ym.splitn(2, '-').collect();

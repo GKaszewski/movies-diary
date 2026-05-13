@@ -342,6 +342,9 @@ struct ProfileSettingsTemplate<'a> {
     ctx: &'a HtmlPageContext,
     bio: Option<&'a str>,
     avatar_url: Option<&'a str>,
+    banner_url: Option<&'a str>,
+    also_known_as: Option<&'a str>,
+    profile_fields: &'a [(String, String)],
     saved: bool,
 }
 
@@ -703,6 +706,9 @@ impl HtmlRenderer for AskamaHtmlRenderer {
             ctx: &data.ctx,
             bio: data.bio.as_deref(),
             avatar_url: data.avatar_url.as_deref(),
+            banner_url: data.banner_url.as_deref(),
+            also_known_as: data.also_known_as.as_deref(),
+            profile_fields: &data.profile_fields,
             saved: data.saved,
         }
         .render()
