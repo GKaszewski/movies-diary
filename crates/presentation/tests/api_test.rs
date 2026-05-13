@@ -109,9 +109,16 @@ impl UserRepository for NobodyUserRepo {
     async fn list_with_stats(&self) -> Result<Vec<domain::models::UserSummary>, DomainError> {
         panic!()
     }
-    async fn update_profile(&self, _: &UserId, _: Option<String>, _: Option<String>) -> Result<(), DomainError> {
+    async fn update_profile(&self, _: &UserId, _: Option<String>, _: Option<String>, _: Option<String>, _: Option<String>) -> Result<(), DomainError> {
         Ok(())
     }
+}
+
+struct PanicProfileFields;
+#[async_trait]
+impl domain::ports::UserProfileFieldsRepository for PanicProfileFields {
+    async fn get_fields(&self, _: &UserId) -> Result<Vec<domain::models::ProfileField>, DomainError> { Ok(vec![]) }
+    async fn set_fields(&self, _: &UserId, _: Vec<domain::models::ProfileField>) -> Result<(), DomainError> { panic!() }
 }
 
 struct PanicExporter;
@@ -259,6 +266,7 @@ async fn test_app() -> Router {
             import_profile_repository: Arc::new(PanicImportProfile),
             movie_profile_repository: Arc::new(PanicMovieProfile),
             watchlist_repository: Arc::new(PanicWatchlist),
+            profile_fields_repository: Arc::new(PanicProfileFields),
             #[cfg(feature = "federation")]
             remote_watchlist_repository: Arc::new(PanicRemoteWatchlist),
             person_command: Arc::new(PanicPersonCommand),

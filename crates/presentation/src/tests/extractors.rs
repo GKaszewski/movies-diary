@@ -215,9 +215,14 @@ impl UserRepository for Panic {
     async fn list_with_stats(&self) -> Result<Vec<domain::models::UserSummary>, DomainError> {
         panic!()
     }
-    async fn update_profile(&self, _: &UserId, _: Option<String>, _: Option<String>) -> Result<(), DomainError> {
+    async fn update_profile(&self, _: &UserId, _: Option<String>, _: Option<String>, _: Option<String>, _: Option<String>) -> Result<(), DomainError> {
         panic!()
     }
+}
+#[async_trait::async_trait]
+impl domain::ports::UserProfileFieldsRepository for Panic {
+    async fn get_fields(&self, _: &UserId) -> Result<Vec<domain::models::ProfileField>, DomainError> { panic!() }
+    async fn set_fields(&self, _: &UserId, _: Vec<domain::models::ProfileField>) -> Result<(), DomainError> { panic!() }
 }
 #[async_trait::async_trait]
 impl EventPublisher for Panic {
@@ -414,6 +419,7 @@ pub fn make_test_state(auth_service: Arc<dyn AuthService>) -> crate::state::AppS
             import_profile_repository: Arc::clone(&repo) as _,
             movie_profile_repository: Arc::clone(&repo) as _,
             watchlist_repository: Arc::clone(&repo) as _,
+            profile_fields_repository: Arc::clone(&repo) as _,
             #[cfg(feature = "federation")]
             remote_watchlist_repository: Arc::clone(&repo) as _,
             person_command: Arc::clone(&repo) as _,
