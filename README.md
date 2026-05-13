@@ -153,8 +153,11 @@ Supports review logging, bulk CSV import (column order matches the export format
 ## Test
 
 ```bash
-cargo test
+cargo test           # full workspace (requires DATABASE_URL for sqlx offline checks)
+cargo test -p application   # domain-level unit tests only — no database required
 ```
+
+The `application` crate has unit tests for core use cases (`log_review`, `register`, `login`, `add_to_watchlist`, `delete_review`) backed by in-memory fakes from `domain`'s `test-helpers` feature. These run without a database and are the fastest feedback loop for business logic changes.
 
 ## Docker
 
