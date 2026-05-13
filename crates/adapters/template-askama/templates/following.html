@@ -6,7 +6,7 @@
 {% endif %}
 <form method="POST" action="/users/{{ user_id }}/follow" class="follow-form">
   <input type="hidden" name="_csrf" value="{{ ctx.csrf_token }}">
-  <input type="hidden" name="redirect_after" value="/social/following">
+  <input type="hidden" name="redirect_after" value="/users/{{ user_id }}/following-list">
   <input type="text" name="handle" placeholder="@user@instance.tld" required>
   <button type="submit">Follow</button>
 </form>
