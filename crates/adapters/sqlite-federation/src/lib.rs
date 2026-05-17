@@ -4,7 +4,7 @@ use chrono::{NaiveDateTime, Utc};
 use sqlx::{Row, SqlitePool};
 
 use activitypub::RemoteReviewRepository;
-use activitypub_base::{
+use k_ap::{
     BlockedDomain, FederationRepository, Follower, FollowerStatus, FollowingStatus, RemoteActor,
 };
 use domain::models::{RemoteWatchlistEntry, Review, ReviewSource};
@@ -935,7 +935,7 @@ pub fn wire(
 #[cfg(test)]
 mod outbox_url_tests {
     use super::*;
-    use activitypub_base::{FederationRepository, FollowingStatus, RemoteActor};
+    use k_ap::{FederationRepository, FollowingStatus, RemoteActor};
 
     async fn setup_pool() -> SqlitePool {
         let pool = SqlitePool::connect(":memory:").await.unwrap();

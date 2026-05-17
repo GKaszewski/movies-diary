@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use activitypub_base::ApObjectHandler;
+use k_ap::ApObjectHandler;
 use async_trait::async_trait;
 use domain::{
     models::{Review, ReviewSource},

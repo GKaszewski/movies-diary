@@ -4,7 +4,7 @@ use chrono::{NaiveDateTime, Utc};
 use sqlx::{PgPool, Row};
 
 use activitypub::RemoteReviewRepository;
-use activitypub_base::{
+use k_ap::{
     BlockedDomain, FederationRepository, Follower, FollowerStatus, FollowingStatus, RemoteActor,
 };
 use domain::models::{RemoteWatchlistEntry, Review, ReviewSource};

@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use uuid::Uuid;
 
-use activitypub_base::{ActivityPubService, BlockedDomain, RemoteActor};
+use k_ap::{ActivityPubService, BlockedDomain, RemoteActor};
 
 #[async_trait]
 pub trait ActivityPubPort: Send + Sync {

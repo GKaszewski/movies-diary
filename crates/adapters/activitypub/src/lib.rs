@@ -9,7 +9,7 @@ pub mod user_adapter;
 pub mod watchlist_handler;
 
 // Re-export the generic base types that callers need
-pub use activitypub_base::{
+pub use k_ap::{
     ActivityPubService, ApFederationConfig, ApObjectHandler, ApUser, ApUserRepository,
     FederationData, FederationRepository, Follower, FollowerStatus, FollowingStatus, RemoteActor,
 };

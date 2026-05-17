@@ -256,7 +256,7 @@ async fn main() -> anyhow::Result<()> {
 
 fn init_tracing() {
     let filter = std::env::var("RUST_LOG")
-        .unwrap_or_else(|_| "worker=info,application=info,activitypub_base=info".to_string());
+        .unwrap_or_else(|_| "worker=info,application=info,k_ap=info".to_string());
     tracing_subscriber::registry()
         .with(tracing_subscriber::EnvFilter::new(filter))
         .with(tracing_subscriber::fmt::layer())

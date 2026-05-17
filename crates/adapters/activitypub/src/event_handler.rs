@@ -8,7 +8,7 @@ use domain::{
 };
 use std::sync::Arc;
 
-use activitypub_base::ActivityPubService;
+use k_ap::ActivityPubService;
 
 use crate::objects::review_to_ap_object;
 use crate::urls::{actor_url, review_url};

@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 sqlx = { workspace = true }
 activitypub = { workspace = true }
-activitypub-base = { workspace = true }
+k-ap        = { git = "https://git.gabrielkaszewski.dev/GKaszewski/k-ap.git", tag = "v0.1.2" }
 domain = { workspace = true }
 anyhow = { workspace = true }
 uuid = { workspace = true }

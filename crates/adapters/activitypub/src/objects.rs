@@ -1,4 +1,4 @@
-use activitypub_base::AS_PUBLIC;
+use k_ap::AS_PUBLIC;
 use activitypub_federation::kinds::object::NoteType;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
