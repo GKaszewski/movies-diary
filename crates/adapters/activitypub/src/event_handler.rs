@@ -129,7 +129,7 @@ impl ActivityPubEventHandler {
         let json = serde_json::to_value(obj)?;
 
         self.ap_service
-            .broadcast_to_followers(user_id.value(), ap_id, json)
+            .broadcast_add_to_followers(user_id.value(), ap_id, json)
             .await?;
 
         Ok(())
@@ -179,7 +179,7 @@ impl ActivityPubEventHandler {
         let json = serde_json::to_value(obj)?;
 
         self.ap_service
-            .broadcast_update_to_followers(user_id.value(), json)
+            .broadcast_update_note(user_id.value(), json)
             .await?;
 
         Ok(())
@@ -236,7 +236,7 @@ impl ActivityPubEventHandler {
         let json = serde_json::to_value(obj)?;
 
         self.ap_service
-            .broadcast_to_followers(user_id.value(), ap_id, json)
+            .broadcast_add_to_followers(user_id.value(), ap_id, json)
             .await?;
         Ok(())
     }

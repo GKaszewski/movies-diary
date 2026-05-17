@@ -6,35 +6,15 @@ version = 4
 name = "activitypub"
 version = "0.1.0"
 dependencies = [
- "activitypub-base",
  "activitypub_federation",
  "anyhow",
  "async-trait",
  "axum",
  "chrono",
  "domain",
+ "k-ap",
  "serde",
  "serde_json",
- "tracing",
- "url",
- "uuid",
-]
-
-[[package]]
-name = "activitypub-base"
-version = "0.1.0"
-dependencies = [
- "activitypub_federation",
- "anyhow",
- "async-trait",
- "axum",
- "chrono",
- "domain",
- "enum_delegate",
- "reqwest 0.13.3",
- "serde",
- "serde_json",
- "tokio",
  "tracing",
  "url",
  "uuid",
@@ -2801,6 +2781,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "k-ap"
+version = "0.1.0"
+source = "git+https://git.gabrielkaszewski.dev/GKaszewski/k-ap.git?tag=v0.1.2#767b1e69d4f384093ea33d72d5aa46ff140f5ac8"
+dependencies = [
+ "activitypub_federation",
+ "anyhow",
+ "async-trait",
+ "axum",
+ "chrono",
+ "enum_delegate",
+ "futures",
+ "reqwest 0.13.3",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "url",
+ "uuid",
+]
+
+[[package]]
 name = "kasuari"
 version = "0.4.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3761,11 +3762,11 @@ name = "postgres-federation"
 version = "0.1.0"
 dependencies = [
  "activitypub",
- "activitypub-base",
  "anyhow",
  "async-trait",
  "chrono",
  "domain",
+ "k-ap",
  "sqlx",
  "tracing",
  "uuid",
@@ -5028,11 +5029,11 @@ name = "sqlite-federation"
 version = "0.1.0"
 dependencies = [
  "activitypub",
- "activitypub-base",
  "anyhow",
  "async-trait",
  "chrono",
  "domain",
+ "k-ap",
  "sqlx",
  "tokio",
  "tracing",

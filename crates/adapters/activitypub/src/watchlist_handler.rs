@@ -79,4 +79,20 @@ impl ApObjectHandler for WatchlistObjectHandler {
     async fn count_local_posts(&self) -> anyhow::Result<u64> {
         Ok(0)
     }
+
+    async fn on_like(&self, _object_url: &Url, _actor_url: &Url) -> anyhow::Result<()> {
+        Ok(())
+    }
+
+    async fn on_announce_received(&self, _object_url: &Url, _actor_url: &Url) -> anyhow::Result<()> {
+        Ok(())
+    }
+
+    async fn on_unlike(&self, _object_url: &Url, _actor_url: &Url) -> anyhow::Result<()> {
+        Ok(())
+    }
+
+    async fn on_mention(&self, _thought_ap_id: &Url, _mentioned_user_uuid: uuid::Uuid, _actor_url: &Url) -> anyhow::Result<()> {
+        Ok(())
+    }
 }

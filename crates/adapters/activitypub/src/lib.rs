@@ -36,7 +36,7 @@ pub async fn wire(
     diary_repo: std::sync::Arc<dyn domain::ports::DiaryRepository>,
     base_url: String,
     allow_registration: bool,
-    event_publisher: std::sync::Arc<dyn domain::ports::EventPublisher>,
+    _event_publisher: std::sync::Arc<dyn domain::ports::EventPublisher>,
 ) -> anyhow::Result<ActivityPubWire> {
     let review_handler = std::sync::Arc::new(ReviewObjectHandler {
         movie_repository: std::sync::Arc::clone(&movie_repo),
@@ -64,16 +64,16 @@ pub async fn wire(
     }
 
     let concrete = std::sync::Arc::new(
-        ActivityPubService::new(
+        ActivityPubService::builder(
             federation_repo,
             std::sync::Arc::new(DomainUserRepoAdapter::new(user_repo, base_url.clone())),
             composite,
             base_url.clone(),
-            allow_registration,
-            "movies-diary".to_string(),
-            federation_debug,
-            Some(event_publisher),
         )
+        .allow_registration(allow_registration)
+        .software_name("movies-diary")
+        .debug(federation_debug)
+        .build()
         .await?,
     );
 
