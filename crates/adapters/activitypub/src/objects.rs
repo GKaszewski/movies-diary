@@ -1,5 +1,5 @@
 use k_ap::AS_PUBLIC;
-use activitypub_federation::kinds::object::NoteType;
+use k_ap::NoteType;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use url::Url;
