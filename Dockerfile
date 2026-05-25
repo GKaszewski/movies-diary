@@ -8,7 +8,6 @@ COPY Cargo.toml Cargo.lock ./
 COPY .cargo ./.cargo
 COPY .sqlx ./.sqlx
 COPY crates/adapters/activitypub/Cargo.toml       crates/adapters/activitypub/Cargo.toml
-COPY crates/adapters/activitypub-base/Cargo.toml  crates/adapters/activitypub-base/Cargo.toml
 COPY crates/adapters/auth/Cargo.toml              crates/adapters/auth/Cargo.toml
 COPY crates/adapters/event-payload/Cargo.toml     crates/adapters/event-payload/Cargo.toml
 COPY crates/adapters/event-publisher/Cargo.toml   crates/adapters/event-publisher/Cargo.toml
