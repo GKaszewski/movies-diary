@@ -540,6 +540,17 @@ pub async fn update_profile_handler(
     }
 }
 
+#[utoipa::path(
+    put, path = "/api/v1/profile/fields",
+    request_body = api_types::UpdateProfileFieldsRequest,
+    responses(
+        (status = 204, description = "Profile fields updated"),
+        (status = 400, description = "Invalid input"),
+        (status = 401, description = "Unauthorized"),
+        (status = 500, description = "Internal server error"),
+    ),
+    security(("bearer_auth" = []))
+)]
 pub async fn update_profile_fields_handler(
     State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,

@@ -83,3 +83,14 @@ pub struct ProfileResponse {
     pub bio: Option<String>,
     pub avatar_url: Option<String>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct ProfileFieldDto {
+    pub name: String,
+    pub value: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct UpdateProfileFieldsRequest {
+    pub fields: Vec<ProfileFieldDto>,
+}

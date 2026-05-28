@@ -1,5 +1,6 @@
 use api_types::{
-    ProfileResponse, UserProfileResponse, UserStatsDto, UserSummaryDto, UsersResponse,
+    ProfileFieldDto, ProfileResponse, UpdateProfileFieldsRequest, UserProfileResponse,
+    UserStatsDto, UserSummaryDto, UsersResponse,
 };
 use utoipa::OpenApi;
 
@@ -10,6 +11,7 @@ use utoipa::OpenApi;
         crate::handlers::api::get_user_profile,
         crate::handlers::api::get_profile,
         crate::handlers::api::update_profile_handler,
+        crate::handlers::api::update_profile_fields_handler,
     ),
     components(schemas(
         UsersResponse,
@@ -17,6 +19,8 @@ use utoipa::OpenApi;
         UserProfileResponse,
         UserStatsDto,
         ProfileResponse,
+        UpdateProfileFieldsRequest,
+        ProfileFieldDto,
     ))
 )]
 pub struct UsersDoc;
