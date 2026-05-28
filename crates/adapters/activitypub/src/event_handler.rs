@@ -227,7 +227,7 @@ impl ActivityPubEventHandler {
         let json = serde_json::to_value(obj)?;
 
         self.ap_service
-            .broadcast_add_to_followers(user_id.value(), ap_id, json)
+            .broadcast_create_note(user_id.value(), json)
             .await?;
         Ok(())
     }
