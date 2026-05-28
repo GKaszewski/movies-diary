@@ -3,7 +3,7 @@ use domain::ports::EventHandler;
 use domain::{
     errors::DomainError,
     events::DomainEvent,
-    ports::{MovieRepository, ReviewRepository},
+    ports::LocalApContentQuery,
     value_objects::{ReviewId, UserId},
 };
 use std::sync::Arc;
@@ -15,22 +15,19 @@ use crate::urls::{actor_url, review_url};
 
 pub struct ActivityPubEventHandler {
     ap_service: Arc<ActivityPubService>,
-    movie_repository: Arc<dyn MovieRepository>,
-    review_repository: Arc<dyn ReviewRepository>,
+    content_query: Arc<dyn LocalApContentQuery>,
     base_url: String,
 }
 
 impl ActivityPubEventHandler {
     pub fn new(
         ap_service: Arc<ActivityPubService>,
-        movie_repository: Arc<dyn MovieRepository>,
-        review_repository: Arc<dyn ReviewRepository>,
+        content_query: Arc<dyn LocalApContentQuery>,
         base_url: String,
     ) -> Self {
         Self {
             ap_service,
-            movie_repository,
-            review_repository,
+            content_query,
             base_url,
         }
     }
@@ -90,7 +87,7 @@ impl EventHandler for ActivityPubEventHandler {
 
 impl ActivityPubEventHandler {
     async fn on_review_logged(&self, user_id: &UserId, review_id: &ReviewId) -> anyhow::Result<()> {
-        let review = match self.review_repository.get_review_by_id(review_id).await? {
+        let review = match self.content_query.get_review_by_id(review_id).await? {
             Some(r) => r,
             None => return Ok(()),
         };
@@ -99,7 +96,7 @@ impl ActivityPubEventHandler {
         let actor = actor_url(&self.base_url, user_id.value());
 
         let movie = self
-            .movie_repository
+            .content_query
             .get_movie_by_id(review.movie_id())
             .await
             .ok()
@@ -108,10 +105,7 @@ impl ActivityPubEventHandler {
             .as_ref()
             .map(|m| m.title().value().to_string())
             .unwrap_or_else(|| "Unknown".to_string());
-        let release_year = movie
-            .as_ref()
-            .map(|m| m.release_year().value())
-            .unwrap_or(0);
+        let release_year = movie.as_ref().map(|m| m.release_year().value()).unwrap_or(0);
         let poster_url = movie
             .as_ref()
             .and_then(|m| m.poster_path())
@@ -140,7 +134,7 @@ impl ActivityPubEventHandler {
         user_id: &UserId,
         review_id: &ReviewId,
     ) -> anyhow::Result<()> {
-        let review = match self.review_repository.get_review_by_id(review_id).await? {
+        let review = match self.content_query.get_review_by_id(review_id).await? {
             Some(r) => r,
             None => return Ok(()),
         };
@@ -149,7 +143,7 @@ impl ActivityPubEventHandler {
         let actor = actor_url(&self.base_url, user_id.value());
 
         let movie = self
-            .movie_repository
+            .content_query
             .get_movie_by_id(review.movie_id())
             .await
             .ok()
@@ -158,10 +152,7 @@ impl ActivityPubEventHandler {
             .as_ref()
             .map(|m| m.title().value().to_string())
             .unwrap_or_else(|| "Unknown".to_string());
-        let release_year = movie
-            .as_ref()
-            .map(|m| m.release_year().value())
-            .unwrap_or(0);
+        let release_year = movie.as_ref().map(|m| m.release_year().value()).unwrap_or(0);
         let poster_url = movie
             .as_ref()
             .and_then(|m| m.poster_path())
@@ -211,7 +202,7 @@ impl ActivityPubEventHandler {
         let actor = actor_url(&self.base_url, user_id.value());
 
         let poster_url = self
-            .movie_repository
+            .content_query
             .get_movie_by_id(movie_id)
             .await
             .ok()

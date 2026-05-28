@@ -12,6 +12,7 @@ use domain::{
 };
 use sqlx::SqlitePool;
 
+mod ap_content;
 mod image_ref;
 mod import_profile;
 mod import_session;
@@ -28,6 +29,7 @@ use models::{
     MovieSummaryRow, ReviewRow, UserTotalsRow, datetime_to_str,
 };
 
+pub use ap_content::SqliteApContentQuery;
 pub use image_ref::{SqliteImageRefAdapter, create_image_ref};
 pub use import_profile::SqliteImportProfileRepository;
 pub use import_session::SqliteImportSessionRepository;
@@ -944,6 +946,7 @@ pub async fn wire(
     std::sync::Arc<dyn domain::ports::ImportProfileRepository>,
     std::sync::Arc<dyn domain::ports::MovieProfileRepository>,
     std::sync::Arc<dyn domain::ports::WatchlistRepository>,
+    std::sync::Arc<dyn domain::ports::LocalApContentQuery>,
 )> {
     use anyhow::Context;
     use sqlx::sqlite::SqliteConnectOptions;
@@ -968,6 +971,7 @@ pub async fn wire(
     let import_profile_repo = std::sync::Arc::new(SqliteImportProfileRepository::new(pool.clone()));
     let movie_profile_repo = std::sync::Arc::new(SqliteMovieProfileRepository::new(pool.clone()));
     let watchlist_repo = std::sync::Arc::new(SqliteWatchlistRepository::new(pool.clone()));
+    let ap_content = std::sync::Arc::new(SqliteApContentQuery::new(pool.clone()));
 
     Ok((
         pool.clone(),
@@ -980,6 +984,7 @@ pub async fn wire(
         import_profile_repo as _,
         movie_profile_repo as _,
         watchlist_repo as _,
+        ap_content as _,
     ))
 }
 

@@ -3,8 +3,8 @@ use std::sync::Arc;
 use k_ap::ApObjectHandler;
 use async_trait::async_trait;
 use domain::{
-    models::{Review, ReviewSource},
-    ports::{DiaryRepository, MovieRepository},
+    models::ReviewSource,
+    ports::LocalApContentQuery,
     value_objects::{Comment, MovieId, Rating, ReviewId, UserId},
 };
 use url::Url;
@@ -14,8 +14,7 @@ use crate::remote_review_repository::RemoteReviewRepository;
 use crate::urls::{actor_url, review_url};
 
 pub struct ReviewObjectHandler {
-    pub movie_repository: Arc<dyn MovieRepository>,
-    pub diary_repository: Arc<dyn DiaryRepository>,
+    pub content_query: Arc<dyn LocalApContentQuery>,
     pub review_store: Arc<dyn RemoteReviewRepository>,
     pub base_url: String,
 }
@@ -27,51 +26,33 @@ impl ApObjectHandler for ReviewObjectHandler {
         user_id: uuid::Uuid,
     ) -> anyhow::Result<Vec<(Url, serde_json::Value)>> {
         let domain_user_id = UserId::from_uuid(user_id);
-        let history = self
-            .diary_repository
-            .get_user_history(&domain_user_id)
-            .await?;
+        let entries = self
+            .content_query
+            .get_local_reviews_for_user(&domain_user_id)
+            .await
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
+        let actor = actor_url(&self.base_url, user_id);
         let mut results = Vec::new();
-        for entry in history {
+        for entry in entries {
             let review = entry.review();
-            if !matches!(review.source(), ReviewSource::Local) {
-                continue;
-            }
+            let movie = entry.movie();
 
             let ap_id = review_url(&self.base_url, review.id());
-            let actor_url = actor_url(&self.base_url, user_id);
-
-            let movie = self
-                .movie_repository
-                .get_movie_by_id(review.movie_id())
-                .await
-                .ok()
-                .flatten();
-            let movie_title = movie
-                .as_ref()
-                .map(|m| m.title().value().to_string())
-                .unwrap_or_else(|| "Unknown".to_string());
-            let release_year = movie
-                .as_ref()
-                .map(|m| m.release_year().value())
-                .unwrap_or(0);
             let poster_url = movie
-                .as_ref()
-                .and_then(|m| m.poster_path())
+                .poster_path()
                 .map(|p| format!("{}/images/{}", self.base_url, p.value()));
 
             let obj = review_to_ap_object(
                 review,
                 ap_id.clone(),
-                actor_url,
-                movie_title,
-                release_year,
+                actor.clone(),
+                movie.title().value().to_string(),
+                movie.release_year().value(),
                 poster_url,
                 &self.base_url,
             );
-            let json = serde_json::to_value(obj)?;
-            results.push((ap_id, json));
+            results.push((ap_id, serde_json::to_value(obj)?));
         }
         Ok(results)
     }
@@ -82,23 +63,18 @@ impl ApObjectHandler for ReviewObjectHandler {
         before: Option<chrono::DateTime<chrono::Utc>>,
         limit: usize,
     ) -> anyhow::Result<Vec<(url::Url, serde_json::Value, chrono::DateTime<chrono::Utc>)>> {
-        use domain::value_objects::UserId;
-
         let domain_user_id = UserId::from_uuid(user_id);
-        let history = self
-            .diary_repository
-            .get_user_history(&domain_user_id)
-            .await?;
+        let entries = self
+            .content_query
+            .get_local_reviews_for_user(&domain_user_id)
+            .await
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
+        let actor = actor_url(&self.base_url, user_id);
         let mut results = Vec::new();
-        for entry in history {
+        for entry in entries {
             let review = entry.review();
-            if !matches!(review.source(), ReviewSource::Local) {
-                continue;
-            }
-
-            let published =
-                chrono::DateTime::from_naive_utc_and_offset(*review.watched_at(), chrono::Utc);
+            let published = chrono::DateTime::from_naive_utc_and_offset(*review.watched_at(), chrono::Utc);
 
             if let Some(cutoff) = before
                 && published >= cutoff
@@ -106,39 +82,22 @@ impl ApObjectHandler for ReviewObjectHandler {
                 continue;
             }
 
+            let movie = entry.movie();
             let ap_id = review_url(&self.base_url, review.id());
-            let actor_url = actor_url(&self.base_url, user_id);
-
-            let movie = self
-                .movie_repository
-                .get_movie_by_id(review.movie_id())
-                .await
-                .ok()
-                .flatten();
-            let movie_title = movie
-                .as_ref()
-                .map(|m| m.title().value().to_string())
-                .unwrap_or_else(|| "Unknown".to_string());
-            let release_year = movie
-                .as_ref()
-                .map(|m| m.release_year().value())
-                .unwrap_or(0);
             let poster_url = movie
-                .as_ref()
-                .and_then(|m| m.poster_path())
+                .poster_path()
                 .map(|p| format!("{}/images/{}", self.base_url, p.value()));
 
             let obj = review_to_ap_object(
                 review,
                 ap_id.clone(),
-                actor_url,
-                movie_title,
-                release_year,
+                actor.clone(),
+                movie.title().value().to_string(),
+                movie.release_year().value(),
                 poster_url,
                 &self.base_url,
             );
-            let json = serde_json::to_value(obj)?;
-            results.push((ap_id, json, published));
+            results.push((ap_id, serde_json::to_value(obj)?, published));
 
             if results.len() >= limit {
                 break;
@@ -174,7 +133,7 @@ impl ApObjectHandler for ReviewObjectHandler {
         let rating = Rating::new(obj.rating.min(5))?;
         let comment = obj.comment.map(Comment::new).transpose()?;
 
-        let review = Review::from_persistence(
+        let review = domain::models::Review::from_persistence(
             review_id,
             movie_id,
             user_id,
@@ -242,7 +201,7 @@ impl ApObjectHandler for ReviewObjectHandler {
     }
 
     async fn count_local_posts(&self) -> anyhow::Result<u64> {
-        self.diary_repository
+        self.content_query
             .count_local_posts()
             .await
             .map_err(|e| anyhow::anyhow!(e.to_string()))

@@ -69,6 +69,7 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
     let import_profile_repository = db.import_profile_repo;
     let movie_profile_repository = db.movie_profile_repo;
     let watchlist_repository = db.watchlist_repo;
+    let ap_content_repo = db.ap_content_repo;
     let person_command = db.person_command;
     let person_query = db.person_query;
     let search_port = db.search_port;
@@ -121,10 +122,8 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
             federation_repo,
             review_store,
             remote_watchlist_repo.clone(),
+            Arc::clone(&ap_content_repo),
             Arc::clone(&user_repository),
-            Arc::clone(&movie_repository),
-            Arc::clone(&review_repository),
-            Arc::clone(&diary_repository),
             app_config.base_url.clone(),
             app_config.allow_registration,
             Arc::clone(&ep),

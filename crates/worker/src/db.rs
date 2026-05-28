@@ -3,9 +3,9 @@ use std::sync::Arc;
 use anyhow::Context;
 use domain::ports::{
     DiaryRepository, ImageRefCommand, ImageRefQuery, ImportProfileRepository,
-    ImportSessionRepository, MovieProfileRepository, MovieRepository, PersonCommand, PersonQuery,
-    ReviewRepository, SearchCommand, SearchPort, StatsRepository, UserProfileFieldsRepository,
-    UserRepository, WatchlistRepository,
+    ImportSessionRepository, LocalApContentQuery, MovieProfileRepository, MovieRepository,
+    PersonCommand, PersonQuery, ReviewRepository, SearchCommand, SearchPort, StatsRepository,
+    UserProfileFieldsRepository, UserRepository, WatchlistRepository,
 };
 
 pub enum DbPool {
@@ -25,6 +25,7 @@ pub struct Repos {
     pub import_profile: Arc<dyn ImportProfileRepository>,
     pub movie_profile: Arc<dyn MovieProfileRepository>,
     pub watchlist: Arc<dyn WatchlistRepository>,
+    pub ap_content: Arc<dyn LocalApContentQuery>,
     pub image_ref_command: Arc<dyn ImageRefCommand>,
     pub image_ref_query: Arc<dyn ImageRefQuery>,
     pub person_command: Arc<dyn PersonCommand>,
@@ -38,7 +39,7 @@ pub async fn connect(database_url: &str, backend: &str) -> anyhow::Result<(Repos
     match backend {
         #[cfg(feature = "postgres")]
         "postgres" => {
-            let (pool, m, r, d, s, u, is, ip, mp, wl) = postgres::wire(database_url)
+            let (pool, m, r, d, s, u, is, ip, mp, wl, ac) = postgres::wire(database_url)
                 .await
                 .context("PostgreSQL connection failed")?;
             let (image_ref_command, image_ref_query) = postgres::create_image_ref(pool.clone());
@@ -57,6 +58,7 @@ pub async fn connect(database_url: &str, backend: &str) -> anyhow::Result<(Repos
                     import_profile: ip,
                     movie_profile: mp,
                     watchlist: wl,
+                    ap_content: ac,
                     image_ref_command,
                     image_ref_query,
                     person_command,
@@ -70,7 +72,7 @@ pub async fn connect(database_url: &str, backend: &str) -> anyhow::Result<(Repos
         }
         #[cfg(feature = "sqlite")]
         _ => {
-            let (pool, m, r, d, s, u, is, ip, mp, wl) = sqlite::wire(database_url)
+            let (pool, m, r, d, s, u, is, ip, mp, wl, ac) = sqlite::wire(database_url)
                 .await
                 .context("SQLite connection failed")?;
             let (image_ref_command, image_ref_query) = sqlite::create_image_ref(pool.clone());
@@ -88,6 +90,7 @@ pub async fn connect(database_url: &str, backend: &str) -> anyhow::Result<(Repos
                     import_profile: ip,
                     movie_profile: mp,
                     watchlist: wl,
+                    ap_content: ac,
                     image_ref_command,
                     image_ref_query,
                     person_command,

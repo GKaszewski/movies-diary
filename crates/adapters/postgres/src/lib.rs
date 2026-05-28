@@ -12,6 +12,7 @@ use domain::{
 };
 use sqlx::PgPool;
 
+mod ap_content;
 mod image_ref;
 mod import_profile;
 mod import_session;
@@ -27,6 +28,7 @@ use models::{
     MovieSummaryRow, ReviewRow, UserTotalsRow, datetime_to_str,
 };
 
+pub use ap_content::PostgresApContentQuery;
 pub use image_ref::{PostgresImageRefAdapter, create_image_ref};
 pub use import_profile::PostgresImportProfileRepository;
 pub use import_session::PostgresImportSessionRepository;
@@ -949,6 +951,7 @@ pub async fn wire(
     std::sync::Arc<dyn domain::ports::ImportProfileRepository>,
     std::sync::Arc<dyn domain::ports::MovieProfileRepository>,
     std::sync::Arc<dyn domain::ports::WatchlistRepository>,
+    std::sync::Arc<dyn domain::ports::LocalApContentQuery>,
 )> {
     use anyhow::Context;
 
@@ -968,6 +971,7 @@ pub async fn wire(
         std::sync::Arc::new(PostgresImportProfileRepository::new(pool.clone()));
     let movie_profile_repo = std::sync::Arc::new(PostgresMovieProfileRepository::new(pool.clone()));
     let watchlist_repo = std::sync::Arc::new(PostgresWatchlistRepository::new(pool.clone()));
+    let ap_content = std::sync::Arc::new(PostgresApContentQuery::new(pool.clone()));
 
     Ok((
         pool.clone(),
@@ -980,5 +984,6 @@ pub async fn wire(
         import_profile_repo as _,
         movie_profile_repo as _,
         watchlist_repo as _,
+        ap_content as _,
     ))
 }

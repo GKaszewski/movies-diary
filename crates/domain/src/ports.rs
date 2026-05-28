@@ -375,3 +375,27 @@ pub trait RemoteWatchlistRepository: Send + Sync {
         uuid: uuid::Uuid,
     ) -> Result<Vec<RemoteWatchlistEntry>, DomainError>;
 }
+
+/// Read-only query port used exclusively by the ActivityPub adapter.
+/// Consolidates all reads the AP adapter needs so it never touches write repositories.
+#[async_trait]
+pub trait LocalApContentQuery: Send + Sync {
+    async fn get_local_reviews_for_user(
+        &self,
+        user_id: &UserId,
+    ) -> Result<Vec<DiaryEntry>, DomainError>;
+
+    async fn get_local_watchlist_for_user(
+        &self,
+        user_id: &UserId,
+    ) -> Result<Vec<WatchlistWithMovie>, DomainError>;
+
+    async fn get_review_by_id(
+        &self,
+        review_id: &ReviewId,
+    ) -> Result<Option<Review>, DomainError>;
+
+    async fn get_movie_by_id(&self, movie_id: &MovieId) -> Result<Option<Movie>, DomainError>;
+
+    async fn count_local_posts(&self) -> Result<u64, DomainError>;
+}

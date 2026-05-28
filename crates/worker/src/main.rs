@@ -48,16 +48,12 @@ async fn main() -> anyhow::Result<()> {
     // Clone refs federation handler needs before ctx consumes them.
     #[cfg(feature = "federation")]
     let (
-        fed_movie_repo,
-        fed_review_repo,
-        fed_diary_repo,
+        fed_ap_content,
         fed_user_repo,
         base_url,
         allow_registration,
     ) = (
-        Arc::clone(&repos.movie),
-        Arc::clone(&repos.review),
-        Arc::clone(&repos.diary),
+        Arc::clone(&repos.ap_content),
         Arc::clone(&repos.user),
         app_config.base_url.clone(),
         app_config.allow_registration,
@@ -202,10 +198,8 @@ async fn main() -> anyhow::Result<()> {
                 fed_federation_repo,
                 fed_review_store,
                 fed_remote_watchlist_repo,
+                fed_ap_content,
                 fed_user_repo,
-                fed_movie_repo,
-                fed_review_repo,
-                fed_diary_repo,
                 base_url,
                 allow_registration,
                 Arc::clone(&ctx.event_publisher),

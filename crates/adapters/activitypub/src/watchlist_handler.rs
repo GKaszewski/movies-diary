@@ -3,22 +3,61 @@ use std::sync::Arc;
 use k_ap::ApObjectHandler;
 use async_trait::async_trait;
 use chrono::Utc;
-use domain::{models::RemoteWatchlistEntry, ports::RemoteWatchlistRepository};
+use domain::{
+    models::RemoteWatchlistEntry,
+    ports::{LocalApContentQuery, RemoteWatchlistRepository},
+    value_objects::UserId,
+};
 use url::Url;
 
-use crate::objects::WatchlistObject;
+use crate::{objects::{WatchlistObject, watchlist_to_ap_object}, urls::{actor_url, watchlist_entry_url}};
 
 pub struct WatchlistObjectHandler {
     pub remote_watchlist_repo: Arc<dyn RemoteWatchlistRepository>,
+    pub content_query: Arc<dyn LocalApContentQuery>,
+    pub base_url: String,
 }
 
 #[async_trait]
 impl ApObjectHandler for WatchlistObjectHandler {
     async fn get_local_objects_for_user(
         &self,
-        _user_id: uuid::Uuid,
+        user_id: uuid::Uuid,
     ) -> anyhow::Result<Vec<(Url, serde_json::Value)>> {
-        Ok(vec![])
+        let domain_user_id = UserId::from_uuid(user_id);
+        let entries = self
+            .content_query
+            .get_local_watchlist_for_user(&domain_user_id)
+            .await
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+
+        let actor = actor_url(&self.base_url, user_id);
+        let mut results = Vec::new();
+        for wm in entries {
+            let movie_id = wm.entry.movie_id.value();
+            let ap_id = watchlist_entry_url(&self.base_url, user_id, movie_id);
+            let added_at = chrono::DateTime::from_naive_utc_and_offset(wm.entry.added_at, Utc);
+            let external_metadata_id = wm
+                .movie
+                .external_metadata_id()
+                .map(|id| id.value().to_string());
+            let poster_url = wm
+                .movie
+                .poster_path()
+                .map(|p| format!("{}/images/{}", self.base_url, p.value()));
+            let obj = watchlist_to_ap_object(
+                ap_id.clone(),
+                actor.clone(),
+                wm.movie.title().value().to_string(),
+                wm.movie.release_year().value(),
+                external_metadata_id,
+                poster_url,
+                added_at,
+                &self.base_url,
+            );
+            results.push((ap_id, serde_json::to_value(obj)?));
+        }
+        Ok(results)
     }
 
     async fn get_local_objects_page(

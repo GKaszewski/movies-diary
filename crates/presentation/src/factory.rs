@@ -4,10 +4,10 @@ use anyhow::Context;
 
 use domain::ports::{
     AuthService, DiaryRepository, ImageStorage, ImportProfileRepository,
-    ImportSessionRepository, MetadataClient, MovieProfileRepository, MovieRepository,
-    PasswordHasher, PersonCommand, PersonQuery, PosterFetcherClient, ReviewRepository,
-    SearchCommand, SearchPort, StatsRepository, UserProfileFieldsRepository, UserRepository,
-    WatchlistRepository,
+    ImportSessionRepository, LocalApContentQuery, MetadataClient, MovieProfileRepository,
+    MovieRepository, PasswordHasher, PersonCommand, PersonQuery, PosterFetcherClient,
+    ReviewRepository, SearchCommand, SearchPort, StatsRepository, UserProfileFieldsRepository,
+    UserRepository, WatchlistRepository,
 };
 
 pub struct DatabaseAdapters {
@@ -20,6 +20,7 @@ pub struct DatabaseAdapters {
     pub import_profile_repo: Arc<dyn ImportProfileRepository>,
     pub movie_profile_repo: Arc<dyn MovieProfileRepository>,
     pub watchlist_repo: Arc<dyn WatchlistRepository>,
+    pub ap_content_repo: Arc<dyn LocalApContentQuery>,
     pub person_command: Arc<dyn PersonCommand>,
     pub person_query: Arc<dyn PersonQuery>,
     pub search_port: Arc<dyn SearchPort>,
@@ -42,7 +43,7 @@ pub async fn build_database_adapters(
     match backend {
         #[cfg(feature = "postgres")]
         "postgres" => {
-            let (pool, m, r, d, s, u, is, ip, mp, wl) = postgres::wire(url)
+            let (pool, m, r, d, s, u, is, ip, mp, wl, ac) = postgres::wire(url)
                 .await
                 .context("PostgreSQL connection failed")?;
             let (pc, pq) = postgres::create_person_adapter(pool.clone());
@@ -58,6 +59,7 @@ pub async fn build_database_adapters(
                 import_profile_repo: ip,
                 movie_profile_repo: mp,
                 watchlist_repo: wl,
+                ap_content_repo: ac,
                 person_command: pc,
                 person_query: pq,
                 search_port: sp,
@@ -68,7 +70,7 @@ pub async fn build_database_adapters(
         }
         #[cfg(feature = "sqlite")]
         _ => {
-            let (pool, m, r, d, s, u, is, ip, mp, wl) = sqlite::wire(url)
+            let (pool, m, r, d, s, u, is, ip, mp, wl, ac) = sqlite::wire(url)
                 .await
                 .context("SQLite connection failed")?;
             let (pc, pq) = sqlite::create_person_adapter(pool.clone());
@@ -84,6 +86,7 @@ pub async fn build_database_adapters(
                 import_profile_repo: ip,
                 movie_profile_repo: mp,
                 watchlist_repo: wl,
+                ap_content_repo: ac,
                 person_command: pc,
                 person_query: pq,
                 search_port: sp,

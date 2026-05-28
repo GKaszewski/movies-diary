@@ -18,7 +18,9 @@ impl ApObjectHandler for CompositeObjectHandler {
         &self,
         user_id: uuid::Uuid,
     ) -> anyhow::Result<Vec<(Url, serde_json::Value)>> {
-        self.review.get_local_objects_for_user(user_id).await
+        let mut results = self.review.get_local_objects_for_user(user_id).await?;
+        results.extend(self.watchlist.get_local_objects_for_user(user_id).await?);
+        Ok(results)
     }
 
     async fn get_local_objects_page(

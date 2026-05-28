@@ -30,22 +30,21 @@ pub async fn wire(
     federation_repo: std::sync::Arc<dyn FederationRepository>,
     review_store: std::sync::Arc<dyn RemoteReviewRepository>,
     remote_watchlist_repo: std::sync::Arc<dyn domain::ports::RemoteWatchlistRepository>,
+    local_ap_content: std::sync::Arc<dyn domain::ports::LocalApContentQuery>,
     user_repo: std::sync::Arc<dyn domain::ports::UserRepository>,
-    movie_repo: std::sync::Arc<dyn domain::ports::MovieRepository>,
-    review_repo: std::sync::Arc<dyn domain::ports::ReviewRepository>,
-    diary_repo: std::sync::Arc<dyn domain::ports::DiaryRepository>,
     base_url: String,
     allow_registration: bool,
     _event_publisher: std::sync::Arc<dyn domain::ports::EventPublisher>,
 ) -> anyhow::Result<ActivityPubWire> {
     let review_handler = std::sync::Arc::new(ReviewObjectHandler {
-        movie_repository: std::sync::Arc::clone(&movie_repo),
-        diary_repository: std::sync::Arc::clone(&diary_repo),
+        content_query: std::sync::Arc::clone(&local_ap_content),
         review_store,
         base_url: base_url.clone(),
     });
     let watchlist_handler = std::sync::Arc::new(watchlist_handler::WatchlistObjectHandler {
         remote_watchlist_repo,
+        content_query: std::sync::Arc::clone(&local_ap_content),
+        base_url: base_url.clone(),
     });
     let composite = std::sync::Arc::new(composite_handler::CompositeObjectHandler {
         review: review_handler,
@@ -80,8 +79,7 @@ pub async fn wire(
     let router = concrete.router();
     let event_handler = std::sync::Arc::new(ActivityPubEventHandler::new(
         std::sync::Arc::clone(&concrete),
-        movie_repo,
-        review_repo,
+        local_ap_content,
         base_url,
     )) as std::sync::Arc<dyn domain::ports::EventHandler>;
 

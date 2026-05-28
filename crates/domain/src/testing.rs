@@ -668,6 +668,27 @@ impl DocumentParser for PanicDocumentParser {
 
 // ── PanicProfileFieldsRepo ────────────────────────────────────────────────────
 
+pub struct PanicRemoteWatchlistRepository;
+
+#[async_trait]
+impl crate::ports::RemoteWatchlistRepository for PanicRemoteWatchlistRepository {
+    async fn save(&self, _: crate::models::RemoteWatchlistEntry) -> Result<(), DomainError> {
+        panic!("PanicRemoteWatchlistRepository called")
+    }
+    async fn remove_by_ap_id(&self, _: &str, _: &str) -> Result<(), DomainError> {
+        panic!("PanicRemoteWatchlistRepository called")
+    }
+    async fn get_by_actor_url(&self, _: &str) -> Result<Vec<crate::models::RemoteWatchlistEntry>, DomainError> {
+        panic!("PanicRemoteWatchlistRepository called")
+    }
+    async fn remove_all_by_actor(&self, _: &str) -> Result<(), DomainError> {
+        panic!("PanicRemoteWatchlistRepository called")
+    }
+    async fn get_by_derived_uuid(&self, _: uuid::Uuid) -> Result<Vec<crate::models::RemoteWatchlistEntry>, DomainError> {
+        panic!("PanicRemoteWatchlistRepository called")
+    }
+}
+
 pub struct PanicProfileFieldsRepo;
 
 #[async_trait]

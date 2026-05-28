@@ -18,6 +18,8 @@ use domain::{
         PanicSearchPort, PanicStatsRepository,
     },
 };
+#[cfg(feature = "federation")]
+use domain::testing::PanicRemoteWatchlistRepository;
 
 use crate::{
     config::AppConfig,
@@ -143,6 +145,8 @@ impl TestContextBuilder {
             search_port: self.search_port,
             search_command: self.search_command,
             config: self.config,
+            #[cfg(feature = "federation")]
+            remote_watchlist_repository: std::sync::Arc::new(PanicRemoteWatchlistRepository),
         }
     }
 }
