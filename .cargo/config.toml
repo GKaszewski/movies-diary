@@ -1,2 +1,5 @@
 [env]
 SQLX_OFFLINE = "true"
+
+[registries.gitea]
+index = "sparse+https://git.gabrielkaszewski.dev/api/packages/GKaszewski/cargo/"
