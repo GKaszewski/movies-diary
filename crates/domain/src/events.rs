@@ -65,6 +65,11 @@ pub enum DomainEvent {
         owner_user_id: UserId,
         follower_inbox_url: String,
     },
+    FederationDeliveryRequested {
+        inbox_url: String,
+        activity_json: String,
+        signing_actor_id: uuid::Uuid,
+    },
 }
 
 #[async_trait]

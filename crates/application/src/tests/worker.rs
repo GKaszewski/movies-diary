@@ -57,6 +57,7 @@ impl EventHandler for RecordingHandler {
             }
             DomainEvent::FollowAccepted { .. } => "follow_accepted",
             DomainEvent::BackfillFollower { .. } => "backfill_follower",
+            DomainEvent::FederationDeliveryRequested { .. } => "federation_delivery",
         };
         self.calls.lock().unwrap().push(label);
         Ok(())

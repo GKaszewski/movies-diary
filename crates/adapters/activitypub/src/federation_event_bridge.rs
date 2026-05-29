@@ -29,8 +29,24 @@ impl k_ap::EventPublisher for FederationEventBridge {
                 })
                 .await
                 .map_err(|e| anyhow::anyhow!(e.to_string())),
-            _ => {
-                tracing::debug!("ignoring federation event: {:?}", event);
+            FederationEvent::DeliveryRequested {
+                inbox,
+                activity,
+                signing_actor_id,
+            } => {
+                let json = serde_json::to_string(&activity)
+                    .map_err(|e| anyhow::anyhow!("serialize activity: {e}"))?;
+                self.domain_publisher
+                    .publish(&DomainEvent::FederationDeliveryRequested {
+                        inbox_url: inbox.to_string(),
+                        activity_json: json,
+                        signing_actor_id,
+                    })
+                    .await
+                    .map_err(|e| anyhow::anyhow!(e.to_string()))
+            }
+            other => {
+                tracing::debug!("ignoring federation event: {:?}", other);
                 Ok(())
             }
         }

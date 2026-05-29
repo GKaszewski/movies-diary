@@ -67,6 +67,11 @@ pub enum EventPayload {
         owner_user_id: String,
         follower_inbox_url: String,
     },
+    FederationDeliveryRequested {
+        inbox_url: String,
+        activity_json: String,
+        signing_actor_id: String,
+    },
 }
 
 impl EventPayload {
@@ -84,6 +89,7 @@ impl EventPayload {
             EventPayload::WatchlistEntryRemoved { .. } => "WatchlistEntryRemoved",
             EventPayload::FollowAccepted { .. } => "FollowAccepted",
             EventPayload::BackfillFollower { .. } => "BackfillFollower",
+            EventPayload::FederationDeliveryRequested { .. } => "FederationDeliveryRequested",
         }
     }
 }
@@ -193,6 +199,15 @@ impl From<&DomainEvent> for EventPayload {
                 owner_user_id: owner_user_id.value().to_string(),
                 follower_inbox_url: follower_inbox_url.clone(),
             },
+            DomainEvent::FederationDeliveryRequested {
+                inbox_url,
+                activity_json,
+                signing_actor_id,
+            } => EventPayload::FederationDeliveryRequested {
+                inbox_url: inbox_url.clone(),
+                activity_json: activity_json.clone(),
+                signing_actor_id: signing_actor_id.to_string(),
+            },
         }
     }
 }
@@ -299,6 +314,15 @@ impl TryFrom<EventPayload> for DomainEvent {
             } => Ok(DomainEvent::BackfillFollower {
                 owner_user_id: UserId::from_uuid(parse_uuid(&owner_user_id, "owner_user_id")?),
                 follower_inbox_url,
+            }),
+            EventPayload::FederationDeliveryRequested {
+                inbox_url,
+                activity_json,
+                signing_actor_id,
+            } => Ok(DomainEvent::FederationDeliveryRequested {
+                inbox_url,
+                activity_json,
+                signing_actor_id: parse_uuid(&signing_actor_id, "signing_actor_id")?,
             }),
         }
     }

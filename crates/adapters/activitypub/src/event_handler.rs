@@ -80,6 +80,23 @@ impl EventHandler for ActivityPubEventHandler {
                 .on_watchlist_removed(user_id, movie_id)
                 .await
                 .map_err(|e| DomainError::InfrastructureError(e.to_string())),
+            DomainEvent::FederationDeliveryRequested {
+                inbox_url,
+                activity_json,
+                signing_actor_id,
+            } => {
+                let inbox: url::Url = inbox_url
+                    .parse()
+                    .map_err(|e| DomainError::InfrastructureError(format!("bad inbox URL: {e}")))?;
+                let activity: serde_json::Value =
+                    serde_json::from_str(activity_json).map_err(|e| {
+                        DomainError::InfrastructureError(format!("bad activity JSON: {e}"))
+                    })?;
+                self.ap_service
+                    .deliver_to_inbox(inbox, activity, *signing_actor_id)
+                    .await
+                    .map_err(|e| DomainError::InfrastructureError(e.to_string()))
+            }
             _ => Ok(()),
         }
     }
