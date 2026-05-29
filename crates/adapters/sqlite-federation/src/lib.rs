@@ -58,7 +58,12 @@ fn remote_actor_from_row(row: &sqlx::sqlite::SqliteRow, url_col: &str) -> Remote
             .try_get::<Option<String>, _>("also_known_as")
             .ok()
             .flatten()
-            .map(|s| serde_json::from_str(&s).unwrap_or_default())
+            .map(|s| {
+                serde_json::from_str::<Vec<String>>(&s).unwrap_or_else(|e| {
+                    tracing::warn!(raw = %s, error = %e, "failed to parse also_known_as JSON");
+                    vec![s]
+                })
+            })
             .unwrap_or_default(),
     }
 }

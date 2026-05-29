@@ -22,16 +22,10 @@ impl k_ap::EventPublisher for FederationEventBridge {
                 owner_user_id,
                 follower_inbox_url,
             } => {
-                tracing::info!(
-                    owner = %owner_user_id,
-                    inbox = %follower_inbox_url,
-                    "federation BackfillRequested → FollowAccepted"
-                );
                 self.domain_publisher
-                    .publish(&DomainEvent::FollowAccepted {
-                        local_user_id: UserId::from_uuid(owner_user_id),
-                        remote_actor_url: follower_inbox_url.clone(),
-                        outbox_url: follower_inbox_url,
+                    .publish(&DomainEvent::BackfillFollower {
+                        owner_user_id: UserId::from_uuid(owner_user_id),
+                        follower_inbox_url,
                     })
                     .await
                     .map_err(|e| anyhow::anyhow!(e.to_string()))

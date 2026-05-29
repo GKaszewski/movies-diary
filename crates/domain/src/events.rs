@@ -61,6 +61,10 @@ pub enum DomainEvent {
         remote_actor_url: String,
         outbox_url: String,
     },
+    BackfillFollower {
+        owner_user_id: UserId,
+        follower_inbox_url: String,
+    },
 }
 
 #[async_trait]

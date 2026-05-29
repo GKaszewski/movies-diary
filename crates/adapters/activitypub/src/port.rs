@@ -34,6 +34,7 @@ pub trait ActivityPubPort: Send + Sync {
     async fn import_remote_outbox(&self, outbox_url: &str, actor_url: &str) -> anyhow::Result<()>;
     async fn followers_collection_json(&self, user_id: Uuid, page: Option<u32>) -> anyhow::Result<String>;
     async fn following_collection_json(&self, user_id: Uuid, page: Option<u32>) -> anyhow::Result<String>;
+    async fn run_backfill_for_follower(&self, owner_user_id: Uuid, follower_inbox_url: String) -> anyhow::Result<()>;
 }
 
 #[async_trait]
@@ -109,6 +110,9 @@ impl ActivityPubPort for ActivityPubService {
     async fn following_collection_json(&self, user_id: Uuid, page: Option<u32>) -> anyhow::Result<String> {
         self.following_collection_json(user_id, page).await
     }
+    async fn run_backfill_for_follower(&self, owner_user_id: Uuid, follower_inbox_url: String) -> anyhow::Result<()> {
+        self.run_backfill_for_follower(owner_user_id, follower_inbox_url).await
+    }
 }
 
 pub struct NoopActivityPubService;
@@ -174,5 +178,8 @@ impl ActivityPubPort for NoopActivityPubService {
     }
     async fn following_collection_json(&self, _: Uuid, _: Option<u32>) -> anyhow::Result<String> {
         Ok(String::new())
+    }
+    async fn run_backfill_for_follower(&self, _: Uuid, _: String) -> anyhow::Result<()> {
+        Ok(())
     }
 }

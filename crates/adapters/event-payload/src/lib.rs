@@ -63,6 +63,10 @@ pub enum EventPayload {
         remote_actor_url: String,
         outbox_url: String,
     },
+    BackfillFollower {
+        owner_user_id: String,
+        follower_inbox_url: String,
+    },
 }
 
 impl EventPayload {
@@ -79,6 +83,7 @@ impl EventPayload {
             EventPayload::WatchlistEntryAdded { .. } => "WatchlistEntryAdded",
             EventPayload::WatchlistEntryRemoved { .. } => "WatchlistEntryRemoved",
             EventPayload::FollowAccepted { .. } => "FollowAccepted",
+            EventPayload::BackfillFollower { .. } => "BackfillFollower",
         }
     }
 }
@@ -181,6 +186,13 @@ impl From<&DomainEvent> for EventPayload {
                 remote_actor_url: remote_actor_url.clone(),
                 outbox_url: outbox_url.clone(),
             },
+            DomainEvent::BackfillFollower {
+                owner_user_id,
+                follower_inbox_url,
+            } => EventPayload::BackfillFollower {
+                owner_user_id: owner_user_id.value().to_string(),
+                follower_inbox_url: follower_inbox_url.clone(),
+            },
         }
     }
 }
@@ -280,6 +292,13 @@ impl TryFrom<EventPayload> for DomainEvent {
                 local_user_id: UserId::from_uuid(parse_uuid(&local_user_id, "local_user_id")?),
                 remote_actor_url,
                 outbox_url,
+            }),
+            EventPayload::BackfillFollower {
+                owner_user_id,
+                follower_inbox_url,
+            } => Ok(DomainEvent::BackfillFollower {
+                owner_user_id: UserId::from_uuid(parse_uuid(&owner_user_id, "owner_user_id")?),
+                follower_inbox_url,
             }),
         }
     }
