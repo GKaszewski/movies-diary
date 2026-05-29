@@ -60,7 +60,7 @@ async fn main() -> anyhow::Result<()> {
         fed_follow_repo,
         fed_actor_repo,
         fed_blocklist_repo,
-        _fed_social_query,
+        fed_social_query,
         fed_review_store,
         fed_remote_watchlist_repo,
     ) = match &db_pool {
@@ -91,6 +91,8 @@ async fn main() -> anyhow::Result<()> {
         profile_fields_repository: Arc::clone(&profile_fields_repo),
         #[cfg(feature = "federation")]
         remote_watchlist_repository: fed_remote_watchlist_repo.clone(),
+        #[cfg(feature = "federation")]
+        social_query: fed_social_query,
         person_command: Arc::clone(&person_command),
         person_query: Arc::clone(&person_query),
         search_port: Arc::clone(&search_port),

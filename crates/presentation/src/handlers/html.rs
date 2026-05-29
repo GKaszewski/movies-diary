@@ -9,32 +9,25 @@ use axum::{
 use chrono::Utc;
 use uuid::Uuid;
 
+#[cfg(feature = "federation")]
+use application::ports::{
+    BlockedActorEntry, BlockedActorsPageData, BlockedDomainEntry, BlockedDomainsPageData,
+    FollowersPageData, FollowingPageData,
+};
 use application::{
     commands::{
-        AddToWatchlistCommand, DeleteReviewCommand, MovieInput, RegisterCommand,
-        RemoveFromWatchlistCommand,
+        AddToWatchlistCommand, DeleteReviewCommand, MovieInput, RemoveFromWatchlistCommand,
     },
     ports::{
         HtmlPageContext, LoginPageData, MovieDetailPageData, NewReviewPageData,
-        ProfileSettingsPageData, RegisterPageData, RemoteActorView, WatchlistDisplayEntry,
-        WatchlistPageData,
+        ProfileSettingsPageData, RegisterPageData, RemoteActorView, WatchlistPageData,
     },
-    queries::{
-        ExportQuery, GetMovieSocialPageQuery, GetWatchlistQuery, IsOnWatchlistQuery, LoginQuery,
-    },
+    queries::{ExportQuery, GetMovieSocialPageQuery, IsOnWatchlistQuery, LoginQuery},
     use_cases::{
         add_to_watchlist, delete_review, export_diary as export_diary_uc, get_movie_social_page,
-        get_watchlist, is_on_watchlist, log_review, login as login_uc, register as register_uc,
-        remove_from_watchlist, update_profile, update_profile_fields,
+        is_on_watchlist, log_review, login as login_uc, remove_from_watchlist, update_profile,
+        update_profile_fields,
     },
-};
-#[cfg(feature = "federation")]
-use application::{
-    ports::{
-        BlockedActorEntry, BlockedActorsPageData, BlockedDomainEntry, BlockedDomainsPageData,
-        FollowersPageData, FollowingPageData,
-    },
-    use_cases::get_remote_watchlist,
 };
 use domain::models::ExportFormat;
 use domain::{errors::DomainError, value_objects::UserId};
@@ -216,27 +209,21 @@ pub async fn post_register(
     if crate::csrf::mismatch(&csrf, &form.csrf_token) {
         return StatusCode::FORBIDDEN.into_response();
     }
-    let email = form.email.clone();
-    let password = form.password.clone();
-    match register_uc::execute(
+    match application::use_cases::register_and_login::execute(
         &state.app_ctx,
-        RegisterCommand {
+        application::commands::RegisterAndLoginCommand {
             email: form.email,
             username: form.username,
             password: form.password,
-            role: domain::models::UserRole::Standard,
         },
     )
     .await
     {
-        Ok(_) => match login_uc::execute(&state.app_ctx, LoginQuery { email, password }).await {
-            Ok(result) => {
-                let max_age = (result.expires_at - Utc::now()).num_seconds().max(0);
-                let cookie = set_cookie_header(&result.token, max_age);
-                ([cookie], Redirect::to("/")).into_response()
-            }
-            Err(_) => Redirect::to("/login").into_response(),
-        },
+        Ok(result) => {
+            let max_age = (result.expires_at - Utc::now()).num_seconds().max(0);
+            let cookie = set_cookie_header(&result.token, max_age);
+            ([cookie], Redirect::to("/")).into_response()
+        }
         Err(_) => {
             Redirect::to("/register?error=Registration+failed.+Please+try+again.").into_response()
         }
@@ -369,14 +356,9 @@ pub async fn get_activity_feed(
     let limit = params.limit.unwrap_or(20);
     let offset = params.offset.unwrap_or(0);
 
-    #[cfg(feature = "federation")]
-    let filter_str = if params.filter == "following" && user_id.is_some() {
-        "following"
-    } else {
-        "all"
-    };
-    #[cfg(not(feature = "federation"))]
-    let filter_str = "all";
+    let filter_following =
+        cfg!(feature = "federation") && params.filter == "following" && user_id.is_some();
+    let filter_str = if filter_following { "following" } else { "all" };
 
     let sort_by_str = match params.sort_by.as_str() {
         "date_asc" => "date_asc",
@@ -385,52 +367,17 @@ pub async fn get_activity_feed(
         _ => "date",
     };
 
-    #[cfg(feature = "federation")]
-    let following = if filter_str == "following" {
-        if let Some(uid) = user_id {
-            let urls = state
-                .social_query
-                .get_accepted_following_urls(uid.value())
-                .await
-                .unwrap_or_default();
-            let base_url = &state.app_ctx.config.base_url;
-            let mut local_ids = vec![uid.value()];
-            let mut remote_urls = Vec::new();
-            for url in urls {
-                if let Some(suffix) = url.strip_prefix(&format!("{}/users/", base_url))
-                    && let Ok(parsed_id) = uuid::Uuid::parse_str(suffix)
-                {
-                    local_ids.push(parsed_id);
-                    continue;
-                }
-                remote_urls.push(url);
-            }
-            Some(domain::ports::FollowingFilter {
-                local_user_ids: local_ids,
-                remote_actor_urls: remote_urls,
-            })
-        } else {
-            None
-        }
-    } else {
-        None
-    };
-
-    #[cfg(not(feature = "federation"))]
-    let following: Option<domain::ports::FollowingFilter> = None;
-
-    let search_opt = if params.search.is_empty() {
-        None
-    } else {
-        Some(params.search.clone())
-    };
-
     let query = application::queries::GetActivityFeedQuery {
         limit,
         offset,
         sort_by: sort_by_str.parse().unwrap_or_default(),
-        search: search_opt,
-        following,
+        search: if params.search.is_empty() {
+            None
+        } else {
+            Some(params.search.clone())
+        },
+        viewer_user_id: user_id.map(|u| u.value()),
+        filter_following,
     };
 
     match application::use_cases::get_activity_feed::execute(&state.app_ctx, query).await {
@@ -467,27 +414,15 @@ pub async fn get_users_list(
     ctx.page_title = "Members — Movies Diary".to_string();
     ctx.canonical_url = format!("{}/users", state.app_ctx.config.base_url);
 
-    #[cfg(feature = "federation")]
-    let (users_result, actors_result) = tokio::join!(
-        application::use_cases::get_users::execute(
-            &state.app_ctx,
-            application::queries::GetUsersQuery,
-        ),
-        state.social_query.list_all_followed_remote_actors()
-    );
-    #[cfg(not(feature = "federation"))]
-    let (users_result, actors_result) = (
-        application::use_cases::get_users::execute(
-            &state.app_ctx,
-            application::queries::GetUsersQuery,
-        )
-        .await,
-        Ok::<Vec<domain::ports::RemoteActorInfo>, domain::errors::DomainError>(vec![]),
-    );
-
-    match (users_result, actors_result) {
-        (Ok(users), Ok(remote_actors)) => {
-            let actor_views = remote_actors
+    match application::use_cases::get_users::execute(
+        &state.app_ctx,
+        application::queries::GetUsersQuery,
+    )
+    .await
+    {
+        Ok(result) => {
+            let actor_views = result
+                .remote_actors
                 .into_iter()
                 .map(|a| application::ports::RemoteActorView {
                     handle: a.handle,
@@ -498,7 +433,7 @@ pub async fn get_users_list(
                 .collect();
             let data = application::ports::UsersPageData {
                 ctx,
-                users,
+                users: result.users,
                 remote_actors: actor_views,
             };
             match state.html_renderer.render_users_page(data) {
@@ -506,8 +441,7 @@ pub async fn get_users_list(
                 Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
             }
         }
-        (Err(e), _) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
-        (_, Err(e)) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
     }
 }
 
@@ -605,57 +539,6 @@ pub async fn get_user_profile(
         .map(|u| u.value() == profile_user_uuid)
         .unwrap_or(false);
 
-    #[cfg(feature = "federation")]
-    let following_count = if is_own_profile {
-        if let Some(ref uid) = user_id {
-            state
-                .ap_service
-                .count_following(uid.value())
-                .await
-                .unwrap_or(0)
-        } else {
-            0
-        }
-    } else {
-        0
-    };
-    #[cfg(not(feature = "federation"))]
-    let following_count = 0usize;
-
-    #[cfg(feature = "federation")]
-    let followers_count = if is_own_profile {
-        state
-            .ap_service
-            .count_accepted_followers(profile_user_uuid)
-            .await
-            .unwrap_or(0)
-    } else {
-        0
-    };
-    #[cfg(not(feature = "federation"))]
-    let followers_count = 0usize;
-
-    #[cfg(feature = "federation")]
-    let pending_followers: Vec<application::ports::RemoteActorView> = if is_own_profile {
-        state
-            .ap_service
-            .get_pending_followers(profile_user_uuid)
-            .await
-            .unwrap_or_default()
-            .into_iter()
-            .map(|a| application::ports::RemoteActorView {
-                handle: a.handle,
-                url: a.url,
-                display_name: a.display_name,
-                avatar_url: a.avatar_url.clone(),
-            })
-            .collect()
-    } else {
-        vec![]
-    };
-    #[cfg(not(feature = "federation"))]
-    let pending_followers: Vec<application::ports::RemoteActorView> = vec![];
-
     let query = application::queries::GetUserProfileQuery {
         user_id: profile_user_uuid,
         view: profile_view,
@@ -667,6 +550,7 @@ pub async fn get_user_profile(
         } else {
             Some(params.search.clone())
         },
+        is_own_profile,
     };
 
     match application::use_cases::get_user_profile::execute(&state.app_ctx, query).await {
@@ -682,6 +566,16 @@ pub async fn get_user_profile(
             if !is_own_profile {
                 ctx.page_rss_url = Some(format!("/users/{}/feed.rss", profile_user_uuid));
             }
+            let pending_followers: Vec<application::ports::RemoteActorView> = profile
+                .pending_followers
+                .into_iter()
+                .map(|p| application::ports::RemoteActorView {
+                    handle: p.handle,
+                    url: p.url,
+                    display_name: p.display_name,
+                    avatar_url: p.avatar_url,
+                })
+                .collect();
             let data = application::ports::ProfilePageData {
                 ctx,
                 profile_user_id: profile_user_uuid,
@@ -696,8 +590,8 @@ pub async fn get_user_profile(
                 trends: profile.trends,
                 is_own_profile,
                 error: params.error,
-                following_count,
-                followers_count,
+                following_count: profile.following_count,
+                followers_count: profile.followers_count,
                 pending_followers,
                 sort_by: sort_by_str.to_string(),
                 search: params.search.clone(),
@@ -1115,94 +1009,33 @@ pub async fn get_watchlist_page(
     Extension(csrf): Extension<CsrfToken>,
 ) -> impl IntoResponse {
     let ctx = build_page_context(&state, viewer_id.clone(), csrf.0).await;
-    let limit = params.limit.unwrap_or(20);
-    let offset = params.offset.unwrap_or(0);
     let is_owner = viewer_id.map(|u| u.value() == owner_id).unwrap_or(false);
 
-    // Try local user first
-    let local_user = state
-        .app_ctx
-        .user_repository
-        .find_by_id(&domain::value_objects::UserId::from_uuid(owner_id))
-        .await
-        .ok()
-        .flatten();
-
-    let (display_entries, has_more, current_offset, page_limit) = if local_user.is_some() {
-        match get_watchlist::execute(
-            &state.app_ctx,
-            GetWatchlistQuery {
-                user_id: owner_id,
-                limit: Some(limit),
-                offset: Some(offset),
-            },
-        )
-        .await
-        {
-            Err(e) => {
-                tracing::error!("watchlist error: {:?}", e);
-                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-            }
-            Ok(entries) => {
-                let has_more = entries.offset + entries.limit < entries.total_count as u32;
-                let display: Vec<WatchlistDisplayEntry> = entries
-                    .items
-                    .iter()
-                    .map(|w| {
-                        let remove_url = if is_owner {
-                            Some(format!("/watchlist/{}/remove", w.movie.id().value()))
-                        } else {
-                            None
-                        };
-                        WatchlistDisplayEntry {
-                            poster_url: w
-                                .movie
-                                .poster_path()
-                                .map(|p| format!("/images/{}", p.value())),
-                            movie_title: w.movie.title().value().to_string(),
-                            release_year: w.movie.release_year().value(),
-                            movie_url: Some(format!("/movies/{}", w.movie.id().value())),
-                            added_at: w.entry.added_at.format("%b %-d, %Y").to_string(),
-                            remove_url,
-                        }
-                    })
-                    .collect();
-                (display, has_more, entries.offset, entries.limit)
-            }
-        }
-    } else {
-        #[cfg(feature = "federation")]
-        {
-            let remote_entries = get_remote_watchlist::execute(&state.app_ctx, owner_id)
-                .await
-                .unwrap_or_default();
-            let display: Vec<WatchlistDisplayEntry> = remote_entries
-                .into_iter()
-                .map(|e| WatchlistDisplayEntry {
-                    poster_url: e.poster_url,
-                    movie_title: e.movie_title,
-                    release_year: e.release_year,
-                    movie_url: None,
-                    added_at: e.added_at.format("%b %-d, %Y").to_string(),
-                    remove_url: None,
-                })
-                .collect();
-            let len = display.len() as u32;
-            (display, false, 0u32, len)
-        }
-        #[cfg(not(feature = "federation"))]
-        {
-            (vec![], false, 0u32, 0u32)
+    let result = match application::use_cases::get_watchlist_page::execute(
+        &state.app_ctx,
+        application::queries::GetWatchlistQuery {
+            user_id: owner_id,
+            limit: params.limit.or(Some(20)),
+            offset: params.offset.or(Some(0)),
+        },
+        is_owner,
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            tracing::error!("watchlist error: {:?}", e);
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     };
 
     let data = WatchlistPageData {
         ctx,
         owner_id,
-        display_entries,
-        current_offset,
-        has_more,
-        limit: page_limit,
+        display_entries: result.display_entries,
+        current_offset: result.current_offset,
+        has_more: result.has_more,
+        limit: result.limit,
         is_owner,
         error: params.error,
     };

@@ -33,7 +33,7 @@ use domain::{
         DiaryEntry, ExportFormat, Movie, MovieSummary, PersonId, Review, collections::PageParams,
     },
     services::review_history::Trend,
-    value_objects::{MovieId, UserId},
+    value_objects::UserId,
 };
 
 use crate::{
@@ -178,32 +178,7 @@ pub async fn sync_poster(
     _user: AuthenticatedUser,
     Path(movie_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, ApiError> {
-    let movie = state
-        .app_ctx
-        .movie_repository
-        .get_movie_by_id(&MovieId::from_uuid(movie_id))
-        .await?
-        .ok_or_else(|| ApiError(DomainError::NotFound(format!("Movie {movie_id}"))))?;
-
-    let external_id = movie
-        .external_metadata_id()
-        .ok_or_else(|| {
-            ApiError(DomainError::ValidationError(
-                "Movie has no external metadata ID, cannot sync poster".into(),
-            ))
-        })?
-        .value()
-        .to_string();
-
-    sync_poster::execute(
-        &state.app_ctx,
-        SyncPosterCommand {
-            movie_id,
-            external_metadata_id: external_id,
-        },
-    )
-    .await?;
-
+    sync_poster::execute(&state.app_ctx, SyncPosterCommand { movie_id }).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -438,26 +413,26 @@ pub async fn get_profile(
     State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
 ) -> impl IntoResponse {
-    let user = match state.app_ctx.user_repository.find_by_id(&user_id).await {
-        Ok(Some(u)) => u,
-        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+    match application::use_cases::get_current_profile::execute(
+        &state.app_ctx,
+        application::queries::GetCurrentProfileQuery {
+            user_id: user_id.value(),
+        },
+    )
+    .await
+    {
+        Ok(profile) => Json(ProfileResponse {
+            username: profile.username,
+            bio: profile.bio,
+            avatar_url: profile.avatar_url,
+        })
+        .into_response(),
+        Err(DomainError::NotFound(_)) => StatusCode::NOT_FOUND.into_response(),
         Err(e) => {
-            tracing::error!("get_profile user lookup: {:?}", e);
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            tracing::error!("get_profile error: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
-    };
-
-    let base_url = &state.app_ctx.config.base_url;
-    let avatar_url = user
-        .avatar_path()
-        .map(|path| format!("{}/images/{}", base_url, path));
-
-    Json(ProfileResponse {
-        username: user.username().value().to_string(),
-        bio: user.bio().map(|s| s.to_string()),
-        avatar_url,
-    })
-    .into_response()
+    }
 }
 
 #[utoipa::path(
@@ -1032,7 +1007,8 @@ pub async fn get_activity_feed(
             offset: params.offset.unwrap_or(0),
             sort_by: domain::ports::FeedSortBy::Date,
             search: None,
-            following: None,
+            viewer_user_id: None,
+            filter_following: false,
         },
     )
     .await?;
@@ -1058,9 +1034,10 @@ pub async fn get_activity_feed(
     responses((status = 200, body = UsersResponse)),
 )]
 pub async fn list_users(State(state): State<AppState>) -> Result<Json<UsersResponse>, ApiError> {
-    let users = get_users::execute(&state.app_ctx, GetUsersQuery).await?;
+    let result = get_users::execute(&state.app_ctx, GetUsersQuery).await?;
     Ok(Json(UsersResponse {
-        users: users
+        users: result
+            .users
             .iter()
             .map(|u| UserSummaryDto {
                 id: u.user_id.value(),
@@ -1117,6 +1094,7 @@ pub async fn get_user_profile(
             offset: params.offset,
             sort_by: domain::ports::FeedSortBy::Date,
             search: None,
+            is_own_profile: false,
         },
     )
     .await
@@ -1127,20 +1105,6 @@ pub async fn get_user_profile(
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     };
-
-    #[cfg(feature = "federation")]
-    let following_count = state.ap_service.count_following(user_id).await.unwrap_or(0);
-    #[cfg(not(feature = "federation"))]
-    let following_count = 0usize;
-
-    #[cfg(feature = "federation")]
-    let followers_count = state
-        .ap_service
-        .count_accepted_followers(user_id)
-        .await
-        .unwrap_or(0);
-    #[cfg(not(feature = "federation"))]
-    let followers_count = 0usize;
 
     let entries = profile.entries.map(|p| DiaryResponse {
         items: p.items.iter().map(entry_to_dto).collect(),
@@ -1192,8 +1156,8 @@ pub async fn get_user_profile(
             favorite_director: profile.stats.favorite_director,
             most_active_month: profile.stats.most_active_month,
         },
-        following_count,
-        followers_count,
+        following_count: profile.following_count,
+        followers_count: profile.followers_count,
         entries,
         history,
         trends,

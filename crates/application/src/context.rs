@@ -6,8 +6,8 @@ use domain::ports::{
     AuthService, DiaryExporter, DiaryRepository, DocumentParser, EventPublisher, ImageStorage,
     ImportProfileRepository, ImportSessionRepository, MetadataClient, MovieProfileRepository,
     MovieRepository, PasswordHasher, PersonCommand, PersonQuery, PosterFetcherClient,
-    ReviewRepository, SearchCommand, SearchPort, StatsRepository, UserProfileFieldsRepository,
-    UserRepository, WatchlistRepository,
+    ReviewRepository, SearchCommand, SearchPort, SocialQueryPort, StatsRepository,
+    UserProfileFieldsRepository, UserRepository, WatchlistRepository,
 };
 
 use crate::config::AppConfig;
@@ -38,5 +38,7 @@ pub struct AppContext {
     pub profile_fields_repository: Arc<dyn UserProfileFieldsRepository>,
     #[cfg(feature = "federation")]
     pub remote_watchlist_repository: Arc<dyn RemoteWatchlistRepository>,
+    #[cfg(feature = "federation")]
+    pub social_query: Arc<dyn SocialQueryPort>,
     pub config: AppConfig,
 }

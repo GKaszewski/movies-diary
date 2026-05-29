@@ -202,6 +202,8 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
         profile_fields_repository: profile_fields_repo,
         #[cfg(feature = "federation")]
         remote_watchlist_repository: remote_watchlist_repo,
+        #[cfg(feature = "federation")]
+        social_query: social_query.clone(),
         person_command,
         person_query,
         search_port,

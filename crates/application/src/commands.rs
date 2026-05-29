@@ -21,7 +21,6 @@ pub struct LogReviewCommand {
 #[derive(Clone)]
 pub struct SyncPosterCommand {
     pub movie_id: Uuid,
-    pub external_metadata_id: String,
 }
 
 pub struct RegisterCommand {
@@ -102,4 +101,10 @@ pub struct AddToWatchlistCommand {
 pub struct RemoveFromWatchlistCommand {
     pub user_id: Uuid,
     pub movie_id: Uuid,
+}
+
+pub struct RegisterAndLoginCommand {
+    pub email: String,
+    pub username: String,
+    pub password: String,
 }

@@ -370,6 +370,18 @@ impl domain::ports::SocialQueryPort for PanicSocialQuery {
     ) -> Result<Vec<domain::ports::RemoteActorInfo>, DomainError> {
         panic!()
     }
+    async fn count_following(&self, _: uuid::Uuid) -> Result<usize, DomainError> {
+        panic!()
+    }
+    async fn count_accepted_followers(&self, _: uuid::Uuid) -> Result<usize, DomainError> {
+        panic!()
+    }
+    async fn get_pending_followers(
+        &self,
+        _: uuid::Uuid,
+    ) -> Result<Vec<domain::ports::PendingFollowerInfo>, DomainError> {
+        panic!()
+    }
 }
 
 async fn test_app() -> Router {
@@ -402,6 +414,8 @@ async fn test_app() -> Router {
             profile_fields_repository: Arc::new(PanicProfileFields),
             #[cfg(feature = "federation")]
             remote_watchlist_repository: Arc::new(PanicRemoteWatchlist),
+            #[cfg(feature = "federation")]
+            social_query: Arc::new(PanicSocialQuery),
             person_command: Arc::new(PanicPersonCommand),
             person_query: Arc::new(PanicPersonQuery),
             search_port: Arc::new(PanicSearchPort),

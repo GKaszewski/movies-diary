@@ -28,7 +28,8 @@ pub struct GetActivityFeedQuery {
     pub offset: u32,
     pub sort_by: domain::ports::FeedSortBy,
     pub search: Option<String>,
-    pub following: Option<domain::ports::FollowingFilter>,
+    pub viewer_user_id: Option<Uuid>,
+    pub filter_following: bool,
 }
 
 pub struct GetUsersQuery;
@@ -73,6 +74,7 @@ pub struct GetUserProfileQuery {
     pub offset: Option<u32>,
     pub sort_by: domain::ports::FeedSortBy,
     pub search: Option<String>,
+    pub is_own_profile: bool,
 }
 
 pub struct GetMovieSocialPageQuery {
@@ -98,4 +100,8 @@ pub struct GetWatchlistQuery {
 pub struct IsOnWatchlistQuery {
     pub user_id: Uuid,
     pub movie_id: Uuid,
+}
+
+pub struct GetCurrentProfileQuery {
+    pub user_id: Uuid,
 }

@@ -787,3 +787,55 @@ impl UserProfileFieldsRepository for PanicProfileFieldsRepo {
         panic!("PanicProfileFieldsRepo called")
     }
 }
+
+pub struct PanicSocialQueryPort;
+
+#[async_trait]
+impl crate::ports::SocialQueryPort for PanicSocialQueryPort {
+    async fn get_accepted_following_urls(&self, _: uuid::Uuid) -> Result<Vec<String>, DomainError> {
+        panic!("PanicSocialQueryPort called")
+    }
+    async fn list_all_followed_remote_actors(
+        &self,
+    ) -> Result<Vec<crate::ports::RemoteActorInfo>, DomainError> {
+        panic!("PanicSocialQueryPort called")
+    }
+    async fn count_following(&self, _: uuid::Uuid) -> Result<usize, DomainError> {
+        panic!("PanicSocialQueryPort called")
+    }
+    async fn count_accepted_followers(&self, _: uuid::Uuid) -> Result<usize, DomainError> {
+        panic!("PanicSocialQueryPort called")
+    }
+    async fn get_pending_followers(
+        &self,
+        _: uuid::Uuid,
+    ) -> Result<Vec<crate::ports::PendingFollowerInfo>, DomainError> {
+        panic!("PanicSocialQueryPort called")
+    }
+}
+
+pub struct NoopSocialQueryPort;
+
+#[async_trait]
+impl crate::ports::SocialQueryPort for NoopSocialQueryPort {
+    async fn get_accepted_following_urls(&self, _: uuid::Uuid) -> Result<Vec<String>, DomainError> {
+        Ok(vec![])
+    }
+    async fn list_all_followed_remote_actors(
+        &self,
+    ) -> Result<Vec<crate::ports::RemoteActorInfo>, DomainError> {
+        Ok(vec![])
+    }
+    async fn count_following(&self, _: uuid::Uuid) -> Result<usize, DomainError> {
+        Ok(0)
+    }
+    async fn count_accepted_followers(&self, _: uuid::Uuid) -> Result<usize, DomainError> {
+        Ok(0)
+    }
+    async fn get_pending_followers(
+        &self,
+        _: uuid::Uuid,
+    ) -> Result<Vec<crate::ports::PendingFollowerInfo>, DomainError> {
+        Ok(vec![])
+    }
+}

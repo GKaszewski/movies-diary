@@ -2,14 +2,13 @@ use domain::{
     errors::DomainError,
     events::DomainEvent,
     models::IndexableDocument,
-    value_objects::{ExternalMetadataId, MovieId, PosterPath},
+    value_objects::{MovieId, PosterPath},
 };
 
 use crate::{commands::SyncPosterCommand, context::AppContext};
 
 pub async fn execute(ctx: &AppContext, cmd: SyncPosterCommand) -> Result<(), DomainError> {
     let movie_id = MovieId::from_uuid(cmd.movie_id);
-    let external_metadata_id = ExternalMetadataId::new(cmd.external_metadata_id)?;
 
     let mut movie = match ctx.movie_repository.get_movie_by_id(&movie_id).await? {
         Some(m) => m,
@@ -21,6 +20,15 @@ pub async fn execute(ctx: &AppContext, cmd: SyncPosterCommand) -> Result<(), Dom
             return Err(DomainError::NotFound("Movie not found".into()));
         }
     };
+
+    let external_metadata_id = movie
+        .external_metadata_id()
+        .ok_or_else(|| {
+            DomainError::ValidationError(
+                "Movie has no external metadata ID, cannot sync poster".into(),
+            )
+        })?
+        .clone();
 
     let poster_url = match ctx
         .metadata_client

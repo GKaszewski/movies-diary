@@ -58,17 +58,31 @@ pub struct RemoteActorInfo {
     pub display_name: Option<String>,
 }
 
-/// New trait for social/federation read queries
+#[derive(Debug, Clone)]
+pub struct PendingFollowerInfo {
+    pub url: String,
+    pub handle: String,
+    pub display_name: Option<String>,
+    pub avatar_url: Option<String>,
+}
+
 #[async_trait]
 pub trait SocialQueryPort: Send + Sync {
-    /// Returns all accepted remote_actor_urls followed by `user_id`.
     async fn get_accepted_following_urls(
         &self,
         user_id: uuid::Uuid,
     ) -> Result<Vec<String>, DomainError>;
 
-    /// Returns all distinct remote actors followed by any local user on this instance.
     async fn list_all_followed_remote_actors(&self) -> Result<Vec<RemoteActorInfo>, DomainError>;
+
+    async fn count_following(&self, user_id: uuid::Uuid) -> Result<usize, DomainError>;
+
+    async fn count_accepted_followers(&self, user_id: uuid::Uuid) -> Result<usize, DomainError>;
+
+    async fn get_pending_followers(
+        &self,
+        user_id: uuid::Uuid,
+    ) -> Result<Vec<PendingFollowerInfo>, DomainError>;
 }
 
 #[async_trait]

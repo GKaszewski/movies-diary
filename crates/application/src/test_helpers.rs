@@ -2,6 +2,8 @@ use std::sync::Arc;
 
 #[cfg(feature = "federation")]
 use domain::testing::PanicRemoteWatchlistRepository;
+#[cfg(feature = "federation")]
+use domain::testing::PanicSocialQueryPort;
 use domain::{
     ports::{
         AuthService, DiaryExporter, DiaryRepository, DocumentParser, EventPublisher, ImageStorage,
@@ -144,6 +146,8 @@ impl TestContextBuilder {
             config: self.config,
             #[cfg(feature = "federation")]
             remote_watchlist_repository: std::sync::Arc::new(PanicRemoteWatchlistRepository),
+            #[cfg(feature = "federation")]
+            social_query: std::sync::Arc::new(PanicSocialQueryPort),
         }
     }
 }
