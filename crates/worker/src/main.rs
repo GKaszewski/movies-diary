@@ -60,7 +60,7 @@ async fn main() -> anyhow::Result<()> {
     );
     // Wire federation repos early to get remote_watchlist_repo for AppContext.
     #[cfg(feature = "federation")]
-    let (fed_federation_repo, _fed_social_query, fed_review_store, fed_remote_watchlist_repo) =
+    let (fed_activity_repo, fed_follow_repo, fed_actor_repo, fed_blocklist_repo, _fed_social_query, fed_review_store, fed_remote_watchlist_repo) =
         match &db_pool {
             #[cfg(feature = "sqlite-federation")]
             db::DbPool::Sqlite(pool) => sqlite_federation::wire(pool.clone()),
@@ -195,7 +195,10 @@ async fn main() -> anyhow::Result<()> {
         #[cfg(feature = "federation")]
         {
             let ap_wire = activitypub::wire(
-                fed_federation_repo,
+                fed_activity_repo,
+                fed_follow_repo,
+                fed_actor_repo,
+                fed_blocklist_repo,
                 fed_review_store,
                 fed_remote_watchlist_repo,
                 fed_ap_content,

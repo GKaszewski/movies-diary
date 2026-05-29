@@ -835,6 +835,56 @@ pub async fn reject_follower(
 }
 
 #[cfg(feature = "federation")]
+pub async fn get_followers_collection(
+    State(state): State<AppState>,
+    Path(user_id): Path<Uuid>,
+    headers: axum::http::HeaderMap,
+    Query(params): Query<std::collections::HashMap<String, String>>,
+) -> impl IntoResponse {
+    let accept = headers
+        .get(axum::http::header::ACCEPT)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    if accept.contains("application/activity+json") || accept.contains("application/ld+json") {
+        let page = params.get("page").and_then(|p| p.parse::<u32>().ok());
+        return match state.ap_service.followers_collection_json(user_id, page).await {
+            Ok(json) => (
+                [(axum::http::header::CONTENT_TYPE, "application/activity+json")],
+                json,
+            )
+                .into_response(),
+            Err(_) => StatusCode::NOT_FOUND.into_response(),
+        };
+    }
+    axum::response::Redirect::to(&format!("/users/{}/followers-list", user_id)).into_response()
+}
+
+#[cfg(feature = "federation")]
+pub async fn get_following_collection(
+    State(state): State<AppState>,
+    Path(user_id): Path<Uuid>,
+    headers: axum::http::HeaderMap,
+    Query(params): Query<std::collections::HashMap<String, String>>,
+) -> impl IntoResponse {
+    let accept = headers
+        .get(axum::http::header::ACCEPT)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    if accept.contains("application/activity+json") || accept.contains("application/ld+json") {
+        let page = params.get("page").and_then(|p| p.parse::<u32>().ok());
+        return match state.ap_service.following_collection_json(user_id, page).await {
+            Ok(json) => (
+                [(axum::http::header::CONTENT_TYPE, "application/activity+json")],
+                json,
+            )
+                .into_response(),
+            Err(_) => StatusCode::NOT_FOUND.into_response(),
+        };
+    }
+    axum::response::Redirect::to(&format!("/users/{}/following-list", user_id)).into_response()
+}
+
+#[cfg(feature = "federation")]
 pub async fn get_following_page(
     RequiredCookieUser(user_id): RequiredCookieUser,
     State(state): State<AppState>,
@@ -1503,6 +1553,7 @@ pub async fn post_profile_settings(
     State(state): State<AppState>,
     mut multipart: Multipart,
 ) -> impl IntoResponse {
+    let mut display_name: Option<String> = None;
     let mut bio: Option<String> = None;
     let mut avatar_bytes: Option<Vec<u8>> = None;
     let mut avatar_content_type: Option<String> = None;
@@ -1517,6 +1568,11 @@ pub async fn post_profile_settings(
     while let Ok(Some(field)) = multipart.next_field().await {
         let name = field.name().unwrap_or("").to_string();
         match name.as_str() {
+            "display_name" => {
+                if let Ok(text) = field.text().await {
+                    display_name = Some(text).filter(|s| !s.is_empty());
+                }
+            }
             "bio" => {
                 if let Ok(text) = field.text().await {
                     bio = Some(text);
@@ -1569,6 +1625,7 @@ pub async fn post_profile_settings(
 
     let cmd = application::commands::UpdateProfileCommand {
         user_id: user_id.value(),
+        display_name,
         bio,
         avatar_bytes,
         avatar_content_type,

@@ -75,6 +75,7 @@ pub struct DeleteImportProfileCommand {
 
 pub struct UpdateProfileCommand {
     pub user_id: Uuid,
+    pub display_name: Option<String>,
     pub bio: Option<String>,
     pub avatar_bytes: Option<Vec<u8>>,
     pub avatar_content_type: Option<String>,

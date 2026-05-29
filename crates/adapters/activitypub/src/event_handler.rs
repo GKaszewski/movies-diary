@@ -8,7 +8,7 @@ use domain::{
 };
 use std::sync::Arc;
 
-use k_ap::ActivityPubService;
+use k_ap::{ActivityPubService, ApVisibility};
 
 use crate::objects::review_to_ap_object;
 use crate::urls::{actor_url, review_url};
@@ -170,7 +170,7 @@ impl ActivityPubEventHandler {
         let json = serde_json::to_value(obj)?;
 
         self.ap_service
-            .broadcast_update_note(user_id.value(), json)
+            .broadcast_update_note(user_id.value(), json, ApVisibility::Public, vec![])
             .await?;
 
         Ok(())
@@ -227,7 +227,7 @@ impl ActivityPubEventHandler {
         let json = serde_json::to_value(obj)?;
 
         self.ap_service
-            .broadcast_create_note(user_id.value(), json)
+            .broadcast_create_note(user_id.value(), json, ApVisibility::Public, vec![])
             .await?;
         Ok(())
     }

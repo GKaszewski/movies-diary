@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use k_ap::ApObjectHandler;
+use k_ap::{ApContentReader, ApObjectHandler};
 use async_trait::async_trait;
 use domain::{
     models::ReviewSource,
@@ -20,43 +20,7 @@ pub struct ReviewObjectHandler {
 }
 
 #[async_trait]
-impl ApObjectHandler for ReviewObjectHandler {
-    async fn get_local_objects_for_user(
-        &self,
-        user_id: uuid::Uuid,
-    ) -> anyhow::Result<Vec<(Url, serde_json::Value)>> {
-        let domain_user_id = UserId::from_uuid(user_id);
-        let entries = self
-            .content_query
-            .get_local_reviews_for_user(&domain_user_id)
-            .await
-            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
-
-        let actor = actor_url(&self.base_url, user_id);
-        let mut results = Vec::new();
-        for entry in entries {
-            let review = entry.review();
-            let movie = entry.movie();
-
-            let ap_id = review_url(&self.base_url, review.id());
-            let poster_url = movie
-                .poster_path()
-                .map(|p| format!("{}/images/{}", self.base_url, p.value()));
-
-            let obj = review_to_ap_object(
-                review,
-                ap_id.clone(),
-                actor.clone(),
-                movie.title().value().to_string(),
-                movie.release_year().value(),
-                poster_url,
-                &self.base_url,
-            );
-            results.push((ap_id, serde_json::to_value(obj)?));
-        }
-        Ok(results)
-    }
-
+impl ApContentReader for ReviewObjectHandler {
     async fn get_local_objects_page(
         &self,
         user_id: uuid::Uuid,
@@ -64,9 +28,10 @@ impl ApObjectHandler for ReviewObjectHandler {
         limit: usize,
     ) -> anyhow::Result<Vec<(url::Url, serde_json::Value, chrono::DateTime<chrono::Utc>)>> {
         let domain_user_id = UserId::from_uuid(user_id);
+        let before_naive = before.map(|dt| dt.naive_utc());
         let entries = self
             .content_query
-            .get_local_reviews_for_user(&domain_user_id)
+            .get_local_reviews_page(&domain_user_id, before_naive, limit)
             .await
             .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
@@ -75,13 +40,6 @@ impl ApObjectHandler for ReviewObjectHandler {
         for entry in entries {
             let review = entry.review();
             let published = chrono::DateTime::from_naive_utc_and_offset(*review.watched_at(), chrono::Utc);
-
-            if let Some(cutoff) = before
-                && published >= cutoff
-            {
-                continue;
-            }
-
             let movie = entry.movie();
             let ap_id = review_url(&self.base_url, review.id());
             let poster_url = movie
@@ -98,14 +56,20 @@ impl ApObjectHandler for ReviewObjectHandler {
                 &self.base_url,
             );
             results.push((ap_id, serde_json::to_value(obj)?, published));
-
-            if results.len() >= limit {
-                break;
-            }
         }
         Ok(results)
     }
 
+    async fn count_local_posts(&self) -> anyhow::Result<u64> {
+        self.content_query
+            .count_local_posts()
+            .await
+            .map_err(|e| anyhow::anyhow!(e.to_string()))
+    }
+}
+
+#[async_trait]
+impl ApObjectHandler for ReviewObjectHandler {
     async fn on_create(
         &self,
         _ap_id: &Url,
@@ -200,18 +164,15 @@ impl ApObjectHandler for ReviewObjectHandler {
         self.review_store.delete_by_actor(actor_url.as_str()).await
     }
 
-    async fn count_local_posts(&self) -> anyhow::Result<u64> {
-        self.content_query
-            .count_local_posts()
-            .await
-            .map_err(|e| anyhow::anyhow!(e.to_string()))
-    }
-
     async fn on_like(&self, _object_url: &Url, _actor_url: &Url) -> anyhow::Result<()> {
         Ok(())
     }
 
     async fn on_announce_received(&self, _object_url: &Url, _actor_url: &Url) -> anyhow::Result<()> {
+        Ok(())
+    }
+
+    async fn on_announce_of_remote(&self, _object_url: &Url, _actor_url: &Url) -> anyhow::Result<()> {
         Ok(())
     }
 

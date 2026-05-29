@@ -145,4 +145,55 @@ impl LocalApContentQuery for PostgresApContentQuery {
                 .map_err(Self::map_err)?;
         Ok(count as u64)
     }
+
+    async fn get_local_reviews_page(
+        &self,
+        user_id: &UserId,
+        before: Option<chrono::NaiveDateTime>,
+        limit: usize,
+    ) -> Result<Vec<DiaryEntry>, DomainError> {
+        let uid = user_id.value().to_string();
+        let limit_i64 = limit as i64;
+
+        let rows = if let Some(before_ts) = before {
+            let ts = before_ts.format("%Y-%m-%d %H:%M:%S").to_string();
+            sqlx::query_as::<_, DiaryRow>(
+                "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
+                        r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment,
+                        to_char(r.watched_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS watched_at,
+                        to_char(r.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS created_at,
+                        r.remote_actor_url
+                 FROM reviews r
+                 INNER JOIN movies m ON m.id = r.movie_id
+                 WHERE r.user_id = $1 AND r.remote_actor_url IS NULL AND r.watched_at < $2::timestamptz
+                 ORDER BY r.watched_at DESC
+                 LIMIT $3",
+            )
+            .bind(&uid)
+            .bind(&ts)
+            .bind(limit_i64)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(Self::map_err)?
+        } else {
+            sqlx::query_as::<_, DiaryRow>(
+                "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
+                        r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment,
+                        to_char(r.watched_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS watched_at,
+                        to_char(r.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS created_at,
+                        r.remote_actor_url
+                 FROM reviews r
+                 INNER JOIN movies m ON m.id = r.movie_id
+                 WHERE r.user_id = $1 AND r.remote_actor_url IS NULL
+                 ORDER BY r.watched_at DESC
+                 LIMIT $2",
+            )
+            .bind(&uid)
+            .bind(limit_i64)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(Self::map_err)?
+        };
+        rows.into_iter().map(DiaryRow::into_domain).collect()
+    }
 }

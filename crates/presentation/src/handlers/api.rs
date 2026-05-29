@@ -475,6 +475,7 @@ pub async fn update_profile_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     mut multipart: Multipart,
 ) -> impl IntoResponse {
+    let mut display_name: Option<String> = None;
     let mut bio: Option<String> = None;
     let mut avatar_bytes: Option<Vec<u8>> = None;
     let mut avatar_content_type: Option<String> = None;
@@ -485,6 +486,11 @@ pub async fn update_profile_handler(
     while let Ok(Some(field)) = multipart.next_field().await {
         let name = field.name().unwrap_or("").to_string();
         match name.as_str() {
+            "display_name" => {
+                if let Ok(text) = field.text().await {
+                    display_name = Some(text).filter(|s| !s.is_empty());
+                }
+            }
             "bio" => {
                 if let Ok(text) = field.text().await {
                     bio = Some(text);
@@ -519,6 +525,7 @@ pub async fn update_profile_handler(
 
     let cmd = application::commands::UpdateProfileCommand {
         user_id: user_id.value(),
+        display_name,
         bio,
         avatar_bytes,
         avatar_content_type,

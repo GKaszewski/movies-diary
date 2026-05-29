@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use k_ap::ApObjectHandler;
+use k_ap::{ApContentReader, ApObjectHandler};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use url::Url;
@@ -13,16 +13,7 @@ pub struct CompositeObjectHandler {
 }
 
 #[async_trait]
-impl ApObjectHandler for CompositeObjectHandler {
-    async fn get_local_objects_for_user(
-        &self,
-        user_id: uuid::Uuid,
-    ) -> anyhow::Result<Vec<(Url, serde_json::Value)>> {
-        let mut results = self.review.get_local_objects_for_user(user_id).await?;
-        results.extend(self.watchlist.get_local_objects_for_user(user_id).await?);
-        Ok(results)
-    }
-
+impl ApContentReader for CompositeObjectHandler {
     async fn get_local_objects_page(
         &self,
         user_id: uuid::Uuid,
@@ -34,6 +25,13 @@ impl ApObjectHandler for CompositeObjectHandler {
             .await
     }
 
+    async fn count_local_posts(&self) -> anyhow::Result<u64> {
+        self.review.count_local_posts().await
+    }
+}
+
+#[async_trait]
+impl ApObjectHandler for CompositeObjectHandler {
     async fn on_create(
         &self,
         ap_id: &Url,
@@ -77,15 +75,15 @@ impl ApObjectHandler for CompositeObjectHandler {
         Ok(())
     }
 
-    async fn count_local_posts(&self) -> anyhow::Result<u64> {
-        self.review.count_local_posts().await
-    }
-
     async fn on_like(&self, _object_url: &Url, _actor_url: &Url) -> anyhow::Result<()> {
         Ok(())
     }
 
     async fn on_announce_received(&self, _object_url: &Url, _actor_url: &Url) -> anyhow::Result<()> {
+        Ok(())
+    }
+
+    async fn on_announce_of_remote(&self, _object_url: &Url, _actor_url: &Url) -> anyhow::Result<()> {
         Ok(())
     }
 

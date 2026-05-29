@@ -2770,8 +2770,9 @@ dependencies = [
 
 [[package]]
 name = "k-ap"
-version = "0.1.10"
-source = "git+https://git.gabrielkaszewski.dev/GKaszewski/k-ap.git?tag=v0.1.10#d80cfd0431205498161db8665fd884710866ca95"
+version = "0.3.1"
+source = "sparse+https://git.gabrielkaszewski.dev/api/packages/GKaszewski/cargo/"
+checksum = "f73de37ac4feab6d7b78e73c60acbb07933c2be58dcbb12e8a34201f66e0480d"
 dependencies = [
  "activitypub_federation",
  "anyhow",
@@ -2787,6 +2788,7 @@ dependencies = [
  "tracing",
  "url",
  "uuid",
+ "zeroize",
 ]
 
 [[package]]
@@ -3749,6 +3751,7 @@ dependencies = [
  "chrono",
  "domain",
  "k-ap",
+ "serde_json",
  "sqlx",
  "tracing",
  "uuid",
@@ -5014,6 +5017,7 @@ dependencies = [
  "chrono",
  "domain",
  "k-ap",
+ "serde_json",
  "sqlx",
  "tokio",
  "tracing",
@@ -7060,6 +7064,20 @@ name = "zeroize"
 version = "1.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b97154e67e32c85465826e8bcc1c59429aaaf107c1e4a9e53c8d8ccd5eff88d0"
+dependencies = [
+ "zeroize_derive",
+]
+
+[[package]]
+name = "zeroize_derive"
+version = "1.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "85a5b4158499876c763cb03bc4e49185d3cccbabb15b33c627f7884f43db852e"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.117",
+]
 
 [[package]]
 name = "zerotrie"

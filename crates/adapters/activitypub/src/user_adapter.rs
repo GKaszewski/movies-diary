@@ -26,10 +26,14 @@ impl DomainUserRepoAdapter {
         ApUser {
             id: u.id().value(),
             username: u.username().value().to_string(),
+            display_name: u.display_name().map(|s| s.to_string()),
             bio: u.bio().map(|s| s.to_string()),
             avatar_url,
             banner_url,
-            also_known_as: u.also_known_as().map(|s| s.to_string()),
+            also_known_as: u
+                .also_known_as()
+                .map(|s| vec![s.to_string()])
+                .unwrap_or_default(),
             profile_url,
             attachment: u
                 .profile_fields()
@@ -39,6 +43,15 @@ impl DomainUserRepoAdapter {
                     value: f.value.clone(),
                 })
                 .collect(),
+            manually_approves_followers: true,
+            discoverable: true,
+            actor_type: Default::default(),
+            featured_url: Url::parse(&format!(
+                "{}/users/{}/featured",
+                self.base_url,
+                u.id().value()
+            ))
+            .ok(),
         }
     }
 }

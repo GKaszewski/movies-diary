@@ -68,6 +68,7 @@ pub async fn execute(ctx: &AppContext, cmd: UpdateProfileCommand) -> Result<(), 
     ctx.user_repository
         .update_profile(
             &user_id,
+            cmd.display_name,
             cmd.bio,
             new_avatar_path,
             new_banner_path,

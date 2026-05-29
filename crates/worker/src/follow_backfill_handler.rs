@@ -20,7 +20,7 @@ impl EventHandler for FollowBackfillHandler {
         };
         tracing::info!(actor = %remote_actor_url, outbox = %outbox_url, "starting outbox backfill");
         self.ap_service
-            .backfill_outbox(outbox_url, remote_actor_url)
+            .import_remote_outbox(outbox_url, remote_actor_url)
             .await
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))
     }

@@ -106,4 +106,49 @@ impl LocalApContentQuery for SqliteApContentQuery {
                 .map_err(Self::map_err)?;
         Ok(count as u64)
     }
+
+    async fn get_local_reviews_page(
+        &self,
+        user_id: &UserId,
+        before: Option<chrono::NaiveDateTime>,
+        limit: usize,
+    ) -> Result<Vec<DiaryEntry>, DomainError> {
+        let uid = user_id.value().to_string();
+        let limit_i64 = limit as i64;
+
+        let rows = if let Some(before_ts) = before {
+            let ts = before_ts.format("%Y-%m-%d %H:%M:%S").to_string();
+            sqlx::query_as::<_, DiaryRow>(
+                "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
+                        r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url
+                 FROM reviews r
+                 INNER JOIN movies m ON m.id = r.movie_id
+                 WHERE r.user_id = ? AND r.remote_actor_url IS NULL AND r.watched_at < ?
+                 ORDER BY r.watched_at DESC
+                 LIMIT ?",
+            )
+            .bind(&uid)
+            .bind(&ts)
+            .bind(limit_i64)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(Self::map_err)?
+        } else {
+            sqlx::query_as::<_, DiaryRow>(
+                "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
+                        r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url
+                 FROM reviews r
+                 INNER JOIN movies m ON m.id = r.movie_id
+                 WHERE r.user_id = ? AND r.remote_actor_url IS NULL
+                 ORDER BY r.watched_at DESC
+                 LIMIT ?",
+            )
+            .bind(&uid)
+            .bind(limit_i64)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(Self::map_err)?
+        };
+        rows.into_iter().map(DiaryRow::into_domain).collect()
+    }
 }

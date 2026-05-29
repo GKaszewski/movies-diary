@@ -167,6 +167,14 @@ fn federation_html_routes() -> Router<AppState> {
             routing::post(handlers::html::reject_follower),
         )
         .route(
+            "/users/{id}/followers",
+            routing::get(handlers::html::get_followers_collection),
+        )
+        .route(
+            "/users/{id}/following",
+            routing::get(handlers::html::get_following_collection),
+        )
+        .route(
             "/users/{id}/following-list",
             routing::get(handlers::html::get_following_page),
         )

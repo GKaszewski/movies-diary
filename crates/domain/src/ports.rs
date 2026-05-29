@@ -185,6 +185,7 @@ pub trait UserRepository: Send + Sync {
     async fn update_profile(
         &self,
         user_id: &UserId,
+        display_name: Option<String>,
         bio: Option<String>,
         avatar_path: Option<String>,
         banner_path: Option<String>,
@@ -398,4 +399,11 @@ pub trait LocalApContentQuery: Send + Sync {
     async fn get_movie_by_id(&self, movie_id: &MovieId) -> Result<Option<Movie>, DomainError>;
 
     async fn count_local_posts(&self) -> Result<u64, DomainError>;
+
+    async fn get_local_reviews_page(
+        &self,
+        user_id: &UserId,
+        before: Option<chrono::NaiveDateTime>,
+        limit: usize,
+    ) -> Result<Vec<DiaryEntry>, DomainError>;
 }

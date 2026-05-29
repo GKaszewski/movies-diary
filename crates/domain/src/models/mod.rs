@@ -321,6 +321,7 @@ pub struct User {
     username: Username,
     password_hash: PasswordHash,
     role: UserRole,
+    display_name: Option<String>,
     bio: Option<String>,
     avatar_path: Option<String>,
     banner_path: Option<String>,
@@ -341,6 +342,7 @@ impl User {
             username,
             password_hash,
             role,
+            display_name: None,
             bio: None,
             avatar_path: None,
             banner_path: None,
@@ -355,6 +357,7 @@ impl User {
         username: Username,
         password_hash: PasswordHash,
         role: UserRole,
+        display_name: Option<String>,
         bio: Option<String>,
         avatar_path: Option<String>,
         banner_path: Option<String>,
@@ -367,6 +370,7 @@ impl User {
             username,
             password_hash,
             role,
+            display_name,
             bio,
             avatar_path,
             banner_path,
@@ -381,11 +385,13 @@ impl User {
 
     pub fn update_profile(
         &mut self,
+        display_name: Option<String>,
         bio: Option<String>,
         avatar_path: Option<String>,
         banner_path: Option<String>,
         also_known_as: Option<String>,
     ) {
+        self.display_name = display_name;
         self.bio = bio;
         self.avatar_path = avatar_path;
         self.banner_path = banner_path;
@@ -406,6 +412,9 @@ impl User {
     }
     pub fn role(&self) -> &UserRole {
         &self.role
+    }
+    pub fn display_name(&self) -> Option<&str> {
+        self.display_name.as_deref()
     }
     pub fn bio(&self) -> Option<&str> {
         self.bio.as_deref()

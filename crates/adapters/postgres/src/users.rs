@@ -38,6 +38,7 @@ impl PostgresUserRepository {
         username_str: String,
         hash_str: String,
         role: UserRole,
+        display_name: Option<String>,
         bio: Option<String>,
         avatar_path: Option<String>,
         banner_path: Option<String>,
@@ -58,6 +59,7 @@ impl PostgresUserRepository {
             username,
             hash,
             role,
+            display_name,
             bio,
             avatar_path,
             banner_path,
@@ -78,13 +80,14 @@ impl UserRepository for PostgresUserRepository {
             username: String,
             password_hash: String,
             role: String,
+            display_name: Option<String>,
             bio: Option<String>,
             avatar_path: Option<String>,
             banner_path: Option<String>,
             also_known_as: Option<String>,
         }
         let row = sqlx::query_as::<_, Row>(
-            "SELECT id, email, username, password_hash, role, bio, avatar_path, banner_path, also_known_as FROM users WHERE email = $1",
+            "SELECT id, email, username, password_hash, role, display_name, bio, avatar_path, banner_path, also_known_as FROM users WHERE email = $1",
         )
         .bind(email_str)
         .fetch_optional(&self.pool)
@@ -97,6 +100,7 @@ impl UserRepository for PostgresUserRepository {
                 r.username,
                 r.password_hash,
                 Self::parse_role(&r.role),
+                r.display_name,
                 r.bio,
                 r.avatar_path,
                 r.banner_path,
@@ -116,13 +120,14 @@ impl UserRepository for PostgresUserRepository {
             username: String,
             password_hash: String,
             role: String,
+            display_name: Option<String>,
             bio: Option<String>,
             avatar_path: Option<String>,
             banner_path: Option<String>,
             also_known_as: Option<String>,
         }
         let row = sqlx::query_as::<_, Row>(
-            "SELECT id, email, username, password_hash, role, bio, avatar_path, banner_path, also_known_as FROM users WHERE username = $1",
+            "SELECT id, email, username, password_hash, role, display_name, bio, avatar_path, banner_path, also_known_as FROM users WHERE username = $1",
         )
         .bind(username_str)
         .fetch_optional(&self.pool)
@@ -135,6 +140,7 @@ impl UserRepository for PostgresUserRepository {
                 r.username,
                 r.password_hash,
                 Self::parse_role(&r.role),
+                r.display_name,
                 r.bio,
                 r.avatar_path,
                 r.banner_path,
@@ -192,13 +198,14 @@ impl UserRepository for PostgresUserRepository {
             username: String,
             password_hash: String,
             role: String,
+            display_name: Option<String>,
             bio: Option<String>,
             avatar_path: Option<String>,
             banner_path: Option<String>,
             also_known_as: Option<String>,
         }
         let row = sqlx::query_as::<_, Row>(
-            "SELECT id, email, username, password_hash, role, bio, avatar_path, banner_path, also_known_as FROM users WHERE id = $1",
+            "SELECT id, email, username, password_hash, role, display_name, bio, avatar_path, banner_path, also_known_as FROM users WHERE id = $1",
         )
         .bind(&id_str)
         .fetch_optional(&self.pool)
@@ -234,6 +241,7 @@ impl UserRepository for PostgresUserRepository {
             r.username,
             r.password_hash,
             Self::parse_role(&r.role),
+            r.display_name,
             r.bio,
             r.avatar_path,
             r.banner_path,
@@ -246,6 +254,7 @@ impl UserRepository for PostgresUserRepository {
     async fn update_profile(
         &self,
         user_id: &UserId,
+        display_name: Option<String>,
         bio: Option<String>,
         avatar_path: Option<String>,
         banner_path: Option<String>,
@@ -253,8 +262,9 @@ impl UserRepository for PostgresUserRepository {
     ) -> Result<(), DomainError> {
         let id_str = user_id.value().to_string();
         sqlx::query(
-            "UPDATE users SET bio = $1, avatar_path = $2, banner_path = $3, also_known_as = $4 WHERE id = $5",
+            "UPDATE users SET display_name = $1, bio = $2, avatar_path = $3, banner_path = $4, also_known_as = $5 WHERE id = $6",
         )
+        .bind(&display_name)
         .bind(&bio)
         .bind(&avatar_path)
         .bind(&banner_path)

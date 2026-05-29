@@ -82,7 +82,7 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
 
     #[cfg(feature = "federation")]
     let (event_publisher_arc, ap_router, ap_service, social_query, remote_watchlist_repo) = {
-        let (federation_repo, social_query_arc, review_store, remote_watchlist_repo) =
+        let (activity_repo, follow_repo, actor_repo, blocklist_repo, social_query_arc, review_store, remote_watchlist_repo) =
             match &db_pool {
                 #[cfg(feature = "postgres-federation")]
                 factory::DbPool::Postgres(pool) => postgres_federation::wire(pool.clone()),
@@ -119,7 +119,10 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
         };
 
         let ap = activitypub::wire(
-            federation_repo,
+            activity_repo,
+            follow_repo,
+            actor_repo,
+            blocklist_repo,
             review_store,
             remote_watchlist_repo.clone(),
             Arc::clone(&ap_content_repo),

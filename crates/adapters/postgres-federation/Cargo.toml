@@ -11,12 +11,12 @@ sqlx = { version = "0.8.6", features = [
     "macros",
     "chrono",
 ] }
-activitypub      = { workspace = true }
-k-ap             = { git = "https://git.gabrielkaszewski.dev/GKaszewski/k-ap.git", tag = "v0.1.10" }
-domain           = { workspace = true }
-uuid             = { workspace = true }
-chrono           = { workspace = true }
-tracing          = { workspace = true }
-async-trait      = { workspace = true }
-anyhow           = { workspace = true }
-
+activitypub = { workspace = true }
+k-ap = { version = "0.3.1", registry = "gitea" }
+domain = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+tracing = { workspace = true }
+async-trait = { workspace = true }
+anyhow = { workspace = true }
+serde_json = { workspace = true }

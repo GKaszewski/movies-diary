@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use chrono::Utc;
-use sqlx::SqlitePool;
+use sqlx::{Row, SqlitePool};
 
 use super::models::UserSummaryRow;
 use domain::{
@@ -31,105 +31,69 @@ impl SqliteUserRepository {
         }
     }
 
-    fn row_to_user(
-        id_str: String,
-        email_str: String,
-        username_str: String,
-        hash_str: String,
-        role: UserRole,
-        bio: Option<String>,
-        avatar_path: Option<String>,
-        banner_path: Option<String>,
-        also_known_as: Option<String>,
-        profile_fields: Vec<ProfileField>,
-    ) -> Result<User, DomainError> {
+    fn row_to_user(row: &sqlx::sqlite::SqliteRow, profile_fields: Vec<ProfileField>) -> Result<User, DomainError> {
+        let id_str: String = row.try_get("id").unwrap_or_default();
         let id = uuid::Uuid::parse_str(&id_str)
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
-        let email =
-            Email::new(email_str).map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
-        let username = Username::new(username_str)
+        let email = Email::new(row.get("email"))
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
-        let hash = PasswordHash::new(hash_str)
+        let username = Username::new(row.get("username"))
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        let hash = PasswordHash::new(row.get("password_hash"))
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        let role_str: String = row.get("role");
         Ok(User::from_persistence(
             UserId::from_uuid(id),
             email,
             username,
             hash,
-            role,
-            bio,
-            avatar_path,
-            banner_path,
-            also_known_as,
+            Self::parse_role(&role_str),
+            row.try_get("display_name").ok().flatten(),
+            row.try_get("bio").ok().flatten(),
+            row.try_get("avatar_path").ok().flatten(),
+            row.try_get("banner_path").ok().flatten(),
+            row.try_get("also_known_as").ok().flatten(),
             profile_fields,
         ))
     }
 }
 
+const USER_COLS: &str = "id, email, username, password_hash, role, display_name, bio, avatar_path, banner_path, also_known_as";
+
 #[async_trait]
 impl UserRepository for SqliteUserRepository {
     async fn find_by_email(&self, email: &Email) -> Result<Option<User>, DomainError> {
         let email_str = email.value();
-        let row = sqlx::query!(
-            "SELECT id, email, username, password_hash, role, bio, avatar_path, banner_path, also_known_as FROM users WHERE email = ?",
-            email_str
-        )
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(Self::map_err)?;
+        let row = sqlx::query(&format!("SELECT {USER_COLS} FROM users WHERE email = ?"))
+            .bind(email_str)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(Self::map_err)?;
 
-        row.map(|r| {
-            Self::row_to_user(
-                r.id.unwrap_or_default(),
-                r.email,
-                r.username,
-                r.password_hash,
-                Self::parse_role(&r.role),
-                r.bio,
-                r.avatar_path,
-                r.banner_path,
-                r.also_known_as,
-                vec![],
-            )
-        })
-        .transpose()
+        row.as_ref()
+            .map(|r| Self::row_to_user(r, vec![]))
+            .transpose()
     }
 
     async fn find_by_username(&self, username: &Username) -> Result<Option<User>, DomainError> {
         let username_str = username.value();
-        let row = sqlx::query!(
-            "SELECT id, email, username, password_hash, role, bio, avatar_path, banner_path, also_known_as FROM users WHERE username = ?",
-            username_str
-        )
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(Self::map_err)?;
+        let row = sqlx::query(&format!("SELECT {USER_COLS} FROM users WHERE username = ?"))
+            .bind(username_str)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(Self::map_err)?;
 
-        row.map(|r| {
-            Self::row_to_user(
-                r.id.unwrap_or_default(),
-                r.email,
-                r.username,
-                r.password_hash,
-                Self::parse_role(&r.role),
-                r.bio,
-                r.avatar_path,
-                r.banner_path,
-                r.also_known_as,
-                vec![],
-            )
-        })
-        .transpose()
+        row.as_ref()
+            .map(|r| Self::row_to_user(r, vec![]))
+            .transpose()
     }
 
     async fn save(&self, user: &User) -> Result<(), DomainError> {
-        // Check email uniqueness first (clearer error than INSERT OR IGNORE)
         if self.find_by_email(user.email()).await?.is_some() {
             return Err(DomainError::ValidationError(
                 "Email already registered".into(),
             ));
         }
-        // Check username uniqueness
         if self.find_by_username(user.username()).await?.is_some() {
             return Err(DomainError::ValidationError(
                 "Username already taken".into(),
@@ -141,15 +105,20 @@ impl UserRepository for SqliteUserRepository {
         let username = user.username().value();
         let hash = user.password_hash().value();
         let created_at = Utc::now().to_rfc3339();
-
         let role = match user.role() {
             UserRole::Admin => "admin",
             UserRole::Standard => "standard",
         };
-        sqlx::query!(
+
+        sqlx::query(
             "INSERT INTO users (id, email, username, password_hash, created_at, role) VALUES (?, ?, ?, ?, ?, ?)",
-            id, email, username, hash, created_at, role
         )
+        .bind(&id)
+        .bind(email)
+        .bind(username)
+        .bind(hash)
+        .bind(&created_at)
+        .bind(role)
         .execute(&self.pool)
         .await
         .map_err(Self::map_err)?;
@@ -159,50 +128,37 @@ impl UserRepository for SqliteUserRepository {
 
     async fn find_by_id(&self, id: &UserId) -> Result<Option<User>, DomainError> {
         let id_str = id.value().to_string();
-        let row = sqlx::query!(
-            "SELECT id, email, username, password_hash, role, bio, avatar_path, banner_path, also_known_as FROM users WHERE id = ?",
-            id_str
-        )
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(Self::map_err)?;
+        let row = sqlx::query(&format!("SELECT {USER_COLS} FROM users WHERE id = ?"))
+            .bind(&id_str)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(Self::map_err)?;
 
         let Some(r) = row else { return Ok(None) };
 
-        let field_rows = sqlx::query!(
+        let field_rows = sqlx::query(
             "SELECT name, value FROM user_profile_fields WHERE user_id = ? ORDER BY position ASC",
-            id_str
         )
+        .bind(&id_str)
         .fetch_all(&self.pool)
         .await
         .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
 
         let profile_fields = field_rows
-            .into_iter()
+            .iter()
             .map(|f| ProfileField {
-                name: f.name,
-                value: f.value,
+                name: f.get("name"),
+                value: f.get("value"),
             })
             .collect();
 
-        Self::row_to_user(
-            r.id.unwrap_or_default(),
-            r.email,
-            r.username,
-            r.password_hash,
-            Self::parse_role(&r.role),
-            r.bio,
-            r.avatar_path,
-            r.banner_path,
-            r.also_known_as,
-            profile_fields,
-        )
-        .map(Some)
+        Self::row_to_user(&r, profile_fields).map(Some)
     }
 
     async fn update_profile(
         &self,
         user_id: &UserId,
+        display_name: Option<String>,
         bio: Option<String>,
         avatar_path: Option<String>,
         banner_path: Option<String>,
@@ -210,8 +166,9 @@ impl UserRepository for SqliteUserRepository {
     ) -> Result<(), DomainError> {
         let id_str = user_id.value().to_string();
         sqlx::query(
-            "UPDATE users SET bio = ?, avatar_path = ?, banner_path = ?, also_known_as = ? WHERE id = ?",
+            "UPDATE users SET display_name = ?, bio = ?, avatar_path = ?, banner_path = ?, also_known_as = ? WHERE id = ?",
         )
+        .bind(&display_name)
         .bind(&bio)
         .bind(&avatar_path)
         .bind(&banner_path)
