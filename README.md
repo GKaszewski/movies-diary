@@ -14,6 +14,8 @@ A self-hosted, server-side rendered movie logging system with a full REST API. B
 - JWT authentication via cookie (HTML) or Bearer token (REST API)
 - ActivityPub federation — follow/unfollow remote users, accept/reject/remove followers, federated reviews broadcast as `Note` objects with `#MoviesDiary` + `#MovieTitle` hashtags, paginated outbox, boost/Announce tracking, NodeInfo discovery endpoint, shared inbox delivery, actor profile sync (bio, avatar, discoverable)
 - Federation moderation — instance-level domain blocking (admin-managed), per-user actor blocking with `Block` activity, delivery filter excludes blocked actors and blocked-domain inboxes
+- Watchlist — add movies to watch later, per-user; federated watchlist entries visible for remote actors
+- User profiles — display name, bio, avatar, banner, custom profile fields; editable via HTML settings page or REST API
 - CSV and JSON diary export
 - File importer: upload CSV, TSV, JSON, or XLSX from any source (Letterboxd, IMDb, etc.), map columns to domain fields via a step-by-step wizard or REST API, save mapping profiles for repeat imports
 - REST API v1 (`/api/v1/`) with full feature parity with the HTML interface
@@ -29,7 +31,7 @@ Hexagonal (Ports & Adapters) with Domain-Driven Design:
 ```
 api-types           — shared REST API request/response DTOs (Serialize/Deserialize + utoipa schemas); used by presentation and tui
 domain              — pure types and trait definitions, no external deps
-application         — use cases / business logic orchestration
+application         — use cases (commands + queries), business logic orchestration; handlers delegate here for all domain logic
 presentation        — Axum HTTP router, OpenAPI spec assembly, Swagger UI + Scalar serving, composition root for the HTTP process
 worker              — standalone worker binary (event consumer, poster sync, federation)
 adapters/
@@ -51,8 +53,7 @@ adapters/
   postgres-event-queue — durable polling event queue backed by PostgreSQL
   nats                 — NATS Core / JetStream event publisher and consumer
   event-publisher      — in-memory event channel (used in tests)
-  activitypub          — ActivityPub federation wiring (follow, inbox/outbox, actor)
-  activitypub-base     — core ActivityPub protocol types and service
+  activitypub          — ActivityPub federation adapter (follow, inbox/outbox, actor); delegates to k-ap for protocol internals
   sqlite-search        — SQLite FTS5 implementation of SearchPort + SearchCommand
   postgres-search      — PostgreSQL tsvector + GIN implementation of SearchPort + SearchCommand
   sqlite-federation    — SQLite-backed federation repository
@@ -150,6 +151,18 @@ cargo run -p tui
 
 Supports review logging, bulk CSV import (column order matches the export format), and diary browsing with review history.
 
+## Development
+
+A `Makefile` wraps the most common dev commands:
+
+```bash
+make           # default: fmt-check + clippy + test (same order as CI)
+make fix       # auto-apply fmt + clippy fixes
+make fmt       # apply rustfmt
+make clippy    # clippy with -D warnings
+make test      # cargo test
+```
+
 ## Test
 
 ```bash
@@ -157,7 +170,7 @@ cargo test           # full workspace (requires DATABASE_URL for sqlx offline ch
 cargo test -p application   # domain-level unit tests only — no database required
 ```
 
-The `application` crate has unit tests for core use cases (`log_review`, `register`, `login`, `add_to_watchlist`, `delete_review`) backed by in-memory fakes from `domain`'s `test-helpers` feature. These run without a database and are the fastest feedback loop for business logic changes.
+The `application` crate has unit tests for core use cases backed by in-memory fakes from `domain`'s `test-helpers` feature. These run without a database and are the fastest feedback loop for business logic changes.
 
 ## Docker
 
