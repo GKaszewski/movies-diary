@@ -6,7 +6,7 @@ use sqlx::SqlitePool;
 async fn setup() -> (SqlitePool, SqliteUserRepository) {
     let pool = SqlitePool::connect(":memory:").await.unwrap();
     sqlx::query(
-        "CREATE TABLE users (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, username TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, created_at TEXT NOT NULL, role TEXT NOT NULL DEFAULT 'standard', bio TEXT, avatar_path TEXT, banner_path TEXT, also_known_as TEXT)"
+        "CREATE TABLE users (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, username TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, created_at TEXT NOT NULL, role TEXT NOT NULL DEFAULT 'standard', display_name TEXT, bio TEXT, avatar_path TEXT, banner_path TEXT, also_known_as TEXT)"
     )
     .execute(&pool)
     .await
@@ -65,10 +65,11 @@ async fn update_profile_persists_bio_and_avatar() {
 
     repo.update_profile(
         user.id(),
-        Some("My biography".to_string()),
-        Some("avatars/user1".to_string()),
-        None,
-        None,
+        &domain::models::UserProfile {
+            bio: Some("My biography".to_string()),
+            avatar_path: Some("avatars/user1".to_string()),
+            ..Default::default()
+        },
     )
     .await
     .unwrap();
@@ -90,14 +91,15 @@ async fn update_profile_clears_fields_with_none() {
     repo.save(&user).await.unwrap();
     repo.update_profile(
         user.id(),
-        Some("bio".to_string()),
-        Some("path".to_string()),
-        None,
-        None,
+        &domain::models::UserProfile {
+            bio: Some("bio".to_string()),
+            avatar_path: Some("path".to_string()),
+            ..Default::default()
+        },
     )
     .await
     .unwrap();
-    repo.update_profile(user.id(), None, None, None, None)
+    repo.update_profile(user.id(), &domain::models::UserProfile::default())
         .await
         .unwrap();
 

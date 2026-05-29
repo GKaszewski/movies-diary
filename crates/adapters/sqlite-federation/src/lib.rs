@@ -1038,17 +1038,7 @@ impl RemoteWatchlistRepository for SqliteFederationRepository {
     }
 }
 
-pub fn wire(
-    pool: sqlx::SqlitePool,
-) -> (
-    std::sync::Arc<dyn activitypub::ActivityRepository>,
-    std::sync::Arc<dyn activitypub::FollowRepository>,
-    std::sync::Arc<dyn activitypub::ActorRepository>,
-    std::sync::Arc<dyn activitypub::BlocklistRepository>,
-    std::sync::Arc<dyn domain::ports::SocialQueryPort>,
-    std::sync::Arc<dyn activitypub::RemoteReviewRepository>,
-    std::sync::Arc<dyn domain::ports::RemoteWatchlistRepository>,
-) {
+pub fn wire(pool: sqlx::SqlitePool) -> activitypub::FederationRepos {
     let fed = std::sync::Arc::new(SqliteFederationRepository::new(pool));
     (
         std::sync::Arc::clone(&fed) as _,

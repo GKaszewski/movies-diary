@@ -51,12 +51,14 @@ impl SqliteUserRepository {
             username,
             hash,
             Self::parse_role(&role_str),
-            row.try_get("display_name").ok().flatten(),
-            row.try_get("bio").ok().flatten(),
-            row.try_get("avatar_path").ok().flatten(),
-            row.try_get("banner_path").ok().flatten(),
-            row.try_get("also_known_as").ok().flatten(),
-            profile_fields,
+            domain::models::UserProfile {
+                display_name: row.try_get("display_name").ok().flatten(),
+                bio: row.try_get("bio").ok().flatten(),
+                avatar_path: row.try_get("avatar_path").ok().flatten(),
+                banner_path: row.try_get("banner_path").ok().flatten(),
+                also_known_as: row.try_get("also_known_as").ok().flatten(),
+                profile_fields,
+            },
         ))
     }
 }
@@ -161,21 +163,17 @@ impl UserRepository for SqliteUserRepository {
     async fn update_profile(
         &self,
         user_id: &UserId,
-        display_name: Option<String>,
-        bio: Option<String>,
-        avatar_path: Option<String>,
-        banner_path: Option<String>,
-        also_known_as: Option<String>,
+        profile: &domain::models::UserProfile,
     ) -> Result<(), DomainError> {
         let id_str = user_id.value().to_string();
         sqlx::query(
             "UPDATE users SET display_name = ?, bio = ?, avatar_path = ?, banner_path = ?, also_known_as = ? WHERE id = ?",
         )
-        .bind(&display_name)
-        .bind(&bio)
-        .bind(&avatar_path)
-        .bind(&banner_path)
-        .bind(&also_known_as)
+        .bind(&profile.display_name)
+        .bind(&profile.bio)
+        .bind(&profile.avatar_path)
+        .bind(&profile.banner_path)
+        .bind(&profile.also_known_as)
         .bind(&id_str)
         .execute(&self.pool)
         .await

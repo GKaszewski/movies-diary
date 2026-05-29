@@ -220,16 +220,16 @@ impl ActivityPubEventHandler {
 
         let added_at_utc =
             chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(*added_at, chrono::Utc);
-        let obj = crate::objects::watchlist_to_ap_object(
-            ap_id.clone(),
-            actor,
-            movie_title.to_string(),
+        let obj = crate::objects::watchlist_to_ap_object(crate::objects::WatchlistApInput {
+            ap_id: ap_id.clone(),
+            actor_url: actor,
+            movie_title: movie_title.to_string(),
             release_year,
-            external_metadata_id.clone(),
+            external_metadata_id: external_metadata_id.clone(),
             poster_url,
-            added_at_utc,
-            &self.base_url,
-        );
+            added_at: added_at_utc,
+            base_url: self.base_url.clone(),
+        });
         let json = serde_json::to_value(obj)?;
 
         self.ap_service

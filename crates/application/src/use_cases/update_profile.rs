@@ -68,11 +68,14 @@ pub async fn execute(ctx: &AppContext, cmd: UpdateProfileCommand) -> Result<(), 
     ctx.user_repository
         .update_profile(
             &user_id,
-            cmd.display_name,
-            cmd.bio,
-            new_avatar_path,
-            new_banner_path,
-            cmd.also_known_as,
+            &domain::models::UserProfile {
+                display_name: cmd.display_name,
+                bio: cmd.bio,
+                avatar_path: new_avatar_path,
+                banner_path: new_banner_path,
+                also_known_as: cmd.also_known_as,
+                profile_fields: vec![],
+            },
         )
         .await?;
 

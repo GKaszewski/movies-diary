@@ -219,10 +219,7 @@ impl UserRepository for Panic {
     async fn update_profile(
         &self,
         _: &UserId,
-        _: Option<String>,
-        _: Option<String>,
-        _: Option<String>,
-        _: Option<String>,
+        _: &domain::models::UserProfile,
     ) -> Result<(), DomainError> {
         panic!()
     }

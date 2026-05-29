@@ -219,10 +219,7 @@ impl UserRepository for InMemoryUserRepository {
     async fn update_profile(
         &self,
         _user_id: &UserId,
-        _bio: Option<String>,
-        _avatar_path: Option<String>,
-        _banner_path: Option<String>,
-        _also_known_as: Option<String>,
+        _profile: &crate::models::UserProfile,
     ) -> Result<(), DomainError> {
         Ok(())
     }

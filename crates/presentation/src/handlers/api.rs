@@ -503,20 +503,20 @@ pub async fn update_profile_handler(
             }
             "avatar" => {
                 let ct = field.content_type().map(|s| s.to_string());
-                if let Ok(bytes) = field.bytes().await {
-                    if !bytes.is_empty() {
-                        avatar_bytes = Some(bytes.to_vec());
-                        avatar_content_type = ct;
-                    }
+                if let Ok(bytes) = field.bytes().await
+                    && !bytes.is_empty()
+                {
+                    avatar_bytes = Some(bytes.to_vec());
+                    avatar_content_type = ct;
                 }
             }
             "banner" => {
                 let ct = field.content_type().map(|s| s.to_string());
-                if let Ok(bytes) = field.bytes().await {
-                    if !bytes.is_empty() {
-                        banner_bytes = Some(bytes.to_vec());
-                        banner_content_type = ct;
-                    }
+                if let Ok(bytes) = field.bytes().await
+                    && !bytes.is_empty()
+                {
+                    banner_bytes = Some(bytes.to_vec());
+                    banner_content_type = ct;
                 }
             }
             _ => {}

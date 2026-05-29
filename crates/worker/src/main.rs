@@ -102,28 +102,27 @@ async fn main() -> anyhow::Result<()> {
     // Both the event handler and the staleness job are gated on TMDB_API_KEY.
     // Without a key, no MovieEnrichmentRequested events are produced or handled.
 
-    let (enrichment_handler, enrichment_job): (
-        Option<Arc<dyn EventHandler>>,
-        Option<Arc<dyn PeriodicJob>>,
-    ) = match tmdb_enrichment::TmdbEnrichmentClient::from_env() {
-        Ok(client) => {
-            tracing::info!("TMDb enrichment enabled");
-            let handler = Arc::new(tmdb_enrichment::EnrichmentHandler {
-                enrichment_client: Arc::new(client),
-                movie_repository: Arc::clone(&ctx.movie_repository),
-                profile_repo: Arc::clone(&ctx.movie_profile_repository),
-                person_command: Arc::clone(&ctx.person_command),
-                search_command: Arc::clone(&ctx.search_command),
-            }) as Arc<dyn EventHandler>;
-            let job = Arc::new(application::jobs::EnrichmentStalenessJob::new(ctx.clone()))
-                as Arc<dyn PeriodicJob>;
-            (Some(handler), Some(job))
-        }
-        Err(e) => {
-            tracing::warn!("TMDb enrichment disabled: {e}");
-            (None, None)
-        }
-    };
+    type OptionalPair = (Option<Arc<dyn EventHandler>>, Option<Arc<dyn PeriodicJob>>);
+    let (enrichment_handler, enrichment_job): OptionalPair =
+        match tmdb_enrichment::TmdbEnrichmentClient::from_env() {
+            Ok(client) => {
+                tracing::info!("TMDb enrichment enabled");
+                let handler = Arc::new(tmdb_enrichment::EnrichmentHandler {
+                    enrichment_client: Arc::new(client),
+                    movie_repository: Arc::clone(&ctx.movie_repository),
+                    profile_repo: Arc::clone(&ctx.movie_profile_repository),
+                    person_command: Arc::clone(&ctx.person_command),
+                    search_command: Arc::clone(&ctx.search_command),
+                }) as Arc<dyn EventHandler>;
+                let job = Arc::new(application::jobs::EnrichmentStalenessJob::new(ctx.clone()))
+                    as Arc<dyn PeriodicJob>;
+                (Some(handler), Some(job))
+            }
+            Err(e) => {
+                tracing::warn!("TMDb enrichment disabled: {e}");
+                (None, None)
+            }
+        };
 
     // ── Image conversion ──────────────────────────────────────────────────────
 
@@ -196,19 +195,19 @@ async fn main() -> anyhow::Result<()> {
 
         #[cfg(feature = "federation")]
         {
-            let ap_wire = activitypub::wire(
-                fed_activity_repo,
-                fed_follow_repo,
-                fed_actor_repo,
-                fed_blocklist_repo,
-                fed_review_store,
-                fed_remote_watchlist_repo,
-                fed_ap_content,
-                fed_user_repo,
+            let ap_wire = activitypub::wire(activitypub::ActivityPubDeps {
+                activity_repo: fed_activity_repo,
+                follow_repo: fed_follow_repo,
+                actor_repo: fed_actor_repo,
+                blocklist_repo: fed_blocklist_repo,
+                review_store: fed_review_store,
+                remote_watchlist_repo: fed_remote_watchlist_repo,
+                local_ap_content: fed_ap_content,
+                user_repo: fed_user_repo,
                 base_url,
                 allow_registration,
-                Arc::clone(&ctx.event_publisher),
-            )
+                event_publisher: Arc::clone(&ctx.event_publisher),
+            })
             .await?;
 
             let ap_event_handler = ap_wire.event_handler;

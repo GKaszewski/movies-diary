@@ -117,11 +117,10 @@ impl ResolutionStrategy for TitleSearchStrategy {
         match deps.metadata_client.fetch_movie_metadata(&criteria).await {
             Ok(m) => {
                 // Movie may already exist in DB under this external_metadata_id
-                if let Some(ext_id) = m.external_metadata_id() {
-                    if let Some(existing) = deps.repository.get_movie_by_external_id(ext_id).await?
-                    {
-                        return Ok(Some((existing, false)));
-                    }
+                if let Some(ext_id) = m.external_metadata_id()
+                    && let Some(existing) = deps.repository.get_movie_by_external_id(ext_id).await?
+                {
+                    return Ok(Some((existing, false)));
                 }
                 Ok(Some((m, true)))
             }

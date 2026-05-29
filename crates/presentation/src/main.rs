@@ -125,19 +125,19 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
             }
         };
 
-        let ap = activitypub::wire(
+        let ap = activitypub::wire(activitypub::ActivityPubDeps {
             activity_repo,
             follow_repo,
             actor_repo,
             blocklist_repo,
             review_store,
-            remote_watchlist_repo.clone(),
-            Arc::clone(&ap_content_repo),
-            Arc::clone(&user_repository),
-            app_config.base_url.clone(),
-            app_config.allow_registration,
-            Arc::clone(&ep),
-        )
+            remote_watchlist_repo: remote_watchlist_repo.clone(),
+            local_ap_content: Arc::clone(&ap_content_repo),
+            user_repo: Arc::clone(&user_repository),
+            base_url: app_config.base_url.clone(),
+            allow_registration: app_config.allow_registration,
+            event_publisher: Arc::clone(&ep),
+        })
         .await?;
         let ap_router = ap.router;
         let ap_service_arc = ap.service;

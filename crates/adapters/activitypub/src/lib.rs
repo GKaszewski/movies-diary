@@ -22,25 +22,50 @@ pub use remote_review_repository::RemoteReviewRepository;
 pub use review_handler::ReviewObjectHandler;
 pub use user_adapter::DomainUserRepoAdapter;
 
+pub type FederationRepos = (
+    std::sync::Arc<dyn ActivityRepository>,
+    std::sync::Arc<dyn FollowRepository>,
+    std::sync::Arc<dyn ActorRepository>,
+    std::sync::Arc<dyn BlocklistRepository>,
+    std::sync::Arc<dyn domain::ports::SocialQueryPort>,
+    std::sync::Arc<dyn RemoteReviewRepository>,
+    std::sync::Arc<dyn domain::ports::RemoteWatchlistRepository>,
+);
+
 pub struct ActivityPubWire {
     pub service: std::sync::Arc<dyn ActivityPubPort>,
     pub router: axum::Router,
     pub event_handler: std::sync::Arc<dyn domain::ports::EventHandler>,
 }
 
-pub async fn wire(
-    activity_repo: std::sync::Arc<dyn ActivityRepository>,
-    follow_repo: std::sync::Arc<dyn FollowRepository>,
-    actor_repo: std::sync::Arc<dyn ActorRepository>,
-    blocklist_repo: std::sync::Arc<dyn BlocklistRepository>,
-    review_store: std::sync::Arc<dyn RemoteReviewRepository>,
-    remote_watchlist_repo: std::sync::Arc<dyn domain::ports::RemoteWatchlistRepository>,
-    local_ap_content: std::sync::Arc<dyn domain::ports::LocalApContentQuery>,
-    user_repo: std::sync::Arc<dyn domain::ports::UserRepository>,
-    base_url: String,
-    allow_registration: bool,
-    event_publisher: std::sync::Arc<dyn domain::ports::EventPublisher>,
-) -> anyhow::Result<ActivityPubWire> {
+pub struct ActivityPubDeps {
+    pub activity_repo: std::sync::Arc<dyn ActivityRepository>,
+    pub follow_repo: std::sync::Arc<dyn FollowRepository>,
+    pub actor_repo: std::sync::Arc<dyn ActorRepository>,
+    pub blocklist_repo: std::sync::Arc<dyn BlocklistRepository>,
+    pub review_store: std::sync::Arc<dyn RemoteReviewRepository>,
+    pub remote_watchlist_repo: std::sync::Arc<dyn domain::ports::RemoteWatchlistRepository>,
+    pub local_ap_content: std::sync::Arc<dyn domain::ports::LocalApContentQuery>,
+    pub user_repo: std::sync::Arc<dyn domain::ports::UserRepository>,
+    pub base_url: String,
+    pub allow_registration: bool,
+    pub event_publisher: std::sync::Arc<dyn domain::ports::EventPublisher>,
+}
+
+pub async fn wire(deps: ActivityPubDeps) -> anyhow::Result<ActivityPubWire> {
+    let ActivityPubDeps {
+        activity_repo,
+        follow_repo,
+        actor_repo,
+        blocklist_repo,
+        review_store,
+        remote_watchlist_repo,
+        local_ap_content,
+        user_repo,
+        base_url,
+        allow_registration,
+        event_publisher,
+    } = deps;
     let review_handler = std::sync::Arc::new(ReviewObjectHandler {
         content_query: std::sync::Arc::clone(&local_ap_content),
         review_store,

@@ -56,6 +56,7 @@ impl EventHandler for RecordingHandler {
                 "watchlist"
             }
             DomainEvent::FollowAccepted { .. } => "follow_accepted",
+            DomainEvent::BackfillFollower { .. } => "backfill_follower",
         };
         self.calls.lock().unwrap().push(label);
         Ok(())

@@ -11,12 +11,14 @@ use domain::ports::{
 };
 use std::sync::Arc;
 
+type ConversionPair = (Arc<dyn EventHandler>, Arc<dyn PeriodicJob>);
+
 pub fn build(
     image_storage: Arc<dyn ImageStorage>,
     image_ref_command: Arc<dyn ImageRefCommand>,
     image_ref_query: Arc<dyn ImageRefQuery>,
     event_publisher: Arc<dyn EventPublisher>,
-) -> anyhow::Result<Option<(Arc<dyn EventHandler>, Arc<dyn PeriodicJob>)>> {
+) -> anyhow::Result<Option<ConversionPair>> {
     let config = match ConversionConfig::from_env()? {
         Some(c) => c,
         None => return Ok(None),

@@ -98,18 +98,18 @@ impl ApObjectHandler for ReviewObjectHandler {
         let rating = Rating::new(obj.rating.min(5))?;
         let comment = obj.comment.map(Comment::new).transpose()?;
 
-        let review = domain::models::Review::from_persistence(
-            review_id,
+        let review = domain::models::Review::from_persistence(domain::models::PersistedReview {
+            id: review_id,
             movie_id,
             user_id,
             rating,
             comment,
-            obj.watched_at.naive_utc(),
-            obj.published.naive_utc(),
-            ReviewSource::Remote {
+            watched_at: obj.watched_at.naive_utc(),
+            created_at: obj.published.naive_utc(),
+            source: ReviewSource::Remote {
                 actor_url: actor_url_str,
             },
-        );
+        });
 
         self.review_store
             .save_remote_review(

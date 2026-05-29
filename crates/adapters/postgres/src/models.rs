@@ -1,7 +1,10 @@
 use chrono::NaiveDateTime;
 use domain::{
     errors::DomainError,
-    models::{DiaryEntry, FeedEntry, Movie, MovieSummary, Review, ReviewSource, UserSummary},
+    models::{
+        DiaryEntry, FeedEntry, Movie, MovieSummary, PersistedReview, Review, ReviewSource,
+        UserSummary,
+    },
     value_objects::{
         Comment, Email, ExternalMetadataId, MovieId, MovieTitle, PosterPath, Rating, ReleaseYear,
         ReviewId, UserId,
@@ -102,9 +105,16 @@ impl ReviewRow {
             None => ReviewSource::Local,
             Some(url) => ReviewSource::Remote { actor_url: url },
         };
-        Ok(Review::from_persistence(
-            id, movie_id, user_id, rating, comment, watched_at, created_at, source,
-        ))
+        Ok(Review::from_persistence(PersistedReview {
+            id,
+            movie_id,
+            user_id,
+            rating,
+            comment,
+            watched_at,
+            created_at,
+            source,
+        }))
     }
 }
 

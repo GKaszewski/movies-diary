@@ -33,14 +33,15 @@ pub enum FeedSortBy {
     RatingAsc,
 }
 
-impl FeedSortBy {
-    pub fn from_str(s: &str) -> Self {
-        match s {
+impl std::str::FromStr for FeedSortBy {
+    type Err = std::convert::Infallible;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
             "date_asc" => Self::DateAsc,
             "rating" => Self::Rating,
             "rating_asc" => Self::RatingAsc,
             _ => Self::Date,
-        }
+        })
     }
 }
 
@@ -185,11 +186,7 @@ pub trait UserRepository: Send + Sync {
     async fn update_profile(
         &self,
         user_id: &UserId,
-        display_name: Option<String>,
-        bio: Option<String>,
-        avatar_path: Option<String>,
-        banner_path: Option<String>,
-        also_known_as: Option<String>,
+        profile: &crate::models::UserProfile,
     ) -> Result<(), DomainError>;
 }
 

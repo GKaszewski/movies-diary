@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use chrono::Utc;
-use sqlx::PgPool;
+use sqlx::{PgPool, Row};
 
 use domain::{
     errors::DomainError,
@@ -33,122 +33,67 @@ impl PostgresUserRepository {
     }
 
     fn row_to_user(
-        id_str: String,
-        email_str: String,
-        username_str: String,
-        hash_str: String,
-        role: UserRole,
-        display_name: Option<String>,
-        bio: Option<String>,
-        avatar_path: Option<String>,
-        banner_path: Option<String>,
-        also_known_as: Option<String>,
+        row: &sqlx::postgres::PgRow,
         profile_fields: Vec<ProfileField>,
     ) -> Result<User, DomainError> {
+        let id_str: String = row.get("id");
         let id = uuid::Uuid::parse_str(&id_str)
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
-        let email =
-            Email::new(email_str).map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
-        let username = Username::new(username_str)
+        let email = Email::new(row.get::<String, _>("email"))
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
-        let hash = PasswordHash::new(hash_str)
+        let username = Username::new(row.get::<String, _>("username"))
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        let hash = PasswordHash::new(row.get::<String, _>("password_hash"))
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        let role_str: String = row.get("role");
         Ok(User::from_persistence(
             UserId::from_uuid(id),
             email,
             username,
             hash,
-            role,
-            display_name,
-            bio,
-            avatar_path,
-            banner_path,
-            also_known_as,
-            profile_fields,
+            Self::parse_role(&role_str),
+            domain::models::UserProfile {
+                display_name: row.try_get("display_name").ok().flatten(),
+                bio: row.try_get("bio").ok().flatten(),
+                avatar_path: row.try_get("avatar_path").ok().flatten(),
+                banner_path: row.try_get("banner_path").ok().flatten(),
+                also_known_as: row.try_get("also_known_as").ok().flatten(),
+                profile_fields,
+            },
         ))
     }
 }
+
+const PG_USER_COLS: &str = "id, email, username, password_hash, role, display_name, bio, avatar_path, banner_path, also_known_as";
 
 #[async_trait]
 impl UserRepository for PostgresUserRepository {
     async fn find_by_email(&self, email: &Email) -> Result<Option<User>, DomainError> {
         let email_str = email.value();
-        #[derive(sqlx::FromRow)]
-        struct Row {
-            id: String,
-            email: String,
-            username: String,
-            password_hash: String,
-            role: String,
-            display_name: Option<String>,
-            bio: Option<String>,
-            avatar_path: Option<String>,
-            banner_path: Option<String>,
-            also_known_as: Option<String>,
-        }
-        let row = sqlx::query_as::<_, Row>(
-            "SELECT id, email, username, password_hash, role, display_name, bio, avatar_path, banner_path, also_known_as FROM users WHERE email = $1",
-        )
+        let row = sqlx::query(&format!(
+            "SELECT {PG_USER_COLS} FROM users WHERE email = $1"
+        ))
         .bind(email_str)
         .fetch_optional(&self.pool)
         .await
         .map_err(Self::map_err)?;
-        row.map(|r| {
-            Self::row_to_user(
-                r.id,
-                r.email,
-                r.username,
-                r.password_hash,
-                Self::parse_role(&r.role),
-                r.display_name,
-                r.bio,
-                r.avatar_path,
-                r.banner_path,
-                r.also_known_as,
-                vec![],
-            )
-        })
-        .transpose()
+        row.as_ref()
+            .map(|r| Self::row_to_user(r, vec![]))
+            .transpose()
     }
 
     async fn find_by_username(&self, username: &Username) -> Result<Option<User>, DomainError> {
         let username_str = username.value();
-        #[derive(sqlx::FromRow)]
-        struct Row {
-            id: String,
-            email: String,
-            username: String,
-            password_hash: String,
-            role: String,
-            display_name: Option<String>,
-            bio: Option<String>,
-            avatar_path: Option<String>,
-            banner_path: Option<String>,
-            also_known_as: Option<String>,
-        }
-        let row = sqlx::query_as::<_, Row>(
-            "SELECT id, email, username, password_hash, role, display_name, bio, avatar_path, banner_path, also_known_as FROM users WHERE username = $1",
-        )
+        let row = sqlx::query(&format!(
+            "SELECT {PG_USER_COLS} FROM users WHERE username = $1"
+        ))
         .bind(username_str)
         .fetch_optional(&self.pool)
         .await
         .map_err(Self::map_err)?;
-        row.map(|r| {
-            Self::row_to_user(
-                r.id,
-                r.email,
-                r.username,
-                r.password_hash,
-                Self::parse_role(&r.role),
-                r.display_name,
-                r.bio,
-                r.avatar_path,
-                r.banner_path,
-                r.also_known_as,
-                vec![],
-            )
-        })
-        .transpose()
+        row.as_ref()
+            .map(|r| Self::row_to_user(r, vec![]))
+            .transpose()
     }
 
     async fn save(&self, user: &User) -> Result<(), DomainError> {
@@ -191,35 +136,15 @@ impl UserRepository for PostgresUserRepository {
 
     async fn find_by_id(&self, id: &UserId) -> Result<Option<User>, DomainError> {
         let id_str = id.value().to_string();
-        #[derive(sqlx::FromRow)]
-        struct Row {
-            id: String,
-            email: String,
-            username: String,
-            password_hash: String,
-            role: String,
-            display_name: Option<String>,
-            bio: Option<String>,
-            avatar_path: Option<String>,
-            banner_path: Option<String>,
-            also_known_as: Option<String>,
-        }
-        let row = sqlx::query_as::<_, Row>(
-            "SELECT id, email, username, password_hash, role, display_name, bio, avatar_path, banner_path, also_known_as FROM users WHERE id = $1",
-        )
-        .bind(&id_str)
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(Self::map_err)?;
+        let row = sqlx::query(&format!("SELECT {PG_USER_COLS} FROM users WHERE id = $1"))
+            .bind(&id_str)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(Self::map_err)?;
 
         let Some(r) = row else { return Ok(None) };
 
-        #[derive(sqlx::FromRow)]
-        struct FieldRow {
-            name: String,
-            value: String,
-        }
-        let field_rows = sqlx::query_as::<_, FieldRow>(
+        let field_rows = sqlx::query(
             "SELECT name, value FROM user_profile_fields WHERE user_id = $1 ORDER BY position ASC",
         )
         .bind(&id_str)
@@ -228,47 +153,30 @@ impl UserRepository for PostgresUserRepository {
         .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
 
         let profile_fields = field_rows
-            .into_iter()
+            .iter()
             .map(|f| ProfileField {
-                name: f.name,
-                value: f.value,
+                name: f.get("name"),
+                value: f.get("value"),
             })
             .collect();
 
-        Self::row_to_user(
-            r.id,
-            r.email,
-            r.username,
-            r.password_hash,
-            Self::parse_role(&r.role),
-            r.display_name,
-            r.bio,
-            r.avatar_path,
-            r.banner_path,
-            r.also_known_as,
-            profile_fields,
-        )
-        .map(Some)
+        Self::row_to_user(&r, profile_fields).map(Some)
     }
 
     async fn update_profile(
         &self,
         user_id: &UserId,
-        display_name: Option<String>,
-        bio: Option<String>,
-        avatar_path: Option<String>,
-        banner_path: Option<String>,
-        also_known_as: Option<String>,
+        profile: &domain::models::UserProfile,
     ) -> Result<(), DomainError> {
         let id_str = user_id.value().to_string();
         sqlx::query(
             "UPDATE users SET display_name = $1, bio = $2, avatar_path = $3, banner_path = $4, also_known_as = $5 WHERE id = $6",
         )
-        .bind(&display_name)
-        .bind(&bio)
-        .bind(&avatar_path)
-        .bind(&banner_path)
-        .bind(&also_known_as)
+        .bind(&profile.display_name)
+        .bind(&profile.bio)
+        .bind(&profile.avatar_path)
+        .bind(&profile.banner_path)
+        .bind(&profile.also_known_as)
         .bind(&id_str)
         .execute(&self.pool)
         .await

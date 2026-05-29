@@ -163,6 +163,17 @@ pub enum ReviewSource {
     },
 }
 
+pub struct PersistedReview {
+    pub id: ReviewId,
+    pub movie_id: MovieId,
+    pub user_id: UserId,
+    pub rating: Rating,
+    pub comment: Option<Comment>,
+    pub watched_at: NaiveDateTime,
+    pub created_at: NaiveDateTime,
+    pub source: ReviewSource,
+}
+
 #[derive(Clone, Debug)]
 pub struct Review {
     id: ReviewId,
@@ -195,25 +206,16 @@ impl Review {
         })
     }
 
-    pub fn from_persistence(
-        id: ReviewId,
-        movie_id: MovieId,
-        user_id: UserId,
-        rating: Rating,
-        comment: Option<Comment>,
-        watched_at: NaiveDateTime,
-        created_at: NaiveDateTime,
-        source: ReviewSource,
-    ) -> Self {
+    pub fn from_persistence(row: PersistedReview) -> Self {
         Self {
-            id,
-            movie_id,
-            user_id,
-            rating,
-            comment,
-            watched_at,
-            created_at,
-            source,
+            id: row.id,
+            movie_id: row.movie_id,
+            user_id: row.user_id,
+            rating: row.rating,
+            comment: row.comment,
+            watched_at: row.watched_at,
+            created_at: row.created_at,
+            source: row.source,
         }
     }
 
@@ -314,6 +316,16 @@ pub struct ProfileField {
     pub value: String,
 }
 
+#[derive(Clone, Debug, Default)]
+pub struct UserProfile {
+    pub display_name: Option<String>,
+    pub bio: Option<String>,
+    pub avatar_path: Option<String>,
+    pub banner_path: Option<String>,
+    pub also_known_as: Option<String>,
+    pub profile_fields: Vec<ProfileField>,
+}
+
 #[derive(Clone, Debug)]
 pub struct User {
     id: UserId,
@@ -321,12 +333,7 @@ pub struct User {
     username: Username,
     password_hash: PasswordHash,
     role: UserRole,
-    display_name: Option<String>,
-    bio: Option<String>,
-    avatar_path: Option<String>,
-    banner_path: Option<String>,
-    also_known_as: Option<String>,
-    profile_fields: Vec<ProfileField>,
+    profile: UserProfile,
 }
 
 impl User {
@@ -342,12 +349,7 @@ impl User {
             username,
             password_hash,
             role,
-            display_name: None,
-            bio: None,
-            avatar_path: None,
-            banner_path: None,
-            also_known_as: None,
-            profile_fields: vec![],
+            profile: UserProfile::default(),
         }
     }
 
@@ -357,12 +359,7 @@ impl User {
         username: Username,
         password_hash: PasswordHash,
         role: UserRole,
-        display_name: Option<String>,
-        bio: Option<String>,
-        avatar_path: Option<String>,
-        banner_path: Option<String>,
-        also_known_as: Option<String>,
-        profile_fields: Vec<ProfileField>,
+        profile: UserProfile,
     ) -> Self {
         Self {
             id,
@@ -370,12 +367,7 @@ impl User {
             username,
             password_hash,
             role,
-            display_name,
-            bio,
-            avatar_path,
-            banner_path,
-            also_known_as,
-            profile_fields,
+            profile,
         }
     }
 
@@ -383,19 +375,8 @@ impl User {
         self.password_hash = new_hash;
     }
 
-    pub fn update_profile(
-        &mut self,
-        display_name: Option<String>,
-        bio: Option<String>,
-        avatar_path: Option<String>,
-        banner_path: Option<String>,
-        also_known_as: Option<String>,
-    ) {
-        self.display_name = display_name;
-        self.bio = bio;
-        self.avatar_path = avatar_path;
-        self.banner_path = banner_path;
-        self.also_known_as = also_known_as;
+    pub fn update_profile(&mut self, profile: UserProfile) {
+        self.profile = profile;
     }
 
     pub fn email(&self) -> &Email {
@@ -414,26 +395,22 @@ impl User {
         &self.role
     }
     pub fn display_name(&self) -> Option<&str> {
-        self.display_name.as_deref()
+        self.profile.display_name.as_deref()
     }
     pub fn bio(&self) -> Option<&str> {
-        self.bio.as_deref()
+        self.profile.bio.as_deref()
     }
-
     pub fn avatar_path(&self) -> Option<&str> {
-        self.avatar_path.as_deref()
+        self.profile.avatar_path.as_deref()
     }
-
     pub fn banner_path(&self) -> Option<&str> {
-        self.banner_path.as_deref()
+        self.profile.banner_path.as_deref()
     }
-
     pub fn also_known_as(&self) -> Option<&str> {
-        self.also_known_as.as_deref()
+        self.profile.also_known_as.as_deref()
     }
-
     pub fn profile_fields(&self) -> &[ProfileField] {
-        &self.profile_fields
+        &self.profile.profile_fields
     }
 }
 

@@ -14,20 +14,22 @@ fn normalize_hashtag_strips_non_alphanumeric() {
 fn review_to_ap_object_includes_two_hashtags() {
     use chrono::NaiveDateTime;
     use domain::{
-        models::{Review, ReviewSource},
+        models::{PersistedReview, Review, ReviewSource},
         value_objects::{MovieId, Rating, ReviewId, UserId},
     };
 
-    let review = Review::from_persistence(
-        ReviewId::generate(),
-        MovieId::from_uuid(uuid::Uuid::new_v4()),
-        UserId::from_uuid(uuid::Uuid::new_v4()),
-        Rating::new(4).unwrap(),
-        None,
-        NaiveDateTime::parse_from_str("2024-01-01 00:00:00", "%Y-%m-%d %H:%M:%S").unwrap(),
-        NaiveDateTime::parse_from_str("2024-01-01 00:00:00", "%Y-%m-%d %H:%M:%S").unwrap(),
-        ReviewSource::Local,
-    );
+    let review = Review::from_persistence(PersistedReview {
+        id: ReviewId::generate(),
+        movie_id: MovieId::from_uuid(uuid::Uuid::new_v4()),
+        user_id: UserId::from_uuid(uuid::Uuid::new_v4()),
+        rating: Rating::new(4).unwrap(),
+        comment: None,
+        watched_at: NaiveDateTime::parse_from_str("2024-01-01 00:00:00", "%Y-%m-%d %H:%M:%S")
+            .unwrap(),
+        created_at: NaiveDateTime::parse_from_str("2024-01-01 00:00:00", "%Y-%m-%d %H:%M:%S")
+            .unwrap(),
+        source: ReviewSource::Local,
+    });
     let obj = review_to_ap_object(
         &review,
         "https://example.com/reviews/1".parse().unwrap(),
@@ -47,20 +49,22 @@ fn review_to_ap_object_includes_two_hashtags() {
 fn review_to_ap_object_has_public_addressing() {
     use chrono::NaiveDateTime;
     use domain::{
-        models::{Review, ReviewSource},
+        models::{PersistedReview, Review, ReviewSource},
         value_objects::{MovieId, Rating, ReviewId, UserId},
     };
 
-    let review = Review::from_persistence(
-        ReviewId::generate(),
-        MovieId::from_uuid(uuid::Uuid::new_v4()),
-        UserId::from_uuid(uuid::Uuid::new_v4()),
-        Rating::new(3).unwrap(),
-        None,
-        NaiveDateTime::parse_from_str("2024-06-01 00:00:00", "%Y-%m-%d %H:%M:%S").unwrap(),
-        NaiveDateTime::parse_from_str("2024-06-01 00:00:00", "%Y-%m-%d %H:%M:%S").unwrap(),
-        ReviewSource::Local,
-    );
+    let review = Review::from_persistence(PersistedReview {
+        id: ReviewId::generate(),
+        movie_id: MovieId::from_uuid(uuid::Uuid::new_v4()),
+        user_id: UserId::from_uuid(uuid::Uuid::new_v4()),
+        rating: Rating::new(3).unwrap(),
+        comment: None,
+        watched_at: NaiveDateTime::parse_from_str("2024-06-01 00:00:00", "%Y-%m-%d %H:%M:%S")
+            .unwrap(),
+        created_at: NaiveDateTime::parse_from_str("2024-06-01 00:00:00", "%Y-%m-%d %H:%M:%S")
+            .unwrap(),
+        source: ReviewSource::Local,
+    });
     let actor_url: url::Url = "https://example.com/users/abc".parse().unwrap();
     let obj = review_to_ap_object(
         &review,
@@ -78,16 +82,16 @@ fn review_to_ap_object_has_public_addressing() {
 #[test]
 fn watchlist_to_ap_object_has_public_addressing() {
     let actor_url: url::Url = "https://example.com/users/abc".parse().unwrap();
-    let obj = watchlist_to_ap_object(
-        "https://example.com/watchlist/1".parse().unwrap(),
-        actor_url.clone(),
-        "Alien".to_string(),
-        1979,
-        None,
-        None,
-        chrono::Utc::now(),
-        "https://example.com",
-    );
+    let obj = watchlist_to_ap_object(WatchlistApInput {
+        ap_id: "https://example.com/watchlist/1".parse().unwrap(),
+        actor_url: actor_url.clone(),
+        movie_title: "Alien".to_string(),
+        release_year: 1979,
+        external_metadata_id: None,
+        poster_url: None,
+        added_at: chrono::Utc::now(),
+        base_url: "https://example.com".to_string(),
+    });
     assert_eq!(obj.to, vec!["https://www.w3.org/ns/activitystreams#Public"]);
     assert_eq!(obj.cc, vec!["https://example.com/users/abc/followers"]);
 }

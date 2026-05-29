@@ -131,16 +131,28 @@ pub struct WatchlistObject {
     pub(crate) cc: Vec<String>,
 }
 
-pub fn watchlist_to_ap_object(
-    ap_id: Url,
-    actor_url: Url,
-    movie_title: String,
-    release_year: u16,
-    external_metadata_id: Option<String>,
-    poster_url: Option<String>,
-    added_at: chrono::DateTime<chrono::Utc>,
-    base_url: &str,
-) -> WatchlistObject {
+pub struct WatchlistApInput {
+    pub ap_id: Url,
+    pub actor_url: Url,
+    pub movie_title: String,
+    pub release_year: u16,
+    pub external_metadata_id: Option<String>,
+    pub poster_url: Option<String>,
+    pub added_at: chrono::DateTime<chrono::Utc>,
+    pub base_url: String,
+}
+
+pub fn watchlist_to_ap_object(input: WatchlistApInput) -> WatchlistObject {
+    let WatchlistApInput {
+        ap_id,
+        actor_url,
+        movie_title,
+        release_year,
+        external_metadata_id,
+        poster_url,
+        added_at,
+        base_url,
+    } = input;
     let year_str = if release_year > 0 {
         format!(" ({})", release_year)
     } else {

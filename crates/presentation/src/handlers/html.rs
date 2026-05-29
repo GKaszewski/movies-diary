@@ -428,7 +428,7 @@ pub async fn get_activity_feed(
     let query = application::queries::GetActivityFeedQuery {
         limit,
         offset,
-        sort_by: domain::ports::FeedSortBy::from_str(sort_by_str),
+        sort_by: sort_by_str.parse().unwrap_or_default(),
         search: search_opt,
         following,
     };
@@ -661,7 +661,7 @@ pub async fn get_user_profile(
         view: profile_view,
         limit: params.limit,
         offset: params.offset,
-        sort_by: domain::ports::FeedSortBy::from_str(sort_by_str),
+        sort_by: sort_by_str.parse().unwrap_or_default(),
         search: if params.search.is_empty() {
             None
         } else {
@@ -1599,38 +1599,36 @@ pub async fn post_profile_settings(
             }
             "avatar" => {
                 let ct = field.content_type().map(|s| s.to_string());
-                if let Ok(bytes) = field.bytes().await {
-                    if !bytes.is_empty() {
-                        avatar_bytes = Some(bytes.to_vec());
-                        avatar_content_type = ct;
-                    }
+                if let Ok(bytes) = field.bytes().await
+                    && !bytes.is_empty()
+                {
+                    avatar_bytes = Some(bytes.to_vec());
+                    avatar_content_type = ct;
                 }
             }
             "banner" => {
                 let ct = field.content_type().map(|s| s.to_string());
-                if let Ok(bytes) = field.bytes().await {
-                    if !bytes.is_empty() {
-                        banner_bytes = Some(bytes.to_vec());
-                        banner_content_type = ct;
-                    }
+                if let Ok(bytes) = field.bytes().await
+                    && !bytes.is_empty()
+                {
+                    banner_bytes = Some(bytes.to_vec());
+                    banner_content_type = ct;
                 }
             }
             n if n.starts_with("field_name_") => {
-                if let Ok(idx) = n["field_name_".len()..].parse::<usize>() {
-                    if let Ok(text) = field.text().await {
-                        if !text.is_empty() {
-                            field_names.insert(idx, text);
-                        }
-                    }
+                if let Ok(idx) = n["field_name_".len()..].parse::<usize>()
+                    && let Ok(text) = field.text().await
+                    && !text.is_empty()
+                {
+                    field_names.insert(idx, text);
                 }
             }
             n if n.starts_with("field_value_") => {
-                if let Ok(idx) = n["field_value_".len()..].parse::<usize>() {
-                    if let Ok(text) = field.text().await {
-                        if !text.is_empty() {
-                            field_values.insert(idx, text);
-                        }
-                    }
+                if let Ok(idx) = n["field_value_".len()..].parse::<usize>()
+                    && let Ok(text) = field.text().await
+                    && !text.is_empty()
+                {
+                    field_values.insert(idx, text);
                 }
             }
             _ => {}
