@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+#[cfg(feature = "federation")]
+use domain::testing::PanicRemoteWatchlistRepository;
 use domain::{
     ports::{
         AuthService, DiaryExporter, DiaryRepository, DocumentParser, EventPublisher, ImageStorage,
@@ -18,13 +20,8 @@ use domain::{
         PanicSearchPort, PanicStatsRepository,
     },
 };
-#[cfg(feature = "federation")]
-use domain::testing::PanicRemoteWatchlistRepository;
 
-use crate::{
-    config::AppConfig,
-    context::AppContext,
-};
+use crate::{config::AppConfig, context::AppContext};
 
 pub struct TestContextBuilder {
     pub movie_repo: Arc<dyn MovieRepository>,

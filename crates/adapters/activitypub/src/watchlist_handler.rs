@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
-use k_ap::ApObjectHandler;
 use async_trait::async_trait;
 use domain::{
     models::RemoteWatchlistEntry,
     ports::{LocalApContentQuery, RemoteWatchlistRepository},
 };
+use k_ap::ApObjectHandler;
 use url::Url;
 
 use crate::objects::WatchlistObject;
@@ -68,11 +68,19 @@ impl ApObjectHandler for WatchlistObjectHandler {
         Ok(())
     }
 
-    async fn on_announce_received(&self, _object_url: &Url, _actor_url: &Url) -> anyhow::Result<()> {
+    async fn on_announce_received(
+        &self,
+        _object_url: &Url,
+        _actor_url: &Url,
+    ) -> anyhow::Result<()> {
         Ok(())
     }
 
-    async fn on_announce_of_remote(&self, _object_url: &Url, _actor_url: &Url) -> anyhow::Result<()> {
+    async fn on_announce_of_remote(
+        &self,
+        _object_url: &Url,
+        _actor_url: &Url,
+    ) -> anyhow::Result<()> {
         Ok(())
     }
 
@@ -80,7 +88,12 @@ impl ApObjectHandler for WatchlistObjectHandler {
         Ok(())
     }
 
-    async fn on_mention(&self, _thought_ap_id: &Url, _mentioned_user_uuid: uuid::Uuid, _actor_url: &Url) -> anyhow::Result<()> {
+    async fn on_mention(
+        &self,
+        _thought_ap_id: &Url,
+        _mentioned_user_uuid: uuid::Uuid,
+        _actor_url: &Url,
+    ) -> anyhow::Result<()> {
         Ok(())
     }
 }

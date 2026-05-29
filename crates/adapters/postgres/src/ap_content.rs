@@ -90,12 +90,24 @@ impl LocalApContentQuery for PostgresApContentQuery {
                     )?,
                 };
                 let movie = MovieRow {
-                    id: row.try_get("m_id").map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
-                    external_metadata_id: row.try_get("external_metadata_id").map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
-                    title: row.try_get("title").map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
-                    release_year: row.try_get("release_year").map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
-                    director: row.try_get("director").map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
-                    poster_path: row.try_get("poster_path").map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
+                    id: row
+                        .try_get("m_id")
+                        .map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
+                    external_metadata_id: row
+                        .try_get("external_metadata_id")
+                        .map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
+                    title: row
+                        .try_get("title")
+                        .map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
+                    release_year: row
+                        .try_get("release_year")
+                        .map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
+                    director: row
+                        .try_get("director")
+                        .map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
+                    poster_path: row
+                        .try_get("poster_path")
+                        .map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
                 }
                 .into_domain()?;
                 Ok(WatchlistWithMovie { entry, movie })
@@ -103,10 +115,7 @@ impl LocalApContentQuery for PostgresApContentQuery {
             .collect()
     }
 
-    async fn get_review_by_id(
-        &self,
-        review_id: &ReviewId,
-    ) -> Result<Option<Review>, DomainError> {
+    async fn get_review_by_id(&self, review_id: &ReviewId) -> Result<Option<Review>, DomainError> {
         let id = review_id.value().to_string();
         sqlx::query_as::<_, ReviewRow>(
             "SELECT id, movie_id, user_id, rating, comment,

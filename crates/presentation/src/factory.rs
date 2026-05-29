@@ -3,11 +3,10 @@ use std::sync::Arc;
 use anyhow::Context;
 
 use domain::ports::{
-    AuthService, DiaryRepository, ImageStorage, ImportProfileRepository,
-    ImportSessionRepository, LocalApContentQuery, MetadataClient, MovieProfileRepository,
-    MovieRepository, PasswordHasher, PersonCommand, PersonQuery, PosterFetcherClient,
-    ReviewRepository, SearchCommand, SearchPort, StatsRepository, UserProfileFieldsRepository,
-    UserRepository, WatchlistRepository,
+    AuthService, DiaryRepository, ImageStorage, ImportProfileRepository, ImportSessionRepository,
+    LocalApContentQuery, MetadataClient, MovieProfileRepository, MovieRepository, PasswordHasher,
+    PersonCommand, PersonQuery, PosterFetcherClient, ReviewRepository, SearchCommand, SearchPort,
+    StatsRepository, UserProfileFieldsRepository, UserRepository, WatchlistRepository,
 };
 
 pub struct DatabaseAdapters {
@@ -36,10 +35,7 @@ pub enum DbPool {
     Postgres(sqlx::PgPool),
 }
 
-pub async fn build_database_adapters(
-    backend: &str,
-    url: &str,
-) -> anyhow::Result<DatabaseAdapters> {
+pub async fn build_database_adapters(backend: &str, url: &str) -> anyhow::Result<DatabaseAdapters> {
     match backend {
         #[cfg(feature = "postgres")]
         "postgres" => {
@@ -118,7 +114,9 @@ pub fn build_image_storage() -> anyhow::Result<Arc<dyn ImageStorage>> {
     image_storage::create()
 }
 
-pub fn build_profile_fields_repo(pool: &DbPool) -> anyhow::Result<Arc<dyn UserProfileFieldsRepository>> {
+pub fn build_profile_fields_repo(
+    pool: &DbPool,
+) -> anyhow::Result<Arc<dyn UserProfileFieldsRepository>> {
     match pool {
         #[cfg(feature = "postgres")]
         DbPool::Postgres(pool) => Ok(postgres::create_profile_fields_repo(pool.clone())),

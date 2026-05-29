@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use k_ap::{ApContentReader, ApObjectHandler};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
+use k_ap::{ApContentReader, ApObjectHandler};
 use url::Url;
 
 use crate::{review_handler::ReviewObjectHandler, watchlist_handler::WatchlistObjectHandler};
@@ -79,11 +79,19 @@ impl ApObjectHandler for CompositeObjectHandler {
         Ok(())
     }
 
-    async fn on_announce_received(&self, _object_url: &Url, _actor_url: &Url) -> anyhow::Result<()> {
+    async fn on_announce_received(
+        &self,
+        _object_url: &Url,
+        _actor_url: &Url,
+    ) -> anyhow::Result<()> {
         Ok(())
     }
 
-    async fn on_announce_of_remote(&self, _object_url: &Url, _actor_url: &Url) -> anyhow::Result<()> {
+    async fn on_announce_of_remote(
+        &self,
+        _object_url: &Url,
+        _actor_url: &Url,
+    ) -> anyhow::Result<()> {
         Ok(())
     }
 
@@ -91,7 +99,12 @@ impl ApObjectHandler for CompositeObjectHandler {
         Ok(())
     }
 
-    async fn on_mention(&self, _thought_ap_id: &Url, _mentioned_user_uuid: uuid::Uuid, _actor_url: &Url) -> anyhow::Result<()> {
+    async fn on_mention(
+        &self,
+        _thought_ap_id: &Url,
+        _mentioned_user_uuid: uuid::Uuid,
+        _actor_url: &Url,
+    ) -> anyhow::Result<()> {
         Ok(())
     }
 }

@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use k_ap::{ApProfileField, ApUser, ApUserRepository};
 use async_trait::async_trait;
 use domain::{ports::UserRepository, value_objects::UserId};
+use k_ap::{ApProfileField, ApUser, ApUserRepository};
 use url::Url;
 
 pub struct DomainUserRepoAdapter {

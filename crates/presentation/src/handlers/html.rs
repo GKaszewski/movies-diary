@@ -847,9 +847,16 @@ pub async fn get_followers_collection(
         .unwrap_or("");
     if accept.contains("application/activity+json") || accept.contains("application/ld+json") {
         let page = params.get("page").and_then(|p| p.parse::<u32>().ok());
-        return match state.ap_service.followers_collection_json(user_id, page).await {
+        return match state
+            .ap_service
+            .followers_collection_json(user_id, page)
+            .await
+        {
             Ok(json) => (
-                [(axum::http::header::CONTENT_TYPE, "application/activity+json")],
+                [(
+                    axum::http::header::CONTENT_TYPE,
+                    "application/activity+json",
+                )],
                 json,
             )
                 .into_response(),
@@ -872,9 +879,16 @@ pub async fn get_following_collection(
         .unwrap_or("");
     if accept.contains("application/activity+json") || accept.contains("application/ld+json") {
         let page = params.get("page").and_then(|p| p.parse::<u32>().ok());
-        return match state.ap_service.following_collection_json(user_id, page).await {
+        return match state
+            .ap_service
+            .following_collection_json(user_id, page)
+            .await
+        {
             Ok(json) => (
-                [(axum::http::header::CONTENT_TYPE, "application/activity+json")],
+                [(
+                    axum::http::header::CONTENT_TYPE,
+                    "application/activity+json",
+                )],
                 json,
             )
                 .into_response(),

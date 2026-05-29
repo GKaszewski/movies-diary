@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
-use k_ap::{ApContentReader, ApObjectHandler};
 use async_trait::async_trait;
 use domain::{
     models::ReviewSource,
     ports::LocalApContentQuery,
     value_objects::{Comment, MovieId, Rating, ReviewId, UserId},
 };
+use k_ap::{ApContentReader, ApObjectHandler};
 use url::Url;
 
 use crate::objects::{ReviewObject, review_to_ap_object};
@@ -39,7 +39,8 @@ impl ApContentReader for ReviewObjectHandler {
         let mut results = Vec::new();
         for entry in entries {
             let review = entry.review();
-            let published = chrono::DateTime::from_naive_utc_and_offset(*review.watched_at(), chrono::Utc);
+            let published =
+                chrono::DateTime::from_naive_utc_and_offset(*review.watched_at(), chrono::Utc);
             let movie = entry.movie();
             let ap_id = review_url(&self.base_url, review.id());
             let poster_url = movie
@@ -168,11 +169,19 @@ impl ApObjectHandler for ReviewObjectHandler {
         Ok(())
     }
 
-    async fn on_announce_received(&self, _object_url: &Url, _actor_url: &Url) -> anyhow::Result<()> {
+    async fn on_announce_received(
+        &self,
+        _object_url: &Url,
+        _actor_url: &Url,
+    ) -> anyhow::Result<()> {
         Ok(())
     }
 
-    async fn on_announce_of_remote(&self, _object_url: &Url, _actor_url: &Url) -> anyhow::Result<()> {
+    async fn on_announce_of_remote(
+        &self,
+        _object_url: &Url,
+        _actor_url: &Url,
+    ) -> anyhow::Result<()> {
         Ok(())
     }
 
@@ -180,7 +189,12 @@ impl ApObjectHandler for ReviewObjectHandler {
         Ok(())
     }
 
-    async fn on_mention(&self, _thought_ap_id: &Url, _mentioned_user_uuid: uuid::Uuid, _actor_url: &Url) -> anyhow::Result<()> {
+    async fn on_mention(
+        &self,
+        _thought_ap_id: &Url,
+        _mentioned_user_uuid: uuid::Uuid,
+        _actor_url: &Url,
+    ) -> anyhow::Result<()> {
         Ok(())
     }
 }

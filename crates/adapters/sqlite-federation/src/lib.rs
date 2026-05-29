@@ -4,12 +4,12 @@ use chrono::{NaiveDateTime, Utc};
 use sqlx::{Row, SqlitePool};
 
 use activitypub::RemoteReviewRepository;
+use domain::models::{RemoteWatchlistEntry, Review, ReviewSource};
+use domain::ports::RemoteWatchlistRepository;
 use k_ap::{
     ActivityRepository, ActorRepository, BlockedDomain, BlocklistRepository, FollowRepository,
     Follower, FollowerStatus, FollowingStatus, RemoteActor,
 };
-use domain::models::{RemoteWatchlistEntry, Review, ReviewSource};
-use domain::ports::RemoteWatchlistRepository;
 
 fn datetime_to_str(dt: &NaiveDateTime) -> String {
     dt.format("%Y-%m-%d %H:%M:%S").to_string()
@@ -246,7 +246,10 @@ impl FollowRepository for SqliteFederationRepository {
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(rows.iter().map(|row| remote_actor_from_row(row, "remote_actor_url")).collect())
+        Ok(rows
+            .iter()
+            .map(|row| remote_actor_from_row(row, "remote_actor_url"))
+            .collect())
     }
 
     async fn get_accepted_follower_inboxes(
@@ -268,7 +271,10 @@ impl FollowRepository for SqliteFederationRepository {
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(rows.iter().filter_map(|r| r.try_get::<String, _>("inbox").ok()).collect())
+        Ok(rows
+            .iter()
+            .filter_map(|r| r.try_get::<String, _>("inbox").ok())
+            .collect())
     }
 
     async fn count_accepted_followers(&self, local_user_id: uuid::Uuid) -> Result<usize> {
@@ -308,7 +314,10 @@ impl FollowRepository for SqliteFederationRepository {
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(rows.iter().map(|row| remote_actor_from_row(row, "remote_actor_url")).collect())
+        Ok(rows
+            .iter()
+            .map(|row| remote_actor_from_row(row, "remote_actor_url"))
+            .collect())
     }
 
     async fn add_following(
@@ -377,7 +386,10 @@ impl FollowRepository for SqliteFederationRepository {
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(rows.iter().map(|row| remote_actor_from_row(row, "url")).collect())
+        Ok(rows
+            .iter()
+            .map(|row| remote_actor_from_row(row, "url"))
+            .collect())
     }
 
     async fn count_following(&self, local_user_id: uuid::Uuid) -> Result<usize> {
@@ -416,7 +428,10 @@ impl FollowRepository for SqliteFederationRepository {
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(rows.iter().map(|row| remote_actor_from_row(row, "url")).collect())
+        Ok(rows
+            .iter()
+            .map(|row| remote_actor_from_row(row, "url"))
+            .collect())
     }
 
     async fn update_following_status(
@@ -748,23 +763,20 @@ impl BlocklistRepository for SqliteFederationRepository {
 #[async_trait]
 impl ActivityRepository for SqliteFederationRepository {
     async fn is_activity_processed(&self, activity_id: &str) -> Result<bool> {
-        let count: i64 =
-            sqlx::query_scalar("SELECT COUNT(*) FROM ap_activities WHERE id = ?1")
-                .bind(activity_id)
-                .fetch_one(&self.pool)
-                .await?;
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM ap_activities WHERE id = ?1")
+            .bind(activity_id)
+            .fetch_one(&self.pool)
+            .await?;
         Ok(count > 0)
     }
 
     async fn mark_activity_processed(&self, activity_id: &str) -> Result<()> {
         let ts = datetime_to_str(&Utc::now().naive_utc());
-        sqlx::query(
-            "INSERT OR IGNORE INTO ap_activities (id, processed_at) VALUES (?1, ?2)",
-        )
-        .bind(activity_id)
-        .bind(&ts)
-        .execute(&self.pool)
-        .await?;
+        sqlx::query("INSERT OR IGNORE INTO ap_activities (id, processed_at) VALUES (?1, ?2)")
+            .bind(activity_id)
+            .bind(&ts)
+            .execute(&self.pool)
+            .await?;
         Ok(())
     }
 }

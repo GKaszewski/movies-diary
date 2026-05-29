@@ -21,15 +21,14 @@ impl k_ap::EventPublisher for FederationEventBridge {
             FederationEvent::BackfillRequested {
                 owner_user_id,
                 follower_inbox_url,
-            } => {
-                self.domain_publisher
-                    .publish(&DomainEvent::BackfillFollower {
-                        owner_user_id: UserId::from_uuid(owner_user_id),
-                        follower_inbox_url,
-                    })
-                    .await
-                    .map_err(|e| anyhow::anyhow!(e.to_string()))
-            }
+            } => self
+                .domain_publisher
+                .publish(&DomainEvent::BackfillFollower {
+                    owner_user_id: UserId::from_uuid(owner_user_id),
+                    follower_inbox_url,
+                })
+                .await
+                .map_err(|e| anyhow::anyhow!(e.to_string())),
             _ => {
                 tracing::debug!("ignoring federation event: {:?}", event);
                 Ok(())

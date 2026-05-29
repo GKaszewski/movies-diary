@@ -67,10 +67,7 @@ impl LocalApContentQuery for SqliteApContentQuery {
         rows.into_iter().map(WatchlistRow::into_domain).collect()
     }
 
-    async fn get_review_by_id(
-        &self,
-        review_id: &ReviewId,
-    ) -> Result<Option<Review>, DomainError> {
+    async fn get_review_by_id(&self, review_id: &ReviewId) -> Result<Option<Review>, DomainError> {
         let id = review_id.value().to_string();
         sqlx::query_as::<_, ReviewRow>(
             "SELECT id, movie_id, user_id, rating, comment, watched_at, created_at, remote_actor_url

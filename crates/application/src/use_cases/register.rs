@@ -54,11 +54,7 @@ mod tests {
     use domain::testing::InMemoryUserRepository;
     use domain::value_objects::Email;
 
-    use crate::{
-        commands::RegisterCommand,
-        test_helpers::TestContextBuilder,
-        use_cases::register,
-    };
+    use crate::{commands::RegisterCommand, test_helpers::TestContextBuilder, use_cases::register};
 
     fn cmd(email: &str) -> RegisterCommand {
         RegisterCommand {
@@ -76,7 +72,9 @@ mod tests {
             .with_users(Arc::clone(&users) as _)
             .build();
 
-        register::execute(&ctx, cmd("alice@example.com")).await.unwrap();
+        register::execute(&ctx, cmd("alice@example.com"))
+            .await
+            .unwrap();
 
         let email = Email::new("alice@example.com".into()).unwrap();
         let user = users.find_by_email(&email).await.unwrap().unwrap();
@@ -91,7 +89,9 @@ mod tests {
             .with_users(Arc::clone(&users) as _)
             .build();
 
-        register::execute(&ctx, cmd("bob@example.com")).await.unwrap();
+        register::execute(&ctx, cmd("bob@example.com"))
+            .await
+            .unwrap();
         let result = register::execute(&ctx, cmd("bob@example.com")).await;
         assert!(result.is_err(), "duplicate email should fail");
     }

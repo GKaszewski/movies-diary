@@ -68,8 +68,8 @@ mod tests {
     use domain::{
         models::Movie,
         ports::MovieRepository,
-        value_objects::{MovieTitle, ReleaseYear},
         testing::{InMemoryMovieRepository, InMemoryWatchlistRepository},
+        value_objects::{MovieTitle, ReleaseYear},
     };
 
     use crate::{

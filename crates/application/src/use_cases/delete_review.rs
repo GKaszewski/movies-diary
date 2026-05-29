@@ -62,17 +62,15 @@ mod tests {
     use domain::{
         models::{Movie, Review},
         ports::{MovieRepository, ReviewRepository},
-        value_objects::{MovieId, MovieTitle, Rating, ReleaseYear, UserId},
         testing::{
             FakeDiaryRepository, InMemoryMovieRepository, InMemoryReviewRepository,
             NoopEventPublisher,
         },
+        value_objects::{MovieId, MovieTitle, Rating, ReleaseYear, UserId},
     };
 
     use crate::{
-        commands::DeleteReviewCommand,
-        test_helpers::TestContextBuilder,
-        use_cases::delete_review,
+        commands::DeleteReviewCommand, test_helpers::TestContextBuilder, use_cases::delete_review,
     };
 
     fn make_movie() -> Movie {
@@ -86,8 +84,14 @@ mod tests {
     }
 
     fn make_review(movie_id: MovieId, user_id: UserId) -> Review {
-        Review::new(movie_id, user_id, Rating::new(4).unwrap(), None, Utc::now().naive_utc())
-            .unwrap()
+        Review::new(
+            movie_id,
+            user_id,
+            Rating::new(4).unwrap(),
+            None,
+            Utc::now().naive_utc(),
+        )
+        .unwrap()
     }
 
     #[tokio::test]

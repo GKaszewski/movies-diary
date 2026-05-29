@@ -31,7 +31,10 @@ impl SqliteUserRepository {
         }
     }
 
-    fn row_to_user(row: &sqlx::sqlite::SqliteRow, profile_fields: Vec<ProfileField>) -> Result<User, DomainError> {
+    fn row_to_user(
+        row: &sqlx::sqlite::SqliteRow,
+        profile_fields: Vec<ProfileField>,
+    ) -> Result<User, DomainError> {
         let id_str: String = row.try_get("id").unwrap_or_default();
         let id = uuid::Uuid::parse_str(&id_str)
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;

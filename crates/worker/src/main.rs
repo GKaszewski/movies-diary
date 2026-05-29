@@ -47,12 +47,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Clone refs federation handler needs before ctx consumes them.
     #[cfg(feature = "federation")]
-    let (
-        fed_ap_content,
-        fed_user_repo,
-        base_url,
-        allow_registration,
-    ) = (
+    let (fed_ap_content, fed_user_repo, base_url, allow_registration) = (
         Arc::clone(&repos.ap_content),
         Arc::clone(&repos.user),
         app_config.base_url.clone(),
@@ -60,13 +55,20 @@ async fn main() -> anyhow::Result<()> {
     );
     // Wire federation repos early to get remote_watchlist_repo for AppContext.
     #[cfg(feature = "federation")]
-    let (fed_activity_repo, fed_follow_repo, fed_actor_repo, fed_blocklist_repo, _fed_social_query, fed_review_store, fed_remote_watchlist_repo) =
-        match &db_pool {
-            #[cfg(feature = "sqlite-federation")]
-            db::DbPool::Sqlite(pool) => sqlite_federation::wire(pool.clone()),
-            #[cfg(feature = "postgres-federation")]
-            db::DbPool::Postgres(pool) => postgres_federation::wire(pool.clone()),
-        };
+    let (
+        fed_activity_repo,
+        fed_follow_repo,
+        fed_actor_repo,
+        fed_blocklist_repo,
+        _fed_social_query,
+        fed_review_store,
+        fed_remote_watchlist_repo,
+    ) = match &db_pool {
+        #[cfg(feature = "sqlite-federation")]
+        db::DbPool::Sqlite(pool) => sqlite_federation::wire(pool.clone()),
+        #[cfg(feature = "postgres-federation")]
+        db::DbPool::Postgres(pool) => postgres_federation::wire(pool.clone()),
+    };
 
     let ctx = AppContext {
         movie_repository: repos.movie,

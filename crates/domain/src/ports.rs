@@ -391,10 +391,7 @@ pub trait LocalApContentQuery: Send + Sync {
         user_id: &UserId,
     ) -> Result<Vec<WatchlistWithMovie>, DomainError>;
 
-    async fn get_review_by_id(
-        &self,
-        review_id: &ReviewId,
-    ) -> Result<Option<Review>, DomainError>;
+    async fn get_review_by_id(&self, review_id: &ReviewId) -> Result<Option<Review>, DomainError>;
 
     async fn get_movie_by_id(&self, movie_id: &MovieId) -> Result<Option<Movie>, DomainError>;
 
