@@ -12,7 +12,7 @@ pub fn build_router(state: AppState, ap_router: Router) -> Router {
     let ap_cfg = GovernorConfigBuilder::default()
         .with_extractor(PeerIp::default())
         .expect_connect_info()
-        .quota_default(per_minute(rate_limit))
+        .quota_default(per_minute(rate_limit / 2))
         .finish()
         .unwrap();
     let ap_router = ap_router.layer(GovernorLayer::new(ap_cfg));

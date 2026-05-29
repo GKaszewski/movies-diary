@@ -45,7 +45,7 @@ impl ApObjectHandler for CompositeObjectHandler {
         } else if is_watchlist {
             self.watchlist.on_create(ap_id, actor_url, object).await
         } else {
-            tracing::debug!(ap_id = %ap_id, "ignoring Create for unknown object type");
+            tracing::warn!(ap_id = %ap_id, "ignoring Create for unknown object type");
             Ok(())
         }
     }

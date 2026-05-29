@@ -45,8 +45,8 @@ impl k_ap::EventPublisher for FederationEventBridge {
                     .await
                     .map_err(|e| anyhow::anyhow!(e.to_string()))
             }
-            other => {
-                tracing::debug!("ignoring federation event: {:?}", other);
+            FederationEvent::DeliveryFailed { inbox, error, .. } => {
+                tracing::warn!(inbox = %inbox, error = %error, "federation delivery failed permanently");
                 Ok(())
             }
         }

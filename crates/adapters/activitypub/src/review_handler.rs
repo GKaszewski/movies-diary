@@ -77,13 +77,15 @@ impl ApObjectHandler for ReviewObjectHandler {
         _actor_url: &Url,
         object: serde_json::Value,
     ) -> anyhow::Result<()> {
-        let obj: ReviewObject = match serde_json::from_value(object) {
+        let mut obj: ReviewObject = match serde_json::from_value(object) {
             Ok(o) => o,
             Err(e) => {
-                tracing::debug!("ignoring unrecognized Create object: {}", e);
+                tracing::warn!("ignoring unrecognized Create object: {}", e);
                 return Ok(());
             }
         };
+        obj.movie_title = ammonia::clean(&obj.movie_title);
+        obj.comment = obj.comment.map(|c| ammonia::clean(&c));
 
         let actor_url_str = obj.attributed_to.to_string();
         let review_id = ReviewId::generate();
@@ -130,13 +132,15 @@ impl ApObjectHandler for ReviewObjectHandler {
         actor_url: &Url,
         object: serde_json::Value,
     ) -> anyhow::Result<()> {
-        let obj: ReviewObject = match serde_json::from_value(object) {
+        let mut obj: ReviewObject = match serde_json::from_value(object) {
             Ok(o) => o,
             Err(_) => {
-                tracing::debug!(actor = %actor_url, "ignoring non-review Update activity");
+                tracing::warn!(actor = %actor_url, "ignoring non-review Update activity");
                 return Ok(());
             }
         };
+        obj.movie_title = ammonia::clean(&obj.movie_title);
+        obj.comment = obj.comment.map(|c| ammonia::clean(&c));
 
         if obj.attributed_to != *actor_url {
             anyhow::bail!("update actor does not match object attributed_to");

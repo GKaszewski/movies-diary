@@ -24,7 +24,14 @@ impl ApObjectHandler for WatchlistObjectHandler {
         actor_url: &Url,
         object: serde_json::Value,
     ) -> anyhow::Result<()> {
-        let obj: WatchlistObject = serde_json::from_value(object)?;
+        let mut obj: WatchlistObject = match serde_json::from_value(object) {
+            Ok(o) => o,
+            Err(e) => {
+                tracing::warn!(ap_id = %ap_id, "ignoring malformed watchlist Create: {}", e);
+                return Ok(());
+            }
+        };
+        obj.movie_title = ammonia::clean(&obj.movie_title);
         let added_at = obj.published;
         let entry = RemoteWatchlistEntry {
             ap_id: ap_id.as_str().to_string(),

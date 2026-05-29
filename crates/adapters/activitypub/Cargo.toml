@@ -16,3 +16,4 @@ tracing = { workspace = true }
 async-trait = { workspace = true }
 
 url = { version = "2", features = ["serde"] }
+ammonia = "4"
