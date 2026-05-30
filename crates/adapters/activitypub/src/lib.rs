@@ -1,7 +1,6 @@
 pub mod composite_handler;
 pub mod event_handler;
 pub mod federation_event_bridge;
-pub mod instance_actor;
 pub mod objects;
 pub mod port;
 pub mod remote_review_repository;
@@ -9,6 +8,9 @@ pub mod review_handler;
 pub(crate) mod urls;
 pub mod user_adapter;
 pub mod watchlist_handler;
+
+pub const INSTANCE_ACTOR_ID: uuid::Uuid =
+    uuid::Uuid::from_bytes([0, 0, 0, 0, 0, 0, 0x40, 0, 0x80, 0, 0, 0, 0, 0, 0, 0]);
 
 // Re-export the generic base types that callers need
 pub use k_ap::{
@@ -97,18 +99,17 @@ pub async fn wire(deps: ActivityPubDeps) -> anyhow::Result<ActivityPubWire> {
         federation_event_bridge::FederationEventBridge::new(event_publisher),
     );
 
-    let user_repo = std::sync::Arc::new(instance_actor::InstanceActorUserRepo::new(
-        std::sync::Arc::new(DomainUserRepoAdapter::new(user_repo, base_url.clone())),
-        base_url.clone(),
-    ));
     let concrete = std::sync::Arc::new(
         ActivityPubService::builder(base_url.clone())
             .activity_repo(activity_repo)
             .follow_repo(follow_repo)
             .actor_repo(actor_repo)
             .blocklist_repo(blocklist_repo)
-            .user_repo(user_repo)
-            .signed_fetch_actor_id(instance_actor::INSTANCE_ACTOR_ID)
+            .user_repo(std::sync::Arc::new(DomainUserRepoAdapter::new(
+                user_repo,
+                base_url.clone(),
+            )))
+            .signed_fetch_actor_id(INSTANCE_ACTOR_ID)
             .content_reader(composite.clone() as std::sync::Arc<dyn ApContentReader>)
             .object_handler(composite as std::sync::Arc<dyn ApObjectHandler>)
             .event_publisher(fed_event_bridge)
