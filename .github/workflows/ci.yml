@@ -35,30 +35,8 @@ jobs:
       - name: fmt
         run: cargo fmt --all -- --check
 
+      - name: clippy
+        run: cargo clippy --all-targets -- -D warnings
+
       - name: test
         run: cargo test
-
-  release-build:
-    name: Release build
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
-    needs: ci
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Rust stable
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache cargo
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-release-
-
-      - name: build (release)
-        run: cargo build --release -p presentation -p worker
