@@ -1,6 +1,7 @@
 pub mod composite_handler;
 pub mod event_handler;
 pub mod federation_event_bridge;
+pub mod instance_actor;
 pub mod objects;
 pub mod port;
 pub mod remote_review_repository;
@@ -96,16 +97,18 @@ pub async fn wire(deps: ActivityPubDeps) -> anyhow::Result<ActivityPubWire> {
         federation_event_bridge::FederationEventBridge::new(event_publisher),
     );
 
+    let user_repo = std::sync::Arc::new(instance_actor::InstanceActorUserRepo::new(
+        std::sync::Arc::new(DomainUserRepoAdapter::new(user_repo, base_url.clone())),
+        base_url.clone(),
+    ));
     let concrete = std::sync::Arc::new(
         ActivityPubService::builder(base_url.clone())
             .activity_repo(activity_repo)
             .follow_repo(follow_repo)
             .actor_repo(actor_repo)
             .blocklist_repo(blocklist_repo)
-            .user_repo(std::sync::Arc::new(DomainUserRepoAdapter::new(
-                user_repo,
-                base_url.clone(),
-            )))
+            .user_repo(user_repo)
+            .signed_fetch_actor_id(instance_actor::INSTANCE_ACTOR_ID)
             .content_reader(composite.clone() as std::sync::Arc<dyn ApContentReader>)
             .object_handler(composite as std::sync::Arc<dyn ApObjectHandler>)
             .event_publisher(fed_event_bridge)
