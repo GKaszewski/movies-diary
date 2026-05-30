@@ -65,6 +65,16 @@ fn remote_actor_from_row(row: &sqlx::sqlite::SqliteRow, url_col: &str) -> Remote
                 })
             })
             .unwrap_or_default(),
+        fetched_at: row
+            .try_get::<Option<String>, _>("fetched_at")
+            .ok()
+            .flatten()
+            .and_then(|s| {
+                chrono::NaiveDateTime::parse_from_str(&s, "%Y-%m-%d %H:%M:%S")
+                    .map(|ndt| ndt.and_utc())
+                    .or_else(|_| chrono::DateTime::parse_from_rfc3339(&s).map(|dt| dt.with_timezone(&chrono::Utc)))
+                    .ok()
+            }),
     }
 }
 
@@ -136,7 +146,7 @@ impl FollowRepository for SqliteFederationRepository {
         let rows = sqlx::query(
             "SELECT f.remote_actor_url, f.status,
                     a.handle, a.inbox_url, a.shared_inbox_url, a.display_name, a.avatar_url,
-                    a.outbox_url, a.bio, a.banner_url, a.followers_url, a.following_url, a.also_known_as
+                    a.outbox_url, a.bio, a.banner_url, a.followers_url, a.following_url, a.also_known_as, a.fetched_at
              FROM ap_followers f
              LEFT JOIN ap_remote_actors a ON a.url = f.remote_actor_url
              WHERE f.local_user_id = ?",
@@ -170,7 +180,7 @@ impl FollowRepository for SqliteFederationRepository {
         let rows = sqlx::query(
             "SELECT f.remote_actor_url, f.status,
                     a.handle, a.inbox_url, a.shared_inbox_url, a.display_name, a.avatar_url,
-                    a.outbox_url, a.bio, a.banner_url, a.followers_url, a.following_url, a.also_known_as
+                    a.outbox_url, a.bio, a.banner_url, a.followers_url, a.following_url, a.also_known_as, a.fetched_at
              FROM ap_followers f
              LEFT JOIN ap_remote_actors a ON a.url = f.remote_actor_url
              WHERE f.local_user_id = ? AND f.status = 'accepted'
@@ -237,7 +247,7 @@ impl FollowRepository for SqliteFederationRepository {
         let rows = sqlx::query(
             "SELECT f.remote_actor_url,
                     a.handle, a.inbox_url, a.shared_inbox_url, a.display_name, a.avatar_url,
-                    a.outbox_url, a.bio, a.banner_url, a.followers_url, a.following_url, a.also_known_as
+                    a.outbox_url, a.bio, a.banner_url, a.followers_url, a.following_url, a.also_known_as, a.fetched_at
              FROM ap_followers f
              LEFT JOIN ap_remote_actors a ON a.url = f.remote_actor_url
              WHERE f.local_user_id = ? AND f.status = 'pending'",
@@ -301,7 +311,7 @@ impl FollowRepository for SqliteFederationRepository {
         let rows = sqlx::query(
             "SELECT f.remote_actor_url,
                     a.handle, a.inbox_url, a.shared_inbox_url, a.display_name, a.avatar_url,
-                    a.outbox_url, a.bio, a.banner_url, a.followers_url, a.following_url, a.also_known_as
+                    a.outbox_url, a.bio, a.banner_url, a.followers_url, a.following_url, a.also_known_as, a.fetched_at
              FROM ap_followers f
              LEFT JOIN ap_remote_actors a ON a.url = f.remote_actor_url
              WHERE f.local_user_id = ? AND f.status = 'accepted'
@@ -377,7 +387,7 @@ impl FollowRepository for SqliteFederationRepository {
 
         let rows = sqlx::query(
             "SELECT a.url, a.handle, a.inbox_url, a.shared_inbox_url, a.display_name, a.avatar_url,
-                    a.outbox_url, a.bio, a.banner_url, a.followers_url, a.following_url, a.also_known_as
+                    a.outbox_url, a.bio, a.banner_url, a.followers_url, a.following_url, a.also_known_as, a.fetched_at
              FROM ap_following f
              INNER JOIN ap_remote_actors a ON a.url = f.remote_actor_url
              WHERE f.local_user_id = ? AND f.status = 'accepted'",
@@ -415,7 +425,7 @@ impl FollowRepository for SqliteFederationRepository {
 
         let rows = sqlx::query(
             "SELECT a.url, a.handle, a.inbox_url, a.shared_inbox_url, a.display_name, a.avatar_url,
-                    a.outbox_url, a.bio, a.banner_url, a.followers_url, a.following_url, a.also_known_as
+                    a.outbox_url, a.bio, a.banner_url, a.followers_url, a.following_url, a.also_known_as, a.fetched_at
              FROM ap_following f
              INNER JOIN ap_remote_actors a ON a.url = f.remote_actor_url
              WHERE f.local_user_id = ? AND f.status = 'accepted'
@@ -607,7 +617,7 @@ impl ActorRepository for SqliteFederationRepository {
     async fn get_remote_actor(&self, actor_url: &str) -> Result<Option<RemoteActor>> {
         let row = sqlx::query(
             "SELECT url, handle, inbox_url, shared_inbox_url, display_name, avatar_url,
-                    outbox_url, bio, banner_url, followers_url, following_url, also_known_as
+                    outbox_url, bio, banner_url, followers_url, following_url, also_known_as, fetched_at
              FROM ap_remote_actors WHERE url = ?",
         )
         .bind(actor_url)
@@ -1154,6 +1164,7 @@ mod outbox_url_tests {
             followers_url: None,
             following_url: None,
             also_known_as: vec![],
+            fetched_at: None,
         };
         repo.add_following(local_user, actor, "https://local/activities/1")
             .await

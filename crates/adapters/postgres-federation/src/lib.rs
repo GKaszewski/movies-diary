@@ -65,10 +65,11 @@ fn pg_remote_actor(row: &sqlx::postgres::PgRow, url_col: &str) -> RemoteActor {
                 })
             })
             .unwrap_or_default(),
+        fetched_at: row.try_get("fetched_at").ok(),
     }
 }
 
-const PG_ACTOR_COLS: &str = "a.handle, a.inbox_url, a.shared_inbox_url, a.display_name, a.avatar_url, a.outbox_url, a.bio, a.banner_url, a.followers_url, a.following_url, a.also_known_as";
+const PG_ACTOR_COLS: &str = "a.handle, a.inbox_url, a.shared_inbox_url, a.display_name, a.avatar_url, a.outbox_url, a.bio, a.banner_url, a.followers_url, a.following_url, a.also_known_as, a.fetched_at";
 
 #[async_trait]
 impl FollowRepository for PostgresFederationRepository {
