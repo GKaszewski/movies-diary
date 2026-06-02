@@ -19,7 +19,7 @@ use domain::value_objects::WrapUpId;
 use crate::{
     csrf::CsrfToken,
     errors::ApiError,
-    extractors::{AdminUser, AuthenticatedUser, OptionalCookieUser},
+    extractors::{AdminApiUser, AuthenticatedUser, OptionalCookieUser},
     render::render_page,
     state::AppState,
 };
@@ -53,7 +53,7 @@ fn record_to_dto(r: &WrapUpRecord) -> WrapUpStatusResponse {
 )]
 pub async fn post_generate(
     State(state): State<AppState>,
-    _admin: AdminUser,
+    _admin: AdminApiUser,
     Json(req): Json<GenerateWrapUpRequest>,
 ) -> Result<Json<WrapUpGeneratedResponse>, ApiError> {
     let start = NaiveDate::parse_from_str(&req.start_date, "%Y-%m-%d")

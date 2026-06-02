@@ -98,6 +98,34 @@ where
     }
 }
 
+pub struct AdminApiUser(pub UserId);
+
+impl<S> FromRequestParts<S> for AdminApiUser
+where
+    AppState: FromRef<S>,
+    S: Send + Sync,
+{
+    type Rejection = ApiError;
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        let AuthenticatedUser(user_id) =
+            AuthenticatedUser::from_request_parts(parts, state).await?;
+        let app_state = AppState::from_ref(state);
+        let user = app_state
+            .app_ctx
+            .repos
+            .user
+            .find_by_id(&user_id)
+            .await
+            .map_err(|e| ApiError(e))?
+            .ok_or_else(|| ApiError(DomainError::NotFound("user not found".into())))?;
+        match user.role() {
+            domain::models::UserRole::Admin => Ok(AdminApiUser(user_id)),
+            _ => Err(ApiError(DomainError::Forbidden("admin only".into()))),
+        }
+    }
+}
+
 pub struct AdminUser(pub UserId);
 
 impl<S> FromRequestParts<S> for AdminUser
