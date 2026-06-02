@@ -14,6 +14,6 @@ ravif       = { version = "0.11", default-features = false }
 webp        = "0.3"
 
 [dev-dependencies]
-image-storage = { workspace = true }
+object-storage = { workspace = true }
 object_store = "0.11"
 uuid = { workspace = true }

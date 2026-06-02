@@ -129,7 +129,7 @@ pub fn build_poster_fetcher() -> anyhow::Result<Arc<dyn PosterFetcherClient>> {
 }
 
 pub fn build_object_storage() -> anyhow::Result<Arc<dyn ObjectStorage>> {
-    image_storage::create()
+    object_storage::create()
 }
 
 pub fn build_profile_fields_repo(

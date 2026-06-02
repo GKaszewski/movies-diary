@@ -2759,29 +2759,13 @@ dependencies = [
  "async-trait",
  "domain",
  "image",
- "image-storage",
+ "object-storage",
  "object_store",
  "ravif 0.11.20",
  "tokio",
  "tracing",
  "uuid",
  "webp",
-]
-
-[[package]]
-name = "image-storage"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "bytes",
- "domain",
- "futures",
- "infer",
- "object_store",
- "tokio",
- "tracing",
- "uuid",
 ]
 
 [[package]]
@@ -3694,6 +3678,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "object-storage"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "bytes",
+ "domain",
+ "futures",
+ "infer",
+ "object_store",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "object_store"
 version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4179,12 +4179,12 @@ dependencies = [
  "export",
  "futures",
  "http-body-util",
- "image-storage",
  "importer",
  "infer",
  "jellyfin",
  "metadata",
  "nats",
+ "object-storage",
  "percent-encoding",
  "plex",
  "poster-fetcher",
@@ -7475,10 +7475,10 @@ dependencies = [
  "dotenvy",
  "export",
  "image-converter",
- "image-storage",
  "importer",
  "metadata",
  "nats",
+ "object-storage",
  "poster-fetcher",
  "poster-sync",
  "postgres",

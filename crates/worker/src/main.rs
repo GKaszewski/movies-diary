@@ -34,7 +34,7 @@ async fn main() -> anyhow::Result<()> {
     let (auth_service, password_hasher) = auth::create()?;
     let metadata_client = metadata::create()?;
     let poster_fetcher = poster_fetcher::create()?;
-    let object_storage = image_storage::create()?;
+    let object_storage = object_storage::create()?;
 
     let db = db::connect(&database_url, &backend).await?;
     let (event_publisher_arc, consumer_arc) = event_bus::create(&db.db_pool).await?;
@@ -215,7 +215,7 @@ async fn main() -> anyhow::Result<()> {
             3,
         )) as Arc<dyn EventHandler>;
 
-        let cleanup = Arc::new(image_storage::ImageCleanupHandler::new(Arc::clone(
+        let cleanup = Arc::new(object_storage::ImageCleanupHandler::new(Arc::clone(
             &ctx.services.object_storage,
         ))) as Arc<dyn EventHandler>;
 

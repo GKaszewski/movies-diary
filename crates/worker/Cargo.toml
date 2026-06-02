@@ -23,7 +23,7 @@ dotenvy = { workspace = true }
 auth = { workspace = true }
 metadata = { workspace = true }
 poster-fetcher = { workspace = true }
-image-storage = { workspace = true }
+object-storage = { workspace = true }
 poster-sync = { workspace = true }
 export = { workspace = true }
 tmdb-enrichment = { workspace = true }
