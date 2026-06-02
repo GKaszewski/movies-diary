@@ -1,5 +1,6 @@
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDateTime, Utc};
+use uuid::Uuid;
 
 use crate::{
     errors::DomainError,
@@ -12,6 +13,7 @@ use crate::{
         ReviewHistory, SearchQuery, SearchResults, User, UserStats, UserSummary, UserTrends,
         WatchEvent, WatchEventStatus, WatchlistEntry, WatchlistWithMovie, WebhookToken,
         collections::{self, PageParams, Paginated},
+        wrapup::{DateRange, WrapUpScope},
     },
     value_objects::{
         Email, ExternalMetadataId, ImportProfileId, ImportSessionId, MovieId, MovieTitle,
@@ -467,4 +469,34 @@ pub trait WebhookTokenRepository: Send + Sync {
     async fn list_by_user(&self, user_id: &UserId) -> Result<Vec<WebhookToken>, DomainError>;
     async fn delete(&self, id: &WebhookTokenId, user_id: &UserId) -> Result<(), DomainError>;
     async fn touch_last_used(&self, id: &WebhookTokenId) -> Result<(), DomainError>;
+}
+
+// ── Wrap-up / Year-in-Review ─────────────────────────────────────────────────
+
+#[derive(Clone, Debug)]
+pub struct WrapUpMovieRow {
+    pub movie_id: Uuid,
+    pub title: String,
+    pub release_year: u16,
+    pub director: Option<String>,
+    pub poster_path: Option<String>,
+    pub rating: u8,
+    pub watched_at: NaiveDateTime,
+    pub user_id: Uuid,
+    pub runtime_minutes: Option<u32>,
+    pub budget_usd: Option<i64>,
+    pub original_language: Option<String>,
+    pub genres: Vec<String>,
+    pub keywords: Vec<String>,
+    pub cast_names: Vec<(String, u32)>,
+    pub cast_profile_paths: Vec<Option<String>>,
+}
+
+#[async_trait]
+pub trait WrapUpStatsQuery: Send + Sync {
+    async fn get_reviews_with_profiles(
+        &self,
+        scope: &WrapUpScope,
+        range: &DateRange,
+    ) -> Result<Vec<WrapUpMovieRow>, DomainError>;
 }

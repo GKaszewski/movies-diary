@@ -991,3 +991,47 @@ impl crate::ports::WebhookTokenRepository for PanicWebhookTokenRepository {
         panic!("PanicWebhookTokenRepository called")
     }
 }
+
+// ── InMemoryWrapUpStatsQuery ────────────────────────────────────────────────
+
+pub struct InMemoryWrapUpStatsQuery {
+    pub rows: Mutex<Vec<crate::ports::WrapUpMovieRow>>,
+}
+
+impl InMemoryWrapUpStatsQuery {
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self {
+            rows: Mutex::new(Vec::new()),
+        })
+    }
+
+    pub fn with_rows(rows: Vec<crate::ports::WrapUpMovieRow>) -> Arc<Self> {
+        Arc::new(Self {
+            rows: Mutex::new(rows),
+        })
+    }
+}
+
+#[async_trait]
+impl crate::ports::WrapUpStatsQuery for InMemoryWrapUpStatsQuery {
+    async fn get_reviews_with_profiles(
+        &self,
+        scope: &crate::models::wrapup::WrapUpScope,
+        range: &crate::models::wrapup::DateRange,
+    ) -> Result<Vec<crate::ports::WrapUpMovieRow>, DomainError> {
+        let rows = self.rows.lock().unwrap();
+        let filtered: Vec<_> = rows
+            .iter()
+            .filter(|r| {
+                let date = r.watched_at.date();
+                date >= range.start && date < range.end
+            })
+            .filter(|r| match scope {
+                crate::models::wrapup::WrapUpScope::User(uid) => r.user_id == *uid,
+                crate::models::wrapup::WrapUpScope::Global => true,
+            })
+            .cloned()
+            .collect();
+        Ok(filtered)
+    }
+}
