@@ -237,6 +237,58 @@ impl SlideRenderer {
         to_png(&img)
     }
 
+    pub fn render_genres(
+        &self,
+        report: &WrapUpReport,
+        w: u32,
+        h: u32,
+    ) -> Result<Vec<u8>, DomainError> {
+        let mut img = fill(w, h);
+        self.draw_centered(&mut img, "Genre Breakdown", (h / 8) as i32, 56.0, GOLD);
+
+        let detail = format!("{} genres explored", report.genre_diversity);
+        self.draw_centered(&mut img, &detail, (h / 8) as i32 + 64, 28.0, DIM);
+
+        let margin = 80i32;
+        let bar_area_w = (w as i32 - margin * 2 - 200) as u32;
+        let start_y = (h / 4) as i32;
+        let max_count = report.top_genres.first().map(|g| g.count).unwrap_or(1).max(1);
+
+        for (i, g) in report.top_genres.iter().take(8).enumerate() {
+            let y = start_y + (i as i32) * 80;
+            self.draw_left(&mut img, &g.genre, margin, y, 30.0, WHITE);
+            let count_str = format!("{}", g.count);
+            self.draw_left(&mut img, &count_str, w as i32 - margin - 40, y, 30.0, DIM);
+
+            let bar_y = y + 38;
+            let bar_w = (g.count as f64 / max_count as f64 * bar_area_w as f64) as u32;
+            draw_filled_rect_mut(
+                &mut img,
+                Rect::at(margin, bar_y).of_size(bar_area_w, 12),
+                BAR_BG,
+            );
+            if bar_w > 0 {
+                draw_filled_rect_mut(
+                    &mut img,
+                    Rect::at(margin, bar_y).of_size(bar_w, 12),
+                    GOLD,
+                );
+            }
+        }
+
+        if let Some(ref best) = report.highest_rated_genre {
+            let text = format!("Highest rated: {best}");
+            self.draw_centered(&mut img, &text, h as i32 - 180, 28.0, WHITE);
+        }
+        if let Some(ref worst) = report.lowest_rated_genre {
+            let text = format!("Lowest rated: {worst}");
+            self.draw_centered(&mut img, &text, h as i32 - 140, 28.0, DIM);
+        }
+
+        self.stamp_logo(&mut img);
+        to_png(&img)
+    }
+
     pub fn render_highlights(
         &self,
         report: &WrapUpReport,

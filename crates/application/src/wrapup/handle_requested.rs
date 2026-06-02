@@ -88,9 +88,11 @@ pub async fn execute(
 async fn resolve_poster_images(ctx: &AppContext, report: &WrapUpReport) -> Vec<(String, Vec<u8>)> {
     let mut images = Vec::new();
     for path in report.poster_paths.iter().take(20) {
-        if let Ok(bytes) = ctx.services.image_storage.get(path).await {
-            images.push((path.clone(), bytes));
+        match ctx.services.image_storage.get(path).await {
+            Ok(bytes) => images.push((path.clone(), bytes)),
+            Err(e) => tracing::debug!("poster fetch skipped for {path}: {e}"),
         }
     }
+    tracing::info!("resolved {}/{} poster images for video", images.len(), report.poster_paths.len());
     images
 }

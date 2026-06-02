@@ -7,9 +7,8 @@ edition = "2024"
 domain = { workspace = true }
 async-trait = { workspace = true }
 tracing = { workspace = true }
-image = "0.25"
+image = { version = "0.25", features = ["avif"] }
 imageproc = "0.25"
 ab_glyph = "0.2"
-plotters = { version = "0.3", default-features = false, features = ["bitmap_backend", "bitmap_encoder", "ab_glyph"] }
 tokio = { workspace = true, features = ["process"] }
 tempfile = "3"

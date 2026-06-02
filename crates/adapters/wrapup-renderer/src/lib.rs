@@ -1,4 +1,3 @@
-mod charts;
 mod ffmpeg;
 mod slides;
 
@@ -40,11 +39,13 @@ impl WrapUpVideoRenderer for FfmpegWrapUpRenderer {
             slide_pngs.push(renderer.render_actors(report, width, height)?);
         }
         if !report.top_genres.is_empty() {
-            slide_pngs.push(charts::render_genre_chart(report, width, height)?);
+            slide_pngs.push(renderer.render_genres(report, width, height)?);
         }
         slide_pngs.push(renderer.render_highlights(report, width, height)?);
         if !poster_images.is_empty() {
             slide_pngs.push(renderer.render_mosaic(&poster_images, width, height)?);
+        } else {
+            tracing::warn!("no poster images resolved, skipping mosaic slide");
         }
 
         // 2. Stitch into video
