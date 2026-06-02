@@ -1,10 +1,11 @@
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 #[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct GenerateWrapUpRequest {
     pub start_date: String,
     pub end_date: String,
-    pub global: Option<bool>,
+    pub user_id: Option<Uuid>,
 }
 
 #[derive(Debug, Serialize, utoipa::ToSchema)]

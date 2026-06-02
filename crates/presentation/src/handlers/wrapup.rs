@@ -19,7 +19,7 @@ use domain::value_objects::WrapUpId;
 use crate::{
     csrf::CsrfToken,
     errors::ApiError,
-    extractors::{AuthenticatedUser, OptionalCookieUser},
+    extractors::{AdminUser, AuthenticatedUser, OptionalCookieUser},
     render::render_page,
     state::AppState,
 };
@@ -47,23 +47,20 @@ fn record_to_dto(r: &WrapUpRecord) -> WrapUpStatusResponse {
         (status = 200, body = WrapUpGeneratedResponse),
         (status = 400, description = "Invalid date format"),
         (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden — admin only"),
     ),
     security(("bearer_auth" = []))
 )]
 pub async fn post_generate(
     State(state): State<AppState>,
-    user: AuthenticatedUser,
+    _admin: AdminUser,
     Json(req): Json<GenerateWrapUpRequest>,
 ) -> Result<Json<WrapUpGeneratedResponse>, ApiError> {
     let start = NaiveDate::parse_from_str(&req.start_date, "%Y-%m-%d")
         .map_err(|_| DomainError::ValidationError("invalid start_date".into()))?;
     let end = NaiveDate::parse_from_str(&req.end_date, "%Y-%m-%d")
         .map_err(|_| DomainError::ValidationError("invalid end_date".into()))?;
-    let user_id = if req.global.unwrap_or(false) {
-        None
-    } else {
-        Some(user.0.value())
-    };
+    let user_id = req.user_id;
     let cmd = RequestWrapUpCommand {
         user_id,
         start_date: start,
