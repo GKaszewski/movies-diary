@@ -89,6 +89,12 @@ impl TestContextBuilder {
                 allow_registration: true,
                 base_url: "http://localhost:3000".into(),
                 rate_limit: 20,
+                wrapup: crate::config::WrapUpConfig {
+                    font_path: None,
+                    logo_path: None,
+                    ffmpeg_path: "ffmpeg".into(),
+                    max_concurrent_renders: 2,
+                },
             },
         }
     }

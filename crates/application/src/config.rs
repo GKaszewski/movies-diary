@@ -3,6 +3,15 @@ pub struct AppConfig {
     pub allow_registration: bool,
     pub base_url: String,
     pub rate_limit: u64,
+    pub wrapup: WrapUpConfig,
+}
+
+#[derive(Clone)]
+pub struct WrapUpConfig {
+    pub font_path: Option<String>,
+    pub logo_path: Option<String>,
+    pub ffmpeg_path: String,
+    pub max_concurrent_renders: usize,
 }
 
 impl AppConfig {
@@ -20,6 +29,21 @@ impl AppConfig {
             allow_registration,
             base_url,
             rate_limit,
+            wrapup: WrapUpConfig::from_env(),
+        }
+    }
+}
+
+impl WrapUpConfig {
+    pub fn from_env() -> Self {
+        Self {
+            font_path: std::env::var("WRAPUP_FONT_PATH").ok(),
+            logo_path: std::env::var("WRAPUP_LOGO_PATH").ok(),
+            ffmpeg_path: std::env::var("FFMPEG_PATH").unwrap_or_else(|_| "ffmpeg".to_string()),
+            max_concurrent_renders: std::env::var("WRAPUP_MAX_CONCURRENT")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(2),
         }
     }
 }

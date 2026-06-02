@@ -39,13 +39,14 @@ pub async fn execute(
             // Optionally render video (non-fatal)
             if let Some(ref renderer) = ctx.services.video_renderer {
                 let poster_images = resolve_poster_images(ctx, &report).await;
+                let wc = &ctx.config.wrapup;
                 let config = VideoRenderConfig {
                     slide_duration_secs: 4,
                     transition_duration_secs: 0.8,
                     resolution: (1080, 1920),
-                    ffmpeg_path: "ffmpeg".to_string(),
-                    font_path: None,
-                    logo_path: None,
+                    ffmpeg_path: wc.ffmpeg_path.clone(),
+                    font_path: wc.font_path.clone(),
+                    logo_path: wc.logo_path.clone(),
                 };
                 match renderer.render(&report, poster_images, &config).await {
                     Ok(video_bytes) => {

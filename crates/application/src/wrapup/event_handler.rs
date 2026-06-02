@@ -1,17 +1,25 @@
+use std::sync::Arc;
+
 use async_trait::async_trait;
 use domain::errors::DomainError;
 use domain::events::DomainEvent;
 use domain::ports::EventHandler;
+use tokio::sync::Semaphore;
 
 use crate::context::AppContext;
 
 pub struct WrapUpEventHandler {
     ctx: AppContext,
+    semaphore: Arc<Semaphore>,
 }
 
 impl WrapUpEventHandler {
     pub fn new(ctx: AppContext) -> Self {
-        Self { ctx }
+        let max = ctx.config.wrapup.max_concurrent_renders;
+        Self {
+            ctx,
+            semaphore: Arc::new(Semaphore::new(max)),
+        }
     }
 }
 
@@ -25,6 +33,9 @@ impl EventHandler for WrapUpEventHandler {
                 start_date,
                 end_date,
             } => {
+                let _permit = self.semaphore.acquire().await.map_err(|_| {
+                    DomainError::InfrastructureError("render semaphore closed".into())
+                })?;
                 super::handle_requested::execute(
                     &self.ctx,
                     wrapup_id.clone(),
