@@ -24,11 +24,11 @@ use crate::{
         ImportSessionRepository, MetadataClient, MetadataSearchCriteria, MovieProfileRepository,
         MovieRepository, PasswordHasher, PersonCommand, PersonQuery, PosterFetcherClient,
         ReviewRepository, SearchCommand, SearchPort, StatsRepository, UserProfileFieldsRepository,
-        UserRepository, WatchlistRepository,
+        UserRepository, WatchlistRepository, WrapUpRepository,
     },
     value_objects::{
         Email, ExternalMetadataId, ImportProfileId, ImportSessionId, MovieId, MovieTitle,
-        PasswordHash, PosterUrl, ReleaseYear, ReviewId, UserId, Username,
+        PasswordHash, PosterUrl, ReleaseYear, ReviewId, UserId, Username, WrapUpId,
     },
 };
 
@@ -1048,5 +1048,145 @@ impl crate::ports::WrapUpStatsQuery for InMemoryWrapUpStatsQuery {
             .cloned()
             .collect();
         Ok(filtered)
+    }
+}
+
+// ── InMemoryWrapUpRepository ────────────────────────────────────────────────
+
+pub struct InMemoryWrapUpRepository {
+    pub store: Mutex<Vec<crate::models::wrapup::WrapUpRecord>>,
+}
+
+impl InMemoryWrapUpRepository {
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self {
+            store: Mutex::new(Vec::new()),
+        })
+    }
+}
+
+#[async_trait]
+impl WrapUpRepository for InMemoryWrapUpRepository {
+    async fn create(
+        &self,
+        record: &crate::models::wrapup::WrapUpRecord,
+    ) -> Result<(), DomainError> {
+        self.store.lock().unwrap().push(record.clone());
+        Ok(())
+    }
+
+    async fn update_status(
+        &self,
+        id: &WrapUpId,
+        status: &crate::models::wrapup::WrapUpStatus,
+        error: Option<&str>,
+    ) -> Result<(), DomainError> {
+        let mut store = self.store.lock().unwrap();
+        if let Some(rec) = store.iter_mut().find(|r| r.id == *id) {
+            rec.status = status.clone();
+            rec.error_message = error.map(|s| s.to_string());
+            Ok(())
+        } else {
+            Err(DomainError::NotFound("wrapup record".into()))
+        }
+    }
+
+    async fn set_complete(&self, id: &WrapUpId, report_json: &str) -> Result<(), DomainError> {
+        let mut store = self.store.lock().unwrap();
+        if let Some(rec) = store.iter_mut().find(|r| r.id == *id) {
+            rec.status = crate::models::wrapup::WrapUpStatus::Ready;
+            rec.report_json = Some(report_json.to_string());
+            rec.completed_at = Some(chrono::Utc::now().naive_utc());
+            Ok(())
+        } else {
+            Err(DomainError::NotFound("wrapup record".into()))
+        }
+    }
+
+    async fn get_by_id(
+        &self,
+        id: &WrapUpId,
+    ) -> Result<Option<crate::models::wrapup::WrapUpRecord>, DomainError> {
+        let store = self.store.lock().unwrap();
+        Ok(store.iter().find(|r| r.id == *id).cloned())
+    }
+
+    async fn list_for_user(
+        &self,
+        user_id: Uuid,
+    ) -> Result<Vec<crate::models::wrapup::WrapUpRecord>, DomainError> {
+        let store = self.store.lock().unwrap();
+        Ok(store
+            .iter()
+            .filter(|r| r.user_id == Some(user_id))
+            .cloned()
+            .collect())
+    }
+
+    async fn list_global(
+        &self,
+    ) -> Result<Vec<crate::models::wrapup::WrapUpRecord>, DomainError> {
+        let store = self.store.lock().unwrap();
+        Ok(store.iter().filter(|r| r.user_id.is_none()).cloned().collect())
+    }
+
+    async fn find_existing(
+        &self,
+        user_id: Option<Uuid>,
+        start: chrono::NaiveDate,
+        end: chrono::NaiveDate,
+    ) -> Result<Option<crate::models::wrapup::WrapUpRecord>, DomainError> {
+        let store = self.store.lock().unwrap();
+        Ok(store
+            .iter()
+            .find(|r| r.user_id == user_id && r.start_date == start && r.end_date == end)
+            .cloned())
+    }
+}
+
+// ── PanicWrapUpRepository ──────────────────────────────────────────────────
+
+pub struct PanicWrapUpRepository;
+
+#[async_trait]
+impl WrapUpRepository for PanicWrapUpRepository {
+    async fn create(&self, _: &crate::models::wrapup::WrapUpRecord) -> Result<(), DomainError> {
+        panic!("PanicWrapUpRepository called")
+    }
+    async fn update_status(
+        &self,
+        _: &WrapUpId,
+        _: &crate::models::wrapup::WrapUpStatus,
+        _: Option<&str>,
+    ) -> Result<(), DomainError> {
+        panic!("PanicWrapUpRepository called")
+    }
+    async fn set_complete(&self, _: &WrapUpId, _: &str) -> Result<(), DomainError> {
+        panic!("PanicWrapUpRepository called")
+    }
+    async fn get_by_id(
+        &self,
+        _: &WrapUpId,
+    ) -> Result<Option<crate::models::wrapup::WrapUpRecord>, DomainError> {
+        panic!("PanicWrapUpRepository called")
+    }
+    async fn list_for_user(
+        &self,
+        _: Uuid,
+    ) -> Result<Vec<crate::models::wrapup::WrapUpRecord>, DomainError> {
+        panic!("PanicWrapUpRepository called")
+    }
+    async fn list_global(
+        &self,
+    ) -> Result<Vec<crate::models::wrapup::WrapUpRecord>, DomainError> {
+        panic!("PanicWrapUpRepository called")
+    }
+    async fn find_existing(
+        &self,
+        _: Option<Uuid>,
+        _: chrono::NaiveDate,
+        _: chrono::NaiveDate,
+    ) -> Result<Option<crate::models::wrapup::WrapUpRecord>, DomainError> {
+        panic!("PanicWrapUpRepository called")
     }
 }

@@ -28,6 +28,7 @@ uuid_id!(ImportProfileId);
 uuid_id!(WatchlistEntryId);
 uuid_id!(WatchEventId);
 uuid_id!(WebhookTokenId);
+uuid_id!(WrapUpId);
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ExternalMetadataId(String);

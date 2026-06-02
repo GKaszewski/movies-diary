@@ -1,5 +1,7 @@
-use chrono::NaiveDate;
+use chrono::{NaiveDate, NaiveDateTime};
 use uuid::Uuid;
+
+use crate::value_objects::WrapUpId;
 
 #[derive(Clone, Debug)]
 pub struct DateRange {
@@ -116,4 +118,25 @@ pub struct WrapUpReport {
     // Asset references for renderers
     pub poster_paths: Vec<String>,
     pub top_cast_profile_paths: Vec<String>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum WrapUpStatus {
+    Pending,
+    Generating,
+    Ready,
+    Failed,
+}
+
+#[derive(Clone, Debug)]
+pub struct WrapUpRecord {
+    pub id: WrapUpId,
+    pub user_id: Option<Uuid>,
+    pub start_date: NaiveDate,
+    pub end_date: NaiveDate,
+    pub status: WrapUpStatus,
+    pub report_json: Option<String>,
+    pub error_message: Option<String>,
+    pub created_at: NaiveDateTime,
+    pub completed_at: Option<NaiveDateTime>,
 }

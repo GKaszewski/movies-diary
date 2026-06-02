@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
 use uuid::Uuid;
 
 use crate::{
@@ -13,12 +13,12 @@ use crate::{
         ReviewHistory, SearchQuery, SearchResults, User, UserStats, UserSummary, UserTrends,
         WatchEvent, WatchEventStatus, WatchlistEntry, WatchlistWithMovie, WebhookToken,
         collections::{self, PageParams, Paginated},
-        wrapup::{DateRange, WrapUpScope},
+        wrapup::{DateRange, WrapUpRecord, WrapUpScope, WrapUpStatus},
     },
     value_objects::{
         Email, ExternalMetadataId, ImportProfileId, ImportSessionId, MovieId, MovieTitle,
         PasswordHash, PosterUrl, ReleaseYear, ReviewId, UserId, Username, WatchEventId,
-        WebhookTokenId,
+        WebhookTokenId, WrapUpId,
     },
 };
 
@@ -469,6 +469,27 @@ pub trait WebhookTokenRepository: Send + Sync {
     async fn list_by_user(&self, user_id: &UserId) -> Result<Vec<WebhookToken>, DomainError>;
     async fn delete(&self, id: &WebhookTokenId, user_id: &UserId) -> Result<(), DomainError>;
     async fn touch_last_used(&self, id: &WebhookTokenId) -> Result<(), DomainError>;
+}
+
+#[async_trait]
+pub trait WrapUpRepository: Send + Sync {
+    async fn create(&self, record: &WrapUpRecord) -> Result<(), DomainError>;
+    async fn update_status(
+        &self,
+        id: &WrapUpId,
+        status: &WrapUpStatus,
+        error: Option<&str>,
+    ) -> Result<(), DomainError>;
+    async fn set_complete(&self, id: &WrapUpId, report_json: &str) -> Result<(), DomainError>;
+    async fn get_by_id(&self, id: &WrapUpId) -> Result<Option<WrapUpRecord>, DomainError>;
+    async fn list_for_user(&self, user_id: Uuid) -> Result<Vec<WrapUpRecord>, DomainError>;
+    async fn list_global(&self) -> Result<Vec<WrapUpRecord>, DomainError>;
+    async fn find_existing(
+        &self,
+        user_id: Option<Uuid>,
+        start: NaiveDate,
+        end: NaiveDate,
+    ) -> Result<Option<WrapUpRecord>, DomainError>;
 }
 
 // ── Wrap-up / Year-in-Review ─────────────────────────────────────────────────
