@@ -5,6 +5,7 @@ use uuid::Uuid;
 use crate::{
     errors::DomainError,
     events::{DomainEvent, EventEnvelope},
+    models::wrapup::WrapUpReport,
     models::{
         AnnotatedRow, DiaryEntry, DiaryFilter, EntityType, ExportFormat, ExternalPersonId,
         FeedEntry, FieldMapping, FileFormat, ImportError, ImportProfile, ImportSession,
@@ -520,4 +521,23 @@ pub trait WrapUpStatsQuery: Send + Sync {
         scope: &WrapUpScope,
         range: &DateRange,
     ) -> Result<Vec<WrapUpMovieRow>, DomainError>;
+}
+
+// ── Video renderer ──────────────────────────────────────────────────────────
+
+pub struct VideoRenderConfig {
+    pub slide_duration_secs: u32,
+    pub transition_duration_secs: f32,
+    pub resolution: (u32, u32),
+    pub ffmpeg_path: String,
+}
+
+#[async_trait]
+pub trait WrapUpVideoRenderer: Send + Sync {
+    async fn render(
+        &self,
+        report: &WrapUpReport,
+        poster_images: Vec<(String, Vec<u8>)>,
+        config: &VideoRenderConfig,
+    ) -> Result<Vec<u8>, DomainError>;
 }
