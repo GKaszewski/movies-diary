@@ -8,8 +8,8 @@ use domain::{
     events::DomainEvent,
     models::{CastMember, CrewMember, Genre, Keyword, MovieProfile},
     ports::{
-        EventHandler, ObjectStorage, MovieEnrichmentClient, MovieProfileRepository, MovieRepository,
-        PersonCommand, SearchCommand,
+        EventHandler, MovieEnrichmentClient, MovieProfileRepository, MovieRepository,
+        ObjectStorage, PersonCommand, SearchCommand,
     },
     value_objects::MovieId,
 };

@@ -47,7 +47,9 @@ pub async fn execute(
 
             if let Some(ref renderer) = ctx.services.video_renderer {
                 let asset_storage = WrapUpStorage::new(ctx.services.object_storage.clone());
-                let poster_images = asset_storage.resolve_poster_images(&report.poster_paths).await;
+                let poster_images = asset_storage
+                    .resolve_poster_images(&report.poster_paths)
+                    .await;
                 let cast_images = asset_storage
                     .resolve_cast_images(&report.top_cast_profile_paths)
                     .await;

@@ -18,8 +18,8 @@ use domain::{
         SearchQuery, SearchResults, User,
     },
     ports::{
-        AuthService, EventPublisher, GeneratedToken, ObjectStorage, MetadataClient,
-        MetadataSearchCriteria, PasswordHasher, PersonCommand, PersonQuery, PosterFetcherClient,
+        AuthService, EventPublisher, GeneratedToken, MetadataClient, MetadataSearchCriteria,
+        ObjectStorage, PasswordHasher, PersonCommand, PersonQuery, PosterFetcherClient,
         SearchCommand, SearchPort, UserRepository,
     },
     value_objects::{Email, ExternalMetadataId, PasswordHash, PosterUrl, UserId},

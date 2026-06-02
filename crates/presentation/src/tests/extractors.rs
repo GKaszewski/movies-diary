@@ -19,10 +19,10 @@ use domain::{
         collections::{PageParams, Paginated},
     },
     ports::{
-        AuthService, DiaryRepository, EventPublisher, GeneratedToken, ObjectStorage, MetadataClient,
-        MovieRepository, PasswordHasher, PersonCommand, PersonQuery, PosterFetcherClient,
-        ReviewRepository, SearchCommand, SearchPort, StatsRepository, UserRepository,
-        WatchlistRepository,
+        AuthService, DiaryRepository, EventPublisher, GeneratedToken, MetadataClient,
+        MovieRepository, ObjectStorage, PasswordHasher, PersonCommand, PersonQuery,
+        PosterFetcherClient, ReviewRepository, SearchCommand, SearchPort, StatsRepository,
+        UserRepository, WatchlistRepository,
     },
     value_objects::{
         Email, ExternalMetadataId, MovieId, MovieTitle, PasswordHash, PosterUrl, ReleaseYear,

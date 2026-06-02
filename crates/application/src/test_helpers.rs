@@ -6,12 +6,12 @@ use domain::testing::{
 };
 use domain::{
     ports::{
-        AuthService, DiaryExporter, DiaryRepository, DocumentParser, EventPublisher, ObjectStorage,
+        AuthService, DiaryExporter, DiaryRepository, DocumentParser, EventPublisher,
         ImportProfileRepository, ImportSessionRepository, MetadataClient, MovieProfileRepository,
-        MovieRepository, PasswordHasher, PersonCommand, PersonQuery, PosterFetcherClient,
-        ReviewRepository, SearchCommand, SearchPort, StatsRepository, UserProfileFieldsRepository,
-        UserRepository, WatchEventRepository, WatchlistRepository, WebhookTokenRepository,
-        WrapUpRepository, WrapUpStatsQuery,
+        MovieRepository, ObjectStorage, PasswordHasher, PersonCommand, PersonQuery,
+        PosterFetcherClient, ReviewRepository, SearchCommand, SearchPort, StatsRepository,
+        UserProfileFieldsRepository, UserRepository, WatchEventRepository, WatchlistRepository,
+        WebhookTokenRepository, WrapUpRepository, WrapUpStatsQuery,
     },
     testing::{
         FakeAuthService, FakeMetadataClient, FakePasswordHasher, InMemoryMovieRepository,

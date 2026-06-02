@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use domain::ports::{
-    AuthService, ObjectStorage, LocalApContentQuery, MetadataClient, PasswordHasher,
+    AuthService, LocalApContentQuery, MetadataClient, ObjectStorage, PasswordHasher,
     PosterFetcherClient, UserProfileFieldsRepository, WatchEventRepository, WebhookTokenRepository,
 };
 

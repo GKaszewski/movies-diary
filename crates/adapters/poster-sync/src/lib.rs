@@ -5,7 +5,7 @@ use domain::{
     errors::DomainError,
     events::DomainEvent,
     ports::{
-        EventHandler, EventPublisher, ObjectStorage, MetadataClient, MovieRepository,
+        EventHandler, EventPublisher, MetadataClient, MovieRepository, ObjectStorage,
         PosterFetcherClient,
     },
     value_objects::{ExternalMetadataId, MovieId, PosterPath},

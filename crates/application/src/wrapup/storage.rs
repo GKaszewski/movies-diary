@@ -27,10 +27,7 @@ impl WrapUpStorage {
         format!("cast{profile_path}")
     }
 
-    pub async fn resolve_cast_images(
-        &self,
-        profile_paths: &[String],
-    ) -> Vec<(String, Vec<u8>)> {
+    pub async fn resolve_cast_images(&self, profile_paths: &[String]) -> Vec<(String, Vec<u8>)> {
         let mut images = Vec::new();
         for path in profile_paths.iter().take(20) {
             let key = Self::cast_image_key(path);
@@ -39,14 +36,15 @@ impl WrapUpStorage {
                 Err(e) => tracing::debug!("cast fetch skipped for {key}: {e}"),
             }
         }
-        tracing::info!("resolved {}/{} cast images", images.len(), profile_paths.len());
+        tracing::info!(
+            "resolved {}/{} cast images",
+            images.len(),
+            profile_paths.len()
+        );
         images
     }
 
-    pub async fn resolve_poster_images(
-        &self,
-        paths: &[String],
-    ) -> Vec<(String, Vec<u8>)> {
+    pub async fn resolve_poster_images(&self, paths: &[String]) -> Vec<(String, Vec<u8>)> {
         let mut images = Vec::new();
         for path in paths.iter().take(20) {
             match self.inner.get(path).await {

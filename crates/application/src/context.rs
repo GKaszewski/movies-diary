@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
 use domain::ports::{
-    AuthService, DiaryExporter, DiaryRepository, DocumentParser, EventPublisher, ObjectStorage,
+    AuthService, DiaryExporter, DiaryRepository, DocumentParser, EventPublisher,
     ImportProfileRepository, ImportSessionRepository, MetadataClient, MovieProfileRepository,
-    MovieRepository, PasswordHasher, PersonCommand, PersonQuery, PosterFetcherClient,
-    RemoteWatchlistRepository, ReviewRepository, SearchCommand, SearchPort, SocialQueryPort,
-    StatsRepository, UserProfileFieldsRepository, UserRepository, WatchEventRepository,
-    WatchlistRepository, WebhookTokenRepository, WrapUpRepository, WrapUpStatsQuery,
-    WrapUpVideoRenderer,
+    MovieRepository, ObjectStorage, PasswordHasher, PersonCommand, PersonQuery,
+    PosterFetcherClient, RemoteWatchlistRepository, ReviewRepository, SearchCommand, SearchPort,
+    SocialQueryPort, StatsRepository, UserProfileFieldsRepository, UserRepository,
+    WatchEventRepository, WatchlistRepository, WebhookTokenRepository, WrapUpRepository,
+    WrapUpStatsQuery, WrapUpVideoRenderer,
 };
 
 use crate::config::AppConfig;

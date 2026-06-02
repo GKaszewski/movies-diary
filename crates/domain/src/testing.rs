@@ -20,9 +20,9 @@ use crate::{
     },
     ports::{
         AuthService, DiaryExporter, DiaryRepository, DocumentParser, EventPublisher, FeedSortBy,
-        FollowingFilter, GeneratedToken, ObjectStorage, ImportProfileRepository,
-        ImportSessionRepository, MetadataClient, MetadataSearchCriteria, MovieProfileRepository,
-        MovieRepository, PasswordHasher, PersonCommand, PersonQuery, PosterFetcherClient,
+        FollowingFilter, GeneratedToken, ImportProfileRepository, ImportSessionRepository,
+        MetadataClient, MetadataSearchCriteria, MovieProfileRepository, MovieRepository,
+        ObjectStorage, PasswordHasher, PersonCommand, PersonQuery, PosterFetcherClient,
         ReviewRepository, SearchCommand, SearchPort, StatsRepository, UserProfileFieldsRepository,
         UserRepository, WatchlistRepository, WrapUpRepository,
     },
@@ -1099,7 +1099,11 @@ impl WrapUpRepository for InMemoryWrapUpRepository {
         }
     }
 
-    async fn set_complete(&self, id: &WrapUpId, report: &crate::models::wrapup::WrapUpReport) -> Result<(), DomainError> {
+    async fn set_complete(
+        &self,
+        id: &WrapUpId,
+        report: &crate::models::wrapup::WrapUpReport,
+    ) -> Result<(), DomainError> {
         let mut store = self.store.lock().unwrap();
         if let Some(rec) = store.iter_mut().find(|r| r.id == *id) {
             rec.status = crate::models::wrapup::WrapUpStatus::Ready;
@@ -1189,7 +1193,11 @@ impl WrapUpRepository for PanicWrapUpRepository {
     ) -> Result<(), DomainError> {
         panic!("PanicWrapUpRepository called")
     }
-    async fn set_complete(&self, _: &WrapUpId, _: &crate::models::wrapup::WrapUpReport) -> Result<(), DomainError> {
+    async fn set_complete(
+        &self,
+        _: &WrapUpId,
+        _: &crate::models::wrapup::WrapUpReport,
+    ) -> Result<(), DomainError> {
         panic!("PanicWrapUpRepository called")
     }
     async fn get_by_id(
