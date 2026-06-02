@@ -39,7 +39,7 @@ pub async fn execute(ctx: &AppContext, cmd: RequestWrapUpCommand) -> Result<Wrap
         start_date: date_range.start(),
         end_date: date_range.end(),
         status: WrapUpStatus::Pending,
-        report_json: None,
+        report: None,
         error_message: None,
         created_at: Utc::now().naive_utc(),
         completed_at: None,

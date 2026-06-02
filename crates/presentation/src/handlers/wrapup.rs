@@ -134,8 +134,9 @@ pub async fn get_report(
     Path(id): Path<Uuid>,
 ) -> impl IntoResponse {
     match get_wrapup::execute(&state.app_ctx, WrapUpId::from_uuid(id)).await {
-        Ok(Some(record)) if record.status == WrapUpStatus::Ready => match record.report_json {
-            Some(json) => {
+        Ok(Some(record)) if record.status == WrapUpStatus::Ready => match record.report {
+            Some(ref report) => {
+                let json = serde_json::to_string(report).unwrap_or_default();
                 (StatusCode::OK, [("content-type", "application/json")], json).into_response()
             }
             None => StatusCode::NOT_FOUND.into_response(),
@@ -295,11 +296,8 @@ pub async fn get_user_wrapup_html(
         _ => return StatusCode::NOT_FOUND.into_response(),
     };
 
-    let report: WrapUpReport = match &record.report_json {
-        Some(json) => match serde_json::from_str(json) {
-            Ok(r) => r,
-            Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-        },
+    let report = match record.report {
+        Some(r) => r,
         None => return StatusCode::NOT_FOUND.into_response(),
     };
 
@@ -334,11 +332,8 @@ pub async fn get_global_wrapup_html(
         _ => return StatusCode::NOT_FOUND.into_response(),
     };
 
-    let report: WrapUpReport = match &record.report_json {
-        Some(json) => match serde_json::from_str(json) {
-            Ok(r) => r,
-            Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-        },
+    let report = match record.report {
+        Some(r) => r,
         None => return StatusCode::NOT_FOUND.into_response(),
     };
 

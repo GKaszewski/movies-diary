@@ -485,7 +485,7 @@ pub trait WrapUpRepository: Send + Sync {
         status: &WrapUpStatus,
         error: Option<&str>,
     ) -> Result<(), DomainError>;
-    async fn set_complete(&self, id: &WrapUpId, report_json: &str) -> Result<(), DomainError>;
+    async fn set_complete(&self, id: &WrapUpId, report: &WrapUpReport) -> Result<(), DomainError>;
     async fn get_by_id(&self, id: &WrapUpId) -> Result<Option<WrapUpRecord>, DomainError>;
     async fn list_for_user(&self, user_id: Uuid) -> Result<Vec<WrapUpRecord>, DomainError>;
     async fn list_global(&self) -> Result<Vec<WrapUpRecord>, DomainError>;

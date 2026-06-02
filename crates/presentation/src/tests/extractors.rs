@@ -602,7 +602,7 @@ impl domain::ports::WrapUpRepository for Panic {
     async fn set_complete(
         &self,
         _: &domain::value_objects::WrapUpId,
-        _: &str,
+        _: &domain::models::wrapup::WrapUpReport,
     ) -> Result<(), DomainError> {
         panic!()
     }

@@ -40,11 +40,9 @@ pub async fn execute(
 
     match compute::execute(ctx, query).await {
         Ok(report) => {
-            let json = serde_json::to_string(&report)
-                .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
             ctx.repos
                 .wrapup_repo
-                .set_complete(&wrapup_id, &json)
+                .set_complete(&wrapup_id, &report)
                 .await?;
 
             if let Some(ref renderer) = ctx.services.video_renderer {

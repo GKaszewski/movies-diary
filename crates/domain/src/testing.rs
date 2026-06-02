@@ -1099,11 +1099,11 @@ impl WrapUpRepository for InMemoryWrapUpRepository {
         }
     }
 
-    async fn set_complete(&self, id: &WrapUpId, report_json: &str) -> Result<(), DomainError> {
+    async fn set_complete(&self, id: &WrapUpId, report: &crate::models::wrapup::WrapUpReport) -> Result<(), DomainError> {
         let mut store = self.store.lock().unwrap();
         if let Some(rec) = store.iter_mut().find(|r| r.id == *id) {
             rec.status = crate::models::wrapup::WrapUpStatus::Ready;
-            rec.report_json = Some(report_json.to_string());
+            rec.report = Some(report.clone());
             rec.completed_at = Some(chrono::Utc::now().naive_utc());
             Ok(())
         } else {
@@ -1189,7 +1189,7 @@ impl WrapUpRepository for PanicWrapUpRepository {
     ) -> Result<(), DomainError> {
         panic!("PanicWrapUpRepository called")
     }
-    async fn set_complete(&self, _: &WrapUpId, _: &str) -> Result<(), DomainError> {
+    async fn set_complete(&self, _: &WrapUpId, _: &crate::models::wrapup::WrapUpReport) -> Result<(), DomainError> {
         panic!("PanicWrapUpRepository called")
     }
     async fn get_by_id(

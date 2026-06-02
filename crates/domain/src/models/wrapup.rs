@@ -160,7 +160,7 @@ pub struct WrapUpRecord {
     pub start_date: NaiveDate,
     pub end_date: NaiveDate,
     pub status: WrapUpStatus,
-    pub report_json: Option<String>,
+    pub report: Option<WrapUpReport>,
     pub error_message: Option<String>,
     pub created_at: NaiveDateTime,
     pub completed_at: Option<NaiveDateTime>,

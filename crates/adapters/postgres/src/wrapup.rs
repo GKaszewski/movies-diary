@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use chrono::NaiveDate;
 use domain::{
     errors::DomainError,
-    models::wrapup::{DateRange, WrapUpRecord, WrapUpScope, WrapUpStatus},
+    models::wrapup::{DateRange, WrapUpRecord, WrapUpReport, WrapUpScope, WrapUpStatus},
     ports::{WrapUpMovieRow, WrapUpRepository, WrapUpStatsQuery},
     value_objects::WrapUpId,
 };
@@ -68,7 +68,7 @@ impl WrapUpRepository for PostgresWrapUpRepository {
         .bind(record.start_date)
         .bind(record.end_date)
         .bind(status)
-        .bind(&record.report_json)
+        .bind(record.report.as_ref().and_then(|r| serde_json::to_string(r).ok()))
         .bind(&record.error_message)
         .bind(record.created_at)
         .bind(record.completed_at)
@@ -99,15 +99,17 @@ impl WrapUpRepository for PostgresWrapUpRepository {
         Ok(())
     }
 
-    async fn set_complete(&self, id: &WrapUpId, report_json: &str) -> Result<(), DomainError> {
+    async fn set_complete(&self, id: &WrapUpId, report: &WrapUpReport) -> Result<(), DomainError> {
         let id_str = id.value().to_string();
+        let json = serde_json::to_string(report)
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
 
         sqlx::query(
             "UPDATE wrap_up_records \
              SET status = 'ready', report_json = $1, completed_at = NOW() \
              WHERE id = $2",
         )
-        .bind(report_json)
+        .bind(&json)
         .bind(&id_str)
         .execute(&self.pool)
         .await
@@ -227,13 +229,15 @@ fn row_to_record(row: &sqlx::postgres::PgRow) -> Result<WrapUpRecord, DomainErro
 
     let user_id = user_id_str.as_deref().map(parse_uuid).transpose()?;
 
+    let report = report_json.and_then(|j| serde_json::from_str(&j).ok());
+
     Ok(WrapUpRecord {
         id: WrapUpId::from_uuid(parse_uuid(&id_str)?),
         user_id,
         start_date,
         end_date,
         status: parse_status(&status_str)?,
-        report_json,
+        report,
         error_message,
         created_at: parse_datetime(&created_at_str)?,
         completed_at: completed_at_str
