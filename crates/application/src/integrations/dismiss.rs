@@ -27,7 +27,7 @@ pub async fn execute(ctx: &AppContext, cmd: DismissWatchEventsCommand) -> Result
     }
     for event in &events {
         if event.user_id() != &user_id {
-            return Err(DomainError::Unauthorized("not your watch event".into()));
+            return Err(DomainError::Forbidden("not your watch event".into()));
         }
     }
 

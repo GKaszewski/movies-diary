@@ -301,12 +301,7 @@ pub async fn post_delete_review(
                 .unwrap_or_else(|| "/".to_string());
             Redirect::to(&redirect_url).into_response()
         }
-        Err(DomainError::NotFound(_)) => StatusCode::NOT_FOUND.into_response(),
-        Err(DomainError::Unauthorized(_)) => StatusCode::FORBIDDEN.into_response(),
-        Err(e) => {
-            tracing::error!("delete_review html error: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR.into_response()
-        }
+        Err(e) => crate::errors::domain_error_response(e),
     }
 }
 
@@ -341,11 +336,7 @@ pub async fn get_export(
             bytes,
         )
             .into_response(),
-        Err(DomainError::Unauthorized(_)) => StatusCode::FORBIDDEN.into_response(),
-        Err(e) => {
-            tracing::error!("export error: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR.into_response()
-        }
+        Err(e) => crate::errors::domain_error_response(e),
     }
 }
 
@@ -408,7 +399,7 @@ pub async fn get_activity_feed(
             })
             .into_response()
         }
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+        Err(e) => crate::errors::domain_error_response(e),
     }
 }
 
@@ -445,7 +436,7 @@ pub async fn get_users_list(
             })
             .into_response()
         }
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+        Err(e) => crate::errors::domain_error_response(e),
     }
 }
 
@@ -521,8 +512,8 @@ pub async fn get_user_profile(
         .await
     {
         Ok(Some(u)) => u,
-        Ok(None) => return (StatusCode::NOT_FOUND, "User not found").into_response(),
-        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+        Err(e) => return crate::errors::domain_error_response(e),
     };
 
     let display_name = profile_user.username().value();
@@ -650,7 +641,7 @@ pub async fn get_user_profile(
             })
             .into_response()
         }
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+        Err(e) => crate::errors::domain_error_response(e),
     }
 }
 
@@ -993,12 +984,7 @@ pub async fn get_movie_detail(
     )
     .await
     {
-        Err(DomainError::NotFound(_)) => StatusCode::NOT_FOUND.into_response(),
-        Err(DomainError::ValidationError(_)) => StatusCode::BAD_REQUEST.into_response(),
-        Err(e) => {
-            tracing::error!("movie detail error: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR.into_response()
-        }
+        Err(e) => crate::errors::domain_error_response(e),
         Ok(result) => {
             let histogram_max = result
                 .stats
@@ -1062,10 +1048,7 @@ pub async fn get_watchlist_page(
     .await
     {
         Ok(r) => r,
-        Err(e) => {
-            tracing::error!("watchlist error: {:?}", e);
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-        }
+        Err(e) => return crate::errors::domain_error_response(e),
     };
 
     render_page(WatchlistTemplate {
@@ -1151,10 +1134,7 @@ pub async fn post_watchlist_add(
             let url = format!("{}{}error={}", redirect_base, sep, encode_error(&msg));
             Redirect::to(&url).into_response()
         }
-        Err(e) => {
-            tracing::error!("watchlist add error: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR.into_response()
-        }
+        Err(e) => crate::errors::domain_error_response(e),
     }
 }
 
@@ -1184,10 +1164,7 @@ pub async fn post_watchlist_remove(
                 .unwrap_or_else(|| "/".to_string());
             Redirect::to(&redirect_url).into_response()
         }
-        Err(e) => {
-            tracing::error!("watchlist remove error: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR.into_response()
-        }
+        Err(e) => crate::errors::domain_error_response(e),
     }
 }
 
@@ -1209,10 +1186,7 @@ pub async fn get_profile_settings(
     let user = match state.app_ctx.repos.user.find_by_id(&user_id).await {
         Ok(Some(u)) => u,
         Ok(None) => return StatusCode::NOT_FOUND.into_response(),
-        Err(e) => {
-            tracing::error!("get_profile_settings user lookup: {:?}", e);
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-        }
+        Err(e) => return crate::errors::domain_error_response(e),
     };
 
     let base_url = &state.app_ctx.config.base_url;

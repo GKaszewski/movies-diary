@@ -25,7 +25,7 @@ pub async fn execute(ctx: &AppContext, cmd: ConfirmWatchEventsCommand) -> Result
             .ok_or_else(|| DomainError::NotFound(format!("WatchEvent {}", c.watch_event_id)))?;
 
         if event.user_id() != &user_id {
-            return Err(DomainError::Unauthorized("not your watch event".into()));
+            return Err(DomainError::Forbidden("not your watch event".into()));
         }
 
         let input = if let Some(movie_id) = event.movie_id() {

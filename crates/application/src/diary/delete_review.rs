@@ -17,7 +17,7 @@ pub async fn execute(ctx: &AppContext, cmd: DeleteReviewCommand) -> Result<(), D
         .ok_or_else(|| DomainError::NotFound(format!("review {}", cmd.review_id)))?;
 
     if review.user_id() != &requesting_user_id {
-        return Err(DomainError::Unauthorized("not your review".into()));
+        return Err(DomainError::Forbidden("not your review".into()));
     }
 
     let movie_id = review.movie_id().clone();

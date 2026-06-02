@@ -37,7 +37,6 @@ use application::{
     },
 };
 use domain::{
-    errors::DomainError,
     models::{ExportFormat, PersonId, collections::PageParams},
     services::review_history::Trend,
     value_objects::UserId,
@@ -257,20 +256,13 @@ pub async fn delete_review(
     State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
     Path(review_id): Path<Uuid>,
-) -> impl IntoResponse {
+) -> Result<StatusCode, ApiError> {
     let cmd = DeleteReviewCommand {
         review_id,
         requesting_user_id: user_id.value(),
     };
-    match delete_review::execute(&state.app_ctx, cmd).await {
-        Ok(()) => StatusCode::NO_CONTENT.into_response(),
-        Err(DomainError::NotFound(_)) => StatusCode::NOT_FOUND.into_response(),
-        Err(DomainError::Unauthorized(_)) => StatusCode::FORBIDDEN.into_response(),
-        Err(e) => {
-            tracing::error!("delete_review error: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR.into_response()
-        }
-    }
+    delete_review::execute(&state.app_ctx, cmd).await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 #[utoipa::path(
@@ -395,10 +387,7 @@ pub async fn get_movie_profile(
         })
         .into_response(),
         Ok(None) => StatusCode::NOT_FOUND.into_response(),
-        Err(e) => {
-            tracing::error!("get_movie_profile: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR.into_response()
-        }
+        Err(e) => crate::errors::domain_error_response(e),
     }
 }
 
@@ -414,27 +403,19 @@ pub async fn get_movie_profile(
 pub async fn get_profile(
     State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
-) -> impl IntoResponse {
-    match application::users::get_current_profile::execute(
+) -> Result<Json<ProfileResponse>, ApiError> {
+    let profile = application::users::get_current_profile::execute(
         &state.app_ctx,
         application::users::queries::GetCurrentProfileQuery {
             user_id: user_id.value(),
         },
     )
-    .await
-    {
-        Ok(profile) => Json(ProfileResponse {
-            username: profile.username,
-            bio: profile.bio,
-            avatar_url: profile.avatar_url,
-        })
-        .into_response(),
-        Err(DomainError::NotFound(_)) => StatusCode::NOT_FOUND.into_response(),
-        Err(e) => {
-            tracing::error!("get_profile error: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR.into_response()
-        }
-    }
+    .await?;
+    Ok(Json(ProfileResponse {
+        username: profile.username,
+        bio: profile.bio,
+        avatar_url: profile.avatar_url,
+    }))
 }
 
 #[utoipa::path(
@@ -513,14 +494,7 @@ pub async fn update_profile_handler(
 
     match update_profile::execute(&state.app_ctx, cmd).await {
         Ok(()) => StatusCode::NO_CONTENT.into_response(),
-        Err(domain::errors::DomainError::ValidationError(msg)) => {
-            tracing::warn!("update_profile validation: {}", msg);
-            StatusCode::BAD_REQUEST.into_response()
-        }
-        Err(e) => {
-            tracing::error!("update_profile error: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR.into_response()
-        }
+        Err(e) => crate::errors::domain_error_response(e),
     }
 }
 
@@ -561,13 +535,7 @@ pub async fn update_profile_fields_handler(
 
     match update_profile_fields::execute(&state.app_ctx, cmd).await {
         Ok(()) => StatusCode::NO_CONTENT.into_response(),
-        Err(domain::errors::DomainError::ValidationError(msg)) => {
-            (StatusCode::BAD_REQUEST, msg).into_response()
-        }
-        Err(e) => {
-            tracing::error!("update_profile_fields error: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR.into_response()
-        }
+        Err(e) => crate::errors::domain_error_response(e),
     }
 }
 
@@ -1034,8 +1002,7 @@ pub async fn get_user_profile(
         Ok(Some(u)) => u,
         Ok(None) => return StatusCode::NOT_FOUND.into_response(),
         Err(e) => {
-            tracing::error!("user lookup: {:?}", e);
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            return crate::errors::domain_error_response(e);
         }
     };
 
@@ -1054,10 +1021,7 @@ pub async fn get_user_profile(
     .await
     {
         Ok(p) => p,
-        Err(e) => {
-            tracing::error!("profile: {:?}", e);
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-        }
+        Err(e) => return crate::errors::domain_error_response(e),
     };
 
     let entries = profile.entries.map(|p| DiaryResponse {
@@ -1236,10 +1200,7 @@ pub async fn get_search(
             },
         })
         .into_response(),
-        Err(e) => {
-            tracing::error!("search failed: {e}");
-            StatusCode::INTERNAL_SERVER_ERROR.into_response()
-        }
+        Err(e) => crate::errors::domain_error_response(e),
     }
 }
 
@@ -1266,10 +1227,7 @@ pub async fn get_person_handler(
         })
         .into_response(),
         Ok(None) => StatusCode::NOT_FOUND.into_response(),
-        Err(e) => {
-            tracing::error!("get_person failed: {e}");
-            StatusCode::INTERNAL_SERVER_ERROR.into_response()
-        }
+        Err(e) => crate::errors::domain_error_response(e),
     }
 }
 
@@ -1320,11 +1278,7 @@ pub async fn get_person_credits_handler(
                 .collect(),
         })
         .into_response(),
-        Err(DomainError::NotFound(_)) => StatusCode::NOT_FOUND.into_response(),
-        Err(e) => {
-            tracing::error!("get_person_credits failed: {e}");
-            StatusCode::INTERNAL_SERVER_ERROR.into_response()
-        }
+        Err(e) => crate::errors::domain_error_response(e),
     }
 }
 

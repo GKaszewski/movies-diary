@@ -128,12 +128,7 @@ async fn run_ingest(
 ) -> StatusCode {
     match ingest_watch_event::execute(&state.app_ctx, cmd, parser).await {
         Ok(()) => StatusCode::OK,
-        Err(domain::errors::DomainError::Unauthorized(_)) => StatusCode::UNAUTHORIZED,
-        Err(domain::errors::DomainError::ValidationError(_)) => StatusCode::BAD_REQUEST,
-        Err(e) => {
-            tracing::error!("webhook ingestion failed: {e:?}");
-            StatusCode::INTERNAL_SERVER_ERROR
-        }
+        Err(e) => crate::errors::domain_error_status(&e),
     }
 }
 
