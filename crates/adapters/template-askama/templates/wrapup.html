@@ -19,12 +19,13 @@
     {% endif %}
     <div class="wu-rating-bars">
       {% for i in 0..5 %}
+      {% let ri = 4 - i %}
       <div class="wu-rating-row">
-        <span class="wu-star-label">{{ i + 1 }}★</span>
+        <span class="wu-star-label">{{ ri + 1 }}★</span>
         <div class="wu-bar-track">
-          <div class="wu-bar" style="width: {{ rating_pcts[i] }}%"></div>
+          <div class="wu-bar" style="width: {{ rating_pcts[ri] }}%"></div>
         </div>
-        <span class="wu-bar-count">{{ report.rating_distribution[i] }}</span>
+        <span class="wu-bar-count">{{ report.rating_distribution[ri] }}</span>
       </div>
       {% endfor %}
     </div>
