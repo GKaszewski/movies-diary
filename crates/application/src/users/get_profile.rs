@@ -76,47 +76,40 @@ pub async fn execute(
 }
 
 async fn load_social_counts(
-    _ctx: &AppContext,
-    _user_id: uuid::Uuid,
-    _is_own_profile: bool,
+    ctx: &AppContext,
+    user_id: uuid::Uuid,
+    is_own_profile: bool,
 ) -> (usize, usize, Vec<PendingFollowerView>) {
-    #[cfg(not(feature = "federation"))]
-    {
-        (0, 0, vec![])
+    if !is_own_profile {
+        return (0, 0, vec![]);
     }
-    #[cfg(feature = "federation")]
-    {
-        if !_is_own_profile {
-            return (0, 0, vec![]);
-        }
-        let following = _ctx
-            .repos
-            .social_query
-            .count_following(_user_id)
-            .await
-            .unwrap_or(0);
-        let followers = _ctx
-            .repos
-            .social_query
-            .count_accepted_followers(_user_id)
-            .await
-            .unwrap_or(0);
-        let pending = _ctx
-            .repos
-            .social_query
-            .get_pending_followers(_user_id)
-            .await
-            .unwrap_or_default()
-            .into_iter()
-            .map(|p| PendingFollowerView {
-                url: p.url,
-                handle: p.handle,
-                display_name: p.display_name,
-                avatar_url: p.avatar_url,
-            })
-            .collect();
-        (following, followers, pending)
-    }
+    let following = ctx
+        .repos
+        .social_query
+        .count_following(user_id)
+        .await
+        .unwrap_or(0);
+    let followers = ctx
+        .repos
+        .social_query
+        .count_accepted_followers(user_id)
+        .await
+        .unwrap_or(0);
+    let pending = ctx
+        .repos
+        .social_query
+        .get_pending_followers(user_id)
+        .await
+        .unwrap_or_default()
+        .into_iter()
+        .map(|p| PendingFollowerView {
+            url: p.url,
+            handle: p.handle,
+            display_name: p.display_name,
+            avatar_url: p.avatar_url,
+        })
+        .collect();
+    (following, followers, pending)
 }
 
 fn feed_sort_to_direction(sort_by: FeedSortBy) -> SortDirection {

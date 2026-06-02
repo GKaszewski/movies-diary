@@ -86,8 +86,12 @@ async fn main() -> anyhow::Result<()> {
             search_command: db.search_command,
             #[cfg(feature = "federation")]
             remote_watchlist: fed_remote_watchlist_repo.clone(),
+            #[cfg(not(feature = "federation"))]
+            remote_watchlist: Arc::new(domain::testing::NoopRemoteWatchlistRepository),
             #[cfg(feature = "federation")]
             social_query: fed_social_query,
+            #[cfg(not(feature = "federation"))]
+            social_query: Arc::new(domain::testing::NoopSocialQueryPort),
         },
         services: Services {
             auth: auth_service,

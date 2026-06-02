@@ -800,6 +800,33 @@ impl crate::ports::RemoteWatchlistRepository for PanicRemoteWatchlistRepository 
     }
 }
 
+pub struct NoopRemoteWatchlistRepository;
+
+#[async_trait]
+impl crate::ports::RemoteWatchlistRepository for NoopRemoteWatchlistRepository {
+    async fn save(&self, _: crate::models::RemoteWatchlistEntry) -> Result<(), DomainError> {
+        Ok(())
+    }
+    async fn remove_by_ap_id(&self, _: &str, _: &str) -> Result<(), DomainError> {
+        Ok(())
+    }
+    async fn get_by_actor_url(
+        &self,
+        _: &str,
+    ) -> Result<Vec<crate::models::RemoteWatchlistEntry>, DomainError> {
+        Ok(vec![])
+    }
+    async fn remove_all_by_actor(&self, _: &str) -> Result<(), DomainError> {
+        Ok(())
+    }
+    async fn get_by_derived_uuid(
+        &self,
+        _: uuid::Uuid,
+    ) -> Result<Vec<crate::models::RemoteWatchlistEntry>, DomainError> {
+        Ok(vec![])
+    }
+}
+
 pub struct PanicProfileFieldsRepo;
 
 #[async_trait]

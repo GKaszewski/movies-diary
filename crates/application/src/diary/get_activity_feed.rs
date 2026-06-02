@@ -28,44 +28,39 @@ pub async fn execute(
 }
 
 async fn build_following_filter(
-    _ctx: &AppContext,
+    ctx: &AppContext,
     query: &GetActivityFeedQuery,
 ) -> Option<FollowingFilter> {
-    #[cfg(not(feature = "federation"))]
-    {
-        let _ = query;
+    if !query.filter_following {
         return None;
     }
-    #[cfg(feature = "federation")]
-    {
-        if !query.filter_following {
-            return None;
-        }
-        let viewer_id = match query.viewer_user_id {
-            Some(id) => id,
-            None => return None,
-        };
-        let urls = _ctx
-            .repos
-            .social_query
-            .get_accepted_following_urls(viewer_id)
-            .await
-            .unwrap_or_default();
-        let base_url = &_ctx.config.base_url;
-        let mut local_ids = vec![viewer_id];
-        let mut remote_urls = Vec::new();
-        for url in urls {
-            if let Some(suffix) = url.strip_prefix(&format!("{}/users/", base_url))
-                && let Ok(parsed_id) = uuid::Uuid::parse_str(suffix)
-            {
-                local_ids.push(parsed_id);
-                continue;
-            }
-            remote_urls.push(url);
-        }
-        Some(FollowingFilter {
-            local_user_ids: local_ids,
-            remote_actor_urls: remote_urls,
-        })
+    let viewer_id = query.viewer_user_id?;
+    let urls = ctx
+        .repos
+        .social_query
+        .get_accepted_following_urls(viewer_id)
+        .await
+        .unwrap_or_default();
+    if urls.is_empty() {
+        return Some(FollowingFilter {
+            local_user_ids: vec![viewer_id],
+            remote_actor_urls: vec![],
+        });
     }
+    let base_url = &ctx.config.base_url;
+    let mut local_ids = vec![viewer_id];
+    let mut remote_urls = Vec::new();
+    for url in urls {
+        if let Some(suffix) = url.strip_prefix(&format!("{}/users/", base_url))
+            && let Ok(parsed_id) = uuid::Uuid::parse_str(suffix)
+        {
+            local_ids.push(parsed_id);
+            continue;
+        }
+        remote_urls.push(url);
+    }
+    Some(FollowingFilter {
+        local_user_ids: local_ids,
+        remote_actor_urls: remote_urls,
+    })
 }

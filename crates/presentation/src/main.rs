@@ -187,8 +187,12 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
             profile_fields: db.profile_fields,
             #[cfg(feature = "federation")]
             remote_watchlist: remote_watchlist_repo,
+            #[cfg(not(feature = "federation"))]
+            remote_watchlist: Arc::new(domain::testing::NoopRemoteWatchlistRepository),
             #[cfg(feature = "federation")]
             social_query: social_query.clone(),
+            #[cfg(not(feature = "federation"))]
+            social_query: Arc::new(domain::testing::NoopSocialQueryPort),
         },
         services: Services {
             auth: auth_service,

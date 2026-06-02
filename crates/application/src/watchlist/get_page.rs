@@ -55,25 +55,14 @@ pub async fn execute(
     }
 }
 
-#[cfg(not(feature = "federation"))]
-async fn load_remote_watchlist(
-    _ctx: &AppContext,
-    _user_id: uuid::Uuid,
-) -> Result<WatchlistPageResult, DomainError> {
-    Ok(WatchlistPageResult {
-        display_entries: vec![],
-        has_more: false,
-        current_offset: 0,
-        limit: 0,
-    })
-}
-
-#[cfg(feature = "federation")]
 async fn load_remote_watchlist(
     ctx: &AppContext,
     user_id: uuid::Uuid,
 ) -> Result<WatchlistPageResult, DomainError> {
-    let remote_entries = crate::federation::get_remote_watchlist::execute(ctx, user_id)
+    let remote_entries = ctx
+        .repos
+        .remote_watchlist
+        .get_by_derived_uuid(user_id)
         .await
         .unwrap_or_default();
     let len = remote_entries.len() as u32;

@@ -1,9 +1,6 @@
 use std::sync::Arc;
 
-#[cfg(feature = "federation")]
-use domain::testing::PanicRemoteWatchlistRepository;
-#[cfg(feature = "federation")]
-use domain::testing::PanicSocialQueryPort;
+use domain::testing::{NoopRemoteWatchlistRepository, NoopSocialQueryPort};
 use domain::{
     ports::{
         AuthService, DiaryExporter, DiaryRepository, DocumentParser, EventPublisher, ImageStorage,
@@ -145,10 +142,8 @@ impl TestContextBuilder {
                 person_query: self.person_query,
                 search_port: self.search_port,
                 search_command: self.search_command,
-                #[cfg(feature = "federation")]
-                remote_watchlist: Arc::new(PanicRemoteWatchlistRepository),
-                #[cfg(feature = "federation")]
-                social_query: Arc::new(PanicSocialQueryPort),
+                remote_watchlist: Arc::new(NoopRemoteWatchlistRepository),
+                social_query: Arc::new(NoopSocialQueryPort),
             },
             services: Services {
                 auth: self.auth_service,

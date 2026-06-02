@@ -10,15 +10,9 @@ pub async fn execute(
     ctx: &AppContext,
     _query: GetUsersQuery,
 ) -> Result<UsersListData, DomainError> {
-    #[cfg(feature = "federation")]
     let (users_result, actors_result) = tokio::join!(
         ctx.repos.user.list_with_stats(),
         ctx.repos.social_query.list_all_followed_remote_actors()
-    );
-    #[cfg(not(feature = "federation"))]
-    let (users_result, actors_result) = (
-        ctx.repos.user.list_with_stats().await,
-        Ok::<Vec<RemoteActorInfo>, DomainError>(vec![]),
     );
 
     Ok(UsersListData {

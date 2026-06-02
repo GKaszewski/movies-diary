@@ -413,9 +413,7 @@ async fn test_app() -> Router {
                 person_query: Arc::new(PanicPersonQuery),
                 search_port: Arc::new(PanicSearchPort),
                 search_command: Arc::new(PanicSearchCommand),
-                #[cfg(feature = "federation")]
                 remote_watchlist: Arc::new(PanicRemoteWatchlist),
-                #[cfg(feature = "federation")]
                 social_query: Arc::new(PanicSocialQuery),
             },
             services: Services {

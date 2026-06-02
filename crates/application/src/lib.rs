@@ -6,8 +6,6 @@ pub mod worker;
 
 pub mod auth;
 pub mod diary;
-#[cfg(feature = "federation")]
-pub mod federation;
 pub mod import;
 pub mod integrations;
 pub mod movies;

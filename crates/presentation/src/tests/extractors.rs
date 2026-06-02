@@ -591,9 +591,7 @@ pub fn make_test_state(auth_service: Arc<dyn AuthService>) -> crate::state::AppS
                 person_query: Arc::clone(&repo) as _,
                 search_port: Arc::clone(&repo) as _,
                 search_command: Arc::clone(&repo) as _,
-                #[cfg(feature = "federation")]
                 remote_watchlist: Arc::clone(&repo) as _,
-                #[cfg(feature = "federation")]
                 social_query: Arc::clone(&repo) as _,
             },
             services: Services {

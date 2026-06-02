@@ -4,11 +4,10 @@ use domain::ports::{
     AuthService, DiaryExporter, DiaryRepository, DocumentParser, EventPublisher, ImageStorage,
     ImportProfileRepository, ImportSessionRepository, MetadataClient, MovieProfileRepository,
     MovieRepository, PasswordHasher, PersonCommand, PersonQuery, PosterFetcherClient,
-    ReviewRepository, SearchCommand, SearchPort, StatsRepository, UserProfileFieldsRepository,
-    UserRepository, WatchEventRepository, WatchlistRepository, WebhookTokenRepository,
+    RemoteWatchlistRepository, ReviewRepository, SearchCommand, SearchPort, SocialQueryPort,
+    StatsRepository, UserProfileFieldsRepository, UserRepository, WatchEventRepository,
+    WatchlistRepository, WebhookTokenRepository,
 };
-#[cfg(feature = "federation")]
-use domain::ports::{RemoteWatchlistRepository, SocialQueryPort};
 
 use crate::config::AppConfig;
 
@@ -30,9 +29,7 @@ pub struct Repositories {
     pub search_port: Arc<dyn SearchPort>,
     pub search_command: Arc<dyn SearchCommand>,
     pub profile_fields: Arc<dyn UserProfileFieldsRepository>,
-    #[cfg(feature = "federation")]
     pub remote_watchlist: Arc<dyn RemoteWatchlistRepository>,
-    #[cfg(feature = "federation")]
     pub social_query: Arc<dyn SocialQueryPort>,
 }
 
