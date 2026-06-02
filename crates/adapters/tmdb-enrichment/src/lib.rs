@@ -8,8 +8,8 @@ use domain::{
     events::DomainEvent,
     models::{CastMember, CrewMember, Genre, Keyword, MovieProfile},
     ports::{
-        EventHandler, ImageStorage, MovieEnrichmentClient, MovieProfileRepository,
-        MovieRepository, PersonCommand, SearchCommand,
+        EventHandler, ImageStorage, MovieEnrichmentClient, MovieProfileRepository, MovieRepository,
+        PersonCommand, SearchCommand,
     },
     value_objects::MovieId,
 };
@@ -265,10 +265,10 @@ impl EnrichmentHandler {
             let url = format!("https://image.tmdb.org/t/p/w185{path}");
             match self.http.get(&url).send().await {
                 Ok(resp) if resp.status().is_success() => {
-                    if let Ok(bytes) = resp.bytes().await {
-                        if let Err(e) = self.image_storage.store(&key, &bytes).await {
-                            tracing::debug!("cast photo store failed for {path}: {e}");
-                        }
+                    if let Ok(bytes) = resp.bytes().await
+                        && let Err(e) = self.image_storage.store(&key, &bytes).await
+                    {
+                        tracing::debug!("cast photo store failed for {path}: {e}");
                     }
                 }
                 _ => tracing::debug!("cast photo download failed for {path}"),
