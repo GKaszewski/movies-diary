@@ -430,38 +430,13 @@ pub async fn get_users_list(
         Ok(result) => {
             let users: Vec<UserSummaryView> = result
                 .users
-                .into_iter()
-                .map(|u| {
-                    let name = u.email().split('@').next().unwrap_or("?").to_string();
-                    let initial = name.chars().next().unwrap_or('?').to_ascii_uppercase();
-                    let avg_display = u
-                        .avg_rating
-                        .map(|r| format!("{:.1}", r))
-                        .unwrap_or_else(|| "—".to_string());
-                    let avatar_url = u.avatar_path.map(|p| format!("/images/{}", p));
-                    UserSummaryView {
-                        user_id: u.user_id.value(),
-                        display_name: name,
-                        initial,
-                        avg_rating_display: avg_display,
-                        total_movies: u.total_movies,
-                        avatar_url,
-                    }
-                })
+                .iter()
+                .map(crate::mappers::users::user_summary_view)
                 .collect();
             let remote_actors: Vec<RemoteActorDisplay> = result
                 .remote_actors
-                .into_iter()
-                .map(|a| {
-                    let display = a.display_name.unwrap_or_else(|| a.handle.clone());
-                    let initial = display.chars().next().unwrap_or('?').to_ascii_uppercase();
-                    RemoteActorDisplay {
-                        handle: a.handle,
-                        display_name: display,
-                        initial,
-                        url: a.url,
-                    }
-                })
+                .iter()
+                .map(crate::mappers::users::remote_actor_display)
                 .collect();
             render_page(UsersTemplate {
                 users,
@@ -644,13 +619,8 @@ pub async fn get_user_profile(
             let page_items = build_page_items(total_pages, current_page);
             let pending_followers: Vec<RemoteActorData> = profile
                 .pending_followers
-                .into_iter()
-                .map(|p| RemoteActorData {
-                    handle: p.handle,
-                    url: p.url,
-                    display_name: p.display_name,
-                    avatar_url: p.avatar_url,
-                })
+                .iter()
+                .map(crate::mappers::users::pending_follower_data)
                 .collect();
             render_page(ProfileTemplate {
                 ctx: &ctx,
@@ -1576,16 +1546,8 @@ pub async fn get_integrations_page(
         .unwrap_or_default();
 
     let token_views: Vec<template_askama::WebhookTokenView> = tokens
-        .into_iter()
-        .map(|t| template_askama::WebhookTokenView {
-            id: t.id().value().to_string(),
-            provider: t.provider().to_string(),
-            label: t.label().map(String::from),
-            created_at: t.created_at().format("%Y-%m-%d %H:%M").to_string(),
-            last_used_at: t
-                .last_used_at()
-                .map(|d| d.format("%Y-%m-%d %H:%M").to_string()),
-        })
+        .iter()
+        .map(crate::mappers::integrations::webhook_token_view)
         .collect();
 
     let webhook_base_url = state.app_ctx.config.base_url.clone();
@@ -1676,15 +1638,8 @@ pub async fn get_watch_queue_page(
         .unwrap_or_default();
 
     let entries: Vec<template_askama::WatchQueueDisplayEntry> = events
-        .into_iter()
-        .map(|e| template_askama::WatchQueueDisplayEntry {
-            id: e.id().value().to_string(),
-            title: e.title().to_string(),
-            year: e.year(),
-            source: e.source().to_string(),
-            watched_at: e.watched_at().format("%Y-%m-%d %H:%M").to_string(),
-            movie_url: e.movie_id().map(|m| format!("/movies/{}", m.value())),
-        })
+        .iter()
+        .map(crate::mappers::integrations::watch_queue_entry)
         .collect();
 
     render_page(WatchQueueTemplate {

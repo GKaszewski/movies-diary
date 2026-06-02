@@ -4,6 +4,7 @@ pub mod extractors;
 pub mod factory;
 pub mod forms;
 pub mod handlers;
+pub mod mappers;
 pub mod openapi;
 pub mod ports;
 pub mod render;
