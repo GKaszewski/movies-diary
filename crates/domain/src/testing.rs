@@ -1047,7 +1047,7 @@ impl crate::ports::WrapUpStatsQuery for InMemoryWrapUpStatsQuery {
             .iter()
             .filter(|r| {
                 let date = r.watched_at.date();
-                date >= range.start && date < range.end
+                date >= range.start() && date < range.end()
             })
             .filter(|r| match scope {
                 crate::models::wrapup::WrapUpScope::User(uid) => r.user_id == *uid,

@@ -32,10 +32,11 @@ fn make_row(title: &str, rating: u8, watched_at: &str) -> WrapUpMovieRow {
 }
 
 fn year_2024_range() -> DateRange {
-    DateRange {
-        start: NaiveDate::from_ymd_opt(2024, 1, 1).unwrap(),
-        end: NaiveDate::from_ymd_opt(2025, 1, 1).unwrap(),
-    }
+    DateRange::new(
+        NaiveDate::from_ymd_opt(2024, 1, 1).unwrap(),
+        NaiveDate::from_ymd_opt(2025, 1, 1).unwrap(),
+    )
+    .unwrap()
 }
 
 #[tokio::test]

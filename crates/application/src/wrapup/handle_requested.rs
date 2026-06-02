@@ -24,10 +24,7 @@ pub async fn execute(
     };
     let query = ComputeWrapUpQuery {
         scope,
-        date_range: DateRange {
-            start: start_date,
-            end: end_date,
-        },
+        date_range: DateRange::new(start_date, end_date)?,
     };
 
     match compute::execute(ctx, query).await {

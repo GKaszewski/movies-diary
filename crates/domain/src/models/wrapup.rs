@@ -6,8 +6,32 @@ use crate::value_objects::WrapUpId;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DateRange {
-    pub start: NaiveDate,
-    pub end: NaiveDate,
+    start: NaiveDate,
+    end: NaiveDate,
+}
+
+impl DateRange {
+    pub fn new(start: NaiveDate, end: NaiveDate) -> Result<Self, crate::errors::DomainError> {
+        if end <= start {
+            return Err(crate::errors::DomainError::ValidationError(
+                "end_date must be after start_date".into(),
+            ));
+        }
+        if (end - start).num_days() > 366 {
+            return Err(crate::errors::DomainError::ValidationError(
+                "date range cannot exceed 366 days".into(),
+            ));
+        }
+        Ok(Self { start, end })
+    }
+
+    pub fn start(&self) -> NaiveDate {
+        self.start
+    }
+
+    pub fn end(&self) -> NaiveDate {
+        self.end
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

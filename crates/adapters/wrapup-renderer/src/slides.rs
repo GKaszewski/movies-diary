@@ -277,8 +277,8 @@ impl SlideRenderer {
 
         let year_label = format!(
             "{} - {}",
-            report.date_range.start.format("%b %Y"),
-            report.date_range.end.format("%b %Y")
+            report.date_range.start().format("%b %Y"),
+            report.date_range.end().format("%b %Y")
         );
         self.draw_centered(&mut img, &year_label, (h / 6) as i32, 48.0, DIM);
         self.draw_centered(

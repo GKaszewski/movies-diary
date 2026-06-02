@@ -274,8 +274,8 @@ impl WrapUpStatsQuery for SqliteWrapUpStatsQuery {
         scope: &WrapUpScope,
         range: &DateRange,
     ) -> Result<Vec<WrapUpMovieRow>, DomainError> {
-        let start_str = range.start.format("%Y-%m-%d").to_string();
-        let end_str = range.end.format("%Y-%m-%d").to_string();
+        let start_str = range.start().format("%Y-%m-%d").to_string();
+        let end_str = range.end().format("%Y-%m-%d").to_string();
 
         // 1) Main query
         let (scope_clause, scope_bind) = match scope {

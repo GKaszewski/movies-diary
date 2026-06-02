@@ -282,7 +282,7 @@ impl WrapUpStatsQuery for PostgresWrapUpStatsQuery {
              ORDER BY r.watched_at ASC"
         );
 
-        let mut q = sqlx::query(&sql).bind(range.start).bind(range.end);
+        let mut q = sqlx::query(&sql).bind(range.start()).bind(range.end());
         if let Some(ref uid) = scope_bind {
             q = q.bind(uid);
         }
