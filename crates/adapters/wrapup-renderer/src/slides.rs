@@ -1,9 +1,33 @@
 use ab_glyph::{FontArc, PxScale};
 use domain::errors::DomainError;
 use domain::models::wrapup::WrapUpReport;
-use image::{Rgba, RgbaImage};
+use image::{DynamicImage, Rgba, RgbaImage};
 use imageproc::drawing::{draw_filled_rect_mut, draw_text_mut};
 use imageproc::rect::Rect;
+
+fn decode_image(bytes: &[u8]) -> Result<DynamicImage, String> {
+    image::load_from_memory(bytes).or_else(|_| {
+        let dir = tempfile::tempdir().map_err(|e| e.to_string())?;
+        let input = dir.path().join("input");
+        let output = dir.path().join("output.png");
+        std::fs::write(&input, bytes).map_err(|e| e.to_string())?;
+        let status = std::process::Command::new("ffmpeg")
+            .args([
+                "-y", "-i",
+                &input.to_string_lossy(),
+                &output.to_string_lossy(),
+            ])
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+            .map_err(|e| e.to_string())?;
+        if !status.success() {
+            return Err("ffmpeg conversion failed".into());
+        }
+        let png_bytes = std::fs::read(&output).map_err(|e| e.to_string())?;
+        image::load_from_memory(&png_bytes).map_err(|e| e.to_string())
+    })
+}
 
 const BG: Rgba<u8> = Rgba([26, 26, 36, 255]);
 const GOLD: Rgba<u8> = Rgba([229, 192, 52, 255]);
@@ -364,7 +388,7 @@ impl SlideRenderer {
         let thumb_w = w / cols;
         let thumb_h = (thumb_w * 3) / 2;
 
-        for (i, (_, bytes)) in posters.iter().enumerate() {
+        for (i, (name, bytes)) in posters.iter().enumerate() {
             let col = (i as u32) % cols;
             let row = (i as u32) / cols;
             let x = col * thumb_w;
@@ -372,10 +396,16 @@ impl SlideRenderer {
             if y + thumb_h > h {
                 break;
             }
-            if let Ok(poster) = image::load_from_memory(bytes) {
-                let thumb =
-                    poster.resize_exact(thumb_w, thumb_h, image::imageops::FilterType::Triangle);
-                image::imageops::overlay(&mut canvas, &thumb.to_rgba8(), x as i64, y as i64);
+            match decode_image(bytes) {
+                Ok(poster) => {
+                    let thumb = poster.resize_exact(
+                        thumb_w,
+                        thumb_h,
+                        image::imageops::FilterType::Triangle,
+                    );
+                    image::imageops::overlay(&mut canvas, &thumb.to_rgba8(), x as i64, y as i64);
+                }
+                Err(e) => tracing::debug!("mosaic: skipped {name}: {e}"),
             }
         }
 
