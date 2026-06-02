@@ -193,8 +193,8 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
             social_query: social_query.clone(),
             #[cfg(not(feature = "federation"))]
             social_query: Arc::new(domain::testing::NoopSocialQueryPort),
-            wrapup_stats: Arc::new(domain::testing::PanicWrapUpStatsQuery) as Arc<dyn domain::ports::WrapUpStatsQuery>,
-            wrapup_repo: Arc::new(domain::testing::PanicWrapUpRepository) as Arc<dyn domain::ports::WrapUpRepository>,
+            wrapup_stats: db.wrapup_stats,
+            wrapup_repo: db.wrapup_repo,
         },
         services: Services {
             auth: auth_service,

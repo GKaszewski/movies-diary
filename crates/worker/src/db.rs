@@ -36,6 +36,8 @@ pub struct WorkerDbOutput {
     pub ap_content: Arc<dyn LocalApContentQuery>,
     pub image_ref_command: Arc<dyn ImageRefCommand>,
     pub image_ref_query: Arc<dyn ImageRefQuery>,
+    pub wrapup_stats: Arc<dyn domain::ports::WrapUpStatsQuery>,
+    pub wrapup_repo: Arc<dyn domain::ports::WrapUpRepository>,
     pub db_pool: DbPool,
 }
 
@@ -76,6 +78,8 @@ pub async fn connect(database_url: &str, backend: &str) -> anyhow::Result<Worker
                 ap_content: w.ap_content,
                 image_ref_command,
                 image_ref_query,
+                wrapup_stats: w.wrapup_stats,
+                wrapup_repo: w.wrapup_repo,
                 db_pool: DbPool::Postgres(w.pool),
             })
         }
@@ -113,6 +117,8 @@ pub async fn connect(database_url: &str, backend: &str) -> anyhow::Result<Worker
                 ap_content: w.ap_content,
                 image_ref_command,
                 image_ref_query,
+                wrapup_stats: w.wrapup_stats,
+                wrapup_repo: w.wrapup_repo,
                 db_pool: DbPool::Sqlite(w.pool),
             })
         }

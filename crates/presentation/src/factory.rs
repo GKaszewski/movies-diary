@@ -31,6 +31,8 @@ pub struct DatabaseOutput {
     pub search_command: Arc<dyn domain::ports::SearchCommand>,
     pub profile_fields: Arc<dyn UserProfileFieldsRepository>,
     pub ap_content: Arc<dyn LocalApContentQuery>,
+    pub wrapup_stats: Arc<dyn domain::ports::WrapUpStatsQuery>,
+    pub wrapup_repo: Arc<dyn domain::ports::WrapUpRepository>,
     pub db_pool: DbPool,
 }
 
@@ -67,6 +69,8 @@ pub async fn build_database_adapters(backend: &str, url: &str) -> anyhow::Result
                 search_command: sc,
                 profile_fields: pf,
                 ap_content: w.ap_content,
+                wrapup_stats: w.wrapup_stats,
+                wrapup_repo: w.wrapup_repo,
                 db_pool: DbPool::Postgres(w.pool),
             })
         }
@@ -100,6 +104,8 @@ pub async fn build_database_adapters(backend: &str, url: &str) -> anyhow::Result
                 search_command: sc,
                 profile_fields: pf,
                 ap_content: w.ap_content,
+                wrapup_stats: w.wrapup_stats,
+                wrapup_repo: w.wrapup_repo,
                 db_pool: DbPool::Sqlite(w.pool),
             })
         }
