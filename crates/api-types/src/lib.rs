@@ -8,6 +8,7 @@ pub mod social;
 pub mod users;
 pub mod watchlist;
 pub mod webhook;
+pub mod wrapup;
 
 pub use auth::*;
 pub use common::*;

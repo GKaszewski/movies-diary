@@ -346,6 +346,16 @@ fn api_routes(rate_limit: u64) -> Router<AppState> {
         .route(
             "/watch-queue/dismiss",
             routing::post(handlers::webhook::post_dismiss_watch_events),
+        )
+        .route(
+            "/wrapups/generate",
+            routing::post(handlers::wrapup::post_generate),
+        )
+        .route("/wrapups", routing::get(handlers::wrapup::get_list))
+        .route("/wrapups/{id}", routing::get(handlers::wrapup::get_status))
+        .route(
+            "/wrapups/{id}/report",
+            routing::get(handlers::wrapup::get_report),
         );
 
     #[cfg(feature = "federation")]
