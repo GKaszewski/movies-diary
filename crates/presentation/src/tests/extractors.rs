@@ -568,6 +568,7 @@ impl domain::ports::WebhookTokenRepository for Panic {
     }
 }
 
+#[async_trait::async_trait]
 impl domain::ports::WrapUpStatsQuery for Panic {
     async fn get_reviews_with_profiles(
         &self,
@@ -578,6 +579,7 @@ impl domain::ports::WrapUpStatsQuery for Panic {
     }
 }
 
+#[async_trait::async_trait]
 impl domain::ports::WrapUpRepository for Panic {
     async fn create(&self, _: &domain::models::wrapup::WrapUpRecord) -> Result<(), DomainError> {
         panic!()
