@@ -536,6 +536,12 @@ pub struct VideoRenderConfig {
     pub ffmpeg_path: String,
     pub font_path: Option<String>,
     pub logo_path: Option<String>,
+    pub bg_dir: Option<String>,
+}
+
+pub struct VideoRenderAssets {
+    pub poster_images: Vec<(String, Vec<u8>)>,
+    pub cast_images: Vec<(String, Vec<u8>)>,
 }
 
 #[async_trait]
@@ -543,7 +549,7 @@ pub trait WrapUpVideoRenderer: Send + Sync {
     async fn render(
         &self,
         report: &WrapUpReport,
-        poster_images: Vec<(String, Vec<u8>)>,
+        assets: VideoRenderAssets,
         config: &VideoRenderConfig,
     ) -> Result<Vec<u8>, DomainError>;
 }

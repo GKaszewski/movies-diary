@@ -3,7 +3,7 @@ use crate::wrapup::{compute, queries::ComputeWrapUpQuery};
 use domain::errors::DomainError;
 use domain::events::DomainEvent;
 use domain::models::wrapup::{DateRange, WrapUpReport, WrapUpScope, WrapUpStatus};
-use domain::ports::VideoRenderConfig;
+use domain::ports::{VideoRenderAssets, VideoRenderConfig};
 use domain::value_objects::WrapUpId;
 
 pub async fn execute(
@@ -39,9 +39,10 @@ pub async fn execute(
                 .set_complete(&wrapup_id, &json)
                 .await?;
 
-            // Optionally render video (non-fatal)
             if let Some(ref renderer) = ctx.services.video_renderer {
-                let poster_images = resolve_poster_images(ctx, &report).await;
+                let poster_images = resolve_images(ctx, &report.poster_paths, "poster").await;
+                let cast_images =
+                    resolve_images(ctx, &report.top_cast_profile_paths, "cast").await;
                 let wc = &ctx.config.wrapup;
                 let config = VideoRenderConfig {
                     slide_duration_secs: 4,
@@ -50,8 +51,13 @@ pub async fn execute(
                     ffmpeg_path: wc.ffmpeg_path.clone(),
                     font_path: wc.font_path.clone(),
                     logo_path: wc.logo_path.clone(),
+                    bg_dir: wc.bg_dir.clone(),
                 };
-                match renderer.render(&report, poster_images, &config).await {
+                let assets = VideoRenderAssets {
+                    poster_images,
+                    cast_images,
+                };
+                match renderer.render(&report, assets, &config).await {
                     Ok(video_bytes) => {
                         let video_key = format!("wrapups/{}/video.mp4", wrapup_id.value());
                         if let Err(e) = ctx
@@ -85,14 +91,18 @@ pub async fn execute(
     }
 }
 
-async fn resolve_poster_images(ctx: &AppContext, report: &WrapUpReport) -> Vec<(String, Vec<u8>)> {
+async fn resolve_images(
+    ctx: &AppContext,
+    paths: &[String],
+    label: &str,
+) -> Vec<(String, Vec<u8>)> {
     let mut images = Vec::new();
-    for path in report.poster_paths.iter().take(20) {
+    for path in paths.iter().take(20) {
         match ctx.services.image_storage.get(path).await {
             Ok(bytes) => images.push((path.clone(), bytes)),
-            Err(e) => tracing::debug!("poster fetch skipped for {path}: {e}"),
+            Err(e) => tracing::debug!("{label} fetch skipped for {path}: {e}"),
         }
     }
-    tracing::info!("resolved {}/{} poster images for video", images.len(), report.poster_paths.len());
+    tracing::info!("resolved {}/{} {label} images", images.len(), paths.len());
     images
 }

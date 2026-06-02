@@ -95,6 +95,7 @@ impl TestContextBuilder {
                 wrapup: crate::config::WrapUpConfig {
                     font_path: None,
                     logo_path: None,
+                    bg_dir: None,
                     ffmpeg_path: "ffmpeg".into(),
                     max_concurrent_renders: 2,
                 },

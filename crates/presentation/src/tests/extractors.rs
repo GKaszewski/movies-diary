@@ -677,6 +677,7 @@ pub fn make_test_state(auth_service: Arc<dyn AuthService>) -> crate::state::AppS
                 wrapup: application::config::WrapUpConfig {
                     font_path: None,
                     logo_path: None,
+                    bg_dir: None,
                     ffmpeg_path: "ffmpeg".into(),
                     max_concurrent_renders: 2,
                 },
