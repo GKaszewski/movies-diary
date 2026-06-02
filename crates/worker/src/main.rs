@@ -106,9 +106,14 @@ async fn main() -> anyhow::Result<()> {
             document_parser: Arc::new(ImporterDocumentParser) as Arc<dyn DocumentParser>,
             video_renderer: {
                 let ffmpeg = &app_config.wrapup.ffmpeg_path;
-                if std::process::Command::new(ffmpeg).arg("-version").output().is_ok() {
+                if std::process::Command::new(ffmpeg)
+                    .arg("-version")
+                    .output()
+                    .is_ok()
+                {
                     tracing::info!("wrapup video renderer enabled (ffmpeg={ffmpeg})");
-                    Some(Arc::new(wrapup_renderer::FfmpegWrapUpRenderer::new()) as Arc<dyn domain::ports::WrapUpVideoRenderer>)
+                    Some(Arc::new(wrapup_renderer::FfmpegWrapUpRenderer::new())
+                        as Arc<dyn domain::ports::WrapUpVideoRenderer>)
                 } else {
                     tracing::info!("wrapup video renderer disabled (ffmpeg not found)");
                     None

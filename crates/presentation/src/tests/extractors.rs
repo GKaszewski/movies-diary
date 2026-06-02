@@ -632,10 +632,7 @@ impl domain::ports::WrapUpRepository for Panic {
     async fn delete(&self, _: &domain::value_objects::WrapUpId) -> Result<(), DomainError> {
         panic!()
     }
-    async fn delete_failed_older_than(
-        &self,
-        _: chrono::NaiveDateTime,
-    ) -> Result<u64, DomainError> {
+    async fn delete_failed_older_than(&self, _: chrono::NaiveDateTime) -> Result<u64, DomainError> {
         panic!()
     }
 }

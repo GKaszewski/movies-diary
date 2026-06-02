@@ -35,7 +35,12 @@ impl WrapUpVideoRenderer for FfmpegWrapUpRenderer {
         slide_pngs.push(renderer.render_hero(report, width, height)?);
         slide_pngs.push(renderer.render_ratings(report, width, height)?);
         if !report.top_directors.is_empty() {
-            slide_pngs.push(renderer.render_directors(report, &assets.cast_images, width, height)?);
+            slide_pngs.push(renderer.render_directors(
+                report,
+                &assets.cast_images,
+                width,
+                height,
+            )?);
         }
         if !report.top_actors.is_empty() {
             slide_pngs.push(renderer.render_actors(report, &assets.cast_images, width, height)?);
@@ -43,7 +48,12 @@ impl WrapUpVideoRenderer for FfmpegWrapUpRenderer {
         if !report.top_genres.is_empty() {
             slide_pngs.push(renderer.render_genres(report, width, height)?);
         }
-        slide_pngs.push(renderer.render_highlights(report, &assets.poster_images, width, height)?);
+        slide_pngs.push(renderer.render_highlights(
+            report,
+            &assets.poster_images,
+            width,
+            height,
+        )?);
         if !assets.poster_images.is_empty() {
             slide_pngs.push(renderer.render_mosaic(&assets.poster_images, width, height)?);
         } else {

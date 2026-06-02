@@ -16,7 +16,11 @@ pub async fn execute(
     if let Ok(Some(rec)) = ctx.repos.wrapup_repo.get_by_id(&wrapup_id).await
         && (rec.status == WrapUpStatus::Ready || rec.status == WrapUpStatus::Generating)
     {
-        tracing::debug!("wrapup {} already {:?}, skipping", wrapup_id.value(), rec.status);
+        tracing::debug!(
+            "wrapup {} already {:?}, skipping",
+            wrapup_id.value(),
+            rec.status
+        );
         return Ok(());
     }
 

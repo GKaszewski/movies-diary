@@ -204,13 +204,12 @@ impl WrapUpRepository for PostgresWrapUpRepository {
         &self,
         before: chrono::NaiveDateTime,
     ) -> Result<u64, DomainError> {
-        let result = sqlx::query(
-            "DELETE FROM wrap_up_records WHERE status = 'failed' AND created_at < $1",
-        )
-        .bind(before)
-        .execute(&self.pool)
-        .await
-        .map_err(map_err)?;
+        let result =
+            sqlx::query("DELETE FROM wrap_up_records WHERE status = 'failed' AND created_at < $1")
+                .bind(before)
+                .execute(&self.pool)
+                .await
+                .map_err(map_err)?;
         Ok(result.rows_affected())
     }
 }

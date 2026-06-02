@@ -215,13 +215,12 @@ impl WrapUpRepository for SqliteWrapUpRepository {
         before: chrono::NaiveDateTime,
     ) -> Result<u64, DomainError> {
         let before_str = before.format("%Y-%m-%dT%H:%M:%SZ").to_string();
-        let result = sqlx::query(
-            "DELETE FROM wrap_up_records WHERE status = 'failed' AND created_at < ?",
-        )
-        .bind(&before_str)
-        .execute(&self.pool)
-        .await
-        .map_err(map_err)?;
+        let result =
+            sqlx::query("DELETE FROM wrap_up_records WHERE status = 'failed' AND created_at < ?")
+                .bind(&before_str)
+                .execute(&self.pool)
+                .await
+                .map_err(map_err)?;
         Ok(result.rows_affected())
     }
 }

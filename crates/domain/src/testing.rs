@@ -1218,10 +1218,7 @@ impl WrapUpRepository for PanicWrapUpRepository {
     async fn delete(&self, _: &WrapUpId) -> Result<(), DomainError> {
         panic!("PanicWrapUpRepository called")
     }
-    async fn delete_failed_older_than(
-        &self,
-        _: chrono::NaiveDateTime,
-    ) -> Result<u64, DomainError> {
+    async fn delete_failed_older_than(&self, _: chrono::NaiveDateTime) -> Result<u64, DomainError> {
         panic!("PanicWrapUpRepository called")
     }
 }
