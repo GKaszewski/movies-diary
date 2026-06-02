@@ -37,6 +37,7 @@ COPY crates/tui/Cargo.toml                        crates/tui/Cargo.toml
 COPY crates/adapters/image-converter/Cargo.toml   crates/adapters/image-converter/Cargo.toml
 COPY crates/adapters/sqlite-search/Cargo.toml     crates/adapters/sqlite-search/Cargo.toml
 COPY crates/adapters/postgres-search/Cargo.toml   crates/adapters/postgres-search/Cargo.toml
+COPY crates/adapters/wrapup-renderer/Cargo.toml   crates/adapters/wrapup-renderer/Cargo.toml
 COPY crates/worker/Cargo.toml                     crates/worker/Cargo.toml
 
 # Stub every crate so cargo can resolve and fetch deps
@@ -71,6 +72,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     wget \
     libwebp7 \
+    ffmpeg \
+    fonts-dejavu-core \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

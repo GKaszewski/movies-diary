@@ -17,6 +17,7 @@ A self-hosted, server-side rendered movie logging system with a full REST API. B
 - Watchlist — add movies to watch later, per-user; federated watchlist entries visible for remote actors
 - User profiles — display name, bio, avatar, banner, custom profile fields; editable via HTML settings page or REST API
 - Jellyfin/Plex auto-import — media server sends a webhook on playback stop, movies land in a watch queue; review and confirm with a rating to create diary entries; per-user webhook tokens with SHA-256 auth; setup UI at `/settings/integrations`
+- Annual Wrap-Up — Spotify Wrapped for movies: per-user and instance-wide year-in-review with stats (top directors, actors, genres, rating distribution, watch time, rewatches, budget analysis), shareable HTML page at `/wrapups/{user_id}/{year}`, downloadable MP4 video with branded slides; admin-triggered or auto-generated in January
 - CSV and JSON diary export
 - File importer: upload CSV, TSV, JSON, or XLSX from any source (Letterboxd, IMDb, etc.), map columns to domain fields via a step-by-step wizard or REST API, save mapping profiles for repeat imports
 - REST API v1 (`/api/v1/`) with full feature parity with the HTML interface
@@ -56,6 +57,7 @@ adapters/
   postgres-event-queue — durable polling event queue backed by PostgreSQL
   nats                 — NATS Core / JetStream event publisher and consumer
   event-publisher      — in-memory event channel (used in tests)
+  wrapup-renderer      — annual wrap-up video generator (slide compositing via image crate, charts via plotters, stitching via ffmpeg)
   activitypub          — ActivityPub federation adapter (follow, inbox/outbox, actor); delegates to k-ap for protocol internals
   sqlite-search        — SQLite FTS5 implementation of SearchPort + SearchCommand
   postgres-search      — PostgreSQL tsvector + GIN implementation of SearchPort + SearchCommand
@@ -108,6 +110,12 @@ IMAGE_STORAGE_PATH=./images
 # Image conversion (optional — converts stored images to AVIF or WebP to save space)
 # IMAGE_CONVERSION_ENABLED=false
 # IMAGE_CONVERSION_FORMAT=avif   # avif or webp
+
+# Annual Wrap-Up video (optional — requires ffmpeg)
+# WRAPUP_FONT_PATH=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf
+# WRAPUP_LOGO_PATH=./static/logo.webp   # watermark on video slides
+# FFMPEG_PATH=ffmpeg
+# WRAPUP_MAX_CONCURRENT=2               # max parallel video renders
 
 # Optional
 HOST=0.0.0.0
@@ -177,7 +185,7 @@ The `application` crate has unit tests for core use cases backed by in-memory fa
 
 ## Docker
 
-The image contains both `presentation` (HTTP server) and `worker` (event processor). Run them as separate containers sharing the same data volume:
+The image contains both `presentation` (HTTP server) and `worker` (event processor), plus `ffmpeg` and DejaVu fonts for wrap-up video generation. Run them as separate containers sharing the same data volume:
 
 ```bash
 # Build (SQLite + federation + NATS support)
@@ -231,6 +239,26 @@ Auto-log movies you finish watching. Go to `/settings/integrations` to generate 
 3. Plex does not support custom headers natively — pass the token as a query param: `https://yourdomain.example.com/api/v1/webhooks/plex?token=<your-token>`
 
 Movies you finish watching appear in your watch queue at `/watch-queue` — rate and confirm to add to your diary.
+
+## Annual Wrap-Up
+
+Generate a year-in-review summary for any user — top directors, actors, genres, rating distribution, total watch time, rewatch stats, and more. Available as a shareable HTML page and downloadable MP4 video.
+
+**Generate via API** (admin only):
+```bash
+curl -X POST http://localhost:3000/api/v1/wrapups/generate \
+  -H "Authorization: Bearer <admin-token>" \
+  -H "Content-Type: application/json" \
+  -d '{"user_id": "<uuid>", "start_date": "2025-01-01", "end_date": "2026-01-01"}'
+```
+
+Omit `user_id` for a global instance wrap-up. The worker computes stats in the background — poll `GET /api/v1/wrapups/{id}` for status.
+
+**View:** `http://localhost:3000/wrapups/{user_id}/2025` (public, no login required)
+
+**Auto-generate:** The worker runs a daily job in January that generates wrap-ups for all users with reviews in the previous year.
+
+**Video:** Requires `ffmpeg` installed. Set `WRAPUP_FONT_PATH` and `WRAPUP_LOGO_PATH` for branded slides. Download via `GET /api/v1/wrapups/{id}/video`.
 
 ## License
 
