@@ -9,22 +9,31 @@ use uuid::Uuid;
 use std::str::FromStr;
 
 use application::{
-    commands::{
-        AddToWatchlistCommand, DeleteReviewCommand, MovieInput, RegisterCommand,
-        RemoveFromWatchlistCommand, SyncPosterCommand,
+    auth::{
+        commands::RegisterCommand, login as login_uc, queries::LoginQuery, register as register_uc,
     },
-    queries::{
-        ExportQuery, GetActivityFeedQuery, GetMovieSocialPageQuery, GetMoviesQuery,
-        GetReviewHistoryQuery, GetUserProfileQuery, GetUsersQuery, GetWatchlistQuery,
-        IsOnWatchlistQuery, LoginQuery,
+    diary::{
+        commands::{DeleteReviewCommand, MovieInput, SyncPosterCommand},
+        delete_review, export_diary as export_diary_uc, get_activity_feed as get_feed_uc,
+        get_diary, get_movie_social_page, get_review_history, log_review,
+        queries::{
+            ExportQuery, GetActivityFeedQuery, GetMovieSocialPageQuery, GetReviewHistoryQuery,
+        },
     },
-    use_cases::{
-        add_to_watchlist, delete_review, export_diary as export_diary_uc,
-        get_activity_feed as get_feed_uc, get_diary, get_movie_social_page, get_movies, get_person,
-        get_person_credits, get_review_history, get_user_profile as get_user_profile_uc, get_users,
-        get_watchlist, is_on_watchlist, log_review, login as login_uc, register as register_uc,
-        remove_from_watchlist, search as search_uc, sync_poster, update_profile,
-        update_profile_fields,
+    movies::{get_movies, queries::GetMoviesQuery, sync_poster},
+    person::{get as get_person, get_credits as get_person_credits},
+    search::execute as search_uc,
+    users::{
+        get_profile as get_user_profile_uc, get_users,
+        queries::{GetUserProfileQuery, GetUsersQuery},
+        update_profile, update_profile_fields,
+    },
+    watchlist::{
+        add as add_to_watchlist,
+        commands::{AddToWatchlistCommand, RemoveFromWatchlistCommand},
+        get as get_watchlist, is_on as is_on_watchlist,
+        queries::{GetWatchlistQuery, IsOnWatchlistQuery},
+        remove as remove_from_watchlist,
     },
 };
 use domain::{
@@ -333,12 +342,7 @@ pub async fn get_movie_profile(
     Path(movie_id): Path<Uuid>,
 ) -> impl IntoResponse {
     let id = domain::value_objects::MovieId::from_uuid(movie_id);
-    match state
-        .app_ctx
-        .movie_profile_repository
-        .get_by_movie_id(&id)
-        .await
-    {
+    match state.app_ctx.repos.movie_profile.get_by_movie_id(&id).await {
         Ok(Some(p)) => Json(MovieProfileResponse {
             tmdb_id: p.tmdb_id,
             imdb_id: p.imdb_id,
@@ -413,9 +417,9 @@ pub async fn get_profile(
     State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
 ) -> impl IntoResponse {
-    match application::use_cases::get_current_profile::execute(
+    match application::users::get_current_profile::execute(
         &state.app_ctx,
-        application::queries::GetCurrentProfileQuery {
+        application::users::queries::GetCurrentProfileQuery {
             user_id: user_id.value(),
         },
     )
@@ -498,7 +502,7 @@ pub async fn update_profile_handler(
         }
     }
 
-    let cmd = application::commands::UpdateProfileCommand {
+    let cmd = application::users::commands::UpdateProfileCommand {
         user_id: user_id.value(),
         display_name,
         bio,
@@ -552,7 +556,7 @@ pub async fn update_profile_fields_handler(
         })
         .collect();
 
-    let cmd = application::commands::UpdateProfileFieldsCommand {
+    let cmd = application::users::commands::UpdateProfileFieldsCommand {
         user_id: user_id.value(),
         fields,
     };
@@ -1066,14 +1070,15 @@ pub async fn get_user_profile(
     Query(params): Query<UserProfileQueryParams>,
 ) -> impl IntoResponse {
     let view_str = params.view.as_deref().unwrap_or("recent");
-    let profile_view = match application::queries::ProfileView::from_str(view_str) {
+    let profile_view = match application::users::queries::ProfileView::from_str(view_str) {
         Ok(v) => v,
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
     let user = match state
         .app_ctx
-        .user_repository
+        .repos
+        .user
         .find_by_id(&UserId::from_uuid(user_id))
         .await
     {

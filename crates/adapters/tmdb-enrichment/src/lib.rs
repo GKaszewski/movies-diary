@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use application::{commands::EnrichMovieCommand, use_cases::enrich_movie};
+use application::movies::{commands::EnrichMovieCommand, enrich_movie};
 use async_trait::async_trait;
 use chrono::Utc;
 use domain::{

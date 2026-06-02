@@ -5,7 +5,7 @@ use axum::{
 };
 use uuid::Uuid;
 
-use application::{queries::GetDiaryQuery, use_cases::get_diary};
+use application::{diary::get_diary, diary::queries::GetDiaryQuery};
 use domain::{errors::DomainError, models::SortDirection, value_objects::UserId};
 
 use crate::{errors::ApiError, state::AppState};
@@ -35,7 +35,8 @@ pub async fn get_user_feed(
 ) -> Result<impl IntoResponse, ApiError> {
     let user = state
         .app_ctx
-        .user_repository
+        .repos
+        .user
         .find_by_id(&UserId::from_uuid(user_id))
         .await
         .map_err(ApiError)?

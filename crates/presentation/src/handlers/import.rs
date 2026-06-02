@@ -11,25 +11,26 @@ use axum::{
 use serde::Deserialize;
 use std::collections::HashMap;
 
-use application::{
+use crate::render::render_page;
+use application::import::{
+    apply_mapping as apply_import_mapping,
     commands::{
         ApplyImportMappingCommand, CreateImportSessionCommand, DeleteImportProfileCommand,
         ExecuteImportCommand, SaveImportProfileCommand,
     },
-    ports::{
-        ImportMappingPageData, ImportPreviewPageData, ImportPreviewRow, ImportProfileView,
-        ImportRowStatus, ImportUploadPageData,
-    },
-    use_cases::{
-        apply_import_mapping, create_import_session, delete_import_profile, execute_import,
-        list_import_profiles, save_import_profile,
-    },
+    create_session as create_import_session, delete_profile as delete_import_profile,
+    execute as execute_import, list_profiles as list_import_profiles,
+    save_profile as save_import_profile,
 };
 use domain::models::{
     AnnotatedRow, FieldMapping, FileFormat,
     import::{DomainField, RowResult, Transform},
 };
 use domain::value_objects::ImportSessionId;
+use template_askama::{
+    ImportMappingTemplate, ImportPreviewRow, ImportPreviewTemplate, ImportProfileView,
+    ImportRowStatus, ImportUploadTemplate,
+};
 
 use crate::{
     csrf::CsrfToken,
@@ -143,15 +144,11 @@ pub async fn get_import_page(
             name: p.name,
         })
         .collect::<Vec<_>>();
-    let html = state
-        .html_renderer
-        .render_import_upload_page(ImportUploadPageData {
-            ctx,
-            profiles,
-            error: None,
-        })
-        .unwrap_or_else(|e| e);
-    Html(html)
+    render_page(ImportUploadTemplate {
+        ctx: &ctx,
+        profiles: &profiles,
+        error: None,
+    })
 }
 
 pub async fn post_upload(
@@ -220,7 +217,8 @@ pub async fn get_mapping_page(
     };
     let Ok(Some(session)) = state
         .app_ctx
-        .import_session_repository
+        .repos
+        .import_session
         .get(&session_id, &user_id)
         .await
     else {
@@ -231,27 +229,25 @@ pub async fn get_mapping_page(
     };
 
     let ctx = super::html::build_page_context(&state, Some(user_id), csrf.0).await;
-    let sample_rows = parsed.rows.into_iter().take(5).collect();
-    let html = state
-        .html_renderer
-        .render_import_mapping_page(ImportMappingPageData {
-            ctx,
-            session_id: session_id_str,
-            columns: parsed.columns,
-            sample_rows,
-            domain_fields: vec![
-                ("title", "Title"),
-                ("release_year", "Release Year"),
-                ("director", "Director"),
-                ("rating", "Rating"),
-                ("watched_at", "Watched At"),
-                ("comment", "Comment"),
-                ("external_metadata_id", "External ID"),
-            ],
-            error: None,
-        })
-        .unwrap_or_else(|e| e);
-    Html(html).into_response()
+    let sample_rows: Vec<Vec<String>> = parsed.rows.into_iter().take(5).collect();
+    let domain_fields: Vec<(&str, &str)> = vec![
+        ("title", "Title"),
+        ("release_year", "Release Year"),
+        ("director", "Director"),
+        ("rating", "Rating"),
+        ("watched_at", "Watched At"),
+        ("comment", "Comment"),
+        ("external_metadata_id", "External ID"),
+    ];
+    render_page(ImportMappingTemplate {
+        ctx: &ctx,
+        session_id: &session_id_str,
+        columns: &parsed.columns,
+        sample_rows: &sample_rows,
+        domain_fields: &domain_fields,
+        error: None,
+    })
+    .into_response()
 }
 
 pub async fn post_mapping(
@@ -313,7 +309,8 @@ pub async fn get_preview_page(
     };
     let Ok(Some(session)) = state
         .app_ctx
-        .import_session_repository
+        .repos
+        .import_session
         .get(&session_id, &user_id)
         .await
     else {
@@ -334,16 +331,13 @@ pub async fn get_preview_page(
         .collect();
 
     let ctx = super::html::build_page_context(&state, Some(user_id), csrf.0).await;
-    let html = state
-        .html_renderer
-        .render_import_preview_page(ImportPreviewPageData {
-            ctx,
-            session_id: session_id_str,
-            columns: parsed.columns,
-            rows,
-        })
-        .unwrap_or_else(|e| e);
-    Html(html).into_response()
+    render_page(ImportPreviewTemplate {
+        ctx: &ctx,
+        session_id: &session_id_str,
+        columns: &parsed.columns,
+        rows: &rows,
+    })
+    .into_response()
 }
 
 pub async fn post_confirm(
@@ -571,7 +565,8 @@ pub async fn api_get_session(
     };
     match state
         .app_ctx
-        .import_session_repository
+        .repos
+        .import_session
         .get(&session_id, &user_id)
         .await
     {

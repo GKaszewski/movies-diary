@@ -4,40 +4,53 @@ use axum::{
     Form,
     extract::{Extension, Multipart, Path, Query, State},
     http::{HeaderValue, StatusCode, header::SET_COOKIE},
-    response::{Html, IntoResponse, Redirect},
+    response::{IntoResponse, Redirect},
 };
 use chrono::Utc;
 use uuid::Uuid;
 
-#[cfg(feature = "federation")]
-use application::ports::{
-    BlockedActorEntry, BlockedActorsPageData, BlockedDomainEntry, BlockedDomainsPageData,
-    FollowersPageData, FollowingPageData,
-};
 use application::{
-    commands::{
-        AddToWatchlistCommand, ConfirmWatchEventsCommand, DeleteReviewCommand,
-        DismissWatchEventsCommand, GenerateWebhookTokenCommand, MovieInput,
-        RemoveFromWatchlistCommand, RevokeWebhookTokenCommand, WatchEventConfirmation,
+    auth::{login as login_uc, queries::LoginQuery},
+    diary::{
+        commands::{DeleteReviewCommand, MovieInput},
+        delete_review, export_diary as export_diary_uc, get_movie_social_page, log_review,
+        queries::{ExportQuery, GetMovieSocialPageQuery},
     },
-    ports::{
-        HtmlPageContext, IntegrationsPageData, LoginPageData, MovieDetailPageData,
-        NewReviewPageData, ProfileSettingsPageData, RegisterPageData, RemoteActorView,
-        WatchQueueDisplayEntry, WatchQueuePageData, WatchlistPageData, WebhookTokenView,
+    integrations::{
+        commands::{
+            ConfirmWatchEventsCommand, DismissWatchEventsCommand, GenerateWebhookTokenCommand,
+            RevokeWebhookTokenCommand, WatchEventConfirmation,
+        },
+        confirm as confirm_watch_events, dismiss as dismiss_watch_events,
+        generate_token as generate_webhook_token, get_queue as get_watch_queue,
+        get_tokens as get_webhook_tokens,
+        queries::{GetWatchQueueQuery, GetWebhookTokensQuery},
+        revoke_token as revoke_webhook_token,
     },
-    queries::{
-        ExportQuery, GetMovieSocialPageQuery, GetWatchQueueQuery, GetWebhookTokensQuery,
-        IsOnWatchlistQuery, LoginQuery,
-    },
-    use_cases::{
-        add_to_watchlist, confirm_watch_events, delete_review, dismiss_watch_events,
-        export_diary as export_diary_uc, generate_webhook_token, get_movie_social_page,
-        get_watch_queue, get_webhook_tokens, is_on_watchlist, log_review, login as login_uc,
-        remove_from_watchlist, revoke_webhook_token, update_profile, update_profile_fields,
+    users::{update_profile, update_profile_fields},
+    watchlist::{
+        add as add_to_watchlist,
+        commands::{AddToWatchlistCommand, RemoveFromWatchlistCommand},
+        is_on as is_on_watchlist,
+        queries::IsOnWatchlistQuery,
+        remove as remove_from_watchlist,
     },
 };
+
+use crate::render::render_page;
+use application::ports::HtmlPageContext;
 use domain::models::ExportFormat;
 use domain::{errors::DomainError, value_objects::UserId};
+use template_askama::{
+    ActivityFeedTemplate, IntegrationsTemplate, LoginTemplate, MonthlyRatingRow,
+    MovieDetailTemplate, NewReviewTemplate, ProfileSettingsTemplate, ProfileTemplate,
+    RegisterTemplate, RemoteActorData, RemoteActorDisplay, UserSummaryView, UsersTemplate,
+    WatchQueueTemplate, WatchlistTemplate, bar_height_px, build_heatmap, build_page_items,
+};
+#[cfg(feature = "federation")]
+use template_askama::{
+    BlockedActorsTemplate, BlockedDomainsTemplate, FollowersTemplate, FollowingTemplate,
+};
 
 #[cfg(feature = "federation")]
 use crate::forms::{
@@ -57,13 +70,7 @@ pub(crate) async fn build_page_context(
 ) -> HtmlPageContext {
     let uuid = user_id.as_ref().map(|u| u.value());
     let (user_email, is_admin) = if let Some(ref id) = user_id {
-        let user = state
-            .app_ctx
-            .user_repository
-            .find_by_id(id)
-            .await
-            .ok()
-            .flatten();
+        let user = state.app_ctx.repos.user.find_by_id(id).await.ok().flatten();
         let email = user.as_ref().map(|u| u.email().value().to_string());
         let admin = user
             .as_ref()
@@ -128,14 +135,10 @@ pub async fn get_login_page(
         csrf_token: csrf.0,
         page_rss_url: None,
     };
-    let html = state
-        .html_renderer
-        .render_login_page(LoginPageData {
-            ctx,
-            error: params.error.as_deref(),
-        })
-        .expect("login template failed");
-    Html(html)
+    render_page(LoginTemplate {
+        ctx: &ctx,
+        error: params.error.as_deref(),
+    })
 }
 
 pub async fn post_login(
@@ -195,14 +198,11 @@ pub async fn get_register_page(
         csrf_token: csrf.0,
         page_rss_url: None,
     };
-    let html = state
-        .html_renderer
-        .render_register_page(RegisterPageData {
-            ctx,
-            error: params.error.as_deref(),
-        })
-        .expect("register template failed");
-    Html(html).into_response()
+    render_page(RegisterTemplate {
+        ctx: &ctx,
+        error: params.error.as_deref(),
+    })
+    .into_response()
 }
 
 pub async fn post_register(
@@ -216,9 +216,9 @@ pub async fn post_register(
     if crate::csrf::mismatch(&csrf, &form.csrf_token) {
         return StatusCode::FORBIDDEN.into_response();
     }
-    match application::use_cases::register_and_login::execute(
+    match application::auth::register_and_login::execute(
         &state.app_ctx,
-        application::commands::RegisterAndLoginCommand {
+        application::auth::commands::RegisterAndLoginCommand {
             email: form.email,
             username: form.username,
             password: form.password,
@@ -246,14 +246,10 @@ pub async fn get_new_review_page(
     let mut ctx = build_page_context(&state, Some(user_id), csrf.0).await;
     ctx.page_title = "Log a Review — Movies Diary".to_string();
     ctx.canonical_url = format!("{}/reviews/new", state.app_ctx.config.base_url);
-    let html = state
-        .html_renderer
-        .render_new_review_page(NewReviewPageData {
-            ctx,
-            error: params.error.as_deref(),
-        })
-        .expect("new_review template failed");
-    Html(html)
+    render_page(NewReviewTemplate {
+        ctx: &ctx,
+        error: params.error.as_deref(),
+    })
 }
 
 pub async fn post_review(
@@ -374,7 +370,7 @@ pub async fn get_activity_feed(
         _ => "date",
     };
 
-    let query = application::queries::GetActivityFeedQuery {
+    let query = application::diary::queries::GetActivityFeedQuery {
         limit,
         offset,
         sort_by: sort_by_str.parse().unwrap_or_default(),
@@ -387,26 +383,30 @@ pub async fn get_activity_feed(
         filter_following,
     };
 
-    match application::use_cases::get_activity_feed::execute(&state.app_ctx, query).await {
+    match application::diary::get_activity_feed::execute(&state.app_ctx, query).await {
         Ok(entries) => {
             let entry_limit = entries.limit;
             let entry_offset = entries.offset;
             let has_more =
                 (entry_offset as u64).saturating_add(entry_limit as u64) < entries.total_count;
-            let data = application::ports::ActivityFeedPageData {
-                ctx,
+            let total_pages = (entries.total_count as u32)
+                .saturating_add(entry_limit.saturating_sub(1))
+                .checked_div(entry_limit)
+                .unwrap_or(1);
+            let current_page = entry_offset.checked_div(entry_limit).unwrap_or(0);
+            let page_items = build_page_items(total_pages, current_page);
+            render_page(ActivityFeedTemplate {
+                entries: entries.items.as_slice(),
                 current_offset: entry_offset,
-                has_more,
                 limit: entry_limit,
-                entries,
+                has_more,
+                ctx: &ctx,
+                page_items,
                 filter: filter_str.to_string(),
                 sort_by: sort_by_str.to_string(),
                 search: params.search,
-            };
-            match state.html_renderer.render_activity_feed_page(data) {
-                Ok(html) => Html(html).into_response(),
-                Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
-            }
+            })
+            .into_response()
         }
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
     }
@@ -421,32 +421,54 @@ pub async fn get_users_list(
     ctx.page_title = "Members — Movies Diary".to_string();
     ctx.canonical_url = format!("{}/users", state.app_ctx.config.base_url);
 
-    match application::use_cases::get_users::execute(
+    match application::users::get_users::execute(
         &state.app_ctx,
-        application::queries::GetUsersQuery,
+        application::users::queries::GetUsersQuery,
     )
     .await
     {
         Ok(result) => {
-            let actor_views = result
-                .remote_actors
+            let users: Vec<UserSummaryView> = result
+                .users
                 .into_iter()
-                .map(|a| application::ports::RemoteActorView {
-                    handle: a.handle,
-                    display_name: a.display_name,
-                    url: a.url,
-                    avatar_url: None,
+                .map(|u| {
+                    let name = u.email().split('@').next().unwrap_or("?").to_string();
+                    let initial = name.chars().next().unwrap_or('?').to_ascii_uppercase();
+                    let avg_display = u
+                        .avg_rating
+                        .map(|r| format!("{:.1}", r))
+                        .unwrap_or_else(|| "—".to_string());
+                    let avatar_url = u.avatar_path.map(|p| format!("/images/{}", p));
+                    UserSummaryView {
+                        user_id: u.user_id.value(),
+                        display_name: name,
+                        initial,
+                        avg_rating_display: avg_display,
+                        total_movies: u.total_movies,
+                        avatar_url,
+                    }
                 })
                 .collect();
-            let data = application::ports::UsersPageData {
-                ctx,
-                users: result.users,
-                remote_actors: actor_views,
-            };
-            match state.html_renderer.render_users_page(data) {
-                Ok(html) => Html(html).into_response(),
-                Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
-            }
+            let remote_actors: Vec<RemoteActorDisplay> = result
+                .remote_actors
+                .into_iter()
+                .map(|a| {
+                    let display = a.display_name.unwrap_or_else(|| a.handle.clone());
+                    let initial = display.chars().next().unwrap_or('?').to_ascii_uppercase();
+                    RemoteActorDisplay {
+                        handle: a.handle,
+                        display_name: display,
+                        initial,
+                        url: a.url,
+                    }
+                })
+                .collect();
+            render_page(UsersTemplate {
+                users,
+                ctx: &ctx,
+                remote_actors,
+            })
+            .into_response()
         }
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
     }
@@ -460,7 +482,7 @@ pub async fn get_user_by_username(
         Ok(u) => u,
         Err(_) => return StatusCode::NOT_FOUND.into_response(),
     };
-    match state.app_ctx.user_repository.find_by_username(&uname).await {
+    match state.app_ctx.repos.user.find_by_username(&uname).await {
         Ok(Some(user)) => {
             axum::response::Redirect::permanent(&format!("/users/{}", user.id().value()))
                 .into_response()
@@ -505,7 +527,7 @@ pub async fn get_user_profile(
 
     let mut ctx = build_page_context(&state, user_id.clone(), csrf.0).await;
     let view_str = params.view.as_deref().unwrap_or("recent");
-    let profile_view = match application::queries::ProfileView::from_str(view_str) {
+    let profile_view = match application::users::queries::ProfileView::from_str(view_str) {
         Ok(v) => v,
         Err(_) => {
             return (
@@ -518,7 +540,8 @@ pub async fn get_user_profile(
 
     let profile_user = match state
         .app_ctx
-        .user_repository
+        .repos
+        .user
         .find_by_id(&domain::value_objects::UserId::from_uuid(profile_user_uuid))
         .await
     {
@@ -546,7 +569,7 @@ pub async fn get_user_profile(
         .map(|u| u.value() == profile_user_uuid)
         .unwrap_or(false);
 
-    let query = application::queries::GetUserProfileQuery {
+    let query = application::users::queries::GetUserProfileQuery {
         user_id: profile_user_uuid,
         view: profile_view,
         limit: params.limit,
@@ -560,7 +583,7 @@ pub async fn get_user_profile(
         is_own_profile,
     };
 
-    match application::use_cases::get_user_profile::execute(&state.app_ctx, query).await {
+    match application::users::get_profile::execute(&state.app_ctx, query).await {
         Ok(profile) => {
             let (offset, has_more, limit) = profile
                 .entries
@@ -573,28 +596,80 @@ pub async fn get_user_profile(
             if !is_own_profile {
                 ctx.page_rss_url = Some(format!("/users/{}/feed.rss", profile_user_uuid));
             }
-            let pending_followers: Vec<application::ports::RemoteActorView> = profile
+            let email = profile_user.email().value().to_string();
+            let display_name = email.split('@').next().unwrap_or("?").to_string();
+            let avg_rating_display = profile
+                .stats
+                .avg_rating
+                .map(|r| format!("{:.1}", r))
+                .unwrap_or_else(|| "—".to_string());
+            let favorite_director_display = profile
+                .stats
+                .favorite_director
+                .clone()
+                .unwrap_or_else(|| "—".to_string());
+            let most_active_month_display = profile
+                .stats
+                .most_active_month
+                .clone()
+                .unwrap_or_else(|| "—".to_string());
+            let heatmap = profile
+                .history
+                .as_deref()
+                .map(build_heatmap)
+                .unwrap_or_default();
+            let monthly_rating_rows: Vec<MonthlyRatingRow<'_>> = profile
+                .trends
+                .as_ref()
+                .map(|t| {
+                    t.monthly_ratings
+                        .iter()
+                        .map(|r| MonthlyRatingRow {
+                            rating: r,
+                            bar_height_px: bar_height_px(r.avg_rating),
+                        })
+                        .collect()
+                })
+                .unwrap_or_default();
+            let total = profile
+                .entries
+                .as_ref()
+                .map(|e| e.total_count as u32)
+                .unwrap_or(0);
+            let total_pages = total
+                .saturating_add(limit.saturating_sub(1))
+                .checked_div(limit)
+                .unwrap_or(1);
+            let current_page = offset.checked_div(limit).unwrap_or(0);
+            let page_items = build_page_items(total_pages, current_page);
+            let pending_followers: Vec<RemoteActorData> = profile
                 .pending_followers
                 .into_iter()
-                .map(|p| application::ports::RemoteActorView {
+                .map(|p| RemoteActorData {
                     handle: p.handle,
                     url: p.url,
                     display_name: p.display_name,
                     avatar_url: p.avatar_url,
                 })
                 .collect();
-            let data = application::ports::ProfilePageData {
-                ctx,
+            render_page(ProfileTemplate {
+                ctx: &ctx,
+                profile_display_name: display_name,
                 profile_user_id: profile_user_uuid,
-                profile_user_email: profile_user.email().value().to_string(),
-                stats: profile.stats,
-                view: profile_view.as_str().to_string(),
-                entries: profile.entries,
+                stats: &profile.stats,
+                avg_rating_display,
+                favorite_director_display,
+                most_active_month_display,
+                view: profile_view.as_str(),
+                entries: profile.entries.as_ref(),
                 current_offset: offset,
                 has_more,
                 limit,
-                history: profile.history,
-                trends: profile.trends,
+                history: profile.history.as_ref(),
+                trends: profile.trends.as_ref(),
+                monthly_rating_rows,
+                heatmap,
+                page_items,
                 is_own_profile,
                 error: params.error,
                 following_count: profile.following_count,
@@ -602,11 +677,8 @@ pub async fn get_user_profile(
                 pending_followers,
                 sort_by: sort_by_str.to_string(),
                 search: params.search.clone(),
-            };
-            match state.html_renderer.render_profile_page(data) {
-                Ok(html) => Html(html).into_response(),
-                Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
-            }
+            })
+            .into_response()
         }
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
     }
@@ -818,25 +890,22 @@ pub async fn get_following_page(
     );
     match state.ap_service.get_following(user_id.value()).await {
         Ok(following) => {
-            let actors = following
+            let actors: Vec<RemoteActorData> = following
                 .into_iter()
-                .map(|a| RemoteActorView {
+                .map(|a| RemoteActorData {
                     handle: a.handle,
                     display_name: a.display_name,
                     url: a.url,
                     avatar_url: a.avatar_url.clone(),
                 })
                 .collect();
-            let data = FollowingPageData {
+            render_page(FollowingTemplate {
                 ctx,
                 user_id: profile_user_uuid,
                 actors,
                 error: params.error,
-            };
-            match state.html_renderer.render_following_page(data) {
-                Ok(html) => Html(html).into_response(),
-                Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
-            }
+            })
+            .into_response()
         }
         Err(e) => {
             tracing::error!("get_following error: {:?}", e);
@@ -872,25 +941,22 @@ pub async fn get_followers_page(
         .await
     {
         Ok(followers) => {
-            let actors = followers
+            let actors: Vec<RemoteActorData> = followers
                 .into_iter()
-                .map(|a| RemoteActorView {
+                .map(|a| RemoteActorData {
                     handle: a.handle,
                     display_name: a.display_name,
                     url: a.url,
                     avatar_url: a.avatar_url.clone(),
                 })
                 .collect();
-            let data = FollowersPageData {
+            render_page(FollowersTemplate {
                 ctx,
                 user_id: profile_user_uuid,
                 actors,
                 error: params.error,
-            };
-            match state.html_renderer.render_followers_page(data) {
-                Ok(html) => Html(html).into_response(),
-                Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
-            }
+            })
+            .into_response()
         }
         Err(e) => {
             tracing::error!("get_followers error: {:?}", e);
@@ -985,25 +1051,21 @@ pub async fn get_movie_detail(
                 .unwrap_or(false),
                 None => false,
             };
-            let data = MovieDetailPageData {
-                ctx,
-                movie: result.movie,
-                stats: result.stats,
-                profile: result.profile,
+            let current_offset = result.reviews.offset;
+            let reviews_limit = result.reviews.limit;
+            render_page(MovieDetailTemplate {
+                ctx: &ctx,
+                movie: &result.movie,
+                stats: &result.stats,
+                profile: result.profile.as_ref(),
+                reviews: result.reviews.items.as_slice(),
                 on_watchlist,
-                current_offset: result.reviews.offset,
+                current_offset,
                 has_more,
-                limit: result.reviews.limit,
-                reviews: result.reviews,
+                limit: reviews_limit,
                 histogram_max,
-            };
-            match state.html_renderer.render_movie_detail_page(data) {
-                Ok(html) => Html(html).into_response(),
-                Err(e) => {
-                    tracing::error!("template error: {}", e);
-                    StatusCode::INTERNAL_SERVER_ERROR.into_response()
-                }
-            }
+            })
+            .into_response()
         }
     }
 }
@@ -1018,9 +1080,9 @@ pub async fn get_watchlist_page(
     let ctx = build_page_context(&state, viewer_id.clone(), csrf.0).await;
     let is_owner = viewer_id.map(|u| u.value() == owner_id).unwrap_or(false);
 
-    let result = match application::use_cases::get_watchlist_page::execute(
+    let result = match application::watchlist::get_page::execute(
         &state.app_ctx,
-        application::queries::GetWatchlistQuery {
+        application::watchlist::queries::GetWatchlistQuery {
             user_id: owner_id,
             limit: params.limit.or(Some(20)),
             offset: params.offset.or(Some(0)),
@@ -1036,23 +1098,17 @@ pub async fn get_watchlist_page(
         }
     };
 
-    let data = WatchlistPageData {
-        ctx,
+    render_page(WatchlistTemplate {
+        ctx: &ctx,
         owner_id,
-        display_entries: result.display_entries,
+        display_entries: &result.display_entries,
         current_offset: result.current_offset,
         has_more: result.has_more,
         limit: result.limit,
         is_owner,
         error: params.error,
-    };
-    match state.html_renderer.render_watchlist_page(data) {
-        Ok(html) => Html(html).into_response(),
-        Err(e) => {
-            tracing::error!("watchlist template error: {}", e);
-            StatusCode::INTERNAL_SERVER_ERROR.into_response()
-        }
-    }
+    })
+    .into_response()
 }
 
 pub async fn post_watchlist_add(
@@ -1180,7 +1236,7 @@ pub async fn get_profile_settings(
     ctx.page_title = "Profile Settings — Movies Diary".to_string();
     ctx.canonical_url = format!("{}/settings/profile", state.app_ctx.config.base_url);
 
-    let user = match state.app_ctx.user_repository.find_by_id(&user_id).await {
+    let user = match state.app_ctx.repos.user.find_by_id(&user_id).await {
         Ok(Some(u)) => u,
         Ok(None) => return StatusCode::NOT_FOUND.into_response(),
         Err(e) => {
@@ -1197,9 +1253,10 @@ pub async fn get_profile_settings(
         .banner_path()
         .map(|path| format!("{}/images/{}", base_url, path));
 
-    let profile_fields = state
+    let profile_fields: Vec<(String, String)> = state
         .app_ctx
-        .profile_fields_repository
+        .repos
+        .profile_fields
         .get_fields(&user_id)
         .await
         .unwrap_or_default()
@@ -1209,23 +1266,19 @@ pub async fn get_profile_settings(
 
     let saved = params.saved.as_deref() == Some("1");
 
-    let data = ProfileSettingsPageData {
-        ctx,
-        bio: user.bio().map(|s| s.to_string()),
-        avatar_url,
-        banner_url,
-        also_known_as: user.also_known_as().map(|s| s.to_string()),
-        profile_fields,
-        saved,
-    };
+    let bio = user.bio().map(|s| s.to_string());
+    let also_known_as = user.also_known_as().map(|s| s.to_string());
 
-    match state.html_renderer.render_profile_settings_page(data) {
-        Ok(html) => Html(html).into_response(),
-        Err(e) => {
-            tracing::error!("profile_settings template error: {}", e);
-            StatusCode::INTERNAL_SERVER_ERROR.into_response()
-        }
-    }
+    render_page(ProfileSettingsTemplate {
+        ctx: &ctx,
+        bio: bio.as_deref(),
+        avatar_url: avatar_url.as_deref(),
+        banner_url: banner_url.as_deref(),
+        also_known_as: also_known_as.as_deref(),
+        profile_fields: &profile_fields,
+        saved,
+    })
+    .into_response()
 }
 
 pub async fn get_tag(Path(tag): Path<String>) -> impl IntoResponse {
@@ -1247,21 +1300,19 @@ pub async fn get_blocked_domains_page(
     ctx.canonical_url = format!("{}/admin/blocked-domains", state.app_ctx.config.base_url);
     match state.ap_service.get_blocked_domains().await {
         Ok(domains) => {
-            let data = BlockedDomainsPageData {
-                ctx,
-                domains: domains
-                    .into_iter()
-                    .map(|d| BlockedDomainEntry {
-                        domain: d.domain,
-                        reason: d.reason,
-                        blocked_at: d.blocked_at,
-                    })
-                    .collect(),
-            };
-            match state.html_renderer.render_blocked_domains_page(data) {
-                Ok(html) => Html(html).into_response(),
-                Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
-            }
+            let entries: Vec<template_askama::BlockedDomainEntry> = domains
+                .into_iter()
+                .map(|d| template_askama::BlockedDomainEntry {
+                    domain: d.domain,
+                    reason: d.reason,
+                    blocked_at: d.blocked_at,
+                })
+                .collect();
+            render_page(BlockedDomainsTemplate {
+                ctx: &ctx,
+                domains: &entries,
+            })
+            .into_response()
         }
         Err(e) => {
             tracing::error!("get_blocked_domains error: {:?}", e);
@@ -1328,22 +1379,20 @@ pub async fn get_blocked_actors_page(
     ctx.canonical_url = format!("{}/social/blocked", state.app_ctx.config.base_url);
     match state.ap_service.get_blocked_actors(user_id.value()).await {
         Ok(actors) => {
-            let data = BlockedActorsPageData {
-                ctx,
-                actors: actors
-                    .into_iter()
-                    .map(|a| BlockedActorEntry {
-                        url: a.url,
-                        handle: a.handle,
-                        display_name: a.display_name,
-                        avatar_url: a.avatar_url,
-                    })
-                    .collect(),
-            };
-            match state.html_renderer.render_blocked_actors_page(data) {
-                Ok(html) => Html(html).into_response(),
-                Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
-            }
+            let entries: Vec<template_askama::BlockedActorEntry> = actors
+                .into_iter()
+                .map(|a| template_askama::BlockedActorEntry {
+                    url: a.url,
+                    handle: a.handle,
+                    display_name: a.display_name,
+                    avatar_url: a.avatar_url,
+                })
+                .collect();
+            render_page(BlockedActorsTemplate {
+                ctx: &ctx,
+                actors: &entries,
+            })
+            .into_response()
         }
         Err(e) => {
             tracing::error!("get_blocked_actors error: {:?}", e);
@@ -1475,7 +1524,7 @@ pub async fn post_profile_settings(
         }
     }
 
-    let cmd = application::commands::UpdateProfileCommand {
+    let cmd = application::users::commands::UpdateProfileCommand {
         user_id: user_id.value(),
         display_name,
         bio,
@@ -1498,7 +1547,7 @@ pub async fn post_profile_settings(
         })
         .collect();
 
-    let fields_cmd = application::commands::UpdateProfileFieldsCommand {
+    let fields_cmd = application::users::commands::UpdateProfileFieldsCommand {
         user_id: user_id.value(),
         fields,
     };
@@ -1526,9 +1575,9 @@ pub async fn get_integrations_page(
         .await
         .unwrap_or_default();
 
-    let token_views: Vec<WebhookTokenView> = tokens
+    let token_views: Vec<template_askama::WebhookTokenView> = tokens
         .into_iter()
-        .map(|t| WebhookTokenView {
+        .map(|t| template_askama::WebhookTokenView {
             id: t.id().value().to_string(),
             provider: t.provider().to_string(),
             label: t.label().map(String::from),
@@ -1539,20 +1588,14 @@ pub async fn get_integrations_page(
         })
         .collect();
 
-    let data = IntegrationsPageData {
-        ctx,
-        tokens: token_views,
-        webhook_base_url: state.app_ctx.config.base_url.clone(),
-        new_token: params.token,
-    };
-
-    match state.html_renderer.render_integrations_page(data) {
-        Ok(html) => Html(html).into_response(),
-        Err(e) => {
-            tracing::error!("integrations template error: {}", e);
-            StatusCode::INTERNAL_SERVER_ERROR.into_response()
-        }
-    }
+    let webhook_base_url = state.app_ctx.config.base_url.clone();
+    render_page(IntegrationsTemplate {
+        ctx: &ctx,
+        tokens: &token_views,
+        webhook_base_url: &webhook_base_url,
+        new_token: params.token.as_deref(),
+    })
+    .into_response()
 }
 
 pub async fn post_generate_token(
@@ -1632,9 +1675,9 @@ pub async fn get_watch_queue_page(
         .await
         .unwrap_or_default();
 
-    let entries: Vec<WatchQueueDisplayEntry> = events
+    let entries: Vec<template_askama::WatchQueueDisplayEntry> = events
         .into_iter()
-        .map(|e| WatchQueueDisplayEntry {
+        .map(|e| template_askama::WatchQueueDisplayEntry {
             id: e.id().value().to_string(),
             title: e.title().to_string(),
             year: e.year(),
@@ -1644,19 +1687,12 @@ pub async fn get_watch_queue_page(
         })
         .collect();
 
-    let data = WatchQueuePageData {
-        ctx,
-        entries,
-        error: params.error,
-    };
-
-    match state.html_renderer.render_watch_queue_page(data) {
-        Ok(html) => Html(html).into_response(),
-        Err(e) => {
-            tracing::error!("watch_queue template error: {}", e);
-            StatusCode::INTERNAL_SERVER_ERROR.into_response()
-        }
-    }
+    render_page(WatchQueueTemplate {
+        ctx: &ctx,
+        entries: &entries,
+        error: params.error.as_deref(),
+    })
+    .into_response()
 }
 
 pub async fn post_confirm_single(

@@ -2,7 +2,7 @@ use chrono::NaiveDateTime;
 use serde::Deserialize;
 use uuid::Uuid;
 
-use application::{
+use application::diary::{
     commands::{LogReviewCommand, MovieInput},
     queries::GetDiaryQuery,
 };

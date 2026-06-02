@@ -22,7 +22,7 @@ impl PeriodicJob for ImportSessionCleanupJob {
     }
 
     async fn run(&self) -> Result<(), DomainError> {
-        let n = crate::use_cases::cleanup_expired_import_sessions::execute(&self.ctx).await?;
+        let n = crate::import::cleanup::execute(&self.ctx).await?;
         tracing::info!("import session cleanup: removed {} expired sessions", n);
         Ok(())
     }
@@ -45,7 +45,7 @@ impl PeriodicJob for WatchEventCleanupJob {
     }
 
     async fn run(&self) -> Result<(), DomainError> {
-        let n = crate::use_cases::cleanup_watch_events::execute(&self.ctx).await?;
+        let n = crate::integrations::cleanup::execute(&self.ctx).await?;
         if n > 0 {
             tracing::info!("watch event cleanup: removed {n} old entries");
         }
@@ -70,7 +70,7 @@ impl PeriodicJob for EnrichmentStalenessJob {
     }
 
     async fn run(&self) -> Result<(), DomainError> {
-        let stale = self.ctx.movie_profile_repository.list_stale().await?;
+        let stale = self.ctx.repos.movie_profile.list_stale().await?;
         if stale.is_empty() {
             return Ok(());
         }
@@ -80,7 +80,7 @@ impl PeriodicJob for EnrichmentStalenessJob {
                 movie_id,
                 external_metadata_id,
             };
-            self.ctx.event_publisher.publish(&event).await?;
+            self.ctx.services.event_publisher.publish(&event).await?;
         }
         Ok(())
     }

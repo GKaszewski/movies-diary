@@ -10,16 +10,16 @@ use api_types::{
     ConfirmWatchRequest, ConfirmWatchResponse, DismissWatchRequest, DismissWatchResponse,
     GenerateTokenRequest, GenerateTokenResponse, WatchQueueEntryDto, WebhookTokenDto,
 };
-use application::{
+use application::integrations::{
     commands::{
         ConfirmWatchEventsCommand, DismissWatchEventsCommand, GenerateWebhookTokenCommand,
         IngestWatchEventCommand, RevokeWebhookTokenCommand, WatchEventConfirmation,
     },
+    confirm as confirm_watch_events, dismiss as dismiss_watch_events,
+    generate_token as generate_webhook_token, get_queue as get_watch_queue,
+    get_tokens as get_webhook_tokens, ingest as ingest_watch_event,
     queries::{GetWatchQueueQuery, GetWebhookTokensQuery},
-    use_cases::{
-        confirm_watch_events, dismiss_watch_events, generate_webhook_token, get_watch_queue,
-        get_webhook_tokens, ingest_watch_event, revoke_webhook_token,
-    },
+    revoke_token as revoke_webhook_token,
 };
 use domain::models::WatchEventSource;
 
