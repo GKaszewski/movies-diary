@@ -10,6 +10,9 @@
     {% if report.total_watch_time_minutes > 0 %}
     <div class="wu-detail">{{ watch_time_display }} of watch time</div>
     {% endif %}
+    {% if let Some(url) = video_url %}
+    <a href="{{ url }}" class="wu-video-link" download>Download Video</a>
+    {% endif %}
   </section>
 
   <section class="wu-section">

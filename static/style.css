@@ -1196,6 +1196,14 @@ form button[type="submit"]:hover {
   animation: wu-fade-in 0.6s ease-out both;
 }
 .wu-hero { min-height: 50vh; padding-top: 4rem; }
+.wu-video-link {
+  display: inline-block; margin-top: 1.5rem;
+  padding: 0.5rem 1.5rem;
+  background: var(--primary); color: #1a1a24;
+  border-radius: 999px; font-weight: 700; font-size: 0.85rem;
+  text-decoration: none; transition: opacity 0.2s;
+}
+.wu-video-link:hover { opacity: 0.85; }
 .wu-eyebrow { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.15em; opacity: 0.5; margin-bottom: 0.5rem; }
 .wu-year { font-size: 3rem; opacity: 0.4; margin-bottom: 0.25rem; font-weight: 800; }
 .wu-big-number { font-size: 5rem; font-weight: 800; color: var(--primary); line-height: 1.1; }

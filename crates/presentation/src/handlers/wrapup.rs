@@ -232,6 +232,7 @@ fn render_wrapup(
     report: &WrapUpReport,
     year: i32,
     ctx: &application::ports::HtmlPageContext,
+    video_url: Option<String>,
 ) -> axum::response::Response {
     let rating_max = report
         .rating_distribution
@@ -263,6 +264,7 @@ fn render_wrapup(
         genre_max,
         rating_pcts,
         genre_pcts,
+        video_url,
     };
     render_page(tmpl)
 }
@@ -301,8 +303,9 @@ pub async fn get_user_wrapup_html(
         None => return StatusCode::NOT_FOUND.into_response(),
     };
 
+    let video_url = format!("/api/v1/wrapups/{}/video", record.id.value());
     let ctx = super::html::build_page_context(&state, viewer, csrf.0).await;
-    render_wrapup(&report, year, &ctx)
+    render_wrapup(&report, year, &ctx, Some(video_url))
 }
 
 pub async fn get_global_wrapup_html(
@@ -339,6 +342,7 @@ pub async fn get_global_wrapup_html(
         None => return StatusCode::NOT_FOUND.into_response(),
     };
 
+    let video_url = format!("/api/v1/wrapups/{}/video", record.id.value());
     let ctx = super::html::build_page_context(&state, viewer, csrf.0).await;
-    render_wrapup(&report, year, &ctx)
+    render_wrapup(&report, year, &ctx, Some(video_url))
 }

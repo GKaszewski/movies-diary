@@ -437,4 +437,5 @@ pub struct WrapUpPageTemplate<'a> {
     pub genre_max: u32,
     pub rating_pcts: [f64; 5],
     pub genre_pcts: Vec<f64>,
+    pub video_url: Option<String>,
 }
