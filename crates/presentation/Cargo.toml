@@ -74,5 +74,7 @@ sqlite-federation = { workspace = true, optional = true }
 postgres-federation = { workspace = true, optional = true }
 
 [dev-dependencies]
+bytes = { workspace = true }
+futures = { workspace = true }
 tower = { version = "0.5", features = ["util"] }
 http-body-util = "0.1"

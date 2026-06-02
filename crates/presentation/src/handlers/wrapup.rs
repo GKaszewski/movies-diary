@@ -162,19 +162,40 @@ pub async fn get_video(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
 ) -> impl IntoResponse {
-    let record = match state.app_ctx.repos.wrapup_repo.get_by_id(&WrapUpId::from_uuid(id)).await {
+    let record = match state
+        .app_ctx
+        .repos
+        .wrapup_repo
+        .get_by_id(&WrapUpId::from_uuid(id))
+        .await
+    {
         Ok(Some(r)) if r.status == WrapUpStatus::Ready => r,
         _ => return StatusCode::NOT_FOUND.into_response(),
     };
-    let _ = record; // used only for status check
+    let _ = record;
     let video_key = format!("wrapups/{}/video.mp4", id);
-    match state.app_ctx.services.image_storage.get(&video_key).await {
-        Ok(bytes) => (
-            StatusCode::OK,
-            [(axum::http::header::CONTENT_TYPE, "video/mp4"),
-             (axum::http::header::CONTENT_DISPOSITION, "attachment; filename=\"wrapup.mp4\"")],
-            bytes,
-        ).into_response(),
+    match state
+        .app_ctx
+        .services
+        .image_storage
+        .get_stream(&video_key)
+        .await
+    {
+        Ok(stream) => {
+            let body = axum::body::Body::from_stream(stream);
+            (
+                StatusCode::OK,
+                [
+                    (axum::http::header::CONTENT_TYPE, "video/mp4"),
+                    (
+                        axum::http::header::CONTENT_DISPOSITION,
+                        "attachment; filename=\"wrapup.mp4\"",
+                    ),
+                ],
+                body,
+            )
+                .into_response()
+        }
         Err(_) => StatusCode::NOT_FOUND.into_response(),
     }
 }

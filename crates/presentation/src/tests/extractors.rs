@@ -201,6 +201,13 @@ impl ImageStorage for Panic {
     async fn get(&self, _: &str) -> Result<Vec<u8>, DomainError> {
         panic!()
     }
+    async fn get_stream(
+        &self,
+        _: &str,
+    ) -> Result<futures::stream::BoxStream<'static, Result<bytes::Bytes, DomainError>>, DomainError>
+    {
+        panic!()
+    }
     async fn delete(&self, _: &str) -> Result<(), DomainError> {
         panic!()
     }
@@ -657,6 +664,12 @@ pub fn make_test_state(auth_service: Arc<dyn AuthService>) -> crate::state::AppS
                 allow_registration: false,
                 base_url: "http://localhost:3000".to_string(),
                 rate_limit: 20,
+                wrapup: application::config::WrapUpConfig {
+                    font_path: None,
+                    logo_path: None,
+                    ffmpeg_path: "ffmpeg".into(),
+                    max_concurrent_renders: 2,
+                },
             },
         },
         rss_renderer: Arc::new(Panic),

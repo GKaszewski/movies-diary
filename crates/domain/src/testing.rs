@@ -365,6 +365,14 @@ impl ImageStorage for NoopImageStorage {
         Ok(vec![])
     }
 
+    async fn get_stream(
+        &self,
+        _key: &str,
+    ) -> Result<futures::stream::BoxStream<'static, Result<bytes::Bytes, DomainError>>, DomainError>
+    {
+        Ok(Box::pin(futures::stream::empty()))
+    }
+
     async fn delete(&self, _key: &str) -> Result<(), DomainError> {
         Ok(())
     }

@@ -7,6 +7,7 @@ use domain::{
     events::DomainEvent,
     ports::{EventHandler, ImageStorage},
 };
+use futures::StreamExt;
 use object_store::{ObjectStore, path::Path};
 use std::sync::Arc;
 
@@ -46,6 +47,24 @@ impl ImageStorage for ImageStorageAdapter {
             .await
             .map(|b| b.to_vec())
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))
+    }
+
+    async fn get_stream(
+        &self,
+        key: &str,
+    ) -> Result<futures::stream::BoxStream<'static, Result<bytes::Bytes, DomainError>>, DomainError>
+    {
+        let path = Path::from(key);
+        let result = self.store.get(&path).await.map_err(|e| match e {
+            object_store::Error::NotFound { .. } => DomainError::NotFound("not found".into()),
+            _ => DomainError::InfrastructureError(e.to_string()),
+        })?;
+        let stream = result.into_stream().map(|chunk| {
+            chunk
+                .map(|b| bytes::Bytes::from(b.to_vec()))
+                .map_err(|e| DomainError::InfrastructureError(e.to_string()))
+        });
+        Ok(Box::pin(stream))
     }
 
     async fn delete(&self, key: &str) -> Result<(), DomainError> {

@@ -37,6 +37,7 @@ resolver = "2"
 
 [workspace.dependencies]
 tokio = { version = "1.0", features = ["macros", "net", "rt", "rt-multi-thread", "sync", "time"] }
+bytes = "1"
 futures = "0.3"
 dotenvy = "0.15"
 serde = { version = "1.0", features = ["derive"] }
