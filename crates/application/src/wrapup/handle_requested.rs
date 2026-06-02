@@ -2,7 +2,7 @@ use crate::context::AppContext;
 use crate::wrapup::{compute, queries::ComputeWrapUpQuery};
 use domain::errors::DomainError;
 use domain::events::DomainEvent;
-use domain::models::wrapup::{DateRange, WrapUpReport, WrapUpScope, WrapUpStatus};
+use domain::models::wrapup::{DateRange, WrapUpScope, WrapUpStatus};
 use domain::ports::{VideoRenderAssets, VideoRenderConfig};
 use domain::value_objects::WrapUpId;
 
@@ -41,8 +41,12 @@ pub async fn execute(
 
             if let Some(ref renderer) = ctx.services.video_renderer {
                 let poster_images = resolve_images(ctx, &report.poster_paths, "poster").await;
-                let cast_images =
-                    resolve_images(ctx, &report.top_cast_profile_paths, "cast").await;
+                let cast_keys: Vec<String> = report
+                    .top_cast_profile_paths
+                    .iter()
+                    .map(|p| format!("cast{p}"))
+                    .collect();
+                let cast_images = resolve_images(ctx, &cast_keys, "cast").await;
                 let wc = &ctx.config.wrapup;
                 let config = VideoRenderConfig {
                     slide_duration_secs: 4,

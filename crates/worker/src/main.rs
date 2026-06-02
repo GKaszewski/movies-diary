@@ -127,13 +127,14 @@ async fn main() -> anyhow::Result<()> {
         match tmdb_enrichment::TmdbEnrichmentClient::from_env() {
             Ok(client) => {
                 tracing::info!("TMDb enrichment enabled");
-                let handler = Arc::new(tmdb_enrichment::EnrichmentHandler {
-                    enrichment_client: Arc::new(client),
-                    movie_repository: Arc::clone(&ctx.repos.movie),
-                    profile_repo: Arc::clone(&ctx.repos.movie_profile),
-                    person_command: Arc::clone(&ctx.repos.person_command),
-                    search_command: Arc::clone(&ctx.repos.search_command),
-                }) as Arc<dyn EventHandler>;
+                let handler = Arc::new(tmdb_enrichment::EnrichmentHandler::new(
+                    Arc::new(client),
+                    Arc::clone(&ctx.repos.movie),
+                    Arc::clone(&ctx.repos.movie_profile),
+                    Arc::clone(&ctx.repos.person_command),
+                    Arc::clone(&ctx.repos.search_command),
+                    Arc::clone(&ctx.services.image_storage),
+                )) as Arc<dyn EventHandler>;
                 let job = Arc::new(application::jobs::EnrichmentStalenessJob::new(ctx.clone()))
                     as Arc<dyn PeriodicJob>;
                 (Some(handler), Some(job))

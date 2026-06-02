@@ -8,8 +8,8 @@ use domain::{
     events::DomainEvent,
     models::{CastMember, CrewMember, Genre, Keyword, MovieProfile},
     ports::{
-        EventHandler, MovieEnrichmentClient, MovieProfileRepository, MovieRepository,
-        PersonCommand, SearchCommand,
+        EventHandler, ImageStorage, MovieEnrichmentClient, MovieProfileRepository,
+        MovieRepository, PersonCommand, SearchCommand,
     },
     value_objects::MovieId,
 };
@@ -229,6 +229,52 @@ pub struct EnrichmentHandler {
     pub profile_repo: Arc<dyn MovieProfileRepository>,
     pub person_command: Arc<dyn PersonCommand>,
     pub search_command: Arc<dyn SearchCommand>,
+    pub image_storage: Arc<dyn ImageStorage>,
+    http: reqwest::Client,
+}
+
+impl EnrichmentHandler {
+    pub fn new(
+        enrichment_client: Arc<dyn MovieEnrichmentClient>,
+        movie_repository: Arc<dyn MovieRepository>,
+        profile_repo: Arc<dyn MovieProfileRepository>,
+        person_command: Arc<dyn PersonCommand>,
+        search_command: Arc<dyn SearchCommand>,
+        image_storage: Arc<dyn ImageStorage>,
+    ) -> Self {
+        Self {
+            enrichment_client,
+            movie_repository,
+            profile_repo,
+            person_command,
+            search_command,
+            image_storage,
+            http: reqwest::Client::new(),
+        }
+    }
+
+    async fn download_cast_photos(&self, profile: &MovieProfile) {
+        for member in profile.cast.iter().take(5) {
+            let Some(ref path) = member.profile_path else {
+                continue;
+            };
+            let key = format!("cast{path}");
+            if self.image_storage.get(&key).await.is_ok() {
+                continue;
+            }
+            let url = format!("https://image.tmdb.org/t/p/w185{path}");
+            match self.http.get(&url).send().await {
+                Ok(resp) if resp.status().is_success() => {
+                    if let Ok(bytes) = resp.bytes().await {
+                        if let Err(e) = self.image_storage.store(&key, &bytes).await {
+                            tracing::debug!("cast photo store failed for {path}: {e}");
+                        }
+                    }
+                }
+                _ => tracing::debug!("cast photo download failed for {path}"),
+            }
+        }
+    }
 }
 
 #[async_trait]
@@ -263,6 +309,7 @@ impl EventHandler for EnrichmentHandler {
             .await
         {
             Ok(profile) => {
+                self.download_cast_photos(&profile).await;
                 enrich_movie::execute(
                     &self.movie_repository,
                     &self.profile_repo,
