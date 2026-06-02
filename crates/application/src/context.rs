@@ -6,7 +6,7 @@ use domain::ports::{
     MovieRepository, PasswordHasher, PersonCommand, PersonQuery, PosterFetcherClient,
     RemoteWatchlistRepository, ReviewRepository, SearchCommand, SearchPort, SocialQueryPort,
     StatsRepository, UserProfileFieldsRepository, UserRepository, WatchEventRepository,
-    WatchlistRepository, WebhookTokenRepository,
+    WatchlistRepository, WrapUpStatsQuery, WebhookTokenRepository,
 };
 
 use crate::config::AppConfig;
@@ -31,6 +31,7 @@ pub struct Repositories {
     pub profile_fields: Arc<dyn UserProfileFieldsRepository>,
     pub remote_watchlist: Arc<dyn RemoteWatchlistRepository>,
     pub social_query: Arc<dyn SocialQueryPort>,
+    pub wrapup_stats: Arc<dyn WrapUpStatsQuery>,
 }
 
 #[derive(Clone)]

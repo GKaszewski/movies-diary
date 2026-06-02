@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use domain::testing::{NoopRemoteWatchlistRepository, NoopSocialQueryPort};
+use domain::testing::{InMemoryWrapUpStatsQuery, NoopRemoteWatchlistRepository, NoopSocialQueryPort};
 use domain::{
     ports::{
         AuthService, DiaryExporter, DiaryRepository, DocumentParser, EventPublisher, ImageStorage,
@@ -8,6 +8,7 @@ use domain::{
         MovieRepository, PasswordHasher, PersonCommand, PersonQuery, PosterFetcherClient,
         ReviewRepository, SearchCommand, SearchPort, StatsRepository, UserProfileFieldsRepository,
         UserRepository, WatchEventRepository, WatchlistRepository, WebhookTokenRepository,
+        WrapUpStatsQuery,
     },
     testing::{
         FakeAuthService, FakeMetadataClient, FakePasswordHasher, InMemoryMovieRepository,
@@ -50,6 +51,7 @@ pub struct TestContextBuilder {
     pub person_query: Arc<dyn PersonQuery>,
     pub search_port: Arc<dyn SearchPort>,
     pub search_command: Arc<dyn SearchCommand>,
+    pub wrapup_stats: Arc<dyn WrapUpStatsQuery>,
     pub config: AppConfig,
 }
 
@@ -80,6 +82,7 @@ impl TestContextBuilder {
             person_query: Arc::new(PanicPersonQuery),
             search_port: Arc::new(PanicSearchPort),
             search_command: Arc::new(PanicSearchCommand),
+            wrapup_stats: InMemoryWrapUpStatsQuery::new(),
             config: AppConfig {
                 allow_registration: true,
                 base_url: "http://localhost:3000".into(),
@@ -118,6 +121,11 @@ impl TestContextBuilder {
         self
     }
 
+    pub fn wrapup_stats(mut self, r: Arc<dyn WrapUpStatsQuery>) -> Self {
+        self.wrapup_stats = r;
+        self
+    }
+
     pub fn with_config(mut self, config: AppConfig) -> Self {
         self.config = config;
         self
@@ -144,6 +152,7 @@ impl TestContextBuilder {
                 search_command: self.search_command,
                 remote_watchlist: Arc::new(NoopRemoteWatchlistRepository),
                 social_query: Arc::new(NoopSocialQueryPort),
+                wrapup_stats: self.wrapup_stats,
             },
             services: Services {
                 auth: self.auth_service,

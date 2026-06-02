@@ -13,6 +13,7 @@ pub mod person;
 pub mod search;
 pub mod users;
 pub mod watchlist;
+pub mod wrapup;
 
 #[cfg(test)]
 pub mod test_helpers;
