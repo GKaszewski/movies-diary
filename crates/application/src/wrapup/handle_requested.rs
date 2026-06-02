@@ -44,6 +44,8 @@ pub async fn execute(
                     transition_duration_secs: 0.8,
                     resolution: (1080, 1920),
                     ffmpeg_path: "ffmpeg".to_string(),
+                    font_path: None,
+                    logo_path: None,
                 };
                 match renderer.render(&report, poster_images, &config).await {
                     Ok(video_bytes) => {

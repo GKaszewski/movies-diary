@@ -530,6 +530,8 @@ pub struct VideoRenderConfig {
     pub transition_duration_secs: f32,
     pub resolution: (u32, u32),
     pub ffmpeg_path: String,
+    pub font_path: Option<String>,
+    pub logo_path: Option<String>,
 }
 
 #[async_trait]
