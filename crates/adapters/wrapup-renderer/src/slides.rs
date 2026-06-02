@@ -350,9 +350,11 @@ impl SlideRenderer {
         let margin_x = 120i32;
         let max_bar_w = (w as i32 - margin_x * 2) as u32;
 
-        for (i, &count) in report.rating_distribution.iter().enumerate() {
-            let label = format!("{}\u{2605}", i + 1);
-            let y = bar_area_top + (i as i32) * (bar_h as i32 + bar_gap as i32);
+        for row in 0..5 {
+            let stars = 5 - row;
+            let count = report.rating_distribution[stars - 1];
+            let label = format!("{stars}\u{2605}");
+            let y = bar_area_top + (row as i32) * (bar_h as i32 + bar_gap as i32);
             self.draw_left(&mut img, &label, margin_x - 60, y + 2, 28.0, GOLD);
 
             draw_filled_rect_mut(
