@@ -402,6 +402,57 @@ impl MovieRepository for SqliteMovieRepository {
         Ok(())
     }
 
+    async fn existing_external_ids(
+        &self,
+        ids: &[ExternalMetadataId],
+    ) -> Result<std::collections::HashSet<String>, DomainError> {
+        if ids.is_empty() {
+            return Ok(Default::default());
+        }
+        let placeholders: Vec<&str> = ids.iter().map(|_| "?").collect();
+        let sql = format!(
+            "SELECT external_metadata_id FROM movies WHERE external_metadata_id IN ({})",
+            placeholders.join(",")
+        );
+        let mut q = sqlx::query_scalar::<_, String>(&sql);
+        for id in ids {
+            q = q.bind(id.value().to_string());
+        }
+        let rows = q.fetch_all(&self.pool).await.map_err(Self::map_err)?;
+        Ok(rows.into_iter().collect())
+    }
+
+    async fn existing_title_year_pairs(
+        &self,
+        pairs: &[(MovieTitle, ReleaseYear)],
+    ) -> Result<std::collections::HashSet<(String, u16)>, DomainError> {
+        if pairs.is_empty() {
+            return Ok(Default::default());
+        }
+        let conditions: Vec<String> = pairs
+            .iter()
+            .map(|_| "(title = ? AND release_year = ?)".to_string())
+            .collect();
+        let sql = format!(
+            "SELECT DISTINCT title, release_year FROM movies WHERE {}",
+            conditions.join(" OR ")
+        );
+        use sqlx::Row;
+        let mut q = sqlx::query(&sql);
+        for (t, y) in pairs {
+            q = q.bind(t.value().to_string()).bind(y.value() as i64);
+        }
+        let rows = q.fetch_all(&self.pool).await.map_err(Self::map_err)?;
+        Ok(rows
+            .into_iter()
+            .map(|r| {
+                let t: String = r.get("title");
+                let y: i64 = r.get("release_year");
+                (t, y as u16)
+            })
+            .collect())
+    }
+
     async fn list_movies(
         &self,
         page: &domain::models::collections::PageParams,

@@ -55,6 +55,18 @@ impl MovieRepository for RepoWithExternalMovie {
     async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> {
         panic!("unexpected")
     }
+    async fn existing_external_ids(
+        &self,
+        _: &[ExternalMetadataId],
+    ) -> Result<std::collections::HashSet<String>, DomainError> {
+        panic!("unexpected")
+    }
+    async fn existing_title_year_pairs(
+        &self,
+        _: &[(MovieTitle, ReleaseYear)],
+    ) -> Result<std::collections::HashSet<(String, u16)>, DomainError> {
+        panic!("unexpected")
+    }
     async fn list_movies(
         &self,
         _: &domain::models::collections::PageParams,
@@ -89,6 +101,18 @@ impl MovieRepository for RepoEmpty {
     async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> {
         panic!("unexpected")
     }
+    async fn existing_external_ids(
+        &self,
+        _: &[ExternalMetadataId],
+    ) -> Result<std::collections::HashSet<String>, DomainError> {
+        panic!("unexpected")
+    }
+    async fn existing_title_year_pairs(
+        &self,
+        _: &[(MovieTitle, ReleaseYear)],
+    ) -> Result<std::collections::HashSet<(String, u16)>, DomainError> {
+        panic!("unexpected")
+    }
     async fn list_movies(
         &self,
         _: &domain::models::collections::PageParams,
@@ -121,6 +145,18 @@ impl MovieRepository for RepoWithTitleMatch {
         panic!("unexpected")
     }
     async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> {
+        panic!("unexpected")
+    }
+    async fn existing_external_ids(
+        &self,
+        _: &[ExternalMetadataId],
+    ) -> Result<std::collections::HashSet<String>, DomainError> {
+        panic!("unexpected")
+    }
+    async fn existing_title_year_pairs(
+        &self,
+        _: &[(MovieTitle, ReleaseYear)],
+    ) -> Result<std::collections::HashSet<(String, u16)>, DomainError> {
         panic!("unexpected")
     }
     async fn list_movies(

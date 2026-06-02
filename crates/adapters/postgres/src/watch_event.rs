@@ -115,6 +115,45 @@ impl WatchEventRepository for PostgresWatchEventRepository {
         row.as_ref().map(row_to_watch_event).transpose()
     }
 
+    async fn get_by_ids(&self, ids: &[WatchEventId]) -> Result<Vec<WatchEvent>, DomainError> {
+        if ids.is_empty() {
+            return Ok(vec![]);
+        }
+        let id_strs: Vec<String> = ids.iter().map(|id| id.value().to_string()).collect();
+        let rows = sqlx::query(
+            "SELECT id, user_id, movie_id, title, year, external_metadata_id, \
+                    source, \
+                    to_char(watched_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS watched_at, \
+                    status, \
+                    to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS created_at \
+             FROM watch_events WHERE id = ANY($1)",
+        )
+        .bind(&id_strs)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(map_err)?;
+        rows.iter().map(row_to_watch_event).collect()
+    }
+
+    async fn update_status_batch(
+        &self,
+        ids: &[WatchEventId],
+        status: WatchEventStatus,
+    ) -> Result<u64, DomainError> {
+        if ids.is_empty() {
+            return Ok(0);
+        }
+        let id_strs: Vec<String> = ids.iter().map(|id| id.value().to_string()).collect();
+        let status_str = status.to_string();
+        let result = sqlx::query("UPDATE watch_events SET status = $1 WHERE id = ANY($2)")
+            .bind(&status_str)
+            .bind(&id_strs)
+            .execute(&self.pool)
+            .await
+            .map_err(map_err)?;
+        Ok(result.rows_affected())
+    }
+
     async fn find_duplicate(
         &self,
         user_id: &UserId,

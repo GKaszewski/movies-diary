@@ -122,6 +122,46 @@ impl WatchEventRepository for SqliteWatchEventRepository {
         row.as_ref().map(row_to_watch_event).transpose()
     }
 
+    async fn get_by_ids(&self, ids: &[WatchEventId]) -> Result<Vec<WatchEvent>, DomainError> {
+        if ids.is_empty() {
+            return Ok(vec![]);
+        }
+        let placeholders: Vec<&str> = ids.iter().map(|_| "?").collect();
+        let sql = format!(
+            "SELECT id, user_id, movie_id, title, year, external_metadata_id, \
+                    source, watched_at, status, created_at \
+             FROM watch_events WHERE id IN ({})",
+            placeholders.join(",")
+        );
+        let mut q = sqlx::query(&sql);
+        for id in ids {
+            q = q.bind(id.value().to_string());
+        }
+        let rows = q.fetch_all(&self.pool).await.map_err(map_err)?;
+        rows.iter().map(row_to_watch_event).collect()
+    }
+
+    async fn update_status_batch(
+        &self,
+        ids: &[WatchEventId],
+        status: WatchEventStatus,
+    ) -> Result<u64, DomainError> {
+        if ids.is_empty() {
+            return Ok(0);
+        }
+        let placeholders: Vec<&str> = ids.iter().map(|_| "?").collect();
+        let sql = format!(
+            "UPDATE watch_events SET status = ? WHERE id IN ({})",
+            placeholders.join(",")
+        );
+        let mut q = sqlx::query(&sql).bind(status.to_string());
+        for id in ids {
+            q = q.bind(id.value().to_string());
+        }
+        let result = q.execute(&self.pool).await.map_err(map_err)?;
+        Ok(result.rows_affected())
+    }
+
     async fn find_duplicate(
         &self,
         user_id: &UserId,

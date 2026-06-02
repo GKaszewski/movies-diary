@@ -60,6 +60,18 @@ impl MovieRepository for Panic {
     async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> {
         panic!()
     }
+    async fn existing_external_ids(
+        &self,
+        _: &[ExternalMetadataId],
+    ) -> Result<std::collections::HashSet<String>, DomainError> {
+        panic!()
+    }
+    async fn existing_title_year_pairs(
+        &self,
+        _: &[(MovieTitle, ReleaseYear)],
+    ) -> Result<std::collections::HashSet<(String, u16)>, DomainError> {
+        panic!()
+    }
     async fn list_movies(
         &self,
         _: &domain::models::collections::PageParams,
@@ -494,6 +506,19 @@ impl domain::ports::WatchEventRepository for Panic {
         &self,
         _: &domain::value_objects::WatchEventId,
     ) -> Result<Option<domain::models::WatchEvent>, DomainError> {
+        panic!()
+    }
+    async fn get_by_ids(
+        &self,
+        _: &[domain::value_objects::WatchEventId],
+    ) -> Result<Vec<domain::models::WatchEvent>, DomainError> {
+        panic!()
+    }
+    async fn update_status_batch(
+        &self,
+        _: &[domain::value_objects::WatchEventId],
+        _: domain::models::WatchEventStatus,
+    ) -> Result<u64, DomainError> {
         panic!()
     }
     async fn find_duplicate(

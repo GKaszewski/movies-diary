@@ -100,6 +100,14 @@ pub trait MovieRepository: Send + Sync {
     ) -> Result<Vec<Movie>, DomainError>;
     async fn upsert_movie(&self, movie: &Movie) -> Result<(), DomainError>;
     async fn delete_movie(&self, movie_id: &MovieId) -> Result<(), DomainError>;
+    async fn existing_external_ids(
+        &self,
+        ids: &[ExternalMetadataId],
+    ) -> Result<std::collections::HashSet<String>, DomainError>;
+    async fn existing_title_year_pairs(
+        &self,
+        pairs: &[(MovieTitle, ReleaseYear)],
+    ) -> Result<std::collections::HashSet<(String, u16)>, DomainError>;
     async fn list_movies(
         &self,
         page: &collections::PageParams,
@@ -434,6 +442,12 @@ pub trait WatchEventRepository: Send + Sync {
     ) -> Result<(), DomainError>;
     async fn list_pending(&self, user_id: &UserId) -> Result<Vec<WatchEvent>, DomainError>;
     async fn get_by_id(&self, id: &WatchEventId) -> Result<Option<WatchEvent>, DomainError>;
+    async fn get_by_ids(&self, ids: &[WatchEventId]) -> Result<Vec<WatchEvent>, DomainError>;
+    async fn update_status_batch(
+        &self,
+        ids: &[WatchEventId],
+        status: WatchEventStatus,
+    ) -> Result<u64, DomainError>;
     async fn find_duplicate(
         &self,
         user_id: &UserId,

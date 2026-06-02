@@ -388,6 +388,54 @@ impl MovieRepository for PostgresRepository {
         Ok(())
     }
 
+    async fn existing_external_ids(
+        &self,
+        ids: &[ExternalMetadataId],
+    ) -> Result<std::collections::HashSet<String>, DomainError> {
+        if ids.is_empty() {
+            return Ok(Default::default());
+        }
+        let vals: Vec<String> = ids.iter().map(|id| id.value().to_string()).collect();
+        let rows: Vec<(String,)> = sqlx::query_as(
+            "SELECT external_metadata_id FROM movies WHERE external_metadata_id = ANY($1)",
+        )
+        .bind(&vals)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(Self::map_err)?;
+        Ok(rows.into_iter().map(|(id,)| id).collect())
+    }
+
+    async fn existing_title_year_pairs(
+        &self,
+        pairs: &[(MovieTitle, ReleaseYear)],
+    ) -> Result<std::collections::HashSet<(String, u16)>, DomainError> {
+        if pairs.is_empty() {
+            return Ok(Default::default());
+        }
+        let titles: Vec<&str> = pairs.iter().map(|(t, _)| t.value()).collect();
+        let years: Vec<i64> = pairs.iter().map(|(_, y)| y.value() as i64).collect();
+        use sqlx::Row;
+        let rows = sqlx::query(
+            "SELECT DISTINCT m.title, m.release_year FROM movies m \
+             INNER JOIN unnest($1::text[], $2::bigint[]) AS p(title, release_year) \
+             ON m.title = p.title AND m.release_year = p.release_year",
+        )
+        .bind(&titles)
+        .bind(&years)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(Self::map_err)?;
+        Ok(rows
+            .into_iter()
+            .map(|r| {
+                let t: String = r.get("title");
+                let y: i64 = r.get("release_year");
+                (t, y as u16)
+            })
+            .collect())
+    }
+
     async fn list_movies(
         &self,
         page: &domain::models::collections::PageParams,

@@ -8,28 +8,34 @@ use crate::{context::AppContext, integrations::commands::DismissWatchEventsComma
 
 pub async fn execute(ctx: &AppContext, cmd: DismissWatchEventsCommand) -> Result<u32, DomainError> {
     let user_id = UserId::from_uuid(cmd.user_id);
-    let mut dismissed = 0u32;
+    if cmd.event_ids.is_empty() {
+        return Ok(0);
+    }
 
-    for id in cmd.event_ids {
-        let event_id = WatchEventId::from_uuid(id);
-        let event = ctx
-            .repos
-            .watch_event
-            .get_by_id(&event_id)
-            .await?
-            .ok_or_else(|| DomainError::NotFound(format!("WatchEvent {id}")))?;
+    let ids: Vec<WatchEventId> = cmd
+        .event_ids
+        .iter()
+        .map(|id| WatchEventId::from_uuid(*id))
+        .collect();
 
+    let events = ctx.repos.watch_event.get_by_ids(&ids).await?;
+
+    if events.len() != ids.len() {
+        return Err(DomainError::NotFound(
+            "one or more WatchEvents not found".into(),
+        ));
+    }
+    for event in &events {
         if event.user_id() != &user_id {
             return Err(DomainError::Unauthorized("not your watch event".into()));
         }
-
-        ctx.repos
-            .watch_event
-            .update_status(&event_id, WatchEventStatus::Dismissed)
-            .await?;
-
-        dismissed += 1;
     }
 
-    Ok(dismissed)
+    let count = ctx
+        .repos
+        .watch_event
+        .update_status_batch(&ids, WatchEventStatus::Dismissed)
+        .await?;
+
+    Ok(count as u32)
 }

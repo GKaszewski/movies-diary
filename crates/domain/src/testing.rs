@@ -97,6 +97,38 @@ impl MovieRepository for InMemoryMovieRepository {
         Ok(())
     }
 
+    async fn existing_external_ids(
+        &self,
+        ids: &[ExternalMetadataId],
+    ) -> Result<std::collections::HashSet<String>, DomainError> {
+        let store = self.store.lock().unwrap();
+        let known: std::collections::HashSet<String> = store
+            .values()
+            .filter_map(|m| m.external_metadata_id().map(|e| e.value().to_string()))
+            .collect();
+        Ok(ids
+            .iter()
+            .map(|id| id.value().to_string())
+            .filter(|v| known.contains(v))
+            .collect())
+    }
+
+    async fn existing_title_year_pairs(
+        &self,
+        pairs: &[(MovieTitle, ReleaseYear)],
+    ) -> Result<std::collections::HashSet<(String, u16)>, DomainError> {
+        let store = self.store.lock().unwrap();
+        let known: std::collections::HashSet<(String, u16)> = store
+            .values()
+            .map(|m| (m.title().value().to_string(), m.release_year().value()))
+            .collect();
+        Ok(pairs
+            .iter()
+            .map(|(t, y)| (t.value().to_string(), y.value()))
+            .filter(|p| known.contains(p))
+            .collect())
+    }
+
     async fn list_movies(
         &self,
         _page: &crate::models::collections::PageParams,
@@ -866,6 +898,19 @@ impl crate::ports::WatchEventRepository for PanicWatchEventRepository {
         &self,
         _: &crate::value_objects::WatchEventId,
     ) -> Result<Option<crate::models::WatchEvent>, DomainError> {
+        panic!("PanicWatchEventRepository called")
+    }
+    async fn get_by_ids(
+        &self,
+        _: &[crate::value_objects::WatchEventId],
+    ) -> Result<Vec<crate::models::WatchEvent>, DomainError> {
+        panic!("PanicWatchEventRepository called")
+    }
+    async fn update_status_batch(
+        &self,
+        _: &[crate::value_objects::WatchEventId],
+        _: crate::models::WatchEventStatus,
+    ) -> Result<u64, DomainError> {
         panic!("PanicWatchEventRepository called")
     }
     async fn find_duplicate(

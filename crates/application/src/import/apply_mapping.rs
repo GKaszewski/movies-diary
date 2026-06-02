@@ -20,7 +20,6 @@ pub async fn execute(
         .await?
         .ok_or_else(|| DomainError::NotFound("import session".into()))?;
 
-    // clone to avoid borrow conflict when mutating session fields below
     let parsed = session
         .parsed_file
         .clone()
@@ -31,11 +30,7 @@ pub async fn execute(
         .document_parser
         .apply_mapping(&parsed, &mappings);
 
-    for row in annotated.iter_mut() {
-        if let RowResult::Valid(ref import_row) = row.result {
-            row.is_duplicate = check_duplicate(ctx, import_row).await?;
-        }
-    }
+    mark_duplicates(ctx, &mut annotated).await?;
 
     session.field_mappings = Some(mappings);
     session.row_results = Some(annotated.clone());
@@ -45,33 +40,52 @@ pub async fn execute(
     Ok(annotated)
 }
 
-async fn check_duplicate(
-    ctx: &AppContext,
-    row: &domain::models::ImportRow,
-) -> Result<bool, DomainError> {
-    if let Some(ext_id) = &row.external_metadata_id
-        && let Ok(eid) = ExternalMetadataId::new(ext_id.clone())
-        && ctx
-            .repos
-            .movie
-            .get_movie_by_external_id(&eid)
-            .await?
-            .is_some()
-    {
-        return Ok(true);
-    }
-    if let (Some(title), Some(year_str)) = (&row.title, &row.release_year) {
-        let title_vo = MovieTitle::new(title.clone());
-        let year_vo = year_str
-            .parse::<u16>()
-            .ok()
-            .and_then(|y| ReleaseYear::new(y).ok());
-        if let (Ok(t), Some(y)) = (title_vo, year_vo) {
-            let matches = ctx.repos.movie.get_movies_by_title_and_year(&t, &y).await?;
-            if !matches.is_empty() {
-                return Ok(true);
+async fn mark_duplicates(ctx: &AppContext, rows: &mut [AnnotatedRow]) -> Result<(), DomainError> {
+    let mut ext_ids = Vec::new();
+    let mut title_year_pairs = Vec::new();
+
+    for row in rows.iter() {
+        if let RowResult::Valid(ref r) = row.result {
+            if let Some(ext_id) = &r.external_metadata_id
+                && let Ok(eid) = ExternalMetadataId::new(ext_id.clone())
+            {
+                ext_ids.push(eid);
+            }
+            if let (Some(title), Some(year_str)) = (&r.title, &r.release_year)
+                && let Ok(t) = MovieTitle::new(title.clone())
+                && let Some(y) = year_str
+                    .parse::<u16>()
+                    .ok()
+                    .and_then(|y| ReleaseYear::new(y).ok())
+            {
+                title_year_pairs.push((t, y));
             }
         }
     }
-    Ok(false)
+
+    let known_ext = ctx.repos.movie.existing_external_ids(&ext_ids).await?;
+    let known_ty = ctx
+        .repos
+        .movie
+        .existing_title_year_pairs(&title_year_pairs)
+        .await?;
+
+    for row in rows.iter_mut() {
+        if let RowResult::Valid(ref r) = row.result {
+            if let Some(ext_id) = &r.external_metadata_id
+                && known_ext.contains(ext_id)
+            {
+                row.is_duplicate = true;
+                continue;
+            }
+            if let (Some(title), Some(year_str)) = (&r.title, &r.release_year)
+                && let Ok(y) = year_str.parse::<u16>()
+                && known_ty.contains(&(title.clone(), y))
+            {
+                row.is_duplicate = true;
+            }
+        }
+    }
+
+    Ok(())
 }
