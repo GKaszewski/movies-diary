@@ -200,6 +200,30 @@ impl WrapUpRepository for SqliteWrapUpRepository {
 
         row.as_ref().map(row_to_record).transpose()
     }
+
+    async fn delete(&self, id: &WrapUpId) -> Result<(), DomainError> {
+        sqlx::query("DELETE FROM wrap_up_records WHERE id = ?")
+            .bind(id.value().to_string())
+            .execute(&self.pool)
+            .await
+            .map_err(map_err)?;
+        Ok(())
+    }
+
+    async fn delete_failed_older_than(
+        &self,
+        before: chrono::NaiveDateTime,
+    ) -> Result<u64, DomainError> {
+        let before_str = before.format("%Y-%m-%dT%H:%M:%SZ").to_string();
+        let result = sqlx::query(
+            "DELETE FROM wrap_up_records WHERE status = 'failed' AND created_at < ?",
+        )
+        .bind(&before_str)
+        .execute(&self.pool)
+        .await
+        .map_err(map_err)?;
+        Ok(result.rows_affected())
+    }
 }
 
 fn row_to_record(row: &sqlx::sqlite::SqliteRow) -> Result<WrapUpRecord, DomainError> {

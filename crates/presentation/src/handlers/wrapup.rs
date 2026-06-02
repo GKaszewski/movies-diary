@@ -9,7 +9,7 @@ use uuid::Uuid;
 
 use application::wrapup::{
     commands::RequestWrapUpCommand,
-    generate, get_wrapup,
+    delete as delete_wrapup, generate, get_wrapup,
     list_wrapups::{self, ListWrapUpsQuery},
 };
 use domain::errors::DomainError;
@@ -192,6 +192,26 @@ pub async fn get_video(State(state): State<AppState>, Path(id): Path<Uuid>) -> i
         }
         Err(_) => StatusCode::NOT_FOUND.into_response(),
     }
+}
+
+#[utoipa::path(
+    delete, path = "/api/v1/wrapups/{id}",
+    params(("id" = Uuid, Path, description = "Wrap-up ID")),
+    responses(
+        (status = 204, description = "Deleted"),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden — admin only"),
+        (status = 404, description = "Not found"),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn delete_wrapup_handler(
+    State(state): State<AppState>,
+    _admin: AdminApiUser,
+    Path(id): Path<Uuid>,
+) -> Result<StatusCode, ApiError> {
+    delete_wrapup::execute(&state.app_ctx, WrapUpId::from_uuid(id)).await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 // ── HTML handlers ───────────────────────────────────────────────────────────

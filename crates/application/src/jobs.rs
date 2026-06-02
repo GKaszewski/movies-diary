@@ -161,3 +161,34 @@ impl PeriodicJob for WrapUpAutoGenerateJob {
         Ok(())
     }
 }
+
+pub struct WrapUpCleanupJob {
+    ctx: AppContext,
+}
+
+impl WrapUpCleanupJob {
+    pub fn new(ctx: AppContext) -> Self {
+        Self { ctx }
+    }
+}
+
+#[async_trait]
+impl PeriodicJob for WrapUpCleanupJob {
+    fn interval(&self) -> Duration {
+        Duration::from_secs(86400)
+    }
+
+    async fn run(&self) -> Result<(), DomainError> {
+        let cutoff = chrono::Utc::now().naive_utc() - chrono::Duration::days(7);
+        let n = self
+            .ctx
+            .repos
+            .wrapup_repo
+            .delete_failed_older_than(cutoff)
+            .await?;
+        if n > 0 {
+            tracing::info!("wrapup cleanup: removed {n} failed records");
+        }
+        Ok(())
+    }
+}

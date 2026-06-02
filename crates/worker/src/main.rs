@@ -160,6 +160,7 @@ async fn main() -> anyhow::Result<()> {
         Arc::new(application::jobs::ImportSessionCleanupJob::new(ctx.clone())),
         Arc::new(application::jobs::WatchEventCleanupJob::new(ctx.clone())),
         Arc::new(application::jobs::WrapUpAutoGenerateJob::new(ctx.clone())),
+        Arc::new(application::jobs::WrapUpCleanupJob::new(ctx.clone())),
     ];
     if let Some(job) = enrichment_job {
         periodic_jobs.push(job);

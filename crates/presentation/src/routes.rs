@@ -360,7 +360,11 @@ fn api_routes(rate_limit: u64) -> Router<AppState> {
             routing::post(handlers::wrapup::post_generate),
         )
         .route("/wrapups", routing::get(handlers::wrapup::get_list))
-        .route("/wrapups/{id}", routing::get(handlers::wrapup::get_status))
+        .route(
+            "/wrapups/{id}",
+            routing::get(handlers::wrapup::get_status)
+                .delete(handlers::wrapup::delete_wrapup_handler),
+        )
         .route(
             "/wrapups/{id}/report",
             routing::get(handlers::wrapup::get_report),

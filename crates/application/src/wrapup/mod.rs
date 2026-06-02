@@ -1,5 +1,6 @@
 pub mod commands;
 pub mod compute;
+pub mod delete;
 pub mod event_handler;
 pub mod generate;
 pub mod get_wrapup;

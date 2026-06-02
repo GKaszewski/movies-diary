@@ -1152,6 +1152,24 @@ impl WrapUpRepository for InMemoryWrapUpRepository {
             .find(|r| r.user_id == user_id && r.start_date == start && r.end_date == end)
             .cloned())
     }
+
+    async fn delete(&self, id: &WrapUpId) -> Result<(), DomainError> {
+        let mut store = self.store.lock().unwrap();
+        store.retain(|r| r.id != *id);
+        Ok(())
+    }
+
+    async fn delete_failed_older_than(
+        &self,
+        before: chrono::NaiveDateTime,
+    ) -> Result<u64, DomainError> {
+        let mut store = self.store.lock().unwrap();
+        let before_len = store.len();
+        store.retain(|r| {
+            !(r.status == crate::models::wrapup::WrapUpStatus::Failed && r.created_at < before)
+        });
+        Ok((before_len - store.len()) as u64)
+    }
 }
 
 // ── PanicWrapUpRepository ──────────────────────────────────────────────────
@@ -1195,6 +1213,15 @@ impl WrapUpRepository for PanicWrapUpRepository {
         _: chrono::NaiveDate,
         _: chrono::NaiveDate,
     ) -> Result<Option<crate::models::wrapup::WrapUpRecord>, DomainError> {
+        panic!("PanicWrapUpRepository called")
+    }
+    async fn delete(&self, _: &WrapUpId) -> Result<(), DomainError> {
+        panic!("PanicWrapUpRepository called")
+    }
+    async fn delete_failed_older_than(
+        &self,
+        _: chrono::NaiveDateTime,
+    ) -> Result<u64, DomainError> {
         panic!("PanicWrapUpRepository called")
     }
 }

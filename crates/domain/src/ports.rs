@@ -495,6 +495,11 @@ pub trait WrapUpRepository: Send + Sync {
         start: NaiveDate,
         end: NaiveDate,
     ) -> Result<Option<WrapUpRecord>, DomainError>;
+    async fn delete(&self, id: &WrapUpId) -> Result<(), DomainError>;
+    async fn delete_failed_older_than(
+        &self,
+        before: chrono::NaiveDateTime,
+    ) -> Result<u64, DomainError>;
 }
 
 // ── Wrap-up / Year-in-Review ─────────────────────────────────────────────────

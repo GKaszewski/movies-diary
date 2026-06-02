@@ -190,6 +190,29 @@ impl WrapUpRepository for PostgresWrapUpRepository {
 
         row.as_ref().map(row_to_record).transpose()
     }
+
+    async fn delete(&self, id: &WrapUpId) -> Result<(), DomainError> {
+        sqlx::query("DELETE FROM wrap_up_records WHERE id = $1")
+            .bind(id.value().to_string())
+            .execute(&self.pool)
+            .await
+            .map_err(map_err)?;
+        Ok(())
+    }
+
+    async fn delete_failed_older_than(
+        &self,
+        before: chrono::NaiveDateTime,
+    ) -> Result<u64, DomainError> {
+        let result = sqlx::query(
+            "DELETE FROM wrap_up_records WHERE status = 'failed' AND created_at < $1",
+        )
+        .bind(before)
+        .execute(&self.pool)
+        .await
+        .map_err(map_err)?;
+        Ok(result.rows_affected())
+    }
 }
 
 fn row_to_record(row: &sqlx::postgres::PgRow) -> Result<WrapUpRecord, DomainError> {

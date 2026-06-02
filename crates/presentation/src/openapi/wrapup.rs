@@ -8,6 +8,7 @@ use utoipa::OpenApi;
         crate::handlers::wrapup::get_status,
         crate::handlers::wrapup::get_report,
         crate::handlers::wrapup::get_video,
+        crate::handlers::wrapup::delete_wrapup_handler,
     ),
     components(schemas(
         api_types::wrapup::GenerateWrapUpRequest,
