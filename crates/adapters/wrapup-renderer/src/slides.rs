@@ -29,6 +29,17 @@ fn decode_image(bytes: &[u8]) -> Result<DynamicImage, String> {
     })
 }
 
+fn resize_cover(img: &RgbaImage, w: u32, h: u32) -> RgbaImage {
+    let (iw, ih) = (img.width() as f64, img.height() as f64);
+    let scale = (w as f64 / iw).max(h as f64 / ih);
+    let sw = (iw * scale).ceil() as u32;
+    let sh = (ih * scale).ceil() as u32;
+    let scaled = image::imageops::resize(img, sw, sh, image::imageops::FilterType::CatmullRom);
+    let cx = (sw.saturating_sub(w)) / 2;
+    let cy = (sh.saturating_sub(h)) / 2;
+    image::imageops::crop_imm(&scaled, cx, cy, w, h).to_image()
+}
+
 const BG: Rgba<u8> = Rgba([26, 26, 36, 255]);
 const GOLD: Rgba<u8> = Rgba([229, 192, 52, 255]);
 const WHITE: Rgba<u8> = Rgba([255, 255, 255, 255]);
@@ -99,8 +110,7 @@ impl SlideRenderer {
             return None;
         }
         let bg = &self.backgrounds[index % self.backgrounds.len()];
-        let resized = image::imageops::resize(bg, w, h, image::imageops::FilterType::Triangle);
-        let mut out = resized;
+        let mut out = resize_cover(bg, w, h);
         // darken top 40% and bottom 40% with gradient to ~70% black
         let top_cutoff = (h as f32 * 0.4) as u32;
         let bot_start = h - top_cutoff;
@@ -582,8 +592,8 @@ impl SlideRenderer {
         let row_h = (h / 5) as i32;
         let left = 60i32;
         let right = col_w as i32 + 40;
-        let poster_w = 60u32;
-        let poster_h = 90u32;
+        let poster_w = 100u32;
+        let poster_h = 150u32;
 
         let items: Vec<(&str, Option<&domain::models::wrapup::MovieRef>)> = vec![
             ("Highest Rated", report.highest_rated_movie.as_ref()),
