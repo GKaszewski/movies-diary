@@ -117,7 +117,7 @@ where
             .user
             .find_by_id(&user_id)
             .await
-            .map_err(|e| ApiError(e))?
+            .map_err(ApiError)?
             .ok_or_else(|| ApiError(DomainError::NotFound("user not found".into())))?;
         match user.role() {
             domain::models::UserRole::Admin => Ok(AdminApiUser(user_id)),
