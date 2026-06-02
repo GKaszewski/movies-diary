@@ -13,10 +13,10 @@ pub async fn execute(ctx: &AppContext, cmd: RequestWrapUpCommand) -> Result<Wrap
         .find_existing(cmd.user_id, cmd.start_date, cmd.end_date)
         .await?;
 
-    if let Some(ref rec) = existing {
-        if rec.status == WrapUpStatus::Ready || rec.status == WrapUpStatus::Generating {
-            return Ok(rec.id.clone());
-        }
+    if let Some(ref rec) = existing
+        && (rec.status == WrapUpStatus::Ready || rec.status == WrapUpStatus::Generating)
+    {
+        return Ok(rec.id.clone());
     }
 
     let id = WrapUpId::generate();
