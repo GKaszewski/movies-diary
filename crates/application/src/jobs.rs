@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 use async_trait::async_trait;
+use chrono::Datelike;
 use domain::{errors::DomainError, events::DomainEvent, ports::PeriodicJob};
 
 use crate::context::AppContext;
@@ -82,6 +83,81 @@ impl PeriodicJob for EnrichmentStalenessJob {
             };
             self.ctx.services.event_publisher.publish(&event).await?;
         }
+        Ok(())
+    }
+}
+
+pub struct WrapUpAutoGenerateJob {
+    ctx: AppContext,
+}
+
+impl WrapUpAutoGenerateJob {
+    pub fn new(ctx: AppContext) -> Self {
+        Self { ctx }
+    }
+}
+
+#[async_trait]
+impl PeriodicJob for WrapUpAutoGenerateJob {
+    fn interval(&self) -> Duration {
+        Duration::from_secs(86400)
+    }
+
+    async fn run(&self) -> Result<(), DomainError> {
+        let now = chrono::Utc::now().naive_utc();
+        // Only run in January
+        if now.month() != 1 {
+            return Ok(());
+        }
+        let year = now.year() - 1;
+        let start = chrono::NaiveDate::from_ymd_opt(year, 1, 1)
+            .ok_or_else(|| DomainError::ValidationError("invalid date".into()))?;
+        let end = chrono::NaiveDate::from_ymd_opt(year + 1, 1, 1)
+            .ok_or_else(|| DomainError::ValidationError("invalid date".into()))?;
+
+        let users = self.ctx.repos.user.list_with_stats().await?;
+        for user in &users {
+            if user.total_movies > 0 {
+                let existing = self
+                    .ctx
+                    .repos
+                    .wrapup_repo
+                    .find_existing(Some(user.user_id.value()), start, end)
+                    .await?;
+                if existing.is_none() {
+                    let cmd = crate::wrapup::commands::RequestWrapUpCommand {
+                        user_id: Some(user.user_id.value()),
+                        start_date: start,
+                        end_date: end,
+                    };
+                    if let Err(e) = crate::wrapup::generate::execute(&self.ctx, cmd).await {
+                        tracing::warn!(
+                            "auto-generate wrapup for user {} failed: {e}",
+                            user.user_id.value()
+                        );
+                    }
+                }
+            }
+        }
+
+        // Global wrap-up
+        let existing = self
+            .ctx
+            .repos
+            .wrapup_repo
+            .find_existing(None, start, end)
+            .await?;
+        if existing.is_none() {
+            let cmd = crate::wrapup::commands::RequestWrapUpCommand {
+                user_id: None,
+                start_date: start,
+                end_date: end,
+            };
+            if let Err(e) = crate::wrapup::generate::execute(&self.ctx, cmd).await {
+                tracing::warn!("auto-generate global wrapup failed: {e}");
+            }
+        }
+
         Ok(())
     }
 }

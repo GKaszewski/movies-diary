@@ -3,7 +3,7 @@ use uuid::Uuid;
 
 macro_rules! uuid_id {
     ($name:ident) => {
-        #[derive(Clone, Debug, PartialEq, Eq)]
+        #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
         pub struct $name(Uuid);
 
         impl $name {

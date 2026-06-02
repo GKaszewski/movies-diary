@@ -1,15 +1,16 @@
 use chrono::{NaiveDate, NaiveDateTime};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::value_objects::WrapUpId;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DateRange {
     pub start: NaiveDate,
     pub end: NaiveDate,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MovieRef {
     pub title: String,
     pub year: u16,
@@ -17,52 +18,52 @@ pub struct MovieRef {
     pub poster_path: Option<String>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UserRef {
     pub user_id: Uuid,
     pub display_name: String,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PersonStat {
     pub name: String,
     pub count: u32,
     pub avg_rating: f64,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct GenreStat {
     pub genre: String,
     pub count: u32,
     pub avg_rating: f64,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct KeywordStat {
     pub keyword: String,
     pub count: u32,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct LangStat {
     pub language: String,
     pub count: u32,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MonthCount {
     pub year_month: String,
     pub label: String,
     pub count: u32,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum WrapUpScope {
     User(Uuid),
     Global,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct WrapUpReport {
     pub scope: WrapUpScope,
     pub date_range: DateRange,
@@ -120,7 +121,7 @@ pub struct WrapUpReport {
     pub top_cast_profile_paths: Vec<String>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum WrapUpStatus {
     Pending,
     Generating,
@@ -128,7 +129,7 @@ pub enum WrapUpStatus {
     Failed,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct WrapUpRecord {
     pub id: WrapUpId,
     pub user_id: Option<Uuid>,

@@ -148,6 +148,7 @@ async fn main() -> anyhow::Result<()> {
     let mut periodic_jobs: Vec<Arc<dyn PeriodicJob>> = vec![
         Arc::new(application::jobs::ImportSessionCleanupJob::new(ctx.clone())),
         Arc::new(application::jobs::WatchEventCleanupJob::new(ctx.clone())),
+        Arc::new(application::jobs::WrapUpAutoGenerateJob::new(ctx.clone())),
     ];
     if let Some(job) = enrichment_job {
         periodic_jobs.push(job);
@@ -194,7 +195,10 @@ async fn main() -> anyhow::Result<()> {
                 Arc::clone(&ctx.repos.movie),
                 Arc::clone(&ctx.repos.search_command),
             )) as Arc<dyn EventHandler>;
-            let mut h = vec![poster, cleanup, search_cleanup, discovery_indexer];
+            let wrapup_handler = Arc::new(application::wrapup::event_handler::WrapUpEventHandler::new(
+                ctx.clone(),
+            )) as Arc<dyn EventHandler>;
+            let mut h = vec![poster, cleanup, search_cleanup, discovery_indexer, wrapup_handler];
             if let Some(e) = enrichment_handler {
                 h.push(e);
             }
@@ -235,6 +239,9 @@ async fn main() -> anyhow::Result<()> {
                 Arc::clone(&ctx.repos.search_command),
             )) as Arc<dyn EventHandler>;
             tracing::info!("federation event handler registered");
+            let wrapup_handler = Arc::new(application::wrapup::event_handler::WrapUpEventHandler::new(
+                ctx.clone(),
+            )) as Arc<dyn EventHandler>;
             let mut h = vec![
                 poster,
                 cleanup,
@@ -242,6 +249,7 @@ async fn main() -> anyhow::Result<()> {
                 backfill,
                 search_cleanup,
                 discovery_indexer,
+                wrapup_handler,
             ];
             if let Some(e) = enrichment_handler {
                 h.push(e);
