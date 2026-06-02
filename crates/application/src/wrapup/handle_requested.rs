@@ -13,6 +13,13 @@ pub async fn execute(
     start_date: chrono::NaiveDate,
     end_date: chrono::NaiveDate,
 ) -> Result<(), DomainError> {
+    if let Ok(Some(rec)) = ctx.repos.wrapup_repo.get_by_id(&wrapup_id).await {
+        if rec.status == WrapUpStatus::Ready || rec.status == WrapUpStatus::Generating {
+            tracing::debug!("wrapup {} already {}, skipping", wrapup_id.value(), if rec.status == WrapUpStatus::Ready { "ready" } else { "generating" });
+            return Ok(());
+        }
+    }
+
     ctx.repos
         .wrapup_repo
         .update_status(&wrapup_id, &WrapUpStatus::Generating, None)
