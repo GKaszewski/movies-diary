@@ -7,3 +7,4 @@ pub mod get_wrapup;
 pub mod handle_requested;
 pub mod list_wrapups;
 pub mod queries;
+pub mod storage;

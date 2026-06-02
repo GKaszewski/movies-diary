@@ -1,5 +1,5 @@
 use crate::context::AppContext;
-use crate::wrapup::{compute, queries::ComputeWrapUpQuery};
+use crate::wrapup::{compute, queries::ComputeWrapUpQuery, storage::WrapUpStorage};
 use domain::errors::DomainError;
 use domain::events::DomainEvent;
 use domain::models::wrapup::{DateRange, WrapUpScope, WrapUpStatus};
@@ -48,26 +48,18 @@ pub async fn execute(
                 .await?;
 
             if let Some(ref renderer) = ctx.services.video_renderer {
-                let poster_images = resolve_images(ctx, &report.poster_paths, "poster").await;
-                let cast_keys: Vec<String> = report
-                    .top_cast_profile_paths
-                    .iter()
-                    .map(|p| format!("cast{p}"))
-                    .collect();
-                let cast_images = resolve_images(ctx, &cast_keys, "cast").await;
+                let asset_storage = WrapUpStorage::new(ctx.services.image_storage.clone());
+                let poster_images = asset_storage.resolve_poster_images(&report.poster_paths).await;
+                let cast_images = asset_storage
+                    .resolve_cast_images(&report.top_cast_profile_paths)
+                    .await;
                 let assets = VideoRenderAssets {
                     poster_images,
                     cast_images,
                 };
                 match renderer.render(&report, assets).await {
                     Ok(video_bytes) => {
-                        let video_key = format!("wrapups/{}/video.mp4", wrapup_id.value());
-                        if let Err(e) = ctx
-                            .services
-                            .image_storage
-                            .store(&video_key, &video_bytes)
-                            .await
-                        {
+                        if let Err(e) = asset_storage.store_video(&wrapup_id, &video_bytes).await {
                             tracing::warn!("failed to store wrapup video: {e}");
                         }
                     }
@@ -91,16 +83,4 @@ pub async fn execute(
             Err(e)
         }
     }
-}
-
-async fn resolve_images(ctx: &AppContext, paths: &[String], label: &str) -> Vec<(String, Vec<u8>)> {
-    let mut images = Vec::new();
-    for path in paths.iter().take(20) {
-        match ctx.services.image_storage.get(path).await {
-            Ok(bytes) => images.push((path.clone(), bytes)),
-            Err(e) => tracing::debug!("{label} fetch skipped for {path}: {e}"),
-        }
-    }
-    tracing::info!("resolved {}/{} {label} images", images.len(), paths.len());
-    images
 }
