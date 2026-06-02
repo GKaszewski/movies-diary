@@ -265,6 +265,7 @@ pub async fn get_watch_queue(
     responses(
         (status = 200, body = ConfirmWatchResponse),
         (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden — not your watch event"),
     ),
     security(("bearer_auth" = []))
 )]
@@ -296,6 +297,7 @@ pub async fn post_confirm_watch_events(
     responses(
         (status = 200, body = DismissWatchResponse),
         (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden — not your watch event"),
     ),
     security(("bearer_auth" = []))
 )]
