@@ -13,7 +13,7 @@ pub async fn get_image(
     if key.starts_with("http://") || key.starts_with("https://") {
         return axum::response::Redirect::temporary(&key).into_response();
     }
-    match state.app_ctx.services.image_storage.get(&key).await {
+    match state.app_ctx.services.object_storage.get(&key).await {
         Ok(bytes) => {
             let mime = infer::get(&bytes)
                 .map(|t| t.mime_type())

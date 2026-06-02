@@ -1,5 +1,5 @@
 use super::*;
-use image_storage::ImageStorageAdapter;
+use object_storage::ObjectStorageAdapter;
 use object_store::memory::InMemory;
 use std::sync::Mutex;
 
@@ -27,8 +27,8 @@ impl ImageRefCommand for MockImageRef {
     }
 }
 
-fn in_memory_storage() -> Arc<ImageStorageAdapter> {
-    Arc::new(ImageStorageAdapter::new(Arc::new(InMemory::new())))
+fn in_memory_storage() -> Arc<ObjectStorageAdapter> {
+    Arc::new(ObjectStorageAdapter::new(Arc::new(InMemory::new())))
 }
 
 fn tiny_jpeg() -> Vec<u8> {
@@ -44,7 +44,7 @@ async fn ignores_non_image_stored_events() {
     let storage = in_memory_storage();
     let image_ref = MockImageRef::new();
     let handler = ImageConversionHandler::new(
-        Arc::clone(&storage) as Arc<dyn ImageStorage>,
+        Arc::clone(&storage) as Arc<dyn ObjectStorage>,
         Arc::clone(&image_ref) as Arc<dyn ImageRefCommand>,
         Format::Avif,
     );
@@ -68,7 +68,7 @@ async fn skips_already_converted_avif_key() {
         .unwrap();
     let image_ref = MockImageRef::new();
     let handler = ImageConversionHandler::new(
-        Arc::clone(&storage) as Arc<dyn ImageStorage>,
+        Arc::clone(&storage) as Arc<dyn ObjectStorage>,
         Arc::clone(&image_ref) as Arc<dyn ImageRefCommand>,
         Format::Avif,
     );
@@ -92,7 +92,7 @@ async fn skips_already_converted_webp_key() {
         .unwrap();
     let image_ref = MockImageRef::new();
     let handler = ImageConversionHandler::new(
-        Arc::clone(&storage) as Arc<dyn ImageStorage>,
+        Arc::clone(&storage) as Arc<dyn ObjectStorage>,
         Arc::clone(&image_ref) as Arc<dyn ImageRefCommand>,
         Format::Webp,
     );
@@ -113,7 +113,7 @@ async fn converts_jpeg_to_avif_and_swaps_key() {
     storage.store("avatars/u1", &tiny_jpeg()).await.unwrap();
     let image_ref = MockImageRef::new();
     let handler = ImageConversionHandler::new(
-        Arc::clone(&storage) as Arc<dyn ImageStorage>,
+        Arc::clone(&storage) as Arc<dyn ObjectStorage>,
         Arc::clone(&image_ref) as Arc<dyn ImageRefCommand>,
         Format::Avif,
     );
@@ -139,7 +139,7 @@ async fn converts_jpeg_to_webp_and_swaps_key() {
     storage.store("avatars/u1", &tiny_jpeg()).await.unwrap();
     let image_ref = MockImageRef::new();
     let handler = ImageConversionHandler::new(
-        Arc::clone(&storage) as Arc<dyn ImageStorage>,
+        Arc::clone(&storage) as Arc<dyn ObjectStorage>,
         Arc::clone(&image_ref) as Arc<dyn ImageRefCommand>,
         Format::Webp,
     );

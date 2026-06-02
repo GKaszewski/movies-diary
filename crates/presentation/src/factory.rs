@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use domain::ports::{
-    AuthService, ImageStorage, LocalApContentQuery, MetadataClient, PasswordHasher,
+    AuthService, ObjectStorage, LocalApContentQuery, MetadataClient, PasswordHasher,
     PosterFetcherClient, UserProfileFieldsRepository, WatchEventRepository, WebhookTokenRepository,
 };
 
@@ -128,7 +128,7 @@ pub fn build_poster_fetcher() -> anyhow::Result<Arc<dyn PosterFetcherClient>> {
     poster_fetcher::create()
 }
 
-pub fn build_image_storage() -> anyhow::Result<Arc<dyn ImageStorage>> {
+pub fn build_object_storage() -> anyhow::Result<Arc<dyn ObjectStorage>> {
     image_storage::create()
 }
 

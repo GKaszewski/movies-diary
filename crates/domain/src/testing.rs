@@ -20,7 +20,7 @@ use crate::{
     },
     ports::{
         AuthService, DiaryExporter, DiaryRepository, DocumentParser, EventPublisher, FeedSortBy,
-        FollowingFilter, GeneratedToken, ImageStorage, ImportProfileRepository,
+        FollowingFilter, GeneratedToken, ObjectStorage, ImportProfileRepository,
         ImportSessionRepository, MetadataClient, MetadataSearchCriteria, MovieProfileRepository,
         MovieRepository, PasswordHasher, PersonCommand, PersonQuery, PosterFetcherClient,
         ReviewRepository, SearchCommand, SearchPort, StatsRepository, UserProfileFieldsRepository,
@@ -351,12 +351,12 @@ impl EventPublisher for NoopEventPublisher {
     }
 }
 
-// ── NoopImageStorage ──────────────────────────────────────────────────────────
+// ── NoopObjectStorage ──────────────────────────────────────────────────────────
 
-pub struct NoopImageStorage;
+pub struct NoopObjectStorage;
 
 #[async_trait]
-impl ImageStorage for NoopImageStorage {
+impl ObjectStorage for NoopObjectStorage {
     async fn store(&self, key: &str, _image_bytes: &[u8]) -> Result<String, DomainError> {
         Ok(format!("noop://{key}"))
     }

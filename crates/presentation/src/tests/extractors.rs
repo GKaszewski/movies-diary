@@ -19,7 +19,7 @@ use domain::{
         collections::{PageParams, Paginated},
     },
     ports::{
-        AuthService, DiaryRepository, EventPublisher, GeneratedToken, ImageStorage, MetadataClient,
+        AuthService, DiaryRepository, EventPublisher, GeneratedToken, ObjectStorage, MetadataClient,
         MovieRepository, PasswordHasher, PersonCommand, PersonQuery, PosterFetcherClient,
         ReviewRepository, SearchCommand, SearchPort, StatsRepository, UserRepository,
         WatchlistRepository,
@@ -194,7 +194,7 @@ impl PosterFetcherClient for Panic {
     }
 }
 #[async_trait::async_trait]
-impl ImageStorage for Panic {
+impl ObjectStorage for Panic {
     async fn store(&self, _: &str, _: &[u8]) -> Result<String, DomainError> {
         panic!()
     }
@@ -670,7 +670,7 @@ pub fn make_test_state(auth_service: Arc<dyn AuthService>) -> crate::state::AppS
                 password_hasher: Arc::clone(&repo) as _,
                 metadata: Arc::clone(&repo) as _,
                 poster_fetcher: Arc::clone(&repo) as _,
-                image_storage: Arc::clone(&repo) as _,
+                object_storage: Arc::clone(&repo) as _,
                 event_publisher: Arc::clone(&repo) as _,
                 diary_exporter: Arc::clone(&repo) as _,
                 document_parser: Arc::clone(&repo) as _,

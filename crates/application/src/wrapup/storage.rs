@@ -1,14 +1,14 @@
 use domain::errors::DomainError;
-use domain::ports::ImageStorage;
+use domain::ports::ObjectStorage;
 use domain::value_objects::WrapUpId;
 use std::sync::Arc;
 
 pub struct WrapUpStorage {
-    inner: Arc<dyn ImageStorage>,
+    inner: Arc<dyn ObjectStorage>,
 }
 
 impl WrapUpStorage {
-    pub fn new(storage: Arc<dyn ImageStorage>) -> Self {
+    pub fn new(storage: Arc<dyn ObjectStorage>) -> Self {
         Self { inner: storage }
     }
 

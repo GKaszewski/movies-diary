@@ -52,7 +52,7 @@ pub async fn execute(ctx: &AppContext, cmd: SyncPosterCommand) -> Result<(), Dom
 
     let stored_path = ctx
         .services
-        .image_storage
+        .object_storage
         .store(&movie_id.value().to_string(), &image_bytes)
         .await?;
 

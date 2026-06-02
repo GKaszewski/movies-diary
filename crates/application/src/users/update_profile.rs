@@ -21,10 +21,10 @@ pub async fn execute(ctx: &AppContext, cmd: UpdateProfileCommand) -> Result<(), 
             ));
         }
         if let Some(old_path) = user.avatar_path() {
-            let _ = ctx.services.image_storage.delete(old_path).await;
+            let _ = ctx.services.object_storage.delete(old_path).await;
         }
         let key = format!("avatars/{}", user_id.value());
-        let stored = ctx.services.image_storage.store(&key, &bytes).await?;
+        let stored = ctx.services.object_storage.store(&key, &bytes).await?;
         if let Err(e) = ctx
             .services
             .event_publisher
@@ -49,10 +49,10 @@ pub async fn execute(ctx: &AppContext, cmd: UpdateProfileCommand) -> Result<(), 
             ));
         }
         if let Some(old_path) = user.banner_path() {
-            let _ = ctx.services.image_storage.delete(old_path).await;
+            let _ = ctx.services.object_storage.delete(old_path).await;
         }
         let key = format!("banners/{}", user_id.value());
-        let stored = ctx.services.image_storage.store(&key, &bytes).await?;
+        let stored = ctx.services.object_storage.store(&key, &bytes).await?;
         if let Err(e) = ctx
             .services
             .event_publisher

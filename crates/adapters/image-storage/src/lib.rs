@@ -5,17 +5,17 @@ use async_trait::async_trait;
 use domain::{
     errors::DomainError,
     events::DomainEvent,
-    ports::{EventHandler, ImageStorage},
+    ports::{EventHandler, ObjectStorage},
 };
 use futures::StreamExt;
 use object_store::{ObjectStore, path::Path};
 use std::sync::Arc;
 
-pub struct ImageStorageAdapter {
+pub struct ObjectStorageAdapter {
     store: Arc<dyn ObjectStore>,
 }
 
-impl ImageStorageAdapter {
+impl ObjectStorageAdapter {
     pub fn new(store: Arc<dyn ObjectStore>) -> Self {
         Self { store }
     }
@@ -26,7 +26,7 @@ impl ImageStorageAdapter {
 }
 
 #[async_trait]
-impl ImageStorage for ImageStorageAdapter {
+impl ObjectStorage for ObjectStorageAdapter {
     async fn store(&self, key: &str, image_bytes: &[u8]) -> Result<String, DomainError> {
         let path = Path::from(key);
         self.store
@@ -78,12 +78,12 @@ impl ImageStorage for ImageStorageAdapter {
 }
 
 pub struct ImageCleanupHandler {
-    image_storage: Arc<dyn ImageStorage>,
+    object_storage: Arc<dyn ObjectStorage>,
 }
 
 impl ImageCleanupHandler {
-    pub fn new(image_storage: Arc<dyn ImageStorage>) -> Self {
-        Self { image_storage }
+    pub fn new(object_storage: Arc<dyn ObjectStorage>) -> Self {
+        Self { object_storage }
     }
 }
 
@@ -97,15 +97,15 @@ impl EventHandler for ImageCleanupHandler {
         let Some(path) = poster_path else {
             return Ok(());
         };
-        if let Err(e) = self.image_storage.delete(path.value()).await {
+        if let Err(e) = self.object_storage.delete(path.value()).await {
             tracing::warn!("image cleanup failed for {}: {e}", path.value());
         }
         Ok(())
     }
 }
 
-pub fn create() -> anyhow::Result<Arc<dyn ImageStorage>> {
-    Ok(Arc::new(ImageStorageAdapter::from_config(
+pub fn create() -> anyhow::Result<Arc<dyn ObjectStorage>> {
+    Ok(Arc::new(ObjectStorageAdapter::from_config(
         StorageConfig::from_env()?,
     )))
 }

@@ -34,7 +34,7 @@ async fn main() -> anyhow::Result<()> {
     let (auth_service, password_hasher) = auth::create()?;
     let metadata_client = metadata::create()?;
     let poster_fetcher = poster_fetcher::create()?;
-    let image_storage = image_storage::create()?;
+    let object_storage = image_storage::create()?;
 
     let db = db::connect(&database_url, &backend).await?;
     let (event_publisher_arc, consumer_arc) = event_bus::create(&db.db_pool).await?;
@@ -100,7 +100,7 @@ async fn main() -> anyhow::Result<()> {
             password_hasher,
             metadata: metadata_client,
             poster_fetcher,
-            image_storage,
+            object_storage,
             event_publisher: event_publisher_arc,
             diary_exporter: Arc::new(ExportAdapter) as Arc<dyn DiaryExporter>,
             document_parser: Arc::new(ImporterDocumentParser) as Arc<dyn DocumentParser>,
@@ -155,7 +155,7 @@ async fn main() -> anyhow::Result<()> {
                     Arc::clone(&ctx.repos.movie_profile),
                     Arc::clone(&ctx.repos.person_command),
                     Arc::clone(&ctx.repos.search_command),
-                    Arc::clone(&ctx.services.image_storage),
+                    Arc::clone(&ctx.services.object_storage),
                 )) as Arc<dyn EventHandler>;
                 let job = Arc::new(application::jobs::EnrichmentStalenessJob::new(ctx.clone()))
                     as Arc<dyn PeriodicJob>;
@@ -170,7 +170,7 @@ async fn main() -> anyhow::Result<()> {
     // ── Image conversion ──────────────────────────────────────────────────────
 
     let conversion = image_converter::build(
-        Arc::clone(&ctx.services.image_storage),
+        Arc::clone(&ctx.services.object_storage),
         image_ref_command,
         image_ref_query,
         Arc::clone(&ctx.services.event_publisher),
@@ -210,13 +210,13 @@ async fn main() -> anyhow::Result<()> {
             Arc::clone(&ctx.repos.movie),
             Arc::clone(&ctx.services.metadata),
             Arc::clone(&ctx.services.poster_fetcher),
-            Arc::clone(&ctx.services.image_storage),
+            Arc::clone(&ctx.services.object_storage),
             Arc::clone(&ctx.services.event_publisher),
             3,
         )) as Arc<dyn EventHandler>;
 
         let cleanup = Arc::new(image_storage::ImageCleanupHandler::new(Arc::clone(
-            &ctx.services.image_storage,
+            &ctx.services.object_storage,
         ))) as Arc<dyn EventHandler>;
 
         #[cfg(not(feature = "federation"))]

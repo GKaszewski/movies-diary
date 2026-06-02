@@ -4,20 +4,20 @@ use async_trait::async_trait;
 use domain::{
     errors::DomainError,
     events::DomainEvent,
-    ports::{EventHandler, ImageRefCommand, ImageStorage},
+    ports::{EventHandler, ImageRefCommand, ObjectStorage},
 };
 
 use crate::Format;
 
 pub struct ImageConversionHandler {
-    storage: Arc<dyn ImageStorage>,
+    storage: Arc<dyn ObjectStorage>,
     image_ref: Arc<dyn ImageRefCommand>,
     format: Format,
 }
 
 impl ImageConversionHandler {
     pub fn new(
-        storage: Arc<dyn ImageStorage>,
+        storage: Arc<dyn ObjectStorage>,
         image_ref: Arc<dyn ImageRefCommand>,
         format: Format,
     ) -> Self {

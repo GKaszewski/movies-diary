@@ -1,8 +1,8 @@
 use super::*;
 use object_store::memory::InMemory;
 
-fn adapter() -> ImageStorageAdapter {
-    ImageStorageAdapter::new(Arc::new(InMemory::new()))
+fn adapter() -> ObjectStorageAdapter {
+    ObjectStorageAdapter::new(Arc::new(InMemory::new()))
 }
 
 #[tokio::test]
@@ -46,7 +46,7 @@ async fn cleanup_handler_deletes_on_movie_deleted() {
     let inner = Arc::new(adapter());
     inner.store("some-uuid", b"img").await.unwrap();
     let path = PosterPath::new("some-uuid".to_string()).unwrap();
-    let handler = ImageCleanupHandler::new(Arc::clone(&inner) as Arc<dyn ImageStorage>);
+    let handler = ImageCleanupHandler::new(Arc::clone(&inner) as Arc<dyn ObjectStorage>);
     handler
         .handle(&DomainEvent::MovieDeleted {
             movie_id: MovieId::from_uuid(uuid::Uuid::new_v4()),

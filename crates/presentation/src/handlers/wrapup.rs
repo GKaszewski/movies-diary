@@ -172,7 +172,7 @@ pub async fn get_video(State(state): State<AppState>, Path(id): Path<Uuid>) -> i
     match state
         .app_ctx
         .services
-        .image_storage
+        .object_storage
         .get_stream(&video_key)
         .await
     {

@@ -11,7 +11,7 @@ pub async fn execute(ctx: &AppContext, id: WrapUpId) -> Result<(), DomainError> 
         .await?
         .ok_or_else(|| DomainError::NotFound("wrap-up not found".into()))?;
 
-    let storage = WrapUpStorage::new(ctx.services.image_storage.clone());
+    let storage = WrapUpStorage::new(ctx.services.object_storage.clone());
     let _ = storage.delete_video(&id).await;
 
     ctx.repos.wrapup_repo.delete(&id).await

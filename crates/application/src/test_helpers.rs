@@ -6,7 +6,7 @@ use domain::testing::{
 };
 use domain::{
     ports::{
-        AuthService, DiaryExporter, DiaryRepository, DocumentParser, EventPublisher, ImageStorage,
+        AuthService, DiaryExporter, DiaryRepository, DocumentParser, EventPublisher, ObjectStorage,
         ImportProfileRepository, ImportSessionRepository, MetadataClient, MovieProfileRepository,
         MovieRepository, PasswordHasher, PersonCommand, PersonQuery, PosterFetcherClient,
         ReviewRepository, SearchCommand, SearchPort, StatsRepository, UserProfileFieldsRepository,
@@ -16,7 +16,7 @@ use domain::{
     testing::{
         FakeAuthService, FakeMetadataClient, FakePasswordHasher, InMemoryMovieRepository,
         InMemoryReviewRepository, InMemoryUserRepository, InMemoryWatchlistRepository,
-        NoopEventPublisher, NoopImageStorage, PanicDiaryExporter, PanicDiaryRepository,
+        NoopEventPublisher, NoopObjectStorage, PanicDiaryExporter, PanicDiaryRepository,
         PanicDocumentParser, PanicImportProfileRepository, PanicImportSessionRepository,
         PanicMovieProfileRepository, PanicPersonCommand, PanicPersonQuery, PanicPosterFetcher,
         PanicProfileFieldsRepo, PanicSearchCommand, PanicSearchPort, PanicStatsRepository,
@@ -38,7 +38,7 @@ pub struct TestContextBuilder {
     pub stats_repo: Arc<dyn StatsRepository>,
     pub metadata_client: Arc<dyn MetadataClient>,
     pub poster_fetcher: Arc<dyn PosterFetcherClient>,
-    pub image_storage: Arc<dyn ImageStorage>,
+    pub object_storage: Arc<dyn ObjectStorage>,
     pub event_publisher: Arc<dyn EventPublisher>,
     pub auth_service: Arc<dyn AuthService>,
     pub password_hasher: Arc<dyn PasswordHasher>,
@@ -70,7 +70,7 @@ impl TestContextBuilder {
             stats_repo: Arc::new(PanicStatsRepository),
             metadata_client: Arc::new(FakeMetadataClient),
             poster_fetcher: Arc::new(PanicPosterFetcher),
-            image_storage: Arc::new(NoopImageStorage),
+            object_storage: Arc::new(NoopObjectStorage),
             event_publisher: NoopEventPublisher::new(),
             auth_service: Arc::new(FakeAuthService),
             password_hasher: Arc::new(FakePasswordHasher),
@@ -172,7 +172,7 @@ impl TestContextBuilder {
                 password_hasher: self.password_hasher,
                 metadata: self.metadata_client,
                 poster_fetcher: self.poster_fetcher,
-                image_storage: self.image_storage,
+                object_storage: self.object_storage,
                 event_publisher: self.event_publisher,
                 diary_exporter: self.diary_exporter,
                 document_parser: self.document_parser,

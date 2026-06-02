@@ -184,7 +184,7 @@ pub trait PosterFetcherClient: Send + Sync {
 }
 
 #[async_trait]
-pub trait ImageStorage: Send + Sync {
+pub trait ObjectStorage: Send + Sync {
     /// Stores `image_bytes` at `key` and returns the stored key.
     async fn store(&self, key: &str, image_bytes: &[u8]) -> Result<String, DomainError>;
     async fn get(&self, key: &str) -> Result<Vec<u8>, DomainError>;

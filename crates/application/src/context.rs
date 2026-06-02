@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use domain::ports::{
-    AuthService, DiaryExporter, DiaryRepository, DocumentParser, EventPublisher, ImageStorage,
+    AuthService, DiaryExporter, DiaryRepository, DocumentParser, EventPublisher, ObjectStorage,
     ImportProfileRepository, ImportSessionRepository, MetadataClient, MovieProfileRepository,
     MovieRepository, PasswordHasher, PersonCommand, PersonQuery, PosterFetcherClient,
     RemoteWatchlistRepository, ReviewRepository, SearchCommand, SearchPort, SocialQueryPort,
@@ -42,7 +42,7 @@ pub struct Services {
     pub password_hasher: Arc<dyn PasswordHasher>,
     pub metadata: Arc<dyn MetadataClient>,
     pub poster_fetcher: Arc<dyn PosterFetcherClient>,
-    pub image_storage: Arc<dyn ImageStorage>,
+    pub object_storage: Arc<dyn ObjectStorage>,
     pub event_publisher: Arc<dyn EventPublisher>,
     pub diary_exporter: Arc<dyn DiaryExporter>,
     pub document_parser: Arc<dyn DocumentParser>,

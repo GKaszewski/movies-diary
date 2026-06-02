@@ -8,7 +8,7 @@ use domain::{
     events::DomainEvent,
     models::{CastMember, CrewMember, Genre, Keyword, MovieProfile},
     ports::{
-        EventHandler, ImageStorage, MovieEnrichmentClient, MovieProfileRepository, MovieRepository,
+        EventHandler, ObjectStorage, MovieEnrichmentClient, MovieProfileRepository, MovieRepository,
         PersonCommand, SearchCommand,
     },
     value_objects::MovieId,
@@ -229,7 +229,7 @@ pub struct EnrichmentHandler {
     pub profile_repo: Arc<dyn MovieProfileRepository>,
     pub person_command: Arc<dyn PersonCommand>,
     pub search_command: Arc<dyn SearchCommand>,
-    pub image_storage: Arc<dyn ImageStorage>,
+    pub object_storage: Arc<dyn ObjectStorage>,
     http: reqwest::Client,
 }
 
@@ -240,7 +240,7 @@ impl EnrichmentHandler {
         profile_repo: Arc<dyn MovieProfileRepository>,
         person_command: Arc<dyn PersonCommand>,
         search_command: Arc<dyn SearchCommand>,
-        image_storage: Arc<dyn ImageStorage>,
+        object_storage: Arc<dyn ObjectStorage>,
     ) -> Self {
         Self {
             enrichment_client,
@@ -248,7 +248,7 @@ impl EnrichmentHandler {
             profile_repo,
             person_command,
             search_command,
-            image_storage,
+            object_storage,
             http: reqwest::Client::new(),
         }
     }
@@ -259,14 +259,14 @@ impl EnrichmentHandler {
                 continue;
             };
             let key = format!("cast{path}");
-            if self.image_storage.get(&key).await.is_ok() {
+            if self.object_storage.get(&key).await.is_ok() {
                 continue;
             }
             let url = format!("https://image.tmdb.org/t/p/w185{path}");
             match self.http.get(&url).send().await {
                 Ok(resp) if resp.status().is_success() => {
                     if let Ok(bytes) = resp.bytes().await
-                        && let Err(e) = self.image_storage.store(&key, &bytes).await
+                        && let Err(e) = self.object_storage.store(&key, &bytes).await
                     {
                         tracing::debug!("cast photo store failed for {path}: {e}");
                     }

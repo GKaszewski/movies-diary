@@ -57,7 +57,7 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
     let (auth_service, password_hasher) = factory::build_auth_adapters()?;
     let metadata_client = factory::build_metadata_client()?;
     let poster_fetcher = factory::build_poster_fetcher()?;
-    let image_storage = factory::build_image_storage()?;
+    let object_storage = factory::build_object_storage()?;
 
     let db = factory::build_database_adapters(&backend, &database_url).await?;
     let ap_content_repo = db.ap_content;
@@ -201,7 +201,7 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
             password_hasher,
             metadata: metadata_client,
             poster_fetcher,
-            image_storage,
+            object_storage,
             event_publisher: event_publisher_arc,
             diary_exporter: Arc::new(ExportAdapter) as Arc<dyn DiaryExporter>,
             document_parser: Arc::new(ImporterDocumentParser) as Arc<dyn DocumentParser>,

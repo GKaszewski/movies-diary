@@ -18,7 +18,7 @@ use domain::{
         SearchQuery, SearchResults, User,
     },
     ports::{
-        AuthService, EventPublisher, GeneratedToken, ImageStorage, MetadataClient,
+        AuthService, EventPublisher, GeneratedToken, ObjectStorage, MetadataClient,
         MetadataSearchCriteria, PasswordHasher, PersonCommand, PersonQuery, PosterFetcherClient,
         SearchCommand, SearchPort, UserRepository,
     },
@@ -61,9 +61,9 @@ impl PosterFetcherClient for PanicFetcher {
     }
 }
 
-struct PanicImageStorage;
+struct PanicObjectStorage;
 #[async_trait]
-impl ImageStorage for PanicImageStorage {
+impl ObjectStorage for PanicObjectStorage {
     async fn store(&self, _: &str, _: &[u8]) -> Result<String, DomainError> {
         panic!()
     }
@@ -430,7 +430,7 @@ async fn test_app() -> Router {
                 password_hasher: Arc::new(PanicHasher),
                 metadata: Arc::new(PanicMeta),
                 poster_fetcher: Arc::new(PanicFetcher),
-                image_storage: Arc::new(PanicImageStorage),
+                object_storage: Arc::new(PanicObjectStorage),
                 event_publisher: Arc::new(NoopEventPublisher),
                 diary_exporter: Arc::new(PanicExporter),
                 document_parser: Arc::new(PanicDocumentParser),

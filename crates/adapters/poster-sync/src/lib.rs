@@ -5,7 +5,7 @@ use domain::{
     errors::DomainError,
     events::DomainEvent,
     ports::{
-        EventHandler, EventPublisher, ImageStorage, MetadataClient, MovieRepository,
+        EventHandler, EventPublisher, ObjectStorage, MetadataClient, MovieRepository,
         PosterFetcherClient,
     },
     value_objects::{ExternalMetadataId, MovieId, PosterPath},
@@ -15,7 +15,7 @@ pub struct PosterSyncHandler {
     movie_repository: Arc<dyn MovieRepository>,
     metadata_client: Arc<dyn MetadataClient>,
     poster_fetcher: Arc<dyn PosterFetcherClient>,
-    image_storage: Arc<dyn ImageStorage>,
+    object_storage: Arc<dyn ObjectStorage>,
     event_publisher: Arc<dyn EventPublisher>,
     max_retries: u32,
 }
@@ -25,7 +25,7 @@ impl PosterSyncHandler {
         movie_repository: Arc<dyn MovieRepository>,
         metadata_client: Arc<dyn MetadataClient>,
         poster_fetcher: Arc<dyn PosterFetcherClient>,
-        image_storage: Arc<dyn ImageStorage>,
+        object_storage: Arc<dyn ObjectStorage>,
         event_publisher: Arc<dyn EventPublisher>,
         max_retries: u32,
     ) -> Self {
@@ -33,7 +33,7 @@ impl PosterSyncHandler {
             movie_repository,
             metadata_client,
             poster_fetcher,
-            image_storage,
+            object_storage,
             event_publisher,
             max_retries,
         }
@@ -67,7 +67,7 @@ impl PosterSyncHandler {
 
         let image_bytes = self.poster_fetcher.fetch_poster_bytes(&poster_url).await?;
         let stored_path = self
-            .image_storage
+            .object_storage
             .store(&movie_id.value().to_string(), &image_bytes)
             .await?;
         if let Err(e) = self
