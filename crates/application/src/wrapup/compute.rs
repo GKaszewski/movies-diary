@@ -451,3 +451,7 @@ fn compute_global_stats(
 
     (most_active_user, most_watched, total_users_active)
 }
+
+#[cfg(test)]
+#[path = "tests/compute.rs"]
+mod tests;
