@@ -1,6 +1,6 @@
 use axum::{
     Json,
-    extract::{Path, State},
+    extract::{Extension, Path, State},
     http::StatusCode,
     response::IntoResponse,
 };
@@ -13,10 +13,16 @@ use application::wrapup::{
     list_wrapups::{self, ListWrapUpsQuery},
 };
 use domain::errors::DomainError;
-use domain::models::wrapup::{WrapUpRecord, WrapUpStatus};
+use domain::models::wrapup::{WrapUpRecord, WrapUpReport, WrapUpStatus};
 use domain::value_objects::WrapUpId;
 
-use crate::{errors::ApiError, extractors::AuthenticatedUser, state::AppState};
+use crate::{
+    csrf::CsrfToken,
+    errors::ApiError,
+    extractors::{AuthenticatedUser, OptionalCookieUser},
+    render::render_page,
+    state::AppState,
+};
 use api_types::wrapup::{
     GenerateWrapUpRequest, WrapUpGeneratedResponse, WrapUpListResponse, WrapUpStatusResponse,
 };
@@ -144,4 +150,123 @@ pub async fn get_report(
         Ok(None) => StatusCode::NOT_FOUND.into_response(),
         Err(e) => crate::errors::domain_error_response(e),
     }
+}
+
+// ── HTML handlers ───────────────────────────────────────────────────────────
+
+fn format_watch_time(minutes: u32) -> String {
+    let h = minutes / 60;
+    let m = minutes % 60;
+    if h > 0 && m > 0 {
+        format!("{}h {}m", h, m)
+    } else if h > 0 {
+        format!("{}h", h)
+    } else {
+        format!("{}m", m)
+    }
+}
+
+fn render_wrapup(
+    report: &WrapUpReport,
+    year: i32,
+    ctx: &application::ports::HtmlPageContext,
+) -> axum::response::Response {
+    let rating_max = report.rating_distribution.iter().copied().max().unwrap_or(1).max(1);
+    let rating_pcts: [f64; 5] = std::array::from_fn(|i| {
+        report.rating_distribution[i] as f64 / rating_max as f64 * 100.0
+    });
+    let genre_max = report.top_genres.first().map(|g| g.count).unwrap_or(1).max(1);
+    let genre_pcts: Vec<f64> = report
+        .top_genres
+        .iter()
+        .take(8)
+        .map(|g| g.count as f64 / genre_max as f64 * 100.0)
+        .collect();
+    let tmpl = template_askama::WrapUpPageTemplate {
+        ctx,
+        report,
+        year_label: year.to_string(),
+        watch_time_display: format_watch_time(report.total_watch_time_minutes),
+        rating_max,
+        genre_max,
+        rating_pcts,
+        genre_pcts,
+    };
+    render_page(tmpl)
+}
+
+pub async fn get_user_wrapup_html(
+    OptionalCookieUser(viewer): OptionalCookieUser,
+    State(state): State<AppState>,
+    Path((user_id, year)): Path<(Uuid, i32)>,
+    Extension(csrf): Extension<CsrfToken>,
+) -> impl IntoResponse {
+    let start = match NaiveDate::from_ymd_opt(year, 1, 1) {
+        Some(d) => d,
+        None => return StatusCode::BAD_REQUEST.into_response(),
+    };
+    let end = match NaiveDate::from_ymd_opt(year + 1, 1, 1) {
+        Some(d) => d,
+        None => return StatusCode::BAD_REQUEST.into_response(),
+    };
+
+    let record = match state
+        .app_ctx
+        .repos
+        .wrapup_repo
+        .find_existing(Some(user_id), start, end)
+        .await
+    {
+        Ok(Some(r)) if r.status == WrapUpStatus::Ready => r,
+        _ => return StatusCode::NOT_FOUND.into_response(),
+    };
+
+    let report: WrapUpReport = match &record.report_json {
+        Some(json) => match serde_json::from_str(json) {
+            Ok(r) => r,
+            Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        },
+        None => return StatusCode::NOT_FOUND.into_response(),
+    };
+
+    let ctx = super::html::build_page_context(&state, viewer, csrf.0).await;
+    render_wrapup(&report, year, &ctx)
+}
+
+pub async fn get_global_wrapup_html(
+    OptionalCookieUser(viewer): OptionalCookieUser,
+    State(state): State<AppState>,
+    Path(year): Path<i32>,
+    Extension(csrf): Extension<CsrfToken>,
+) -> impl IntoResponse {
+    let start = match NaiveDate::from_ymd_opt(year, 1, 1) {
+        Some(d) => d,
+        None => return StatusCode::BAD_REQUEST.into_response(),
+    };
+    let end = match NaiveDate::from_ymd_opt(year + 1, 1, 1) {
+        Some(d) => d,
+        None => return StatusCode::BAD_REQUEST.into_response(),
+    };
+
+    let record = match state
+        .app_ctx
+        .repos
+        .wrapup_repo
+        .find_existing(None, start, end)
+        .await
+    {
+        Ok(Some(r)) if r.status == WrapUpStatus::Ready => r,
+        _ => return StatusCode::NOT_FOUND.into_response(),
+    };
+
+    let report: WrapUpReport = match &record.report_json {
+        Some(json) => match serde_json::from_str(json) {
+            Ok(r) => r,
+            Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        },
+        None => return StatusCode::NOT_FOUND.into_response(),
+    };
+
+    let ctx = super::html::build_page_context(&state, viewer, csrf.0).await;
+    render_wrapup(&report, year, &ctx)
 }

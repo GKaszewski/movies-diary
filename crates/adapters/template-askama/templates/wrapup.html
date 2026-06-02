@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="wu-container">
+
+  <section class="wu-section wu-hero">
+    <h1 class="wu-year">{{ year_label }}</h1>
+    <div class="wu-big-number">{{ report.total_movies }}</div>
+    <div class="wu-subtitle">movies watched</div>
+    {% if report.total_watch_time_minutes > 0 %}
+    <div class="wu-detail">{{ watch_time_display }} total watch time</div>
+    {% endif %}
+  </section>
+
+  <section class="wu-section">
+    <h2>Ratings</h2>
+    {% if let Some(avg) = report.avg_rating %}
+    <div class="wu-big-number">{{ avg|fmt("{:.1}") }}</div>
+    <div class="wu-subtitle">average rating</div>
+    {% endif %}
+    <div class="wu-rating-bars">
+      {% for i in 0..5 %}
+      <div class="wu-rating-row">
+        <span class="wu-star-label">{{ i + 1 }}★</span>
+        <div class="wu-bar-track">
+          <div class="wu-bar" style="width: {{ rating_pcts[i] }}%"></div>
+        </div>
+        <span class="wu-bar-count">{{ report.rating_distribution[i] }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% if let Some(month) = report.busiest_month %}
+    <div class="wu-detail" style="margin-top:1rem">Busiest month: <strong>{{ month }}</strong></div>
+    {% endif %}
+    {% if let Some(day) = report.busiest_day_of_week %}
+    <div class="wu-detail">Favorite day: <strong>{{ day }}</strong></div>
+    {% endif %}
+  </section>
+
+  {% if !report.top_directors.is_empty() %}
+  <section class="wu-section">
+    <h2>Top Directors</h2>
+    <div class="wu-detail" style="margin-bottom:1rem">{{ report.director_diversity }} unique directors</div>
+    {% for d in report.top_directors.iter().take(5) %}
+    <div class="wu-stat-row">
+      <span class="wu-stat-name">{{ d.name }}</span>
+      <span class="wu-stat-count">{{ d.count }} films · {{ d.avg_rating|fmt("{:.1}") }}★</span>
+    </div>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  {% if !report.top_actors.is_empty() %}
+  <section class="wu-section">
+    <h2>Top Actors</h2>
+    <div class="wu-detail" style="margin-bottom:1rem">{{ report.actor_diversity }} unique actors</div>
+    {% for a in report.top_actors.iter().take(5) %}
+    <div class="wu-stat-row">
+      <span class="wu-stat-name">{{ a.name }}</span>
+      <span class="wu-stat-count">{{ a.count }} films · {{ a.avg_rating|fmt("{:.1}") }}★</span>
+    </div>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  {% if !report.top_genres.is_empty() %}
+  <section class="wu-section">
+    <h2>Genre Breakdown</h2>
+    <div class="wu-detail" style="margin-bottom:1rem">{{ report.genre_diversity }} genres explored</div>
+    {% for g in report.top_genres.iter().take(8).enumerate() %}
+    <div class="wu-stat-row">
+      <span class="wu-stat-name">{{ g.1.genre }}</span>
+      <span class="wu-stat-count">{{ g.1.count }}</span>
+    </div>
+    <div class="wu-bar-track">
+      <div class="wu-bar" style="width: {{ genre_pcts[g.0] }}%"></div>
+    </div>
+    {% endfor %}
+    {% if let Some(best) = report.highest_rated_genre %}
+    <div class="wu-detail" style="margin-top:1rem">Highest rated: <strong>{{ best }}</strong></div>
+    {% endif %}
+    {% if let Some(worst) = report.lowest_rated_genre %}
+    <div class="wu-detail">Lowest rated: <strong>{{ worst }}</strong></div>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  <section class="wu-section">
+    <h2>Highlights</h2>
+    <div class="wu-highlight-grid">
+      {% if let Some(m) = report.highest_rated_movie %}
+      <div class="wu-highlight-card">
+        <div class="wu-highlight-label">Highest Rated</div>
+        {% if let Some(p) = m.poster_path %}
+        <img src="{{ p|poster_src }}" class="wu-highlight-poster" alt="{{ m.title }}">
+        {% endif %}
+        <div class="wu-highlight-title">{{ m.title }}</div>
+        <div class="wu-detail">{{ m.year }}</div>
+      </div>
+      {% endif %}
+      {% if let Some(m) = report.lowest_rated_movie %}
+      <div class="wu-highlight-card">
+        <div class="wu-highlight-label">Lowest Rated</div>
+        {% if let Some(p) = m.poster_path %}
+        <img src="{{ p|poster_src }}" class="wu-highlight-poster" alt="{{ m.title }}">
+        {% endif %}
+        <div class="wu-highlight-title">{{ m.title }}</div>
+        <div class="wu-detail">{{ m.year }}</div>
+      </div>
+      {% endif %}
+      {% if let Some(m) = report.oldest_movie %}
+      <div class="wu-highlight-card">
+        <div class="wu-highlight-label">Oldest</div>
+        {% if let Some(p) = m.poster_path %}
+        <img src="{{ p|poster_src }}" class="wu-highlight-poster" alt="{{ m.title }}">
+        {% endif %}
+        <div class="wu-highlight-title">{{ m.title }}</div>
+        <div class="wu-detail">{{ m.year }}</div>
+      </div>
+      {% endif %}
+      {% if let Some(m) = report.newest_movie %}
+      <div class="wu-highlight-card">
+        <div class="wu-highlight-label">Newest</div>
+        {% if let Some(p) = m.poster_path %}
+        <img src="{{ p|poster_src }}" class="wu-highlight-poster" alt="{{ m.title }}">
+        {% endif %}
+        <div class="wu-highlight-title">{{ m.title }}</div>
+        <div class="wu-detail">{{ m.year }}</div>
+      </div>
+      {% endif %}
+      {% if let Some(m) = report.longest_movie %}
+      <div class="wu-highlight-card">
+        <div class="wu-highlight-label">Longest</div>
+        {% if let Some(p) = m.poster_path %}
+        <img src="{{ p|poster_src }}" class="wu-highlight-poster" alt="{{ m.title }}">
+        {% endif %}
+        <div class="wu-highlight-title">{{ m.title }}</div>
+        {% if let Some(rt) = m.runtime_minutes %}
+        <div class="wu-detail">{{ rt }} min</div>
+        {% endif %}
+      </div>
+      {% endif %}
+      {% if let Some(m) = report.shortest_movie %}
+      <div class="wu-highlight-card">
+        <div class="wu-highlight-label">Shortest</div>
+        {% if let Some(p) = m.poster_path %}
+        <img src="{{ p|poster_src }}" class="wu-highlight-poster" alt="{{ m.title }}">
+        {% endif %}
+        <div class="wu-highlight-title">{{ m.title }}</div>
+        {% if let Some(rt) = m.runtime_minutes %}
+        <div class="wu-detail">{{ rt }} min</div>
+        {% endif %}
+      </div>
+      {% endif %}
+      {% if let Some(m) = report.first_movie_of_period %}
+      <div class="wu-highlight-card">
+        <div class="wu-highlight-label">First Watched</div>
+        {% if let Some(p) = m.poster_path %}
+        <img src="{{ p|poster_src }}" class="wu-highlight-poster" alt="{{ m.title }}">
+        {% endif %}
+        <div class="wu-highlight-title">{{ m.title }}</div>
+        <div class="wu-detail">{{ m.year }}</div>
+      </div>
+      {% endif %}
+      {% if let Some(m) = report.last_movie_of_period %}
+      <div class="wu-highlight-card">
+        <div class="wu-highlight-label">Last Watched</div>
+        {% if let Some(p) = m.poster_path %}
+        <img src="{{ p|poster_src }}" class="wu-highlight-poster" alt="{{ m.title }}">
+        {% endif %}
+        <div class="wu-highlight-title">{{ m.title }}</div>
+        <div class="wu-detail">{{ m.year }}</div>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+
+  {% if report.total_rewatches > 0 %}
+  <section class="wu-section">
+    <h2>Rewatches</h2>
+    <div class="wu-big-number">{{ report.total_rewatches }}</div>
+    <div class="wu-subtitle">movies rewatched</div>
+    {% if let Some(m) = report.most_rewatched_movie %}
+    <div class="wu-detail" style="margin-top:1rem">Most rewatched: <strong>{{ m.title }}</strong> ({{ m.year }})</div>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  {% if !report.poster_paths.is_empty() %}
+  <section class="wu-section">
+    <h2>Your Year in Posters</h2>
+    <div class="wu-poster-mosaic">
+      {% for path in report.poster_paths.iter() %}
+      <img src="{{ path|poster_src }}" alt="" loading="lazy">
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+</div>
+{% endblock %}

@@ -163,6 +163,14 @@ fn html_routes(rate_limit: u64) -> Router<AppState> {
         .route(
             "/watch-queue/{id}/dismiss",
             routing::post(handlers::html::post_dismiss_single),
+        )
+        .route(
+            "/wrapups/{user_id}/{year}",
+            routing::get(handlers::wrapup::get_user_wrapup_html),
+        )
+        .route(
+            "/wrapups/global/{year}",
+            routing::get(handlers::wrapup::get_global_wrapup_html),
         );
 
     #[cfg(feature = "federation")]
