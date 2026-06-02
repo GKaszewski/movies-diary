@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use application::{config::AppConfig, context::AppContext};
+use application::{
+    config::AppConfig,
+    context::{AppContext, Repositories, Services},
+};
 use async_trait::async_trait;
 use axum::{
     Router,
@@ -26,7 +29,6 @@ use presentation::{routes, state::AppState};
 use rss::RssAdapter;
 use sqlite::SqliteMovieRepository;
 use sqlx::SqlitePool;
-use template_askama::AskamaHtmlRenderer;
 use tower::ServiceExt;
 
 struct NoopEventPublisher;
@@ -394,41 +396,44 @@ async fn test_app() -> Router {
     let repo = Arc::new(repo);
     let state = AppState {
         app_ctx: AppContext {
-            movie_repository: Arc::clone(&repo) as _,
-            review_repository: Arc::clone(&repo) as _,
-            diary_repository: Arc::clone(&repo) as _,
-            diary_exporter: Arc::new(PanicExporter),
-            document_parser: Arc::new(PanicDocumentParser),
-            stats_repository: Arc::clone(&repo) as _,
-            metadata_client: Arc::new(PanicMeta),
-            poster_fetcher: Arc::new(PanicFetcher),
-            image_storage: Arc::new(PanicImageStorage),
-            event_publisher: Arc::new(NoopEventPublisher),
-            auth_service: Arc::new(PanicAuth),
-            password_hasher: Arc::new(PanicHasher),
-            user_repository: Arc::new(NobodyUserRepo),
-            import_session_repository: Arc::new(PanicImportSession),
-            import_profile_repository: Arc::new(PanicImportProfile),
-            movie_profile_repository: Arc::new(PanicMovieProfile),
-            watchlist_repository: Arc::new(PanicWatchlist),
-            watch_event_repository: Arc::new(domain::testing::PanicWatchEventRepository),
-            webhook_token_repository: Arc::new(domain::testing::PanicWebhookTokenRepository),
-            profile_fields_repository: Arc::new(PanicProfileFields),
-            #[cfg(feature = "federation")]
-            remote_watchlist_repository: Arc::new(PanicRemoteWatchlist),
-            #[cfg(feature = "federation")]
-            social_query: Arc::new(PanicSocialQuery),
-            person_command: Arc::new(PanicPersonCommand),
-            person_query: Arc::new(PanicPersonQuery),
-            search_port: Arc::new(PanicSearchPort),
-            search_command: Arc::new(PanicSearchCommand),
+            repos: Repositories {
+                movie: Arc::clone(&repo) as _,
+                review: Arc::clone(&repo) as _,
+                diary: Arc::clone(&repo) as _,
+                stats: Arc::clone(&repo) as _,
+                user: Arc::new(NobodyUserRepo),
+                import_session: Arc::new(PanicImportSession),
+                import_profile: Arc::new(PanicImportProfile),
+                movie_profile: Arc::new(PanicMovieProfile),
+                watchlist: Arc::new(PanicWatchlist),
+                watch_event: Arc::new(domain::testing::PanicWatchEventRepository),
+                webhook_token: Arc::new(domain::testing::PanicWebhookTokenRepository),
+                profile_fields: Arc::new(PanicProfileFields),
+                person_command: Arc::new(PanicPersonCommand),
+                person_query: Arc::new(PanicPersonQuery),
+                search_port: Arc::new(PanicSearchPort),
+                search_command: Arc::new(PanicSearchCommand),
+                #[cfg(feature = "federation")]
+                remote_watchlist: Arc::new(PanicRemoteWatchlist),
+                #[cfg(feature = "federation")]
+                social_query: Arc::new(PanicSocialQuery),
+            },
+            services: Services {
+                auth: Arc::new(PanicAuth),
+                password_hasher: Arc::new(PanicHasher),
+                metadata: Arc::new(PanicMeta),
+                poster_fetcher: Arc::new(PanicFetcher),
+                image_storage: Arc::new(PanicImageStorage),
+                event_publisher: Arc::new(NoopEventPublisher),
+                diary_exporter: Arc::new(PanicExporter),
+                document_parser: Arc::new(PanicDocumentParser),
+            },
             config: AppConfig {
                 allow_registration: false,
                 base_url: "http://localhost:3000".to_string(),
                 rate_limit: 20,
             },
         },
-        html_renderer: Arc::new(AskamaHtmlRenderer::new()),
         rss_renderer: Arc::new(RssAdapter::new("http://localhost:3000".into())),
         #[cfg(feature = "federation")]
         ap_service: Arc::new(activitypub::NoopActivityPubService),

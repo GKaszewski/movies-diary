@@ -1,5 +1,8 @@
 use super::*;
-use application::{config::AppConfig, context::AppContext};
+use application::{
+    config::AppConfig,
+    context::{AppContext, Repositories, Services},
+};
 use axum::{
     Router,
     body::Body,
@@ -387,120 +390,6 @@ impl domain::ports::DocumentParser for Panic {
     }
 }
 
-impl crate::ports::HtmlRenderer for Panic {
-    fn render_diary_page(
-        &self,
-        _: &Paginated<DiaryEntry>,
-        _: application::ports::HtmlPageContext,
-    ) -> Result<String, String> {
-        panic!()
-    }
-    fn render_login_page(
-        &self,
-        _: application::ports::LoginPageData<'_>,
-    ) -> Result<String, String> {
-        panic!()
-    }
-    fn render_register_page(
-        &self,
-        _: application::ports::RegisterPageData<'_>,
-    ) -> Result<String, String> {
-        panic!()
-    }
-    fn render_new_review_page(
-        &self,
-        _: application::ports::NewReviewPageData<'_>,
-    ) -> Result<String, String> {
-        panic!()
-    }
-    fn render_activity_feed_page(
-        &self,
-        _: application::ports::ActivityFeedPageData,
-    ) -> Result<String, String> {
-        panic!()
-    }
-    fn render_users_page(&self, _: application::ports::UsersPageData) -> Result<String, String> {
-        panic!()
-    }
-    fn render_profile_page(
-        &self,
-        _: application::ports::ProfilePageData,
-    ) -> Result<String, String> {
-        panic!()
-    }
-    fn render_following_page(
-        &self,
-        _: application::ports::FollowingPageData,
-    ) -> Result<String, String> {
-        panic!()
-    }
-    fn render_followers_page(
-        &self,
-        _: application::ports::FollowersPageData,
-    ) -> Result<String, String> {
-        panic!()
-    }
-    fn render_movie_detail_page(
-        &self,
-        _: application::ports::MovieDetailPageData,
-    ) -> Result<String, String> {
-        panic!()
-    }
-    fn render_import_upload_page(
-        &self,
-        _: application::ports::ImportUploadPageData,
-    ) -> Result<String, String> {
-        panic!()
-    }
-    fn render_import_mapping_page(
-        &self,
-        _: application::ports::ImportMappingPageData,
-    ) -> Result<String, String> {
-        panic!()
-    }
-    fn render_import_preview_page(
-        &self,
-        _: application::ports::ImportPreviewPageData,
-    ) -> Result<String, String> {
-        panic!()
-    }
-    fn render_profile_settings_page(
-        &self,
-        _: application::ports::ProfileSettingsPageData,
-    ) -> Result<String, String> {
-        panic!()
-    }
-    fn render_blocked_domains_page(
-        &self,
-        _: application::ports::BlockedDomainsPageData,
-    ) -> Result<String, String> {
-        panic!()
-    }
-    fn render_blocked_actors_page(
-        &self,
-        _: application::ports::BlockedActorsPageData,
-    ) -> Result<String, String> {
-        panic!()
-    }
-    fn render_watchlist_page(
-        &self,
-        _: application::ports::WatchlistPageData,
-    ) -> Result<String, String> {
-        panic!()
-    }
-    fn render_integrations_page(
-        &self,
-        _: application::ports::IntegrationsPageData,
-    ) -> Result<String, String> {
-        panic!()
-    }
-    fn render_watch_queue_page(
-        &self,
-        _: application::ports::WatchQueuePageData,
-    ) -> Result<String, String> {
-        panic!()
-    }
-}
 impl crate::ports::RssFeedRenderer for Panic {
     fn render_feed(&self, _: &[DiaryEntry], _: &str) -> Result<String, String> {
         panic!()
@@ -660,41 +549,44 @@ pub fn make_test_state(auth_service: Arc<dyn AuthService>) -> crate::state::AppS
     let repo = Arc::new(Panic);
     crate::state::AppState {
         app_ctx: AppContext {
-            movie_repository: Arc::clone(&repo) as _,
-            review_repository: Arc::clone(&repo) as _,
-            diary_repository: Arc::clone(&repo) as _,
-            diary_exporter: Arc::clone(&repo) as _,
-            document_parser: Arc::clone(&repo) as _,
-            stats_repository: Arc::clone(&repo) as _,
-            metadata_client: Arc::clone(&repo) as _,
-            poster_fetcher: Arc::clone(&repo) as _,
-            image_storage: Arc::clone(&repo) as _,
-            event_publisher: Arc::clone(&repo) as _,
-            password_hasher: Arc::clone(&repo) as _,
-            user_repository: Arc::clone(&repo) as _,
-            import_session_repository: Arc::clone(&repo) as _,
-            import_profile_repository: Arc::clone(&repo) as _,
-            movie_profile_repository: Arc::clone(&repo) as _,
-            watchlist_repository: Arc::clone(&repo) as _,
-            watch_event_repository: Arc::clone(&repo) as _,
-            webhook_token_repository: Arc::clone(&repo) as _,
-            profile_fields_repository: Arc::clone(&repo) as _,
-            #[cfg(feature = "federation")]
-            remote_watchlist_repository: Arc::clone(&repo) as _,
-            #[cfg(feature = "federation")]
-            social_query: Arc::clone(&repo) as _,
-            person_command: Arc::clone(&repo) as _,
-            person_query: Arc::clone(&repo) as _,
-            search_port: Arc::clone(&repo) as _,
-            search_command: Arc::clone(&repo) as _,
-            auth_service,
+            repos: Repositories {
+                movie: Arc::clone(&repo) as _,
+                review: Arc::clone(&repo) as _,
+                diary: Arc::clone(&repo) as _,
+                stats: Arc::clone(&repo) as _,
+                user: Arc::clone(&repo) as _,
+                import_session: Arc::clone(&repo) as _,
+                import_profile: Arc::clone(&repo) as _,
+                movie_profile: Arc::clone(&repo) as _,
+                watchlist: Arc::clone(&repo) as _,
+                watch_event: Arc::clone(&repo) as _,
+                webhook_token: Arc::clone(&repo) as _,
+                profile_fields: Arc::clone(&repo) as _,
+                person_command: Arc::clone(&repo) as _,
+                person_query: Arc::clone(&repo) as _,
+                search_port: Arc::clone(&repo) as _,
+                search_command: Arc::clone(&repo) as _,
+                #[cfg(feature = "federation")]
+                remote_watchlist: Arc::clone(&repo) as _,
+                #[cfg(feature = "federation")]
+                social_query: Arc::clone(&repo) as _,
+            },
+            services: Services {
+                auth: auth_service,
+                password_hasher: Arc::clone(&repo) as _,
+                metadata: Arc::clone(&repo) as _,
+                poster_fetcher: Arc::clone(&repo) as _,
+                image_storage: Arc::clone(&repo) as _,
+                event_publisher: Arc::clone(&repo) as _,
+                diary_exporter: Arc::clone(&repo) as _,
+                document_parser: Arc::clone(&repo) as _,
+            },
             config: AppConfig {
                 allow_registration: false,
                 base_url: "http://localhost:3000".to_string(),
                 rate_limit: 20,
             },
         },
-        html_renderer: Arc::new(Panic),
         rss_renderer: Arc::new(Panic),
         #[cfg(feature = "federation")]
         ap_service: Arc::new(activitypub::NoopActivityPubService),

@@ -13,34 +13,44 @@ use domain::ports::{RemoteWatchlistRepository, SocialQueryPort};
 use crate::config::AppConfig;
 
 #[derive(Clone)]
-pub struct AppContext {
-    pub movie_repository: Arc<dyn MovieRepository>,
-    pub review_repository: Arc<dyn ReviewRepository>,
-    pub diary_repository: Arc<dyn DiaryRepository>,
-    pub diary_exporter: Arc<dyn DiaryExporter>,
-    pub document_parser: Arc<dyn DocumentParser>,
-    pub stats_repository: Arc<dyn StatsRepository>,
-    pub metadata_client: Arc<dyn MetadataClient>,
-    pub poster_fetcher: Arc<dyn PosterFetcherClient>,
-    pub image_storage: Arc<dyn ImageStorage>,
-    pub event_publisher: Arc<dyn EventPublisher>,
-    pub auth_service: Arc<dyn AuthService>,
-    pub password_hasher: Arc<dyn PasswordHasher>,
-    pub user_repository: Arc<dyn UserRepository>,
-    pub import_session_repository: Arc<dyn ImportSessionRepository>,
-    pub import_profile_repository: Arc<dyn ImportProfileRepository>,
-    pub movie_profile_repository: Arc<dyn MovieProfileRepository>,
+pub struct Repositories {
+    pub movie: Arc<dyn MovieRepository>,
+    pub review: Arc<dyn ReviewRepository>,
+    pub diary: Arc<dyn DiaryRepository>,
+    pub stats: Arc<dyn StatsRepository>,
+    pub user: Arc<dyn UserRepository>,
+    pub import_session: Arc<dyn ImportSessionRepository>,
+    pub import_profile: Arc<dyn ImportProfileRepository>,
+    pub movie_profile: Arc<dyn MovieProfileRepository>,
+    pub watchlist: Arc<dyn WatchlistRepository>,
+    pub watch_event: Arc<dyn WatchEventRepository>,
+    pub webhook_token: Arc<dyn WebhookTokenRepository>,
     pub person_command: Arc<dyn PersonCommand>,
     pub person_query: Arc<dyn PersonQuery>,
     pub search_port: Arc<dyn SearchPort>,
     pub search_command: Arc<dyn SearchCommand>,
-    pub watchlist_repository: Arc<dyn WatchlistRepository>,
-    pub watch_event_repository: Arc<dyn WatchEventRepository>,
-    pub webhook_token_repository: Arc<dyn WebhookTokenRepository>,
-    pub profile_fields_repository: Arc<dyn UserProfileFieldsRepository>,
+    pub profile_fields: Arc<dyn UserProfileFieldsRepository>,
     #[cfg(feature = "federation")]
-    pub remote_watchlist_repository: Arc<dyn RemoteWatchlistRepository>,
+    pub remote_watchlist: Arc<dyn RemoteWatchlistRepository>,
     #[cfg(feature = "federation")]
     pub social_query: Arc<dyn SocialQueryPort>,
+}
+
+#[derive(Clone)]
+pub struct Services {
+    pub auth: Arc<dyn AuthService>,
+    pub password_hasher: Arc<dyn PasswordHasher>,
+    pub metadata: Arc<dyn MetadataClient>,
+    pub poster_fetcher: Arc<dyn PosterFetcherClient>,
+    pub image_storage: Arc<dyn ImageStorage>,
+    pub event_publisher: Arc<dyn EventPublisher>,
+    pub diary_exporter: Arc<dyn DiaryExporter>,
+    pub document_parser: Arc<dyn DocumentParser>,
+}
+
+#[derive(Clone)]
+pub struct AppContext {
+    pub repos: Repositories,
+    pub services: Services,
     pub config: AppConfig,
 }

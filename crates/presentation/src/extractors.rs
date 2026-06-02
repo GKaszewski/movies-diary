@@ -28,7 +28,12 @@ where
                     "Missing or invalid auth token".into(),
                 ))
             })?;
-        let user_id = app_state.app_ctx.auth_service.validate_token(token).await?;
+        let user_id = app_state
+            .app_ctx
+            .services
+            .auth
+            .validate_token(token)
+            .await?;
         Ok(AuthenticatedUser(user_id))
     }
 }
@@ -62,7 +67,8 @@ where
         };
         let user_id = app_state
             .app_ctx
-            .auth_service
+            .services
+            .auth
             .validate_token(&token)
             .await
             .ok();
@@ -83,7 +89,8 @@ where
             .ok_or_else(|| Redirect::to("/login").into_response())?;
         let user_id = app_state
             .app_ctx
-            .auth_service
+            .services
+            .auth
             .validate_token(&token)
             .await
             .map_err(|_| Redirect::to("/login").into_response())?;
@@ -106,7 +113,8 @@ where
             RequiredCookieUser::from_request_parts(parts, state).await?;
         let user = app_state
             .app_ctx
-            .user_repository
+            .repos
+            .user
             .find_by_id(&user_id)
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?

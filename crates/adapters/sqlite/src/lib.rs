@@ -935,21 +935,21 @@ impl StatsRepository for SqliteMovieRepository {
     }
 }
 
-pub async fn wire(
-    database_url: &str,
-) -> anyhow::Result<(
-    sqlx::SqlitePool,
-    std::sync::Arc<dyn domain::ports::MovieRepository>,
-    std::sync::Arc<dyn domain::ports::ReviewRepository>,
-    std::sync::Arc<dyn domain::ports::DiaryRepository>,
-    std::sync::Arc<dyn domain::ports::StatsRepository>,
-    std::sync::Arc<dyn domain::ports::UserRepository>,
-    std::sync::Arc<dyn domain::ports::ImportSessionRepository>,
-    std::sync::Arc<dyn domain::ports::ImportProfileRepository>,
-    std::sync::Arc<dyn domain::ports::MovieProfileRepository>,
-    std::sync::Arc<dyn domain::ports::WatchlistRepository>,
-    std::sync::Arc<dyn domain::ports::LocalApContentQuery>,
-)> {
+pub struct SqliteWireOutput {
+    pub pool: SqlitePool,
+    pub movie: std::sync::Arc<dyn domain::ports::MovieRepository>,
+    pub review: std::sync::Arc<dyn domain::ports::ReviewRepository>,
+    pub diary: std::sync::Arc<dyn domain::ports::DiaryRepository>,
+    pub stats: std::sync::Arc<dyn domain::ports::StatsRepository>,
+    pub user: std::sync::Arc<dyn domain::ports::UserRepository>,
+    pub import_session: std::sync::Arc<dyn domain::ports::ImportSessionRepository>,
+    pub import_profile: std::sync::Arc<dyn domain::ports::ImportProfileRepository>,
+    pub movie_profile: std::sync::Arc<dyn domain::ports::MovieProfileRepository>,
+    pub watchlist: std::sync::Arc<dyn domain::ports::WatchlistRepository>,
+    pub ap_content: std::sync::Arc<dyn domain::ports::LocalApContentQuery>,
+}
+
+pub async fn wire(database_url: &str) -> anyhow::Result<SqliteWireOutput> {
     use anyhow::Context;
     use sqlx::sqlite::SqliteConnectOptions;
     use std::str::FromStr;
@@ -969,25 +969,19 @@ pub async fn wire(
         .map_err(|e| anyhow::anyhow!("{e}"))
         .context("Database migration failed")?;
 
-    let import_session_repo = std::sync::Arc::new(SqliteImportSessionRepository::new(pool.clone()));
-    let import_profile_repo = std::sync::Arc::new(SqliteImportProfileRepository::new(pool.clone()));
-    let movie_profile_repo = std::sync::Arc::new(SqliteMovieProfileRepository::new(pool.clone()));
-    let watchlist_repo = std::sync::Arc::new(SqliteWatchlistRepository::new(pool.clone()));
-    let ap_content = std::sync::Arc::new(SqliteApContentQuery::new(pool.clone()));
-
-    Ok((
-        pool.clone(),
-        std::sync::Arc::clone(&repo) as _,
-        std::sync::Arc::clone(&repo) as _,
-        std::sync::Arc::clone(&repo) as _,
-        std::sync::Arc::clone(&repo) as _,
-        std::sync::Arc::new(SqliteUserRepository::new(pool)) as _,
-        import_session_repo as _,
-        import_profile_repo as _,
-        movie_profile_repo as _,
-        watchlist_repo as _,
-        ap_content as _,
-    ))
+    Ok(SqliteWireOutput {
+        pool: pool.clone(),
+        movie: std::sync::Arc::clone(&repo) as _,
+        review: std::sync::Arc::clone(&repo) as _,
+        diary: std::sync::Arc::clone(&repo) as _,
+        stats: std::sync::Arc::clone(&repo) as _,
+        user: std::sync::Arc::new(SqliteUserRepository::new(pool.clone())) as _,
+        import_session: std::sync::Arc::new(SqliteImportSessionRepository::new(pool.clone())) as _,
+        import_profile: std::sync::Arc::new(SqliteImportProfileRepository::new(pool.clone())) as _,
+        movie_profile: std::sync::Arc::new(SqliteMovieProfileRepository::new(pool.clone())) as _,
+        watchlist: std::sync::Arc::new(SqliteWatchlistRepository::new(pool.clone())) as _,
+        ap_content: std::sync::Arc::new(SqliteApContentQuery::new(pool)) as _,
+    })
 }
 
 #[cfg(test)]

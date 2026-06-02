@@ -1,12 +1,7 @@
-use application::ports::{
-    ActivityFeedPageData, BlockedActorEntry, BlockedActorsPageData, BlockedDomainEntry,
-    BlockedDomainsPageData, FollowersPageData, FollowingPageData, HtmlPageContext, HtmlRenderer,
-    ImportMappingPageData, ImportPreviewPageData, ImportPreviewRow, ImportProfileView,
-    ImportRowStatus, ImportUploadPageData, IntegrationsPageData, LoginPageData,
-    MovieDetailPageData, NewReviewPageData, ProfilePageData, ProfileSettingsPageData,
-    RegisterPageData, UsersPageData, WatchQueuePageData, WatchlistPageData, WebhookTokenView,
-};
+pub use askama;
 use askama::Template;
+
+use application::ports::HtmlPageContext;
 use chrono::Datelike;
 use domain::models::{
     DiaryEntry, FeedEntry, MonthActivity, MonthlyRating, ReviewSource, UserStats, UserTrends,
@@ -28,13 +23,13 @@ mod filters {
     }
 }
 
-struct PageItem {
-    number: u32,
-    is_current: bool,
-    is_ellipsis: bool,
+pub struct PageItem {
+    pub number: u32,
+    pub is_current: bool,
+    pub is_ellipsis: bool,
 }
 
-fn build_page_items(total_pages: u32, current_page: u32) -> Vec<PageItem> {
+pub fn build_page_items(total_pages: u32, current_page: u32) -> Vec<PageItem> {
     if total_pages <= 1 {
         return vec![];
     }
@@ -67,45 +62,45 @@ fn build_page_items(total_pages: u32, current_page: u32) -> Vec<PageItem> {
 
 #[derive(Template)]
 #[template(path = "diary.html")]
-struct DiaryTemplate<'a> {
-    entries: &'a [DiaryEntry],
-    current_offset: u32,
-    limit: u32,
-    has_more: bool,
-    ctx: &'a HtmlPageContext,
-    page_items: Vec<PageItem>,
+pub struct DiaryTemplate<'a> {
+    pub entries: &'a [DiaryEntry],
+    pub current_offset: u32,
+    pub limit: u32,
+    pub has_more: bool,
+    pub ctx: &'a HtmlPageContext,
+    pub page_items: Vec<PageItem>,
 }
 
 #[derive(Template)]
 #[template(path = "login.html")]
-struct LoginTemplate<'a> {
-    error: Option<&'a str>,
-    ctx: &'a HtmlPageContext,
+pub struct LoginTemplate<'a> {
+    pub error: Option<&'a str>,
+    pub ctx: &'a HtmlPageContext,
 }
 
 #[derive(Template)]
 #[template(path = "register.html")]
-struct RegisterTemplate<'a> {
-    error: Option<&'a str>,
-    ctx: &'a HtmlPageContext,
+pub struct RegisterTemplate<'a> {
+    pub error: Option<&'a str>,
+    pub ctx: &'a HtmlPageContext,
 }
 
 #[derive(Template)]
 #[template(path = "new_review.html")]
-struct NewReviewTemplate<'a> {
-    error: Option<&'a str>,
-    ctx: &'a HtmlPageContext,
+pub struct NewReviewTemplate<'a> {
+    pub error: Option<&'a str>,
+    pub ctx: &'a HtmlPageContext,
 }
 
 #[derive(Template)]
 #[template(path = "activity_feed.html")]
-struct ActivityFeedTemplate<'a> {
-    entries: &'a [FeedEntry],
-    current_offset: u32,
-    limit: u32,
-    has_more: bool,
-    ctx: &'a HtmlPageContext,
-    page_items: Vec<PageItem>,
+pub struct ActivityFeedTemplate<'a> {
+    pub entries: &'a [FeedEntry],
+    pub current_offset: u32,
+    pub limit: u32,
+    pub has_more: bool,
+    pub ctx: &'a HtmlPageContext,
+    pub page_items: Vec<PageItem>,
     pub filter: String,
     pub sort_by: String,
     pub search: String,
@@ -113,30 +108,30 @@ struct ActivityFeedTemplate<'a> {
 
 #[derive(Template)]
 #[template(path = "movie_detail.html")]
-struct MovieDetailTemplate<'a> {
-    ctx: &'a HtmlPageContext,
-    movie: &'a domain::models::Movie,
-    stats: &'a domain::models::MovieStats,
-    profile: Option<&'a domain::models::MovieProfile>,
-    reviews: &'a [domain::models::FeedEntry],
-    on_watchlist: bool,
-    current_offset: u32,
-    has_more: bool,
-    limit: u32,
-    histogram_max: u64,
+pub struct MovieDetailTemplate<'a> {
+    pub ctx: &'a HtmlPageContext,
+    pub movie: &'a domain::models::Movie,
+    pub stats: &'a domain::models::MovieStats,
+    pub profile: Option<&'a domain::models::MovieProfile>,
+    pub reviews: &'a [domain::models::FeedEntry],
+    pub on_watchlist: bool,
+    pub current_offset: u32,
+    pub has_more: bool,
+    pub limit: u32,
+    pub histogram_max: u64,
 }
 
 #[derive(Template)]
 #[template(path = "watchlist.html")]
-struct WatchlistTemplate<'a> {
-    ctx: &'a HtmlPageContext,
-    owner_id: uuid::Uuid,
-    display_entries: &'a [application::ports::WatchlistDisplayEntry],
-    current_offset: u32,
-    has_more: bool,
-    limit: u32,
-    is_owner: bool,
-    error: Option<String>,
+pub struct WatchlistTemplate<'a> {
+    pub ctx: &'a HtmlPageContext,
+    pub owner_id: uuid::Uuid,
+    pub display_entries: &'a [application::ports::WatchlistDisplayEntry],
+    pub current_offset: u32,
+    pub has_more: bool,
+    pub limit: u32,
+    pub is_owner: bool,
+    pub error: Option<String>,
 }
 
 impl<'a> ActivityFeedTemplate<'a> {
@@ -165,53 +160,53 @@ pub struct RemoteActorDisplay {
     pub url: String,
 }
 
-struct UserSummaryView {
-    user_id: uuid::Uuid,
-    display_name: String,
-    initial: char,
-    avg_rating_display: String,
-    total_movies: i64,
-    avatar_url: Option<String>,
+pub struct UserSummaryView {
+    pub user_id: uuid::Uuid,
+    pub display_name: String,
+    pub initial: char,
+    pub avg_rating_display: String,
+    pub total_movies: i64,
+    pub avatar_url: Option<String>,
 }
 
 #[derive(Template)]
 #[template(path = "users.html")]
-struct UsersTemplate<'a> {
-    users: Vec<UserSummaryView>,
-    ctx: &'a HtmlPageContext,
-    remote_actors: Vec<RemoteActorDisplay>,
+pub struct UsersTemplate<'a> {
+    pub users: Vec<UserSummaryView>,
+    pub ctx: &'a HtmlPageContext,
+    pub remote_actors: Vec<RemoteActorDisplay>,
 }
 
-struct MonthlyRatingRow<'a> {
-    rating: &'a MonthlyRating,
-    bar_height_px: i64,
+pub struct MonthlyRatingRow<'a> {
+    pub rating: &'a MonthlyRating,
+    pub bar_height_px: i64,
 }
 
 #[derive(Template)]
 #[template(path = "profile.html")]
-struct ProfileTemplate<'a> {
-    ctx: &'a HtmlPageContext,
-    profile_display_name: String,
-    profile_user_id: uuid::Uuid,
-    stats: &'a UserStats,
-    avg_rating_display: String,
-    favorite_director_display: String,
-    most_active_month_display: String,
-    view: &'a str,
-    entries: Option<&'a Paginated<DiaryEntry>>,
-    current_offset: u32,
-    has_more: bool,
-    limit: u32,
-    history: Option<&'a Vec<MonthActivity>>,
-    trends: Option<&'a UserTrends>,
-    monthly_rating_rows: Vec<MonthlyRatingRow<'a>>,
-    heatmap: Vec<HeatmapCell>,
-    page_items: Vec<PageItem>,
-    is_own_profile: bool,
-    error: Option<String>,
-    following_count: usize,
-    followers_count: usize,
-    pending_followers: Vec<RemoteActorData>,
+pub struct ProfileTemplate<'a> {
+    pub ctx: &'a HtmlPageContext,
+    pub profile_display_name: String,
+    pub profile_user_id: uuid::Uuid,
+    pub stats: &'a UserStats,
+    pub avg_rating_display: String,
+    pub favorite_director_display: String,
+    pub most_active_month_display: String,
+    pub view: &'a str,
+    pub entries: Option<&'a Paginated<DiaryEntry>>,
+    pub current_offset: u32,
+    pub has_more: bool,
+    pub limit: u32,
+    pub history: Option<&'a Vec<MonthActivity>>,
+    pub trends: Option<&'a UserTrends>,
+    pub monthly_rating_rows: Vec<MonthlyRatingRow<'a>>,
+    pub heatmap: Vec<HeatmapCell>,
+    pub page_items: Vec<PageItem>,
+    pub is_own_profile: bool,
+    pub error: Option<String>,
+    pub following_count: usize,
+    pub followers_count: usize,
+    pub pending_followers: Vec<RemoteActorData>,
     pub sort_by: String,
     pub search: String,
 }
@@ -235,80 +230,65 @@ impl<'a> ProfileTemplate<'a> {
     }
 }
 
-struct RemoteActorData {
-    handle: String,
-    display_name: Option<String>,
-    url: String,
-    avatar_url: Option<String>,
+pub struct RemoteActorData {
+    pub handle: String,
+    pub display_name: Option<String>,
+    pub url: String,
+    pub avatar_url: Option<String>,
 }
 
 #[derive(Template)]
 #[template(path = "following.html")]
-struct FollowingTemplate {
-    ctx: HtmlPageContext,
-    user_id: uuid::Uuid,
-    actors: Vec<RemoteActorData>,
-    error: Option<String>,
+pub struct FollowingTemplate {
+    pub ctx: HtmlPageContext,
+    pub user_id: uuid::Uuid,
+    pub actors: Vec<RemoteActorData>,
+    pub error: Option<String>,
 }
 
 #[derive(Template)]
 #[template(path = "followers.html")]
-struct FollowersTemplate {
-    ctx: HtmlPageContext,
-    user_id: uuid::Uuid,
-    actors: Vec<RemoteActorData>,
-    error: Option<String>,
+pub struct FollowersTemplate {
+    pub ctx: HtmlPageContext,
+    pub user_id: uuid::Uuid,
+    pub actors: Vec<RemoteActorData>,
+    pub error: Option<String>,
 }
 
 #[derive(Template)]
 #[template(path = "blocked_domains.html")]
-struct BlockedDomainsTemplate<'a> {
-    ctx: &'a HtmlPageContext,
-    domains: &'a [BlockedDomainEntry],
+pub struct BlockedDomainsTemplate<'a> {
+    pub ctx: &'a HtmlPageContext,
+    pub domains: &'a [BlockedDomainEntry],
 }
 
 #[derive(Template)]
 #[template(path = "blocked_actors.html")]
-struct BlockedActorsTemplate<'a> {
-    ctx: &'a HtmlPageContext,
-    actors: &'a [BlockedActorEntry],
+pub struct BlockedActorsTemplate<'a> {
+    pub ctx: &'a HtmlPageContext,
+    pub actors: &'a [BlockedActorEntry],
 }
 
-struct HeatmapCell {
-    month_label: String,
-    count: i64,
-    alpha: f64,
+pub struct BlockedDomainEntry {
+    pub domain: String,
+    pub reason: Option<String>,
+    pub blocked_at: String,
 }
 
-#[allow(dead_code)]
-fn relative_time(dt: chrono::NaiveDateTime) -> String {
-    let now = chrono::Utc::now().naive_utc();
-    let diff = now.signed_duration_since(dt);
-    if diff.num_seconds() <= 0 {
-        return "just now".to_string();
-    }
-    let minutes = diff.num_minutes();
-    let hours = diff.num_hours();
-    let days = diff.num_days();
-    if minutes < 1 {
-        return "just now".to_string();
-    }
-    if minutes < 60 {
-        return format!("{} min ago", minutes);
-    }
-    if hours < 24 {
-        return format!("{} h ago", hours);
-    }
-    if days == 1 {
-        return "yesterday".to_string();
-    }
-    if days < 30 {
-        return format!("{} days ago", days);
-    }
-    dt.format("%b %-d, %Y").to_string()
+pub struct BlockedActorEntry {
+    pub url: String,
+    pub handle: String,
+    pub display_name: Option<String>,
+    pub avatar_url: Option<String>,
 }
 
-fn build_heatmap(history: &[MonthActivity]) -> Vec<HeatmapCell> {
+pub struct HeatmapCell {
+    pub month_label: String,
+    pub count: i64,
+    pub alpha: f64,
+}
+
+pub fn build_heatmap(history: &[MonthActivity]) -> Vec<HeatmapCell> {
     let current_year = chrono::Utc::now().year();
     let count_for = |m: &str| -> i64 {
         history
@@ -351,442 +331,97 @@ fn build_heatmap(history: &[MonthActivity]) -> Vec<HeatmapCell> {
         .collect()
 }
 
-fn bar_height_px(avg_rating: f64) -> i64 {
+pub fn bar_height_px(avg_rating: f64) -> i64 {
     (avg_rating / 5.0 * 60.0) as i64
 }
 
 #[derive(Template)]
 #[template(path = "profile_settings.html")]
-struct ProfileSettingsTemplate<'a> {
-    ctx: &'a HtmlPageContext,
-    bio: Option<&'a str>,
-    avatar_url: Option<&'a str>,
-    banner_url: Option<&'a str>,
-    also_known_as: Option<&'a str>,
-    profile_fields: &'a [(String, String)],
-    saved: bool,
+pub struct ProfileSettingsTemplate<'a> {
+    pub ctx: &'a HtmlPageContext,
+    pub bio: Option<&'a str>,
+    pub avatar_url: Option<&'a str>,
+    pub banner_url: Option<&'a str>,
+    pub also_known_as: Option<&'a str>,
+    pub profile_fields: &'a [(String, String)],
+    pub saved: bool,
 }
 
 #[derive(Template)]
 #[template(path = "integrations.html")]
-struct IntegrationsTemplate<'a> {
-    ctx: &'a HtmlPageContext,
-    tokens: &'a [WebhookTokenView],
-    webhook_base_url: &'a str,
-    new_token: Option<&'a str>,
+pub struct IntegrationsTemplate<'a> {
+    pub ctx: &'a HtmlPageContext,
+    pub tokens: &'a [WebhookTokenView],
+    pub webhook_base_url: &'a str,
+    pub new_token: Option<&'a str>,
+}
+
+pub struct WebhookTokenView {
+    pub id: String,
+    pub provider: String,
+    pub label: Option<String>,
+    pub created_at: String,
+    pub last_used_at: Option<String>,
 }
 
 #[derive(Template)]
 #[template(path = "watch_queue.html")]
-struct WatchQueueTemplate<'a> {
-    ctx: &'a HtmlPageContext,
-    entries: &'a [application::ports::WatchQueueDisplayEntry],
-    error: Option<&'a str>,
+pub struct WatchQueueTemplate<'a> {
+    pub ctx: &'a HtmlPageContext,
+    pub entries: &'a [WatchQueueDisplayEntry],
+    pub error: Option<&'a str>,
+}
+
+pub struct WatchQueueDisplayEntry {
+    pub id: String,
+    pub title: String,
+    pub year: Option<u16>,
+    pub source: String,
+    pub watched_at: String,
+    pub movie_url: Option<String>,
 }
 
 #[derive(Template)]
 #[template(path = "import_upload.html")]
-struct ImportUploadTemplate<'a> {
-    ctx: &'a HtmlPageContext,
-    profiles: &'a [ImportProfileView],
-    error: Option<&'a str>,
+pub struct ImportUploadTemplate<'a> {
+    pub ctx: &'a HtmlPageContext,
+    pub profiles: &'a [ImportProfileView],
+    pub error: Option<&'a str>,
+}
+
+pub struct ImportProfileView {
+    pub id: String,
+    pub name: String,
 }
 
 #[derive(Template)]
 #[template(path = "import_mapping.html")]
-struct ImportMappingTemplate<'a> {
-    ctx: &'a HtmlPageContext,
-    session_id: &'a str,
-    columns: &'a [String],
-    sample_rows: &'a [Vec<String>],
-    domain_fields: &'a [(&'static str, &'static str)],
-    error: Option<&'a str>,
+pub struct ImportMappingTemplate<'a> {
+    pub ctx: &'a HtmlPageContext,
+    pub session_id: &'a str,
+    pub columns: &'a [String],
+    pub sample_rows: &'a [Vec<String>],
+    pub domain_fields: &'a [(&'static str, &'static str)],
+    pub error: Option<&'a str>,
 }
 
 #[derive(Template)]
 #[template(path = "import_preview.html")]
-struct ImportPreviewTemplate<'a> {
-    ctx: &'a HtmlPageContext,
-    session_id: &'a str,
-    columns: &'a [String],
-    rows: &'a [ImportPreviewRow],
+pub struct ImportPreviewTemplate<'a> {
+    pub ctx: &'a HtmlPageContext,
+    pub session_id: &'a str,
+    pub columns: &'a [String],
+    pub rows: &'a [ImportPreviewRow],
 }
 
-#[derive(Default)]
-pub struct AskamaHtmlRenderer;
-
-impl AskamaHtmlRenderer {
-    pub fn new() -> Self {
-        Self {}
-    }
+pub struct ImportPreviewRow {
+    pub index: usize,
+    pub status: ImportRowStatus,
+    pub cells: Vec<String>,
 }
 
-impl HtmlRenderer for AskamaHtmlRenderer {
-    fn render_diary_page(
-        &self,
-        data: &Paginated<DiaryEntry>,
-        ctx: HtmlPageContext,
-    ) -> Result<String, String> {
-        let has_more = (data.offset + data.limit) < data.total_count as u32;
-        let (total_pages, current_page) = if data.limit > 0 {
-            let tp = data.total_count.div_ceil(data.limit as u64) as u32;
-            (tp, data.offset / data.limit)
-        } else {
-            (0, 0)
-        };
-        DiaryTemplate {
-            entries: &data.items,
-            current_offset: data.offset,
-            limit: data.limit,
-            has_more,
-            ctx: &ctx,
-            page_items: build_page_items(total_pages, current_page),
-        }
-        .render()
-        .map_err(|e| e.to_string())
-    }
-
-    fn render_login_page(&self, data: LoginPageData<'_>) -> Result<String, String> {
-        LoginTemplate {
-            error: data.error,
-            ctx: &data.ctx,
-        }
-        .render()
-        .map_err(|e| e.to_string())
-    }
-
-    fn render_register_page(&self, data: RegisterPageData<'_>) -> Result<String, String> {
-        RegisterTemplate {
-            error: data.error,
-            ctx: &data.ctx,
-        }
-        .render()
-        .map_err(|e| e.to_string())
-    }
-
-    fn render_new_review_page(&self, data: NewReviewPageData<'_>) -> Result<String, String> {
-        NewReviewTemplate {
-            error: data.error,
-            ctx: &data.ctx,
-        }
-        .render()
-        .map_err(|e| e.to_string())
-    }
-
-    fn render_activity_feed_page(&self, data: ActivityFeedPageData) -> Result<String, String> {
-        let limit = data.limit;
-        let total_pages = data.entries.total_count.div_ceil(limit.max(1) as u64) as u32;
-        let current_page = data.current_offset.checked_div(limit).unwrap_or(0);
-        ActivityFeedTemplate {
-            entries: &data.entries.items,
-            current_offset: data.current_offset,
-            limit,
-            has_more: data.has_more,
-            ctx: &data.ctx,
-            page_items: build_page_items(total_pages, current_page),
-            filter: data.filter,
-            sort_by: data.sort_by,
-            search: data.search,
-        }
-        .render()
-        .map_err(|e| e.to_string())
-    }
-
-    fn render_users_page(&self, data: UsersPageData) -> Result<String, String> {
-        let users: Vec<UserSummaryView> = data
-            .users
-            .iter()
-            .map(|u| {
-                let email = u.email();
-                let display_name = email.split('@').next().unwrap_or(email).to_string();
-                let initial = display_name
-                    .chars()
-                    .next()
-                    .unwrap_or('?')
-                    .to_ascii_uppercase();
-                let avg_rating_display = u
-                    .avg_rating
-                    .map(|r| format!("{:.1}", r))
-                    .unwrap_or_else(|| "—".to_string());
-                UserSummaryView {
-                    user_id: u.user_id.value(),
-                    display_name,
-                    initial,
-                    avg_rating_display,
-                    total_movies: u.total_movies,
-                    avatar_url: u.avatar_path.as_ref().map(|p| format!("/images/{}", p)),
-                }
-            })
-            .collect();
-        let remote_actors = data
-            .remote_actors
-            .into_iter()
-            .map(|a| {
-                let name = a.display_name.unwrap_or_else(|| a.handle.clone());
-                let initial = name.chars().next().unwrap_or('?');
-                RemoteActorDisplay {
-                    display_name: name,
-                    initial,
-                    handle: a.handle,
-                    url: a.url,
-                }
-            })
-            .collect();
-        UsersTemplate {
-            users,
-            ctx: &data.ctx,
-            remote_actors,
-        }
-        .render()
-        .map_err(|e| e.to_string())
-    }
-
-    fn render_profile_page(&self, data: ProfilePageData) -> Result<String, String> {
-        let heatmap = data
-            .history
-            .as_deref()
-            .map(build_heatmap)
-            .unwrap_or_default();
-        let profile_display_name = data
-            .profile_user_email
-            .split('@')
-            .next()
-            .unwrap_or(&data.profile_user_email)
-            .to_string();
-        let monthly_rating_rows: Vec<MonthlyRatingRow<'_>> = data
-            .trends
-            .as_ref()
-            .map(|t| {
-                t.monthly_ratings
-                    .iter()
-                    .map(|r| MonthlyRatingRow {
-                        bar_height_px: bar_height_px(r.avg_rating),
-                        rating: r,
-                    })
-                    .collect()
-            })
-            .unwrap_or_default();
-        let total_pages = data
-            .entries
-            .as_ref()
-            .map(|e| e.total_count.div_ceil(e.limit.max(1) as u64) as u32)
-            .unwrap_or(0);
-        let current_page = data.current_offset.checked_div(data.limit).unwrap_or(0);
-        let avg_rating_display = data
-            .stats
-            .avg_rating
-            .map(|r| format!("{:.1}", r))
-            .unwrap_or_else(|| "—".to_string());
-        let favorite_director_display = data
-            .stats
-            .favorite_director
-            .as_deref()
-            .unwrap_or("—")
-            .to_string();
-        let most_active_month_display = data
-            .stats
-            .most_active_month
-            .as_deref()
-            .unwrap_or("—")
-            .to_string();
-        ProfileTemplate {
-            ctx: &data.ctx,
-            profile_display_name,
-            profile_user_id: data.profile_user_id,
-            stats: &data.stats,
-            avg_rating_display,
-            favorite_director_display,
-            most_active_month_display,
-            view: &data.view,
-            entries: data.entries.as_ref(),
-            current_offset: data.current_offset,
-            has_more: data.has_more,
-            limit: data.limit,
-            history: data.history.as_ref(),
-            trends: data.trends.as_ref(),
-            monthly_rating_rows,
-            heatmap,
-            page_items: build_page_items(total_pages, current_page),
-            is_own_profile: data.is_own_profile,
-            error: data.error,
-            following_count: data.following_count,
-            followers_count: data.followers_count,
-            pending_followers: data
-                .pending_followers
-                .into_iter()
-                .map(|a| RemoteActorData {
-                    handle: a.handle,
-                    url: a.url,
-                    display_name: a.display_name,
-                    avatar_url: a.avatar_url,
-                })
-                .collect(),
-            sort_by: data.sort_by.clone(),
-            search: data.search.clone(),
-        }
-        .render()
-        .map_err(|e| e.to_string())
-    }
-
-    fn render_movie_detail_page(&self, data: MovieDetailPageData) -> Result<String, String> {
-        MovieDetailTemplate {
-            ctx: &data.ctx,
-            movie: &data.movie,
-            stats: &data.stats,
-            profile: data.profile.as_ref(),
-            reviews: &data.reviews.items,
-            on_watchlist: data.on_watchlist,
-            current_offset: data.current_offset,
-            has_more: data.has_more,
-            limit: data.limit,
-            histogram_max: data.histogram_max,
-        }
-        .render()
-        .map_err(|e| e.to_string())
-    }
-
-    fn render_watchlist_page(&self, data: WatchlistPageData) -> Result<String, String> {
-        WatchlistTemplate {
-            ctx: &data.ctx,
-            owner_id: data.owner_id,
-            display_entries: &data.display_entries,
-            current_offset: data.current_offset,
-            has_more: data.has_more,
-            limit: data.limit,
-            is_owner: data.is_owner,
-            error: data.error,
-        }
-        .render()
-        .map_err(|e| e.to_string())
-    }
-
-    fn render_following_page(&self, data: FollowingPageData) -> Result<String, String> {
-        FollowingTemplate {
-            ctx: data.ctx,
-            user_id: data.user_id,
-            actors: data
-                .actors
-                .into_iter()
-                .map(|a| RemoteActorData {
-                    handle: a.handle,
-                    display_name: a.display_name,
-                    url: a.url,
-                    avatar_url: a.avatar_url,
-                })
-                .collect(),
-            error: data.error,
-        }
-        .render()
-        .map_err(|e| e.to_string())
-    }
-
-    fn render_followers_page(&self, data: FollowersPageData) -> Result<String, String> {
-        FollowersTemplate {
-            ctx: data.ctx,
-            user_id: data.user_id,
-            actors: data
-                .actors
-                .into_iter()
-                .map(|a| RemoteActorData {
-                    handle: a.handle,
-                    display_name: a.display_name,
-                    url: a.url,
-                    avatar_url: a.avatar_url,
-                })
-                .collect(),
-            error: data.error,
-        }
-        .render()
-        .map_err(|e| e.to_string())
-    }
-
-    fn render_import_upload_page(&self, data: ImportUploadPageData) -> Result<String, String> {
-        ImportUploadTemplate {
-            ctx: &data.ctx,
-            profiles: &data.profiles,
-            error: data.error.as_deref(),
-        }
-        .render()
-        .map_err(|e| e.to_string())
-    }
-
-    fn render_import_mapping_page(&self, data: ImportMappingPageData) -> Result<String, String> {
-        ImportMappingTemplate {
-            ctx: &data.ctx,
-            session_id: &data.session_id,
-            columns: &data.columns,
-            sample_rows: &data.sample_rows,
-            domain_fields: &data.domain_fields,
-            error: data.error.as_deref(),
-        }
-        .render()
-        .map_err(|e| e.to_string())
-    }
-
-    fn render_import_preview_page(&self, data: ImportPreviewPageData) -> Result<String, String> {
-        ImportPreviewTemplate {
-            ctx: &data.ctx,
-            session_id: &data.session_id,
-            columns: &data.columns,
-            rows: &data.rows,
-        }
-        .render()
-        .map_err(|e| e.to_string())
-    }
-
-    fn render_profile_settings_page(
-        &self,
-        data: ProfileSettingsPageData,
-    ) -> Result<String, String> {
-        ProfileSettingsTemplate {
-            ctx: &data.ctx,
-            bio: data.bio.as_deref(),
-            avatar_url: data.avatar_url.as_deref(),
-            banner_url: data.banner_url.as_deref(),
-            also_known_as: data.also_known_as.as_deref(),
-            profile_fields: &data.profile_fields,
-            saved: data.saved,
-        }
-        .render()
-        .map_err(|e| e.to_string())
-    }
-
-    fn render_blocked_domains_page(&self, data: BlockedDomainsPageData) -> Result<String, String> {
-        BlockedDomainsTemplate {
-            ctx: &data.ctx,
-            domains: &data.domains,
-        }
-        .render()
-        .map_err(|e| e.to_string())
-    }
-
-    fn render_blocked_actors_page(&self, data: BlockedActorsPageData) -> Result<String, String> {
-        BlockedActorsTemplate {
-            ctx: &data.ctx,
-            actors: &data.actors,
-        }
-        .render()
-        .map_err(|e| e.to_string())
-    }
-
-    fn render_integrations_page(&self, data: IntegrationsPageData) -> Result<String, String> {
-        IntegrationsTemplate {
-            ctx: &data.ctx,
-            tokens: &data.tokens,
-            webhook_base_url: &data.webhook_base_url,
-            new_token: data.new_token.as_deref(),
-        }
-        .render()
-        .map_err(|e| e.to_string())
-    }
-
-    fn render_watch_queue_page(&self, data: WatchQueuePageData) -> Result<String, String> {
-        WatchQueueTemplate {
-            ctx: &data.ctx,
-            entries: &data.entries,
-            error: data.error.as_deref(),
-        }
-        .render()
-        .map_err(|e| e.to_string())
-    }
+pub enum ImportRowStatus {
+    Valid,
+    Duplicate,
+    Invalid(String),
 }

@@ -5,13 +5,14 @@ use anyhow::Context;
 use tokio::net::TcpListener;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use application::{config::AppConfig, context::AppContext};
+use application::{
+    config::AppConfig,
+    context::{AppContext, Repositories, Services},
+};
 use export::ExportAdapter;
 use importer::ImporterDocumentParser;
-use rss::RssAdapter;
-use template_askama::AskamaHtmlRenderer;
-
 use presentation::{factory, openapi, routes, state::AppState};
+use rss::RssAdapter;
 
 use domain::ports::{DiaryExporter, DocumentParser, EventPublisher};
 
@@ -59,24 +60,7 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
     let image_storage = factory::build_image_storage()?;
 
     let db = factory::build_database_adapters(&backend, &database_url).await?;
-
-    let movie_repository = db.movie_repo;
-    let review_repository = db.review_repo;
-    let diary_repository = db.diary_repo;
-    let stats_repository = db.stats_repo;
-    let user_repository = db.user_repo;
-    let import_session_repository = db.import_session_repo;
-    let import_profile_repository = db.import_profile_repo;
-    let movie_profile_repository = db.movie_profile_repo;
-    let watchlist_repository = db.watchlist_repo;
-    let ap_content_repo = db.ap_content_repo;
-    let person_command = db.person_command;
-    let person_query = db.person_query;
-    let search_port = db.search_port;
-    let search_command = db.search_command;
-    let profile_fields_repo = db.profile_fields_repo;
-    let watch_event_repository = db.watch_event_repo;
-    let webhook_token_repository = db.webhook_token_repo;
+    let ap_content_repo = db.ap_content;
     let db_pool = db.db_pool;
 
     // Wire up event channel, federation service, and ap_router
@@ -135,7 +119,7 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
             review_store,
             remote_watchlist_repo: remote_watchlist_repo.clone(),
             local_ap_content: Arc::clone(&ap_content_repo),
-            user_repo: Arc::clone(&user_repository),
+            user_repo: Arc::clone(&db.user),
             base_url: app_config.base_url.clone(),
             allow_registration: app_config.allow_registration,
             event_publisher: Arc::clone(&ep),
@@ -184,40 +168,43 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
     let ap_router = axum::Router::new();
 
     let app_ctx = AppContext {
-        movie_repository,
-        review_repository,
-        diary_repository,
-        diary_exporter: Arc::new(ExportAdapter) as Arc<dyn DiaryExporter>,
-        document_parser: Arc::new(ImporterDocumentParser) as Arc<dyn DocumentParser>,
-        stats_repository,
-        metadata_client,
-        poster_fetcher,
-        image_storage,
-        event_publisher: event_publisher_arc,
-        auth_service,
-        password_hasher,
-        user_repository,
-        import_session_repository,
-        import_profile_repository,
-        movie_profile_repository,
-        watchlist_repository,
-        watch_event_repository,
-        webhook_token_repository,
-        profile_fields_repository: profile_fields_repo,
-        #[cfg(feature = "federation")]
-        remote_watchlist_repository: remote_watchlist_repo,
-        #[cfg(feature = "federation")]
-        social_query: social_query.clone(),
-        person_command,
-        person_query,
-        search_port,
-        search_command,
+        repos: Repositories {
+            movie: db.movie,
+            review: db.review,
+            diary: db.diary,
+            stats: db.stats,
+            user: db.user,
+            import_session: db.import_session,
+            import_profile: db.import_profile,
+            movie_profile: db.movie_profile,
+            watchlist: db.watchlist,
+            watch_event: db.watch_event,
+            webhook_token: db.webhook_token,
+            person_command: db.person_command,
+            person_query: db.person_query,
+            search_port: db.search_port,
+            search_command: db.search_command,
+            profile_fields: db.profile_fields,
+            #[cfg(feature = "federation")]
+            remote_watchlist: remote_watchlist_repo,
+            #[cfg(feature = "federation")]
+            social_query: social_query.clone(),
+        },
+        services: Services {
+            auth: auth_service,
+            password_hasher,
+            metadata: metadata_client,
+            poster_fetcher,
+            image_storage,
+            event_publisher: event_publisher_arc,
+            diary_exporter: Arc::new(ExportAdapter) as Arc<dyn DiaryExporter>,
+            document_parser: Arc::new(ImporterDocumentParser) as Arc<dyn DocumentParser>,
+        },
         config: app_config,
     };
 
     let state = AppState {
         app_ctx,
-        html_renderer: Arc::new(AskamaHtmlRenderer::new()),
         rss_renderer: Arc::new(RssAdapter::new(
             std::env::var("BASE_URL").unwrap_or_else(|_| "http://localhost:3000".into()),
         )),

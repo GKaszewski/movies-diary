@@ -23,7 +23,10 @@ use domain::{
     },
 };
 
-use crate::{config::AppConfig, context::AppContext};
+use crate::{
+    config::AppConfig,
+    context::{AppContext, Repositories, Services},
+};
 
 pub struct TestContextBuilder {
     pub movie_repo: Arc<dyn MovieRepository>,
@@ -125,35 +128,39 @@ impl TestContextBuilder {
 
     pub fn build(self) -> AppContext {
         AppContext {
-            movie_repository: self.movie_repo,
-            review_repository: self.review_repo,
-            diary_repository: self.diary_repo,
-            diary_exporter: self.diary_exporter,
-            document_parser: self.document_parser,
-            stats_repository: self.stats_repo,
-            metadata_client: self.metadata_client,
-            poster_fetcher: self.poster_fetcher,
-            image_storage: self.image_storage,
-            event_publisher: self.event_publisher,
-            auth_service: self.auth_service,
-            password_hasher: self.password_hasher,
-            user_repository: self.user_repo,
-            import_session_repository: self.import_session_repo,
-            import_profile_repository: self.import_profile_repo,
-            movie_profile_repository: self.movie_profile_repo,
-            watchlist_repository: self.watchlist_repo,
-            watch_event_repository: self.watch_event_repo,
-            webhook_token_repository: self.webhook_token_repo,
-            profile_fields_repository: self.profile_fields_repo,
-            person_command: self.person_command,
-            person_query: self.person_query,
-            search_port: self.search_port,
-            search_command: self.search_command,
+            repos: Repositories {
+                movie: self.movie_repo,
+                review: self.review_repo,
+                diary: self.diary_repo,
+                stats: self.stats_repo,
+                user: self.user_repo,
+                import_session: self.import_session_repo,
+                import_profile: self.import_profile_repo,
+                movie_profile: self.movie_profile_repo,
+                watchlist: self.watchlist_repo,
+                watch_event: self.watch_event_repo,
+                webhook_token: self.webhook_token_repo,
+                profile_fields: self.profile_fields_repo,
+                person_command: self.person_command,
+                person_query: self.person_query,
+                search_port: self.search_port,
+                search_command: self.search_command,
+                #[cfg(feature = "federation")]
+                remote_watchlist: Arc::new(PanicRemoteWatchlistRepository),
+                #[cfg(feature = "federation")]
+                social_query: Arc::new(PanicSocialQueryPort),
+            },
+            services: Services {
+                auth: self.auth_service,
+                password_hasher: self.password_hasher,
+                metadata: self.metadata_client,
+                poster_fetcher: self.poster_fetcher,
+                image_storage: self.image_storage,
+                event_publisher: self.event_publisher,
+                diary_exporter: self.diary_exporter,
+                document_parser: self.document_parser,
+            },
             config: self.config,
-            #[cfg(feature = "federation")]
-            remote_watchlist_repository: std::sync::Arc::new(PanicRemoteWatchlistRepository),
-            #[cfg(feature = "federation")]
-            social_query: std::sync::Arc::new(PanicSocialQueryPort),
         }
     }
 }

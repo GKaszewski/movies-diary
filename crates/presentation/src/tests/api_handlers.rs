@@ -68,7 +68,7 @@ impl domain::ports::PersonQuery for PersonQueryStub {
 async fn search_endpoint_returns_200_with_empty_results() {
     let mut state = make_test_state(Arc::new(Panic));
     // Override the search_port with our stub
-    state.app_ctx.search_port = Arc::new(SearchPortStub);
+    state.app_ctx.repos.search_port = Arc::new(SearchPortStub);
     let app = Router::new()
         .route("/api/v1/search", get(crate::handlers::api::get_search))
         .with_state(state);
@@ -90,7 +90,7 @@ async fn search_endpoint_returns_200_with_empty_results() {
 async fn search_endpoint_with_no_query_returns_200() {
     let mut state = make_test_state(Arc::new(Panic));
     // Override the search_port with our stub
-    state.app_ctx.search_port = Arc::new(SearchPortStub);
+    state.app_ctx.repos.search_port = Arc::new(SearchPortStub);
     let app = Router::new()
         .route("/api/v1/search", get(crate::handlers::api::get_search))
         .with_state(state);
@@ -114,7 +114,7 @@ async fn search_endpoint_with_no_query_returns_200() {
 async fn person_endpoint_returns_404_for_unknown_id() {
     let mut state = make_test_state(Arc::new(Panic));
     // Override the person_query with our stub
-    state.app_ctx.person_query = Arc::new(PersonQueryStub);
+    state.app_ctx.repos.person_query = Arc::new(PersonQueryStub);
     let app = Router::new()
         .route(
             "/api/v1/people/{id}",
@@ -140,7 +140,7 @@ async fn person_endpoint_returns_404_for_unknown_id() {
 async fn person_credits_endpoint_returns_404_for_unknown_id() {
     let mut state = make_test_state(Arc::new(Panic));
     // Override the person_query with our stub
-    state.app_ctx.person_query = Arc::new(PersonQueryStub);
+    state.app_ctx.repos.person_query = Arc::new(PersonQueryStub);
     let app = Router::new()
         .route(
             "/api/v1/people/{id}/credits",

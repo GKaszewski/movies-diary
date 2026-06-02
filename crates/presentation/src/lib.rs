@@ -6,6 +6,7 @@ pub mod forms;
 pub mod handlers;
 pub mod openapi;
 pub mod ports;
+pub mod render;
 pub mod routes;
 pub mod state;
 

@@ -1,35 +1,10 @@
 use std::sync::Arc;
 
 use anyhow::Context;
-
 use domain::ports::{
-    AuthService, DiaryRepository, ImageStorage, ImportProfileRepository, ImportSessionRepository,
-    LocalApContentQuery, MetadataClient, MovieProfileRepository, MovieRepository, PasswordHasher,
-    PersonCommand, PersonQuery, PosterFetcherClient, ReviewRepository, SearchCommand, SearchPort,
-    StatsRepository, UserProfileFieldsRepository, UserRepository, WatchEventRepository,
-    WatchlistRepository, WebhookTokenRepository,
+    AuthService, ImageStorage, LocalApContentQuery, MetadataClient, PasswordHasher,
+    PosterFetcherClient, UserProfileFieldsRepository, WatchEventRepository, WebhookTokenRepository,
 };
-
-pub struct DatabaseAdapters {
-    pub movie_repo: Arc<dyn MovieRepository>,
-    pub review_repo: Arc<dyn ReviewRepository>,
-    pub diary_repo: Arc<dyn DiaryRepository>,
-    pub stats_repo: Arc<dyn StatsRepository>,
-    pub user_repo: Arc<dyn UserRepository>,
-    pub import_session_repo: Arc<dyn ImportSessionRepository>,
-    pub import_profile_repo: Arc<dyn ImportProfileRepository>,
-    pub movie_profile_repo: Arc<dyn MovieProfileRepository>,
-    pub watchlist_repo: Arc<dyn WatchlistRepository>,
-    pub ap_content_repo: Arc<dyn LocalApContentQuery>,
-    pub person_command: Arc<dyn PersonCommand>,
-    pub person_query: Arc<dyn PersonQuery>,
-    pub search_port: Arc<dyn SearchPort>,
-    pub search_command: Arc<dyn SearchCommand>,
-    pub profile_fields_repo: Arc<dyn UserProfileFieldsRepository>,
-    pub watch_event_repo: Arc<dyn WatchEventRepository>,
-    pub webhook_token_repo: Arc<dyn WebhookTokenRepository>,
-    pub db_pool: DbPool,
-}
 
 pub enum DbPool {
     #[cfg(feature = "sqlite")]
@@ -38,72 +13,94 @@ pub enum DbPool {
     Postgres(sqlx::PgPool),
 }
 
-pub async fn build_database_adapters(backend: &str, url: &str) -> anyhow::Result<DatabaseAdapters> {
+pub struct DatabaseOutput {
+    pub movie: Arc<dyn domain::ports::MovieRepository>,
+    pub review: Arc<dyn domain::ports::ReviewRepository>,
+    pub diary: Arc<dyn domain::ports::DiaryRepository>,
+    pub stats: Arc<dyn domain::ports::StatsRepository>,
+    pub user: Arc<dyn domain::ports::UserRepository>,
+    pub import_session: Arc<dyn domain::ports::ImportSessionRepository>,
+    pub import_profile: Arc<dyn domain::ports::ImportProfileRepository>,
+    pub movie_profile: Arc<dyn domain::ports::MovieProfileRepository>,
+    pub watchlist: Arc<dyn domain::ports::WatchlistRepository>,
+    pub watch_event: Arc<dyn WatchEventRepository>,
+    pub webhook_token: Arc<dyn WebhookTokenRepository>,
+    pub person_command: Arc<dyn domain::ports::PersonCommand>,
+    pub person_query: Arc<dyn domain::ports::PersonQuery>,
+    pub search_port: Arc<dyn domain::ports::SearchPort>,
+    pub search_command: Arc<dyn domain::ports::SearchCommand>,
+    pub profile_fields: Arc<dyn UserProfileFieldsRepository>,
+    pub ap_content: Arc<dyn LocalApContentQuery>,
+    pub db_pool: DbPool,
+}
+
+pub async fn build_database_adapters(backend: &str, url: &str) -> anyhow::Result<DatabaseOutput> {
     match backend {
         #[cfg(feature = "postgres")]
         "postgres" => {
-            let (pool, m, r, d, s, u, is, ip, mp, wl, ac) = postgres::wire(url)
+            let w = postgres::wire(url)
                 .await
                 .context("PostgreSQL connection failed")?;
-            let (pc, pq) = postgres::create_person_adapter(pool.clone());
-            let (sc, sp) = postgres_search::create_search_adapter(pool.clone());
-            let pf = postgres::create_profile_fields_repo(pool.clone());
+            let (pc, pq) = postgres::create_person_adapter(w.pool.clone());
+            let (sc, sp) = postgres_search::create_search_adapter(w.pool.clone());
+            let pf = postgres::create_profile_fields_repo(w.pool.clone());
             let we: Arc<dyn WatchEventRepository> =
-                Arc::new(postgres::PostgresWatchEventRepository::new(pool.clone()));
-            let wt: Arc<dyn WebhookTokenRepository> =
-                Arc::new(postgres::PostgresWebhookTokenRepository::new(pool.clone()));
-            Ok(DatabaseAdapters {
-                movie_repo: m,
-                review_repo: r,
-                diary_repo: d,
-                stats_repo: s,
-                user_repo: u,
-                import_session_repo: is,
-                import_profile_repo: ip,
-                movie_profile_repo: mp,
-                watchlist_repo: wl,
-                ap_content_repo: ac,
+                Arc::new(postgres::PostgresWatchEventRepository::new(w.pool.clone()));
+            let wt: Arc<dyn WebhookTokenRepository> = Arc::new(
+                postgres::PostgresWebhookTokenRepository::new(w.pool.clone()),
+            );
+            Ok(DatabaseOutput {
+                movie: w.movie,
+                review: w.review,
+                diary: w.diary,
+                stats: w.stats,
+                user: w.user,
+                import_session: w.import_session,
+                import_profile: w.import_profile,
+                movie_profile: w.movie_profile,
+                watchlist: w.watchlist,
+                watch_event: we,
+                webhook_token: wt,
                 person_command: pc,
                 person_query: pq,
                 search_port: sp,
                 search_command: sc,
-                profile_fields_repo: pf,
-                watch_event_repo: we,
-                webhook_token_repo: wt,
-                db_pool: DbPool::Postgres(pool),
+                profile_fields: pf,
+                ap_content: w.ap_content,
+                db_pool: DbPool::Postgres(w.pool),
             })
         }
         #[cfg(feature = "sqlite")]
         _ => {
-            let (pool, m, r, d, s, u, is, ip, mp, wl, ac) = sqlite::wire(url)
+            let w = sqlite::wire(url)
                 .await
                 .context("SQLite connection failed")?;
-            let (pc, pq) = sqlite::create_person_adapter(pool.clone());
-            let (sc, sp) = sqlite_search::create_search_adapter(pool.clone());
-            let pf = sqlite::create_profile_fields_repo(pool.clone());
+            let (pc, pq) = sqlite::create_person_adapter(w.pool.clone());
+            let (sc, sp) = sqlite_search::create_search_adapter(w.pool.clone());
+            let pf = sqlite::create_profile_fields_repo(w.pool.clone());
             let we: Arc<dyn WatchEventRepository> =
-                Arc::new(sqlite::SqliteWatchEventRepository::new(pool.clone()));
+                Arc::new(sqlite::SqliteWatchEventRepository::new(w.pool.clone()));
             let wt: Arc<dyn WebhookTokenRepository> =
-                Arc::new(sqlite::SqliteWebhookTokenRepository::new(pool.clone()));
-            Ok(DatabaseAdapters {
-                movie_repo: m,
-                review_repo: r,
-                diary_repo: d,
-                stats_repo: s,
-                user_repo: u,
-                import_session_repo: is,
-                import_profile_repo: ip,
-                movie_profile_repo: mp,
-                watchlist_repo: wl,
-                ap_content_repo: ac,
+                Arc::new(sqlite::SqliteWebhookTokenRepository::new(w.pool.clone()));
+            Ok(DatabaseOutput {
+                movie: w.movie,
+                review: w.review,
+                diary: w.diary,
+                stats: w.stats,
+                user: w.user,
+                import_session: w.import_session,
+                import_profile: w.import_profile,
+                movie_profile: w.movie_profile,
+                watchlist: w.watchlist,
+                watch_event: we,
+                webhook_token: wt,
                 person_command: pc,
                 person_query: pq,
                 search_port: sp,
                 search_command: sc,
-                profile_fields_repo: pf,
-                watch_event_repo: we,
-                webhook_token_repo: wt,
-                db_pool: DbPool::Sqlite(pool),
+                profile_fields: pf,
+                ap_content: w.ap_content,
+                db_pool: DbPool::Sqlite(w.pool),
             })
         }
         #[cfg(not(feature = "sqlite"))]

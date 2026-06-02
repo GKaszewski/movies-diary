@@ -940,21 +940,21 @@ pub fn create_profile_fields_repo(
     std::sync::Arc::new(profile_fields::PostgresProfileFieldsRepository::new(pool))
 }
 
-pub async fn wire(
-    database_url: &str,
-) -> anyhow::Result<(
-    sqlx::PgPool,
-    std::sync::Arc<dyn domain::ports::MovieRepository>,
-    std::sync::Arc<dyn domain::ports::ReviewRepository>,
-    std::sync::Arc<dyn domain::ports::DiaryRepository>,
-    std::sync::Arc<dyn domain::ports::StatsRepository>,
-    std::sync::Arc<dyn domain::ports::UserRepository>,
-    std::sync::Arc<dyn domain::ports::ImportSessionRepository>,
-    std::sync::Arc<dyn domain::ports::ImportProfileRepository>,
-    std::sync::Arc<dyn domain::ports::MovieProfileRepository>,
-    std::sync::Arc<dyn domain::ports::WatchlistRepository>,
-    std::sync::Arc<dyn domain::ports::LocalApContentQuery>,
-)> {
+pub struct PostgresWireOutput {
+    pub pool: PgPool,
+    pub movie: std::sync::Arc<dyn domain::ports::MovieRepository>,
+    pub review: std::sync::Arc<dyn domain::ports::ReviewRepository>,
+    pub diary: std::sync::Arc<dyn domain::ports::DiaryRepository>,
+    pub stats: std::sync::Arc<dyn domain::ports::StatsRepository>,
+    pub user: std::sync::Arc<dyn domain::ports::UserRepository>,
+    pub import_session: std::sync::Arc<dyn domain::ports::ImportSessionRepository>,
+    pub import_profile: std::sync::Arc<dyn domain::ports::ImportProfileRepository>,
+    pub movie_profile: std::sync::Arc<dyn domain::ports::MovieProfileRepository>,
+    pub watchlist: std::sync::Arc<dyn domain::ports::WatchlistRepository>,
+    pub ap_content: std::sync::Arc<dyn domain::ports::LocalApContentQuery>,
+}
+
+pub async fn wire(database_url: &str) -> anyhow::Result<PostgresWireOutput> {
     use anyhow::Context;
 
     let pool = sqlx::PgPool::connect(database_url)
@@ -967,25 +967,19 @@ pub async fn wire(
         .map_err(|e| anyhow::anyhow!("{e}"))
         .context("Database migration failed")?;
 
-    let import_session_repo =
-        std::sync::Arc::new(PostgresImportSessionRepository::new(pool.clone()));
-    let import_profile_repo =
-        std::sync::Arc::new(PostgresImportProfileRepository::new(pool.clone()));
-    let movie_profile_repo = std::sync::Arc::new(PostgresMovieProfileRepository::new(pool.clone()));
-    let watchlist_repo = std::sync::Arc::new(PostgresWatchlistRepository::new(pool.clone()));
-    let ap_content = std::sync::Arc::new(PostgresApContentQuery::new(pool.clone()));
-
-    Ok((
-        pool.clone(),
-        std::sync::Arc::clone(&repo) as _,
-        std::sync::Arc::clone(&repo) as _,
-        std::sync::Arc::clone(&repo) as _,
-        std::sync::Arc::clone(&repo) as _,
-        std::sync::Arc::new(PostgresUserRepository::new(pool)) as _,
-        import_session_repo as _,
-        import_profile_repo as _,
-        movie_profile_repo as _,
-        watchlist_repo as _,
-        ap_content as _,
-    ))
+    Ok(PostgresWireOutput {
+        pool: pool.clone(),
+        movie: std::sync::Arc::clone(&repo) as _,
+        review: std::sync::Arc::clone(&repo) as _,
+        diary: std::sync::Arc::clone(&repo) as _,
+        stats: std::sync::Arc::clone(&repo) as _,
+        user: std::sync::Arc::new(PostgresUserRepository::new(pool.clone())) as _,
+        import_session: std::sync::Arc::new(PostgresImportSessionRepository::new(pool.clone()))
+            as _,
+        import_profile: std::sync::Arc::new(PostgresImportProfileRepository::new(pool.clone()))
+            as _,
+        movie_profile: std::sync::Arc::new(PostgresMovieProfileRepository::new(pool.clone())) as _,
+        watchlist: std::sync::Arc::new(PostgresWatchlistRepository::new(pool.clone())) as _,
+        ap_content: std::sync::Arc::new(PostgresApContentQuery::new(pool)) as _,
+    })
 }
