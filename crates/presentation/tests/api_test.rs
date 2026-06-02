@@ -427,6 +427,7 @@ async fn test_app() -> Router {
                 event_publisher: Arc::new(NoopEventPublisher),
                 diary_exporter: Arc::new(PanicExporter),
                 document_parser: Arc::new(PanicDocumentParser),
+                video_renderer: None,
             },
             config: AppConfig {
                 allow_registration: false,

@@ -651,6 +651,7 @@ pub fn make_test_state(auth_service: Arc<dyn AuthService>) -> crate::state::AppS
                 event_publisher: Arc::clone(&repo) as _,
                 diary_exporter: Arc::clone(&repo) as _,
                 document_parser: Arc::clone(&repo) as _,
+                video_renderer: None,
             },
             config: AppConfig {
                 allow_registration: false,

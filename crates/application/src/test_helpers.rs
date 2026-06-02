@@ -166,6 +166,7 @@ impl TestContextBuilder {
                 event_publisher: self.event_publisher,
                 diary_exporter: self.diary_exporter,
                 document_parser: self.document_parser,
+                video_renderer: None,
             },
             config: self.config,
         }

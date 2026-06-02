@@ -104,6 +104,7 @@ async fn main() -> anyhow::Result<()> {
             event_publisher: event_publisher_arc,
             diary_exporter: Arc::new(ExportAdapter) as Arc<dyn DiaryExporter>,
             document_parser: Arc::new(ImporterDocumentParser) as Arc<dyn DocumentParser>,
+            video_renderer: None,
         },
         config: app_config,
     };

@@ -364,6 +364,10 @@ fn api_routes(rate_limit: u64) -> Router<AppState> {
         .route(
             "/wrapups/{id}/report",
             routing::get(handlers::wrapup::get_report),
+        )
+        .route(
+            "/wrapups/{id}/video",
+            routing::get(handlers::wrapup::get_video),
         );
 
     #[cfg(feature = "federation")]

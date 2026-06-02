@@ -205,6 +205,7 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
             event_publisher: event_publisher_arc,
             diary_exporter: Arc::new(ExportAdapter) as Arc<dyn DiaryExporter>,
             document_parser: Arc::new(ImporterDocumentParser) as Arc<dyn DocumentParser>,
+            video_renderer: None,
         },
         config: app_config,
     };

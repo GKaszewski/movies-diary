@@ -6,7 +6,8 @@ use domain::ports::{
     MovieRepository, PasswordHasher, PersonCommand, PersonQuery, PosterFetcherClient,
     RemoteWatchlistRepository, ReviewRepository, SearchCommand, SearchPort, SocialQueryPort,
     StatsRepository, UserProfileFieldsRepository, UserRepository, WatchEventRepository,
-    WatchlistRepository, WrapUpRepository, WrapUpStatsQuery, WebhookTokenRepository,
+    WatchlistRepository, WrapUpRepository, WrapUpStatsQuery, WrapUpVideoRenderer,
+    WebhookTokenRepository,
 };
 
 use crate::config::AppConfig;
@@ -45,6 +46,7 @@ pub struct Services {
     pub event_publisher: Arc<dyn EventPublisher>,
     pub diary_exporter: Arc<dyn DiaryExporter>,
     pub document_parser: Arc<dyn DocumentParser>,
+    pub video_renderer: Option<Arc<dyn WrapUpVideoRenderer>>,
 }
 
 #[derive(Clone)]
