@@ -206,6 +206,36 @@ pub struct BlockedActorsPageData {
     pub actors: Vec<BlockedActorEntry>,
 }
 
+pub struct WebhookTokenView {
+    pub id: String,
+    pub provider: String,
+    pub label: Option<String>,
+    pub created_at: String,
+    pub last_used_at: Option<String>,
+}
+
+pub struct IntegrationsPageData {
+    pub ctx: HtmlPageContext,
+    pub tokens: Vec<WebhookTokenView>,
+    pub webhook_base_url: String,
+    pub new_token: Option<String>,
+}
+
+pub struct WatchQueueDisplayEntry {
+    pub id: String,
+    pub title: String,
+    pub year: Option<u16>,
+    pub source: String,
+    pub watched_at: String,
+    pub movie_url: Option<String>,
+}
+
+pub struct WatchQueuePageData {
+    pub ctx: HtmlPageContext,
+    pub entries: Vec<WatchQueueDisplayEntry>,
+    pub error: Option<String>,
+}
+
 pub trait HtmlRenderer: Send + Sync {
     fn render_diary_page(
         &self,
@@ -229,6 +259,8 @@ pub trait HtmlRenderer: Send + Sync {
     fn render_blocked_domains_page(&self, data: BlockedDomainsPageData) -> Result<String, String>;
     fn render_blocked_actors_page(&self, data: BlockedActorsPageData) -> Result<String, String>;
     fn render_watchlist_page(&self, data: WatchlistPageData) -> Result<String, String>;
+    fn render_integrations_page(&self, data: IntegrationsPageData) -> Result<String, String>;
+    fn render_watch_queue_page(&self, data: WatchQueuePageData) -> Result<String, String>;
 }
 
 pub trait RssFeedRenderer: Send + Sync {

@@ -16,6 +16,7 @@ A self-hosted, server-side rendered movie logging system with a full REST API. B
 - Federation moderation — instance-level domain blocking (admin-managed), per-user actor blocking with `Block` activity, delivery filter excludes blocked actors and blocked-domain inboxes
 - Watchlist — add movies to watch later, per-user; federated watchlist entries visible for remote actors
 - User profiles — display name, bio, avatar, banner, custom profile fields; editable via HTML settings page or REST API
+- Jellyfin/Plex auto-import — media server sends a webhook on playback stop, movies land in a watch queue; review and confirm with a rating to create diary entries; per-user webhook tokens with SHA-256 auth; setup UI at `/settings/integrations`
 - CSV and JSON diary export
 - File importer: upload CSV, TSV, JSON, or XLSX from any source (Letterboxd, IMDb, etc.), map columns to domain fields via a step-by-step wizard or REST API, save mapping profiles for repeat imports
 - REST API v1 (`/api/v1/`) with full feature parity with the HTML interface
@@ -48,6 +49,8 @@ adapters/
   rss                  — RSS/Atom feed generation
   export               — CSV and JSON diary serialization
   importer             — CSV/TSV/JSON/XLSX parser and column mapper for bulk import
+  jellyfin             — Jellyfin webhook payload parser (MediaServerParser adapter)
+  plex                 — Plex webhook payload parser (MediaServerParser adapter; requires Plex Pass)
   event-payload        — shared event serialization DTOs (used by all event bus adapters)
   sqlite-event-queue   — durable polling event queue backed by SQLite
   postgres-event-queue — durable polling event queue backed by PostgreSQL
@@ -206,6 +209,28 @@ docker run \
 ```
 
 To build for PostgreSQL: `--build-arg FEATURES=postgres,postgres-federation,nats`
+
+## Media Server Integration
+
+Auto-log movies you finish watching. Go to `/settings/integrations` to generate a webhook token, then configure your media server.
+
+### Jellyfin
+
+1. Install the **Webhook** plugin (Dashboard > Plugins > Catalog)
+2. Add a **Generic** destination:
+   - **URL**: `https://yourdomain.example.com/api/v1/webhooks/jellyfin`
+   - **Header**: `Authorization` = `Bearer <your-token>`
+   - **Send All Properties**: enabled
+   - **Notification Type**: Playback Stop only
+   - **Item Type**: Movies only
+
+### Plex (requires Plex Pass)
+
+1. Go to Settings > Webhooks in your Plex server
+2. Add webhook URL: `https://yourdomain.example.com/api/v1/webhooks/plex`
+3. Plex does not support custom headers natively — pass the token as a query param: `https://yourdomain.example.com/api/v1/webhooks/plex?token=<your-token>`
+
+Movies you finish watching appear in your watch queue at `/watch-queue` — rate and confirm to add to your diary.
 
 ## License
 

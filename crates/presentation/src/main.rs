@@ -75,6 +75,8 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
     let search_port = db.search_port;
     let search_command = db.search_command;
     let profile_fields_repo = db.profile_fields_repo;
+    let watch_event_repository = db.watch_event_repo;
+    let webhook_token_repository = db.webhook_token_repo;
     let db_pool = db.db_pool;
 
     // Wire up event channel, federation service, and ap_router
@@ -199,6 +201,8 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
         import_profile_repository,
         movie_profile_repository,
         watchlist_repository,
+        watch_event_repository,
+        webhook_token_repository,
         profile_fields_repository: profile_fields_repo,
         #[cfg(feature = "federation")]
         remote_watchlist_repository: remote_watchlist_repo,

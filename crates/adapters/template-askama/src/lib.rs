@@ -2,8 +2,9 @@ use application::ports::{
     ActivityFeedPageData, BlockedActorEntry, BlockedActorsPageData, BlockedDomainEntry,
     BlockedDomainsPageData, FollowersPageData, FollowingPageData, HtmlPageContext, HtmlRenderer,
     ImportMappingPageData, ImportPreviewPageData, ImportPreviewRow, ImportProfileView,
-    ImportRowStatus, ImportUploadPageData, LoginPageData, MovieDetailPageData, NewReviewPageData,
-    ProfilePageData, ProfileSettingsPageData, RegisterPageData, UsersPageData, WatchlistPageData,
+    ImportRowStatus, ImportUploadPageData, IntegrationsPageData, LoginPageData,
+    MovieDetailPageData, NewReviewPageData, ProfilePageData, ProfileSettingsPageData,
+    RegisterPageData, UsersPageData, WatchQueuePageData, WatchlistPageData, WebhookTokenView,
 };
 use askama::Template;
 use chrono::Datelike;
@@ -364,6 +365,23 @@ struct ProfileSettingsTemplate<'a> {
     also_known_as: Option<&'a str>,
     profile_fields: &'a [(String, String)],
     saved: bool,
+}
+
+#[derive(Template)]
+#[template(path = "integrations.html")]
+struct IntegrationsTemplate<'a> {
+    ctx: &'a HtmlPageContext,
+    tokens: &'a [WebhookTokenView],
+    webhook_base_url: &'a str,
+    new_token: Option<&'a str>,
+}
+
+#[derive(Template)]
+#[template(path = "watch_queue.html")]
+struct WatchQueueTemplate<'a> {
+    ctx: &'a HtmlPageContext,
+    entries: &'a [application::ports::WatchQueueDisplayEntry],
+    error: Option<&'a str>,
 }
 
 #[derive(Template)]
@@ -746,6 +764,27 @@ impl HtmlRenderer for AskamaHtmlRenderer {
         BlockedActorsTemplate {
             ctx: &data.ctx,
             actors: &data.actors,
+        }
+        .render()
+        .map_err(|e| e.to_string())
+    }
+
+    fn render_integrations_page(&self, data: IntegrationsPageData) -> Result<String, String> {
+        IntegrationsTemplate {
+            ctx: &data.ctx,
+            tokens: &data.tokens,
+            webhook_base_url: &data.webhook_base_url,
+            new_token: data.new_token.as_deref(),
+        }
+        .render()
+        .map_err(|e| e.to_string())
+    }
+
+    fn render_watch_queue_page(&self, data: WatchQueuePageData) -> Result<String, String> {
+        WatchQueueTemplate {
+            ctx: &data.ctx,
+            entries: &data.entries,
+            error: data.error.as_deref(),
         }
         .render()
         .map_err(|e| e.to_string())

@@ -21,6 +21,7 @@ mod persons;
 mod profile;
 mod profile_fields;
 mod users;
+mod watch_event;
 mod watchlist;
 
 use models::{
@@ -36,6 +37,7 @@ pub use persons::{PostgresPersonAdapter, create_person_adapter};
 pub use profile::PostgresMovieProfileRepository;
 pub use profile_fields::PostgresProfileFieldsRepository;
 pub use users::PostgresUserRepository;
+pub use watch_event::{PostgresWatchEventRepository, PostgresWebhookTokenRepository};
 pub use watchlist::PostgresWatchlistRepository;
 
 fn format_year_month(ym: &str) -> String {

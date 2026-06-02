@@ -22,6 +22,7 @@ mod persons;
 mod profile;
 mod profile_fields;
 mod users;
+mod watch_event;
 mod watchlist;
 
 use models::{
@@ -37,6 +38,7 @@ pub use persons::{SqlitePersonAdapter, create_person_adapter};
 pub use profile::SqliteMovieProfileRepository;
 pub use profile_fields::SqliteProfileFieldsRepository;
 pub use users::SqliteUserRepository;
+pub use watch_event::{SqliteWatchEventRepository, SqliteWebhookTokenRepository};
 pub use watchlist::SqliteWatchlistRepository;
 
 pub fn create_profile_fields_repo(

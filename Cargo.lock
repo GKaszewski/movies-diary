@@ -317,6 +317,9 @@ dependencies = [
  "chrono",
  "domain",
  "futures",
+ "hex",
+ "rand 0.9.4",
+ "sha2",
  "tokio",
  "tracing",
  "uuid",
@@ -2756,6 +2759,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682"
 
 [[package]]
+name = "jellyfin"
+version = "0.1.0"
+dependencies = [
+ "domain",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "jni"
 version = "0.22.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3765,6 +3777,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b4596b6d070b27117e987119b4dac604f3c58cfb0b191112e24771b2faeac1a6"
 
 [[package]]
+name = "plex"
+version = "0.1.0"
+dependencies = [
+ "domain",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "png"
 version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3924,9 +3945,11 @@ dependencies = [
  "image-storage",
  "importer",
  "infer",
+ "jellyfin",
  "metadata",
  "nats",
  "percent-encoding",
+ "plex",
  "poster-fetcher",
  "postgres",
  "postgres-event-queue",

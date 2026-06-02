@@ -16,17 +16,24 @@ use application::ports::{
 };
 use application::{
     commands::{
-        AddToWatchlistCommand, DeleteReviewCommand, MovieInput, RemoveFromWatchlistCommand,
+        AddToWatchlistCommand, ConfirmWatchEventsCommand, DeleteReviewCommand,
+        DismissWatchEventsCommand, GenerateWebhookTokenCommand, MovieInput,
+        RemoveFromWatchlistCommand, RevokeWebhookTokenCommand, WatchEventConfirmation,
     },
     ports::{
-        HtmlPageContext, LoginPageData, MovieDetailPageData, NewReviewPageData,
-        ProfileSettingsPageData, RegisterPageData, RemoteActorView, WatchlistPageData,
+        HtmlPageContext, IntegrationsPageData, LoginPageData, MovieDetailPageData,
+        NewReviewPageData, ProfileSettingsPageData, RegisterPageData, RemoteActorView,
+        WatchQueueDisplayEntry, WatchQueuePageData, WatchlistPageData, WebhookTokenView,
     },
-    queries::{ExportQuery, GetMovieSocialPageQuery, IsOnWatchlistQuery, LoginQuery},
+    queries::{
+        ExportQuery, GetMovieSocialPageQuery, GetWatchQueueQuery, GetWebhookTokensQuery,
+        IsOnWatchlistQuery, LoginQuery,
+    },
     use_cases::{
-        add_to_watchlist, delete_review, export_diary as export_diary_uc, get_movie_social_page,
-        is_on_watchlist, log_review, login as login_uc, remove_from_watchlist, update_profile,
-        update_profile_fields,
+        add_to_watchlist, confirm_watch_events, delete_review, dismiss_watch_events,
+        export_diary as export_diary_uc, generate_webhook_token, get_movie_social_page,
+        get_watch_queue, get_webhook_tokens, is_on_watchlist, log_review, login as login_uc,
+        remove_from_watchlist, revoke_webhook_token, update_profile, update_profile_fields,
     },
 };
 use domain::models::ExportFormat;
@@ -1498,4 +1505,210 @@ pub async fn post_profile_settings(
     let _ = update_profile_fields::execute(&state.app_ctx, fields_cmd).await;
 
     Redirect::to("/settings/profile?saved=1").into_response()
+}
+
+// ── Integrations ──────────────────────────────────────────────────────────────
+
+pub async fn get_integrations_page(
+    RequiredCookieUser(user_id): RequiredCookieUser,
+    State(state): State<AppState>,
+    Query(params): Query<crate::forms::IntegrationsQuery>,
+    Extension(csrf): Extension<CsrfToken>,
+) -> impl IntoResponse {
+    let mut ctx = build_page_context(&state, Some(user_id.clone()), csrf.0).await;
+    ctx.page_title = "Integrations — Movies Diary".to_string();
+    ctx.canonical_url = format!("{}/settings/integrations", state.app_ctx.config.base_url);
+
+    let query = GetWebhookTokensQuery {
+        user_id: user_id.value(),
+    };
+    let tokens = get_webhook_tokens::execute(&state.app_ctx, query)
+        .await
+        .unwrap_or_default();
+
+    let token_views: Vec<WebhookTokenView> = tokens
+        .into_iter()
+        .map(|t| WebhookTokenView {
+            id: t.id().value().to_string(),
+            provider: t.provider().to_string(),
+            label: t.label().map(String::from),
+            created_at: t.created_at().format("%Y-%m-%d %H:%M").to_string(),
+            last_used_at: t
+                .last_used_at()
+                .map(|d| d.format("%Y-%m-%d %H:%M").to_string()),
+        })
+        .collect();
+
+    let data = IntegrationsPageData {
+        ctx,
+        tokens: token_views,
+        webhook_base_url: state.app_ctx.config.base_url.clone(),
+        new_token: params.token,
+    };
+
+    match state.html_renderer.render_integrations_page(data) {
+        Ok(html) => Html(html).into_response(),
+        Err(e) => {
+            tracing::error!("integrations template error: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+pub async fn post_generate_token(
+    RequiredCookieUser(user_id): RequiredCookieUser,
+    State(state): State<AppState>,
+    Extension(csrf): Extension<CsrfToken>,
+    Form(form): Form<crate::forms::GenerateTokenForm>,
+) -> impl IntoResponse {
+    if crate::csrf::mismatch(&csrf, &form.csrf_token) {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+
+    let provider = match form.provider.parse::<domain::models::WatchEventSource>() {
+        Ok(p) => p,
+        Err(_) => return Redirect::to("/settings/integrations").into_response(),
+    };
+
+    let cmd = GenerateWebhookTokenCommand {
+        user_id: user_id.value(),
+        provider,
+        label: form.label.filter(|l| !l.trim().is_empty()),
+    };
+
+    match generate_webhook_token::execute(&state.app_ctx, cmd).await {
+        Ok(result) => {
+            let encoded = percent_encoding::utf8_percent_encode(
+                &result.token_plaintext,
+                percent_encoding::NON_ALPHANUMERIC,
+            );
+            Redirect::to(&format!("/settings/integrations?token={encoded}")).into_response()
+        }
+        Err(e) => {
+            tracing::error!("generate token failed: {:?}", e);
+            Redirect::to("/settings/integrations").into_response()
+        }
+    }
+}
+
+pub async fn post_revoke_token(
+    RequiredCookieUser(user_id): RequiredCookieUser,
+    State(state): State<AppState>,
+    Path(token_id): Path<Uuid>,
+    Extension(csrf): Extension<CsrfToken>,
+    Form(form): Form<crate::forms::RevokeTokenForm>,
+) -> impl IntoResponse {
+    if crate::csrf::mismatch(&csrf, &form.csrf_token) {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+
+    let cmd = RevokeWebhookTokenCommand {
+        user_id: user_id.value(),
+        token_id,
+    };
+    if let Err(e) = revoke_webhook_token::execute(&state.app_ctx, cmd).await {
+        tracing::error!("revoke token failed: {:?}", e);
+    }
+
+    Redirect::to("/settings/integrations").into_response()
+}
+
+// ── Watch Queue ───────────────────────────────────────────────────────────────
+
+pub async fn get_watch_queue_page(
+    RequiredCookieUser(user_id): RequiredCookieUser,
+    State(state): State<AppState>,
+    Query(params): Query<ErrorQuery>,
+    Extension(csrf): Extension<CsrfToken>,
+) -> impl IntoResponse {
+    let mut ctx = build_page_context(&state, Some(user_id.clone()), csrf.0).await;
+    ctx.page_title = "Watch Queue — Movies Diary".to_string();
+    ctx.canonical_url = format!("{}/watch-queue", state.app_ctx.config.base_url);
+
+    let query = GetWatchQueueQuery {
+        user_id: user_id.value(),
+    };
+    let events = get_watch_queue::execute(&state.app_ctx, query)
+        .await
+        .unwrap_or_default();
+
+    let entries: Vec<WatchQueueDisplayEntry> = events
+        .into_iter()
+        .map(|e| WatchQueueDisplayEntry {
+            id: e.id().value().to_string(),
+            title: e.title().to_string(),
+            year: e.year(),
+            source: e.source().to_string(),
+            watched_at: e.watched_at().format("%Y-%m-%d %H:%M").to_string(),
+            movie_url: e.movie_id().map(|m| format!("/movies/{}", m.value())),
+        })
+        .collect();
+
+    let data = WatchQueuePageData {
+        ctx,
+        entries,
+        error: params.error,
+    };
+
+    match state.html_renderer.render_watch_queue_page(data) {
+        Ok(html) => Html(html).into_response(),
+        Err(e) => {
+            tracing::error!("watch_queue template error: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+pub async fn post_confirm_single(
+    RequiredCookieUser(user_id): RequiredCookieUser,
+    State(state): State<AppState>,
+    Path(event_id): Path<Uuid>,
+    Extension(csrf): Extension<CsrfToken>,
+    Form(form): Form<crate::forms::ConfirmWatchForm>,
+) -> impl IntoResponse {
+    if crate::csrf::mismatch(&csrf, &form.csrf_token) {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+
+    let cmd = ConfirmWatchEventsCommand {
+        user_id: user_id.value(),
+        confirmations: vec![WatchEventConfirmation {
+            watch_event_id: event_id,
+            rating: form.rating,
+            comment: form.comment.filter(|c| !c.trim().is_empty()),
+        }],
+    };
+
+    match confirm_watch_events::execute(&state.app_ctx, cmd).await {
+        Ok(_) => Redirect::to("/watch-queue").into_response(),
+        Err(e) => {
+            let msg = encode_error(&e.to_string());
+            Redirect::to(&format!("/watch-queue?error={msg}")).into_response()
+        }
+    }
+}
+
+pub async fn post_dismiss_single(
+    RequiredCookieUser(user_id): RequiredCookieUser,
+    State(state): State<AppState>,
+    Path(event_id): Path<Uuid>,
+    Extension(csrf): Extension<CsrfToken>,
+    Form(form): Form<crate::forms::DismissWatchForm>,
+) -> impl IntoResponse {
+    if crate::csrf::mismatch(&csrf, &form.csrf_token) {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+
+    let cmd = DismissWatchEventsCommand {
+        user_id: user_id.value(),
+        event_ids: vec![event_id],
+    };
+
+    match dismiss_watch_events::execute(&state.app_ctx, cmd).await {
+        Ok(_) => Redirect::to("/watch-queue").into_response(),
+        Err(e) => {
+            let msg = encode_error(&e.to_string());
+            Redirect::to(&format!("/watch-queue?error={msg}")).into_response()
+        }
+    }
 }

@@ -139,6 +139,30 @@ fn html_routes(rate_limit: u64) -> Router<AppState> {
         .route(
             "/watchlist/{movie_id}/remove",
             routing::post(handlers::html::post_watchlist_remove),
+        )
+        .route(
+            "/settings/integrations",
+            routing::get(handlers::html::get_integrations_page),
+        )
+        .route(
+            "/settings/integrations/generate",
+            routing::post(handlers::html::post_generate_token),
+        )
+        .route(
+            "/settings/integrations/{id}/revoke",
+            routing::post(handlers::html::post_revoke_token),
+        )
+        .route(
+            "/watch-queue",
+            routing::get(handlers::html::get_watch_queue_page),
+        )
+        .route(
+            "/watch-queue/{id}/confirm",
+            routing::post(handlers::html::post_confirm_single),
+        )
+        .route(
+            "/watch-queue/{id}/dismiss",
+            routing::post(handlers::html::post_dismiss_single),
         );
 
     #[cfg(feature = "federation")]
@@ -301,12 +325,52 @@ fn api_routes(rate_limit: u64) -> Router<AppState> {
             "/watchlist/{movie_id}",
             routing::get(handlers::api::get_watchlist_status)
                 .delete(handlers::api::delete_watchlist_entry),
+        )
+        .route(
+            "/settings/webhook-tokens",
+            routing::get(handlers::webhook::get_webhook_tokens)
+                .post(handlers::webhook::post_generate_webhook_token),
+        )
+        .route(
+            "/settings/webhook-tokens/{id}",
+            routing::delete(handlers::webhook::delete_webhook_token),
+        )
+        .route(
+            "/watch-queue",
+            routing::get(handlers::webhook::get_watch_queue),
+        )
+        .route(
+            "/watch-queue/confirm",
+            routing::post(handlers::webhook::post_confirm_watch_events),
+        )
+        .route(
+            "/watch-queue/dismiss",
+            routing::post(handlers::webhook::post_dismiss_watch_events),
         );
 
     #[cfg(feature = "federation")]
     let base = base.merge(federation_api_routes());
 
-    Router::new().nest("/api/v1", base.layer(GovernorLayer::new(cfg)))
+    let webhook_cfg = GovernorConfigBuilder::default()
+        .with_extractor(PeerIp::default())
+        .expect_connect_info()
+        .quota_default(per_minute(rate_limit / 4))
+        .finish()
+        .unwrap();
+    let webhook_routes = Router::new()
+        .route(
+            "/webhooks/jellyfin",
+            routing::post(handlers::webhook::post_jellyfin_webhook),
+        )
+        .route(
+            "/webhooks/plex",
+            routing::post(handlers::webhook::post_plex_webhook),
+        )
+        .layer(GovernorLayer::new(webhook_cfg));
+
+    Router::new()
+        .nest("/api/v1", base.layer(GovernorLayer::new(cfg)))
+        .nest("/api/v1", webhook_routes)
 }
 
 #[cfg(feature = "federation")]

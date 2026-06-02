@@ -70,6 +70,11 @@ pub enum DomainEvent {
         activity_json: String,
         signing_actor_id: uuid::Uuid,
     },
+    WatchEventIngested {
+        user_id: UserId,
+        title: String,
+        source: String,
+    },
 }
 
 #[async_trait]

@@ -15,6 +15,7 @@ pub fn event_to_subject(prefix: &str, event: &DomainEvent) -> String {
         DomainEvent::FollowAccepted { .. } => "follow.accepted",
         DomainEvent::BackfillFollower { .. } => "backfill.follower",
         DomainEvent::FederationDeliveryRequested { .. } => "federation.delivery.requested",
+        DomainEvent::WatchEventIngested { .. } => "watch.event.ingested",
     };
     format!("{prefix}.{suffix}")
 }

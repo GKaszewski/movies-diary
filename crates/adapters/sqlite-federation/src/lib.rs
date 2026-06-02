@@ -72,7 +72,10 @@ fn remote_actor_from_row(row: &sqlx::sqlite::SqliteRow, url_col: &str) -> Remote
             .and_then(|s| {
                 chrono::NaiveDateTime::parse_from_str(&s, "%Y-%m-%d %H:%M:%S")
                     .map(|ndt| ndt.and_utc())
-                    .or_else(|_| chrono::DateTime::parse_from_rfc3339(&s).map(|dt| dt.with_timezone(&chrono::Utc)))
+                    .or_else(|_| {
+                        chrono::DateTime::parse_from_rfc3339(&s)
+                            .map(|dt| dt.with_timezone(&chrono::Utc))
+                    })
                     .ok()
             }),
     }

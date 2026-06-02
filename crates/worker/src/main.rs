@@ -88,6 +88,8 @@ async fn main() -> anyhow::Result<()> {
         import_profile_repository: repos.import_profile,
         movie_profile_repository: repos.movie_profile,
         watchlist_repository: repos.watchlist,
+        watch_event_repository: repos.watch_event,
+        webhook_token_repository: repos.webhook_token,
         profile_fields_repository: Arc::clone(&profile_fields_repo),
         #[cfg(feature = "federation")]
         remote_watchlist_repository: fed_remote_watchlist_repo.clone(),
@@ -137,9 +139,10 @@ async fn main() -> anyhow::Result<()> {
 
     // ── Periodic jobs ─────────────────────────────────────────────────────────
 
-    let mut periodic_jobs: Vec<Arc<dyn PeriodicJob>> = vec![Arc::new(
-        application::jobs::ImportSessionCleanupJob::new(ctx.clone()),
-    )];
+    let mut periodic_jobs: Vec<Arc<dyn PeriodicJob>> = vec![
+        Arc::new(application::jobs::ImportSessionCleanupJob::new(ctx.clone())),
+        Arc::new(application::jobs::WatchEventCleanupJob::new(ctx.clone())),
+    ];
     if let Some(job) = enrichment_job {
         periodic_jobs.push(job);
     }

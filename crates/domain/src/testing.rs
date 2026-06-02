@@ -839,3 +839,83 @@ impl crate::ports::SocialQueryPort for NoopSocialQueryPort {
         Ok(vec![])
     }
 }
+
+// ── PanicWatchEventRepository ────────────────────────────────────────────────
+
+pub struct PanicWatchEventRepository;
+
+#[async_trait]
+impl crate::ports::WatchEventRepository for PanicWatchEventRepository {
+    async fn save(&self, _: &crate::models::WatchEvent) -> Result<(), DomainError> {
+        panic!("PanicWatchEventRepository called")
+    }
+    async fn update_status(
+        &self,
+        _: &crate::value_objects::WatchEventId,
+        _: crate::models::WatchEventStatus,
+    ) -> Result<(), DomainError> {
+        panic!("PanicWatchEventRepository called")
+    }
+    async fn list_pending(
+        &self,
+        _: &UserId,
+    ) -> Result<Vec<crate::models::WatchEvent>, DomainError> {
+        panic!("PanicWatchEventRepository called")
+    }
+    async fn get_by_id(
+        &self,
+        _: &crate::value_objects::WatchEventId,
+    ) -> Result<Option<crate::models::WatchEvent>, DomainError> {
+        panic!("PanicWatchEventRepository called")
+    }
+    async fn find_duplicate(
+        &self,
+        _: &UserId,
+        _: &str,
+        _: chrono::NaiveDateTime,
+    ) -> Result<bool, DomainError> {
+        panic!("PanicWatchEventRepository called")
+    }
+    async fn delete_non_pending_older_than(
+        &self,
+        _: chrono::NaiveDateTime,
+    ) -> Result<u64, DomainError> {
+        panic!("PanicWatchEventRepository called")
+    }
+}
+
+// ── PanicWebhookTokenRepository ──────────────────────────────────────────────
+
+pub struct PanicWebhookTokenRepository;
+
+#[async_trait]
+impl crate::ports::WebhookTokenRepository for PanicWebhookTokenRepository {
+    async fn save(&self, _: &crate::models::WebhookToken) -> Result<(), DomainError> {
+        panic!("PanicWebhookTokenRepository called")
+    }
+    async fn find_by_token_hash(
+        &self,
+        _: &str,
+    ) -> Result<Option<crate::models::WebhookToken>, DomainError> {
+        panic!("PanicWebhookTokenRepository called")
+    }
+    async fn list_by_user(
+        &self,
+        _: &UserId,
+    ) -> Result<Vec<crate::models::WebhookToken>, DomainError> {
+        panic!("PanicWebhookTokenRepository called")
+    }
+    async fn delete(
+        &self,
+        _: &crate::value_objects::WebhookTokenId,
+        _: &UserId,
+    ) -> Result<(), DomainError> {
+        panic!("PanicWebhookTokenRepository called")
+    }
+    async fn touch_last_used(
+        &self,
+        _: &crate::value_objects::WebhookTokenId,
+    ) -> Result<(), DomainError> {
+        panic!("PanicWebhookTokenRepository called")
+    }
+}

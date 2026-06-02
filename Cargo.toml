@@ -27,6 +27,8 @@ members = [
     "crates/tui",
     "crates/worker",
     "crates/adapters/importer",
+    "crates/adapters/jellyfin",
+    "crates/adapters/plex",
     "crates/adapters/sqlite-search",
     "crates/adapters/postgres-search",
 ]
@@ -51,7 +53,10 @@ sqlx = { version = "0.8.6", features = [
     "uuid",
     "macros",
 ] }
+rand = "0.9"
 reqwest = { version = "0.13", features = ["json", "query"] }
+sha2 = "0.10"
+hex = "0.4"
 object_store = { version = "0.11", features = ["aws"] }
 axum = { version = "0.8.8", features = ["macros", "multipart"] }
 csv = "1"
@@ -80,6 +85,8 @@ nats = { path = "crates/adapters/nats" }
 sqlite-event-queue = { path = "crates/adapters/sqlite-event-queue" }
 postgres-event-queue = { path = "crates/adapters/postgres-event-queue" }
 importer = { path = "crates/adapters/importer" }
+jellyfin = { path = "crates/adapters/jellyfin" }
+plex = { path = "crates/adapters/plex" }
 image-converter = { path = "crates/adapters/image-converter" }
 sqlite-search = { path = "crates/adapters/sqlite-search" }
 postgres-search = { path = "crates/adapters/postgres-search" }

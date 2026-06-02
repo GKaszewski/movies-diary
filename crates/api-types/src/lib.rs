@@ -7,6 +7,7 @@ pub mod search;
 pub mod social;
 pub mod users;
 pub mod watchlist;
+pub mod webhook;
 
 pub use auth::*;
 pub use common::*;
@@ -16,3 +17,4 @@ pub use movies::*;
 pub use social::*;
 pub use users::*;
 pub use watchlist::*;
+pub use webhook::*;

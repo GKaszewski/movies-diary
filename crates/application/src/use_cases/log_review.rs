@@ -66,7 +66,7 @@ mod tests {
 
     use domain::{
         models::Movie,
-        value_objects::{MovieId, MovieTitle, ReleaseYear},
+        value_objects::{MovieTitle, ReleaseYear},
     };
 
     use domain::ports::MovieRepository;

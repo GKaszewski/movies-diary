@@ -6,6 +6,7 @@ mod search;
 mod social;
 mod users;
 mod watchlist;
+mod webhook;
 
 use axum::Router;
 use utoipa::{
@@ -40,6 +41,7 @@ fn build() -> utoipa::openapi::OpenApi {
     api.merge(import::ImportDoc::openapi());
     api.merge(search::SearchDoc::openapi());
     api.merge(watchlist::WatchlistDoc::openapi());
+    api.merge(webhook::WebhookDoc::openapi());
     #[cfg(feature = "federation")]
     api.merge(social::SocialDoc::openapi());
     SecurityAddon.modify(&mut api);

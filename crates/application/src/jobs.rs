@@ -28,6 +28,31 @@ impl PeriodicJob for ImportSessionCleanupJob {
     }
 }
 
+pub struct WatchEventCleanupJob {
+    ctx: AppContext,
+}
+
+impl WatchEventCleanupJob {
+    pub fn new(ctx: AppContext) -> Self {
+        Self { ctx }
+    }
+}
+
+#[async_trait]
+impl PeriodicJob for WatchEventCleanupJob {
+    fn interval(&self) -> Duration {
+        Duration::from_secs(86400)
+    }
+
+    async fn run(&self) -> Result<(), DomainError> {
+        let n = crate::use_cases::cleanup_watch_events::execute(&self.ctx).await?;
+        if n > 0 {
+            tracing::info!("watch event cleanup: removed {n} old entries");
+        }
+        Ok(())
+    }
+}
+
 pub struct EnrichmentStalenessJob {
     ctx: AppContext,
 }

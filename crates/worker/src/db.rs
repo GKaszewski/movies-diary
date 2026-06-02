@@ -5,7 +5,8 @@ use domain::ports::{
     DiaryRepository, ImageRefCommand, ImageRefQuery, ImportProfileRepository,
     ImportSessionRepository, LocalApContentQuery, MovieProfileRepository, MovieRepository,
     PersonCommand, PersonQuery, ReviewRepository, SearchCommand, SearchPort, StatsRepository,
-    UserProfileFieldsRepository, UserRepository, WatchlistRepository,
+    UserProfileFieldsRepository, UserRepository, WatchEventRepository, WatchlistRepository,
+    WebhookTokenRepository,
 };
 
 pub enum DbPool {
@@ -33,6 +34,8 @@ pub struct Repos {
     pub search_command: Arc<dyn SearchCommand>,
     pub search_port: Arc<dyn SearchPort>,
     pub profile_fields: Arc<dyn UserProfileFieldsRepository>,
+    pub watch_event: Arc<dyn WatchEventRepository>,
+    pub webhook_token: Arc<dyn WebhookTokenRepository>,
 }
 
 pub async fn connect(database_url: &str, backend: &str) -> anyhow::Result<(Repos, DbPool)> {
@@ -47,6 +50,10 @@ pub async fn connect(database_url: &str, backend: &str) -> anyhow::Result<(Repos
             let (search_command, search_port) =
                 postgres_search::create_search_adapter(pool.clone());
             let pf = postgres::create_profile_fields_repo(pool.clone());
+            let we: Arc<dyn WatchEventRepository> =
+                Arc::new(postgres::PostgresWatchEventRepository::new(pool.clone()));
+            let wt: Arc<dyn WebhookTokenRepository> =
+                Arc::new(postgres::PostgresWebhookTokenRepository::new(pool.clone()));
             Ok((
                 Repos {
                     movie: m,
@@ -66,6 +73,8 @@ pub async fn connect(database_url: &str, backend: &str) -> anyhow::Result<(Repos
                     search_command,
                     search_port,
                     profile_fields: pf,
+                    watch_event: we,
+                    webhook_token: wt,
                 },
                 DbPool::Postgres(pool),
             ))
@@ -79,6 +88,10 @@ pub async fn connect(database_url: &str, backend: &str) -> anyhow::Result<(Repos
             let (person_command, person_query) = sqlite::create_person_adapter(pool.clone());
             let (search_command, search_port) = sqlite_search::create_search_adapter(pool.clone());
             let pf = sqlite::create_profile_fields_repo(pool.clone());
+            let we: Arc<dyn WatchEventRepository> =
+                Arc::new(sqlite::SqliteWatchEventRepository::new(pool.clone()));
+            let wt: Arc<dyn WebhookTokenRepository> =
+                Arc::new(sqlite::SqliteWebhookTokenRepository::new(pool.clone()));
             Ok((
                 Repos {
                     movie: m,
@@ -98,6 +111,8 @@ pub async fn connect(database_url: &str, backend: &str) -> anyhow::Result<(Repos
                     search_command,
                     search_port,
                     profile_fields: pf,
+                    watch_event: we,
+                    webhook_token: wt,
                 },
                 DbPool::Sqlite(pool),
             ))

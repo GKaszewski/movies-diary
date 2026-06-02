@@ -105,3 +105,11 @@ pub struct IsOnWatchlistQuery {
 pub struct GetCurrentProfileQuery {
     pub user_id: Uuid,
 }
+
+pub struct GetWatchQueueQuery {
+    pub user_id: Uuid,
+}
+
+pub struct GetWebhookTokensQuery {
+    pub user_id: Uuid,
+}

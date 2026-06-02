@@ -6,7 +6,8 @@ use domain::ports::{
     AuthService, DiaryRepository, ImageStorage, ImportProfileRepository, ImportSessionRepository,
     LocalApContentQuery, MetadataClient, MovieProfileRepository, MovieRepository, PasswordHasher,
     PersonCommand, PersonQuery, PosterFetcherClient, ReviewRepository, SearchCommand, SearchPort,
-    StatsRepository, UserProfileFieldsRepository, UserRepository, WatchlistRepository,
+    StatsRepository, UserProfileFieldsRepository, UserRepository, WatchEventRepository,
+    WatchlistRepository, WebhookTokenRepository,
 };
 
 pub struct DatabaseAdapters {
@@ -25,6 +26,8 @@ pub struct DatabaseAdapters {
     pub search_port: Arc<dyn SearchPort>,
     pub search_command: Arc<dyn SearchCommand>,
     pub profile_fields_repo: Arc<dyn UserProfileFieldsRepository>,
+    pub watch_event_repo: Arc<dyn WatchEventRepository>,
+    pub webhook_token_repo: Arc<dyn WebhookTokenRepository>,
     pub db_pool: DbPool,
 }
 
@@ -45,6 +48,10 @@ pub async fn build_database_adapters(backend: &str, url: &str) -> anyhow::Result
             let (pc, pq) = postgres::create_person_adapter(pool.clone());
             let (sc, sp) = postgres_search::create_search_adapter(pool.clone());
             let pf = postgres::create_profile_fields_repo(pool.clone());
+            let we: Arc<dyn WatchEventRepository> =
+                Arc::new(postgres::PostgresWatchEventRepository::new(pool.clone()));
+            let wt: Arc<dyn WebhookTokenRepository> =
+                Arc::new(postgres::PostgresWebhookTokenRepository::new(pool.clone()));
             Ok(DatabaseAdapters {
                 movie_repo: m,
                 review_repo: r,
@@ -61,6 +68,8 @@ pub async fn build_database_adapters(backend: &str, url: &str) -> anyhow::Result
                 search_port: sp,
                 search_command: sc,
                 profile_fields_repo: pf,
+                watch_event_repo: we,
+                webhook_token_repo: wt,
                 db_pool: DbPool::Postgres(pool),
             })
         }
@@ -72,6 +81,10 @@ pub async fn build_database_adapters(backend: &str, url: &str) -> anyhow::Result
             let (pc, pq) = sqlite::create_person_adapter(pool.clone());
             let (sc, sp) = sqlite_search::create_search_adapter(pool.clone());
             let pf = sqlite::create_profile_fields_repo(pool.clone());
+            let we: Arc<dyn WatchEventRepository> =
+                Arc::new(sqlite::SqliteWatchEventRepository::new(pool.clone()));
+            let wt: Arc<dyn WebhookTokenRepository> =
+                Arc::new(sqlite::SqliteWebhookTokenRepository::new(pool.clone()));
             Ok(DatabaseAdapters {
                 movie_repo: m,
                 review_repo: r,
@@ -88,6 +101,8 @@ pub async fn build_database_adapters(backend: &str, url: &str) -> anyhow::Result
                 search_port: sp,
                 search_command: sc,
                 profile_fields_repo: pf,
+                watch_event_repo: we,
+                webhook_token_repo: wt,
                 db_pool: DbPool::Sqlite(pool),
             })
         }

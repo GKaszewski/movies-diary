@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="movie-detail">
+  <div class="entry-title" style="margin-bottom:1rem">Watch Queue</div>
+
+  {% if let Some(err) = error %}
+  <p class="form-error">{{ err }}</p>
+  {% endif %}
+
+  {% if entries.is_empty() %}
+  <p class="empty">
+    No pending watches.
+    <a href="/settings/integrations">Connect Jellyfin</a> to start auto-logging.
+  </p>
+  {% else %}
+  <p style="opacity:.7;font-size:.85em;margin-bottom:1rem">
+    Movies you watched via Jellyfin. Rate and confirm to add to your diary, or dismiss.
+  </p>
+  <div class="diary">
+    {% for entry in entries %}
+    <article class="entry">
+      <div class="entry-body">
+        <div class="entry-title">
+          {% if let Some(url) = &entry.movie_url %}
+          <a href="{{ url }}" class="movie-title-link">{{ entry.title }}</a>
+          {% else %}
+          {{ entry.title }}
+          {% endif %}
+          {% if let Some(y) = entry.year %}
+          <span class="year">({{ y }})</span>
+          {% endif %}
+        </div>
+        <div class="feed-meta" style="margin-top:0.3rem">
+          <span class="feed-time">Watched {{ entry.watched_at }}</span>
+          <span class="feed-time" style="margin-left:0.5rem;opacity:.6">via {{ entry.source }}</span>
+        </div>
+
+        <form method="post" action="/watch-queue/{{ entry.id }}/confirm" style="margin-top:0.6rem;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:flex-end">
+          <input type="hidden" name="_csrf" value="{{ ctx.csrf_token }}">
+          <div>
+            <label style="display:block;font-size:0.8em;opacity:.6;margin-bottom:0.25rem">Rating</label>
+            <select name="rating" style="width:auto">
+              <option value="0">—</option>
+              <option value="1">1★</option>
+              <option value="2">2★</option>
+              <option value="3">3★</option>
+              <option value="4">4★</option>
+              <option value="5">5★</option>
+            </select>
+          </div>
+          <div style="flex:1;min-width:120px">
+            <label style="display:block;font-size:0.8em;opacity:.6;margin-bottom:0.25rem">Comment</label>
+            <input type="text" name="comment" placeholder="Optional" style="width:100%;box-sizing:border-box">
+          </div>
+          <button type="submit" class="btn-small" style="height:2.25rem">Confirm</button>
+        </form>
+
+        <form method="post" action="/watch-queue/{{ entry.id }}/dismiss" style="margin-top:0.3rem">
+          <input type="hidden" name="_csrf" value="{{ ctx.csrf_token }}">
+          <button type="submit" class="btn-small" style="color:#e57a7a;border-color:rgba(229,122,122,.3);font-size:.8em">Dismiss</button>
+        </form>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

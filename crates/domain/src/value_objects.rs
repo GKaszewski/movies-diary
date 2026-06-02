@@ -26,6 +26,8 @@ uuid_id!(UserId);
 uuid_id!(ImportSessionId);
 uuid_id!(ImportProfileId);
 uuid_id!(WatchlistEntryId);
+uuid_id!(WatchEventId);
+uuid_id!(WebhookTokenId);
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ExternalMetadataId(String);

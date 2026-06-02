@@ -1,10 +1,8 @@
-use super::{create_search_adapter, SqliteSearchAdapter};
+use super::create_search_adapter;
 use domain::{
     models::{
-        collections::PageParams, EntityType, ExternalPersonId, IndexableDocument, Movie, Person,
-        PersonId, SearchFilters, SearchQuery,
+        collections::PageParams, EntityType, IndexableDocument, Movie, SearchFilters, SearchQuery,
     },
-    ports::{SearchCommand, SearchPort},
     value_objects::{MovieId, MovieTitle, ReleaseYear},
 };
 use sqlx::SqlitePool;

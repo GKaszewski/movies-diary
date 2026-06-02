@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Integrations</h1>
+<p style="font-size:.85em;opacity:.7;margin-bottom:1rem">
+  <a href="/settings/profile">Profile Settings</a>
+</p>
+
+<section style="margin-bottom:2rem">
+  <h2 style="font-size:1.1em">Jellyfin / Plex Webhook</h2>
+  <p style="opacity:.7;font-size:.9em">
+    Automatically log movies you finish watching. Configure your media server's
+    webhook plugin to POST to the URL below.
+  </p>
+
+  <div style="margin:1rem 0;padding:0.75rem 1rem;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:8px">
+    <label style="display:block;font-size:0.8em;opacity:.6;margin-bottom:0.25rem">Jellyfin Webhook URL</label>
+    <code style="word-break:break-all">{{ webhook_base_url }}/api/v1/webhooks/jellyfin</code>
+  </div>
+
+  <div style="margin:1rem 0;padding:0.75rem 1rem;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:8px">
+    <label style="display:block;font-size:0.8em;opacity:.6;margin-bottom:0.25rem">Plex Webhook URL (append token as query param)</label>
+    <code style="word-break:break-all">{{ webhook_base_url }}/api/v1/webhooks/plex?token=YOUR_TOKEN</code>
+  </div>
+
+  <details style="margin:1rem 0;font-size:.85em;opacity:.8">
+    <summary style="cursor:pointer">Jellyfin setup</summary>
+    <ol style="margin-top:0.5rem;padding-left:1.2rem">
+      <li>Install the <strong>Webhook</strong> plugin (Dashboard &rarr; Plugins &rarr; Catalog)</li>
+      <li>Add Generic Destination with the Jellyfin URL above</li>
+      <li>Add header: <code>Authorization</code> = <code>Bearer YOUR_TOKEN</code></li>
+      <li>Check <strong>Send All Properties</strong></li>
+      <li>Notification Type: <strong>Playback Stop</strong> only</li>
+      <li>Item Type: <strong>Movies</strong> only</li>
+    </ol>
+  </details>
+
+  <details style="margin:1rem 0;font-size:.85em;opacity:.8">
+    <summary style="cursor:pointer">Plex setup (requires Plex Pass)</summary>
+    <ol style="margin-top:0.5rem;padding-left:1.2rem">
+      <li>Go to Settings &rarr; Webhooks in your Plex server</li>
+      <li>Add the Plex URL above, replacing <code>YOUR_TOKEN</code> with your generated token</li>
+      <li>Plex automatically sends scrobble events when a movie is watched to 90%+</li>
+    </ol>
+  </details>
+
+  {% if let Some(token) = new_token %}
+  <div style="margin:1rem 0;padding:0.75rem 1rem;background:rgba(229,192,52,.1);border:1px solid rgba(229,192,52,.3);border-radius:8px">
+    <strong>New token (copy now — shown only once):</strong><br>
+    <code style="word-break:break-all;font-size:1.1em">{{ token }}</code>
+  </div>
+  {% endif %}
+
+  <form method="post" action="/settings/integrations/generate" style="display:flex;gap:0.5rem;align-items:flex-end;margin:1rem 0">
+    <input type="hidden" name="_csrf" value="{{ ctx.csrf_token }}">
+    <input type="hidden" name="provider" value="jellyfin">
+    <div style="flex:1;min-width:150px">
+      <label style="display:block;font-size:0.8em;opacity:.6;margin-bottom:0.25rem">Label (optional)</label>
+      <input type="text" name="label" placeholder="e.g. Living Room Server" style="width:100%;box-sizing:border-box">
+    </div>
+    <button type="submit" class="btn-small" style="height:2.25rem">Generate Token</button>
+  </form>
+</section>
+
+{% if !tokens.is_empty() %}
+<section>
+  <h2 style="font-size:1.1em">Active Tokens</h2>
+  <div class="diary">
+    {% for t in tokens %}
+    <article class="entry" style="padding:0.75rem 1rem">
+      <div class="entry-body">
+        <div class="entry-title" style="font-size:0.95em">
+          {{ t.provider }}{% if let Some(l) = &t.label %} — {{ l }}{% endif %}
+        </div>
+        <div class="feed-meta" style="margin-top:0.3rem">
+          <span class="feed-time">Created {{ t.created_at }}</span>
+          {% if let Some(used) = &t.last_used_at %}
+          <span class="feed-time" style="margin-left:0.5rem">Last used {{ used }}</span>
+          {% else %}
+          <span class="feed-time" style="margin-left:0.5rem;opacity:.5">Never used</span>
+          {% endif %}
+        </div>
+        <form method="post" action="/settings/integrations/{{ t.id }}/revoke" style="margin-top:0.5rem">
+          <input type="hidden" name="_csrf" value="{{ ctx.csrf_token }}">
+          <button type="submit" class="btn-small" style="color:#e57a7a;border-color:rgba(229,122,122,.3)">Revoke</button>
+        </form>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+{% endblock %}

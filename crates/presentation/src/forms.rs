@@ -261,6 +261,43 @@ pub fn to_diary_query(p: DiaryQueryParams) -> GetDiaryQuery {
     }
 }
 
+// ── Integrations forms ────────────────────────────────────────────────────────
+
+#[derive(Deserialize)]
+pub struct GenerateTokenForm {
+    pub provider: String,
+    #[serde(default)]
+    pub label: Option<String>,
+    #[serde(rename = "_csrf", default)]
+    pub csrf_token: String,
+}
+
+#[derive(Deserialize)]
+pub struct RevokeTokenForm {
+    #[serde(rename = "_csrf", default)]
+    pub csrf_token: String,
+}
+
+#[derive(Deserialize, Default)]
+pub struct IntegrationsQuery {
+    pub token: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct ConfirmWatchForm {
+    pub rating: u8,
+    #[serde(default)]
+    pub comment: Option<String>,
+    #[serde(rename = "_csrf", default)]
+    pub csrf_token: String,
+}
+
+#[derive(Deserialize)]
+pub struct DismissWatchForm {
+    #[serde(rename = "_csrf", default)]
+    pub csrf_token: String,
+}
+
 #[cfg(test)]
 #[path = "tests/forms.rs"]
 mod tests;

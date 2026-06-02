@@ -72,6 +72,11 @@ pub enum EventPayload {
         activity_json: String,
         signing_actor_id: String,
     },
+    WatchEventIngested {
+        user_id: String,
+        title: String,
+        source: String,
+    },
 }
 
 impl EventPayload {
@@ -90,6 +95,7 @@ impl EventPayload {
             EventPayload::FollowAccepted { .. } => "FollowAccepted",
             EventPayload::BackfillFollower { .. } => "BackfillFollower",
             EventPayload::FederationDeliveryRequested { .. } => "FederationDeliveryRequested",
+            EventPayload::WatchEventIngested { .. } => "WatchEventIngested",
         }
     }
 }
@@ -208,6 +214,15 @@ impl From<&DomainEvent> for EventPayload {
                 activity_json: activity_json.clone(),
                 signing_actor_id: signing_actor_id.to_string(),
             },
+            DomainEvent::WatchEventIngested {
+                user_id,
+                title,
+                source,
+            } => EventPayload::WatchEventIngested {
+                user_id: user_id.value().to_string(),
+                title: title.clone(),
+                source: source.clone(),
+            },
         }
     }
 }
@@ -323,6 +338,15 @@ impl TryFrom<EventPayload> for DomainEvent {
                 inbox_url,
                 activity_json,
                 signing_actor_id: parse_uuid(&signing_actor_id, "signing_actor_id")?,
+            }),
+            EventPayload::WatchEventIngested {
+                user_id,
+                title,
+                source,
+            } => Ok(DomainEvent::WatchEventIngested {
+                user_id: UserId::from_uuid(parse_uuid(&user_id, "user_id")?),
+                title,
+                source,
             }),
         }
     }

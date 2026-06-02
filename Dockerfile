@@ -18,6 +18,8 @@ COPY crates/adapters/image-storage/Cargo.toml     crates/adapters/image-storage/
 COPY crates/adapters/poster-sync/Cargo.toml       crates/adapters/poster-sync/Cargo.toml
 COPY crates/adapters/export/Cargo.toml            crates/adapters/export/Cargo.toml
 COPY crates/adapters/importer/Cargo.toml          crates/adapters/importer/Cargo.toml
+COPY crates/adapters/jellyfin/Cargo.toml          crates/adapters/jellyfin/Cargo.toml
+COPY crates/adapters/plex/Cargo.toml              crates/adapters/plex/Cargo.toml
 COPY crates/adapters/rss/Cargo.toml               crates/adapters/rss/Cargo.toml
 COPY crates/adapters/sqlite/Cargo.toml              crates/adapters/sqlite/Cargo.toml
 COPY crates/adapters/sqlite-federation/Cargo.toml   crates/adapters/sqlite-federation/Cargo.toml

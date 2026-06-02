@@ -488,6 +488,18 @@ impl crate::ports::HtmlRenderer for Panic {
     ) -> Result<String, String> {
         panic!()
     }
+    fn render_integrations_page(
+        &self,
+        _: application::ports::IntegrationsPageData,
+    ) -> Result<String, String> {
+        panic!()
+    }
+    fn render_watch_queue_page(
+        &self,
+        _: application::ports::WatchQueuePageData,
+    ) -> Result<String, String> {
+        panic!()
+    }
 }
 impl crate::ports::RssFeedRenderer for Panic {
     fn render_feed(&self, _: &[DiaryEntry], _: &str) -> Result<String, String> {
@@ -571,6 +583,77 @@ impl domain::ports::RemoteWatchlistRepository for Panic {
     }
 }
 
+#[async_trait::async_trait]
+impl domain::ports::WatchEventRepository for Panic {
+    async fn save(&self, _: &domain::models::WatchEvent) -> Result<(), DomainError> {
+        panic!()
+    }
+    async fn update_status(
+        &self,
+        _: &domain::value_objects::WatchEventId,
+        _: domain::models::WatchEventStatus,
+    ) -> Result<(), DomainError> {
+        panic!()
+    }
+    async fn list_pending(
+        &self,
+        _: &domain::value_objects::UserId,
+    ) -> Result<Vec<domain::models::WatchEvent>, DomainError> {
+        panic!()
+    }
+    async fn get_by_id(
+        &self,
+        _: &domain::value_objects::WatchEventId,
+    ) -> Result<Option<domain::models::WatchEvent>, DomainError> {
+        panic!()
+    }
+    async fn find_duplicate(
+        &self,
+        _: &domain::value_objects::UserId,
+        _: &str,
+        _: chrono::NaiveDateTime,
+    ) -> Result<bool, DomainError> {
+        panic!()
+    }
+    async fn delete_non_pending_older_than(
+        &self,
+        _: chrono::NaiveDateTime,
+    ) -> Result<u64, DomainError> {
+        panic!()
+    }
+}
+#[async_trait::async_trait]
+impl domain::ports::WebhookTokenRepository for Panic {
+    async fn save(&self, _: &domain::models::WebhookToken) -> Result<(), DomainError> {
+        panic!()
+    }
+    async fn find_by_token_hash(
+        &self,
+        _: &str,
+    ) -> Result<Option<domain::models::WebhookToken>, DomainError> {
+        panic!()
+    }
+    async fn list_by_user(
+        &self,
+        _: &domain::value_objects::UserId,
+    ) -> Result<Vec<domain::models::WebhookToken>, DomainError> {
+        panic!()
+    }
+    async fn delete(
+        &self,
+        _: &domain::value_objects::WebhookTokenId,
+        _: &domain::value_objects::UserId,
+    ) -> Result<(), DomainError> {
+        panic!()
+    }
+    async fn touch_last_used(
+        &self,
+        _: &domain::value_objects::WebhookTokenId,
+    ) -> Result<(), DomainError> {
+        panic!()
+    }
+}
+
 // --- Single state factory — only auth_service varies ---
 
 pub fn make_test_state(auth_service: Arc<dyn AuthService>) -> crate::state::AppState {
@@ -593,6 +676,8 @@ pub fn make_test_state(auth_service: Arc<dyn AuthService>) -> crate::state::AppS
             import_profile_repository: Arc::clone(&repo) as _,
             movie_profile_repository: Arc::clone(&repo) as _,
             watchlist_repository: Arc::clone(&repo) as _,
+            watch_event_repository: Arc::clone(&repo) as _,
+            webhook_token_repository: Arc::clone(&repo) as _,
             profile_fields_repository: Arc::clone(&repo) as _,
             #[cfg(feature = "federation")]
             remote_watchlist_repository: Arc::clone(&repo) as _,

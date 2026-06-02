@@ -411,6 +411,8 @@ async fn test_app() -> Router {
             import_profile_repository: Arc::new(PanicImportProfile),
             movie_profile_repository: Arc::new(PanicMovieProfile),
             watchlist_repository: Arc::new(PanicWatchlist),
+            watch_event_repository: Arc::new(domain::testing::PanicWatchEventRepository),
+            webhook_token_repository: Arc::new(domain::testing::PanicWebhookTokenRepository),
             profile_fields_repository: Arc::new(PanicProfileFields),
             #[cfg(feature = "federation")]
             remote_watchlist_repository: Arc::new(PanicRemoteWatchlist),

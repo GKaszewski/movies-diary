@@ -1,14 +1,14 @@
 use std::sync::Arc;
 
-#[cfg(feature = "federation")]
-use domain::ports::RemoteWatchlistRepository;
 use domain::ports::{
     AuthService, DiaryExporter, DiaryRepository, DocumentParser, EventPublisher, ImageStorage,
     ImportProfileRepository, ImportSessionRepository, MetadataClient, MovieProfileRepository,
     MovieRepository, PasswordHasher, PersonCommand, PersonQuery, PosterFetcherClient,
-    ReviewRepository, SearchCommand, SearchPort, SocialQueryPort, StatsRepository,
-    UserProfileFieldsRepository, UserRepository, WatchlistRepository,
+    ReviewRepository, SearchCommand, SearchPort, StatsRepository, UserProfileFieldsRepository,
+    UserRepository, WatchEventRepository, WatchlistRepository, WebhookTokenRepository,
 };
+#[cfg(feature = "federation")]
+use domain::ports::{RemoteWatchlistRepository, SocialQueryPort};
 
 use crate::config::AppConfig;
 
@@ -35,6 +35,8 @@ pub struct AppContext {
     pub search_port: Arc<dyn SearchPort>,
     pub search_command: Arc<dyn SearchCommand>,
     pub watchlist_repository: Arc<dyn WatchlistRepository>,
+    pub watch_event_repository: Arc<dyn WatchEventRepository>,
+    pub webhook_token_repository: Arc<dyn WebhookTokenRepository>,
     pub profile_fields_repository: Arc<dyn UserProfileFieldsRepository>,
     #[cfg(feature = "federation")]
     pub remote_watchlist_repository: Arc<dyn RemoteWatchlistRepository>,

@@ -1,6 +1,5 @@
 use super::super::persons::SqlitePersonAdapter;
 use domain::{
-    errors::DomainError,
     models::{ExternalPersonId, Person, PersonId},
     ports::{PersonCommand, PersonQuery},
 };

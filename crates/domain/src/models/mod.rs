@@ -18,6 +18,11 @@ pub mod watchlist;
 pub use watchlist::{WatchlistEntry, WatchlistWithMovie};
 pub mod remote_watchlist;
 pub use remote_watchlist::RemoteWatchlistEntry;
+pub mod watch_event;
+pub use watch_event::{
+    ParsedPlaybackEvent, PersistedWatchEvent, WatchEvent, WatchEventSource, WatchEventStatus,
+    WebhookToken,
+};
 
 pub use import::{
     AnnotatedRow, DomainField, FieldMapping, FileFormat, ImportError, ImportRow, ParsedFile,
