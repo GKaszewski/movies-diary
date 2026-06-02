@@ -3,7 +3,7 @@ use crate::wrapup::{compute, queries::ComputeWrapUpQuery};
 use domain::errors::DomainError;
 use domain::events::DomainEvent;
 use domain::models::wrapup::{DateRange, WrapUpScope, WrapUpStatus};
-use domain::ports::{VideoRenderAssets, VideoRenderConfig};
+use domain::ports::VideoRenderAssets;
 use domain::value_objects::WrapUpId;
 
 pub async fn execute(
@@ -55,21 +55,11 @@ pub async fn execute(
                     .map(|p| format!("cast{p}"))
                     .collect();
                 let cast_images = resolve_images(ctx, &cast_keys, "cast").await;
-                let wc = &ctx.config.wrapup;
-                let config = VideoRenderConfig {
-                    slide_duration_secs: 4,
-                    transition_duration_secs: 0.8,
-                    resolution: (1080, 1920),
-                    ffmpeg_path: wc.ffmpeg_path.clone(),
-                    font_path: wc.font_path.clone(),
-                    logo_path: wc.logo_path.clone(),
-                    bg_dir: wc.bg_dir.clone(),
-                };
                 let assets = VideoRenderAssets {
                     poster_images,
                     cast_images,
                 };
-                match renderer.render(&report, assets, &config).await {
+                match renderer.render(&report, assets).await {
                     Ok(video_bytes) => {
                         let video_key = format!("wrapups/{}/video.mp4", wrapup_id.value());
                         if let Err(e) = ctx

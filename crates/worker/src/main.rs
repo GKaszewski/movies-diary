@@ -105,15 +105,32 @@ async fn main() -> anyhow::Result<()> {
             diary_exporter: Arc::new(ExportAdapter) as Arc<dyn DiaryExporter>,
             document_parser: Arc::new(ImporterDocumentParser) as Arc<dyn DocumentParser>,
             video_renderer: {
-                let ffmpeg = &app_config.wrapup.ffmpeg_path;
+                let wc = &app_config.wrapup;
+                let ffmpeg = &wc.ffmpeg_path;
                 if std::process::Command::new(ffmpeg)
                     .arg("-version")
                     .output()
                     .is_ok()
                 {
-                    tracing::info!("wrapup video renderer enabled (ffmpeg={ffmpeg})");
-                    Some(Arc::new(wrapup_renderer::FfmpegWrapUpRenderer::new())
-                        as Arc<dyn domain::ports::WrapUpVideoRenderer>)
+                    let renderer_cfg = wrapup_renderer::RendererConfig {
+                        slide_duration_secs: 4,
+                        transition_duration_secs: 0.8,
+                        resolution: (1080, 1920),
+                        ffmpeg_path: ffmpeg.clone(),
+                        font_path: wc.font_path.clone(),
+                        logo_path: wc.logo_path.clone(),
+                        bg_dir: wc.bg_dir.clone(),
+                    };
+                    match wrapup_renderer::FfmpegWrapUpRenderer::new(renderer_cfg) {
+                        Ok(r) => {
+                            tracing::info!("wrapup video renderer enabled (ffmpeg={ffmpeg})");
+                            Some(Arc::new(r) as Arc<dyn domain::ports::WrapUpVideoRenderer>)
+                        }
+                        Err(e) => {
+                            tracing::warn!("wrapup video renderer init failed: {e}");
+                            None
+                        }
+                    }
                 } else {
                     tracing::info!("wrapup video renderer disabled (ffmpeg not found)");
                     None

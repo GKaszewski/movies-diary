@@ -1,26 +1,24 @@
 use domain::errors::DomainError;
-use domain::ports::VideoRenderConfig;
 use tokio::process::Command;
 
 pub async fn stitch_slides(
     slides: &[Vec<u8>],
-    config: &VideoRenderConfig,
+    ffmpeg_path: &str,
+    slide_duration_secs: u32,
+    resolution: (u32, u32),
 ) -> Result<Vec<u8>, DomainError> {
     let dir = tempfile::tempdir().map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
 
-    // Write slide PNGs
     for (i, png) in slides.iter().enumerate() {
         let path = dir.path().join(format!("slide_{:04}.png", i));
         std::fs::write(&path, png).map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
     }
 
     let output_path = dir.path().join("output.mp4");
+    let framerate = format!("1/{}", slide_duration_secs);
+    let (w, h) = resolution;
 
-    // -framerate 1/N makes each image last N seconds
-    let framerate = format!("1/{}", config.slide_duration_secs);
-    let (w, h) = config.resolution;
-
-    let status = Command::new(&config.ffmpeg_path)
+    let status = Command::new(ffmpeg_path)
         .args([
             "-y",
             "-framerate",

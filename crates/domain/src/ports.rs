@@ -534,16 +534,6 @@ pub trait WrapUpStatsQuery: Send + Sync {
 
 // ── Video renderer ──────────────────────────────────────────────────────────
 
-pub struct VideoRenderConfig {
-    pub slide_duration_secs: u32,
-    pub transition_duration_secs: f32,
-    pub resolution: (u32, u32),
-    pub ffmpeg_path: String,
-    pub font_path: Option<String>,
-    pub logo_path: Option<String>,
-    pub bg_dir: Option<String>,
-}
-
 pub struct VideoRenderAssets {
     pub poster_images: Vec<(String, Vec<u8>)>,
     pub cast_images: Vec<(String, Vec<u8>)>,
@@ -555,6 +545,5 @@ pub trait WrapUpVideoRenderer: Send + Sync {
         &self,
         report: &WrapUpReport,
         assets: VideoRenderAssets,
-        config: &VideoRenderConfig,
     ) -> Result<Vec<u8>, DomainError>;
 }
