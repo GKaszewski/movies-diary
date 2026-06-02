@@ -6,14 +6,12 @@ pub async fn stitch_slides(
     slides: &[Vec<u8>],
     config: &VideoRenderConfig,
 ) -> Result<Vec<u8>, DomainError> {
-    let dir =
-        tempfile::tempdir().map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+    let dir = tempfile::tempdir().map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
 
     // Write slide PNGs
     for (i, png) in slides.iter().enumerate() {
         let path = dir.path().join(format!("slide_{:04}.png", i));
-        std::fs::write(&path, png)
-            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        std::fs::write(&path, png).map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
     }
 
     let output_path = dir.path().join("output.mp4");

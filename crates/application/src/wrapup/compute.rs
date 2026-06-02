@@ -22,7 +22,11 @@ pub async fn execute(
     Ok(build_report(query.scope, query.date_range, &rows))
 }
 
-fn build_report(scope: WrapUpScope, date_range: DateRange, rows: &[WrapUpMovieRow]) -> WrapUpReport {
+fn build_report(
+    scope: WrapUpScope,
+    date_range: DateRange,
+    rows: &[WrapUpMovieRow],
+) -> WrapUpReport {
     let total_movies = rows.len() as u32;
 
     let total_watch_time_minutes: u32 = rows.iter().filter_map(|r| r.runtime_minutes).sum();
@@ -179,7 +183,10 @@ fn compute_busiest_day(rows: &[WrapUpMovieRow]) -> Option<String> {
 }
 
 fn compute_runtime_extremes(rows: &[WrapUpMovieRow]) -> (Option<MovieRef>, Option<MovieRef>) {
-    let with_runtime: Vec<_> = rows.iter().filter(|r| r.runtime_minutes.is_some()).collect();
+    let with_runtime: Vec<_> = rows
+        .iter()
+        .filter(|r| r.runtime_minutes.is_some())
+        .collect();
     let longest = with_runtime
         .iter()
         .max_by_key(|r| r.runtime_minutes.unwrap_or(0))
@@ -192,22 +199,20 @@ fn compute_runtime_extremes(rows: &[WrapUpMovieRow]) -> (Option<MovieRef>, Optio
 }
 
 fn compute_rating_extremes(rows: &[WrapUpMovieRow]) -> (Option<MovieRef>, Option<MovieRef>) {
-    let highest = rows.iter().max_by_key(|r| r.rating).map(|r| movie_ref(r));
-    let lowest = rows.iter().min_by_key(|r| r.rating).map(|r| movie_ref(r));
+    let highest = rows.iter().max_by_key(|r| r.rating).map(movie_ref);
+    let lowest = rows.iter().min_by_key(|r| r.rating).map(movie_ref);
     (highest, lowest)
 }
 
-fn compute_chronological_extremes(
-    rows: &[WrapUpMovieRow],
-) -> (Option<MovieRef>, Option<MovieRef>) {
+fn compute_chronological_extremes(rows: &[WrapUpMovieRow]) -> (Option<MovieRef>, Option<MovieRef>) {
     let first = rows
         .iter()
         .min_by_key(|r| r.watched_at)
-        .map(|r| movie_ref(r));
+        .map(movie_ref);
     let last = rows
         .iter()
         .max_by_key(|r| r.watched_at)
-        .map(|r| movie_ref(r));
+        .map(movie_ref);
     (first, last)
 }
 
@@ -215,11 +220,11 @@ fn compute_year_extremes(rows: &[WrapUpMovieRow]) -> (Option<MovieRef>, Option<M
     let oldest = rows
         .iter()
         .min_by_key(|r| r.release_year)
-        .map(|r| movie_ref(r));
+        .map(movie_ref);
     let newest = rows
         .iter()
         .max_by_key(|r| r.release_year)
-        .map(|r| movie_ref(r));
+        .map(movie_ref);
     (oldest, newest)
 }
 
@@ -246,7 +251,11 @@ fn compute_director_stats(rows: &[WrapUpMovieRow]) -> (Vec<PersonStat>, u32) {
             }
         })
         .collect();
-    stats.sort_by(|a, b| b.count.cmp(&a.count).then(b.avg_rating.total_cmp(&a.avg_rating)));
+    stats.sort_by(|a, b| {
+        b.count
+            .cmp(&a.count)
+            .then(b.avg_rating.total_cmp(&a.avg_rating))
+    });
     stats.truncate(5);
     (stats, diversity)
 }
@@ -257,10 +266,7 @@ fn compute_actor_stats(rows: &[WrapUpMovieRow]) -> (Vec<PersonStat>, u32, Vec<St
     for r in rows {
         for (i, (name, billing)) in r.cast_names.iter().enumerate() {
             if *billing <= 3 {
-                actor_movies
-                    .entry(name.clone())
-                    .or_default()
-                    .push(r.rating);
+                actor_movies.entry(name.clone()).or_default().push(r.rating);
                 if let Some(path) = r.cast_profile_paths.get(i) {
                     actor_profiles
                         .entry(name.clone())
@@ -282,7 +288,11 @@ fn compute_actor_stats(rows: &[WrapUpMovieRow]) -> (Vec<PersonStat>, u32, Vec<St
             }
         })
         .collect();
-    stats.sort_by(|a, b| b.count.cmp(&a.count).then(b.avg_rating.total_cmp(&a.avg_rating)));
+    stats.sort_by(|a, b| {
+        b.count
+            .cmp(&a.count)
+            .then(b.avg_rating.total_cmp(&a.avg_rating))
+    });
     stats.truncate(5);
     let profile_paths: Vec<String> = stats
         .iter()
@@ -316,7 +326,7 @@ fn compute_genre_stats(
             }
         })
         .collect();
-    stats.sort_by(|a, b| b.count.cmp(&a.count));
+    stats.sort_by_key(|s| std::cmp::Reverse(s.count));
     let highest = stats
         .iter()
         .max_by(|a, b| a.avg_rating.total_cmp(&b.avg_rating))
@@ -341,7 +351,7 @@ fn compute_keyword_stats(rows: &[WrapUpMovieRow]) -> Vec<KeywordStat> {
         .into_iter()
         .map(|(keyword, count)| KeywordStat { keyword, count })
         .collect();
-    stats.sort_by(|a, b| b.count.cmp(&a.count));
+    stats.sort_by_key(|s| std::cmp::Reverse(s.count));
     stats.truncate(20);
     stats
 }
@@ -371,7 +381,7 @@ fn compute_language_stats(rows: &[WrapUpMovieRow]) -> Vec<LangStat> {
         .into_iter()
         .map(|(language, count)| LangStat { language, count })
         .collect();
-    stats.sort_by(|a, b| b.count.cmp(&a.count));
+    stats.sort_by_key(|s| std::cmp::Reverse(s.count));
     stats
 }
 

@@ -10,17 +10,11 @@ pub fn render_genre_chart(
     let mut buf = vec![0u8; (width * height * 3) as usize];
 
     {
-        let root =
-            BitMapBackend::with_buffer(&mut buf, (width, height)).into_drawing_area();
+        let root = BitMapBackend::with_buffer(&mut buf, (width, height)).into_drawing_area();
         root.fill(&RGBColor(26, 26, 36))
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
 
-        let max_count = report
-            .top_genres
-            .iter()
-            .map(|g| g.count)
-            .max()
-            .unwrap_or(1);
+        let max_count = report.top_genres.iter().map(|g| g.count).max().unwrap_or(1);
 
         let mut chart = ChartBuilder::on(&root)
             .margin(40)
@@ -36,7 +30,7 @@ pub fn render_genre_chart(
             .configure_mesh()
             .disable_mesh()
             .label_style(("sans-serif", 14, &WHITE))
-            .axis_style(&RGBColor(100, 100, 100))
+            .axis_style(RGBColor(100, 100, 100))
             .draw()
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
 

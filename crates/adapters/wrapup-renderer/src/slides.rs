@@ -144,7 +144,13 @@ impl SlideRenderer {
         }
 
         // rating distribution bars
-        let max_count = report.rating_distribution.iter().copied().max().unwrap_or(1).max(1);
+        let max_count = report
+            .rating_distribution
+            .iter()
+            .copied()
+            .max()
+            .unwrap_or(1)
+            .max(1);
         let bar_area_top = (h / 2) as i32;
         let bar_h = 36u32;
         let bar_gap = 16u32;
@@ -165,11 +171,7 @@ impl SlideRenderer {
             // filled bar
             let fill_w = ((count as f32 / max_count as f32) * max_bar_w as f32) as u32;
             if fill_w > 0 {
-                draw_filled_rect_mut(
-                    &mut img,
-                    Rect::at(margin_x, y).of_size(fill_w, bar_h),
-                    GOLD,
-                );
+                draw_filled_rect_mut(&mut img, Rect::at(margin_x, y).of_size(fill_w, bar_h), GOLD);
             }
             // count label
             let count_s = count.to_string();
@@ -336,11 +338,8 @@ fn fill(w: u32, h: u32) -> RgbaImage {
 
 fn to_png(img: &RgbaImage) -> Result<Vec<u8>, DomainError> {
     let mut buf = Vec::new();
-    img.write_to(
-        &mut std::io::Cursor::new(&mut buf),
-        image::ImageFormat::Png,
-    )
-    .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+    img.write_to(&mut std::io::Cursor::new(&mut buf), image::ImageFormat::Png)
+        .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
     Ok(buf)
 }
 
@@ -355,11 +354,11 @@ fn load_system_font() -> Result<FontArc, DomainError> {
         "/System/Library/Fonts/Helvetica.ttc",
     ];
     for path in &candidates {
-        if let Ok(bytes) = std::fs::read(path) {
-            if let Ok(font) = FontArc::try_from_vec(bytes) {
-                tracing::info!("loaded system font: {path}");
-                return Ok(font);
-            }
+        if let Ok(bytes) = std::fs::read(path)
+            && let Ok(font) = FontArc::try_from_vec(bytes)
+        {
+            tracing::info!("loaded system font: {path}");
+            return Ok(font);
         }
     }
     Err(DomainError::InfrastructureError(

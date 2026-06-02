@@ -7,6 +7,7 @@ use domain::errors::DomainError;
 use domain::models::wrapup::WrapUpReport;
 use domain::ports::{VideoRenderConfig, WrapUpVideoRenderer};
 
+#[derive(Default)]
 pub struct FfmpegWrapUpRenderer;
 
 impl FfmpegWrapUpRenderer {
@@ -25,10 +26,8 @@ impl WrapUpVideoRenderer for FfmpegWrapUpRenderer {
     ) -> Result<Vec<u8>, DomainError> {
         let (width, height) = config.resolution;
 
-        let renderer = slides::SlideRenderer::new(
-            config.font_path.as_deref(),
-            config.logo_path.as_deref(),
-        )?;
+        let renderer =
+            slides::SlideRenderer::new(config.font_path.as_deref(), config.logo_path.as_deref())?;
 
         // 1. Generate slide images
         let mut slide_pngs = Vec::new();

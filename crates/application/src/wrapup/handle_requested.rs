@@ -34,7 +34,10 @@ pub async fn execute(
         Ok(report) => {
             let json = serde_json::to_string(&report)
                 .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
-            ctx.repos.wrapup_repo.set_complete(&wrapup_id, &json).await?;
+            ctx.repos
+                .wrapup_repo
+                .set_complete(&wrapup_id, &json)
+                .await?;
 
             // Optionally render video (non-fatal)
             if let Some(ref renderer) = ctx.services.video_renderer {
@@ -51,7 +54,12 @@ pub async fn execute(
                 match renderer.render(&report, poster_images, &config).await {
                     Ok(video_bytes) => {
                         let video_key = format!("wrapups/{}/video.mp4", wrapup_id.value());
-                        if let Err(e) = ctx.services.image_storage.store(&video_key, &video_bytes).await {
+                        if let Err(e) = ctx
+                            .services
+                            .image_storage
+                            .store(&video_key, &video_bytes)
+                            .await
+                        {
                             tracing::warn!("failed to store wrapup video: {e}");
                         }
                     }
@@ -80,9 +88,8 @@ pub async fn execute(
 async fn resolve_poster_images(ctx: &AppContext, report: &WrapUpReport) -> Vec<(String, Vec<u8>)> {
     let mut images = Vec::new();
     for path in report.poster_paths.iter().take(20) {
-        match ctx.services.image_storage.get(path).await {
-            Ok(bytes) => images.push((path.clone(), bytes)),
-            Err(_) => {}
+        if let Ok(bytes) = ctx.services.image_storage.get(path).await {
+            images.push((path.clone(), bytes));
         }
     }
     images
