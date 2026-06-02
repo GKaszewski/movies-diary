@@ -2,7 +2,7 @@ use chrono::NaiveDateTime;
 use domain::{
     errors::DomainError,
     events::DomainEvent,
-    value_objects::{ExternalMetadataId, MovieId, PosterPath, Rating, ReviewId, UserId},
+    value_objects::{ExternalMetadataId, MovieId, PosterPath, Rating, ReviewId, UserId, WrapUpId},
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -77,6 +77,15 @@ pub enum EventPayload {
         title: String,
         source: String,
     },
+    WrapUpRequested {
+        wrapup_id: String,
+        user_id: Option<String>,
+        start_date: String,
+        end_date: String,
+    },
+    WrapUpCompleted {
+        wrapup_id: String,
+    },
 }
 
 impl EventPayload {
@@ -96,6 +105,8 @@ impl EventPayload {
             EventPayload::BackfillFollower { .. } => "BackfillFollower",
             EventPayload::FederationDeliveryRequested { .. } => "FederationDeliveryRequested",
             EventPayload::WatchEventIngested { .. } => "WatchEventIngested",
+            EventPayload::WrapUpRequested { .. } => "WrapUpRequested",
+            EventPayload::WrapUpCompleted { .. } => "WrapUpCompleted",
         }
     }
 }
@@ -223,6 +234,20 @@ impl From<&DomainEvent> for EventPayload {
                 title: title.clone(),
                 source: source.clone(),
             },
+            DomainEvent::WrapUpRequested {
+                wrapup_id,
+                user_id,
+                start_date,
+                end_date,
+            } => EventPayload::WrapUpRequested {
+                wrapup_id: wrapup_id.value().to_string(),
+                user_id: user_id.as_ref().map(|u| u.value().to_string()),
+                start_date: start_date.to_string(),
+                end_date: end_date.to_string(),
+            },
+            DomainEvent::WrapUpCompleted { wrapup_id } => EventPayload::WrapUpCompleted {
+                wrapup_id: wrapup_id.value().to_string(),
+            },
         }
     }
 }
@@ -348,6 +373,33 @@ impl TryFrom<EventPayload> for DomainEvent {
                 title,
                 source,
             }),
+            EventPayload::WrapUpRequested {
+                wrapup_id,
+                user_id,
+                start_date,
+                end_date,
+            } => {
+                let wid = parse_uuid(&wrapup_id, "wrapup_id")?;
+                let uid = user_id
+                    .map(|s| parse_uuid(&s, "user_id"))
+                    .transpose()?;
+                let sd = chrono::NaiveDate::parse_from_str(&start_date, "%Y-%m-%d")
+                    .map_err(|e| DomainError::ValidationError(e.to_string()))?;
+                let ed = chrono::NaiveDate::parse_from_str(&end_date, "%Y-%m-%d")
+                    .map_err(|e| DomainError::ValidationError(e.to_string()))?;
+                Ok(DomainEvent::WrapUpRequested {
+                    wrapup_id: WrapUpId::from_uuid(wid),
+                    user_id: uid.map(UserId::from_uuid),
+                    start_date: sd,
+                    end_date: ed,
+                })
+            }
+            EventPayload::WrapUpCompleted { wrapup_id } => {
+                let wid = parse_uuid(&wrapup_id, "wrapup_id")?;
+                Ok(DomainEvent::WrapUpCompleted {
+                    wrapup_id: WrapUpId::from_uuid(wid),
+                })
+            }
         }
     }
 }

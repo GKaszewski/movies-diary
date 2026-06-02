@@ -3,7 +3,7 @@ use chrono::NaiveDateTime;
 
 use crate::{
     errors::DomainError,
-    value_objects::{ExternalMetadataId, MovieId, PosterPath, Rating, ReviewId, UserId},
+    value_objects::{ExternalMetadataId, MovieId, PosterPath, Rating, ReviewId, UserId, WrapUpId},
 };
 
 #[derive(Clone, Debug)]
@@ -74,6 +74,15 @@ pub enum DomainEvent {
         user_id: UserId,
         title: String,
         source: String,
+    },
+    WrapUpRequested {
+        wrapup_id: WrapUpId,
+        user_id: Option<UserId>,
+        start_date: chrono::NaiveDate,
+        end_date: chrono::NaiveDate,
+    },
+    WrapUpCompleted {
+        wrapup_id: WrapUpId,
     },
 }
 
