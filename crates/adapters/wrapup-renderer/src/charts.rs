@@ -18,8 +18,6 @@ pub fn render_genre_chart(
 
         let mut chart = ChartBuilder::on(&root)
             .margin(40)
-            .x_label_area_size(60)
-            .y_label_area_size(60)
             .build_cartesian_2d(
                 0u32..max_count + 1,
                 (0..report.top_genres.len() as i32).into_segmented(),
@@ -29,8 +27,8 @@ pub fn render_genre_chart(
         chart
             .configure_mesh()
             .disable_mesh()
-            .label_style(("sans-serif", 14, &WHITE))
-            .axis_style(RGBColor(100, 100, 100))
+            .disable_x_axis()
+            .disable_y_axis()
             .draw()
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
 
@@ -51,7 +49,6 @@ pub fn render_genre_chart(
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
     }
 
-    // Convert raw RGB to PNG via image crate
     let img = image::RgbImage::from_raw(width, height, buf)
         .ok_or_else(|| DomainError::InfrastructureError("invalid image buffer".into()))?;
     let rgba = image::DynamicImage::ImageRgb8(img).to_rgba8();
