@@ -57,7 +57,7 @@ adapters/
   postgres-event-queue — durable polling event queue backed by PostgreSQL
   nats                 — NATS Core / JetStream event publisher and consumer
   event-publisher      — in-memory event channel (used in tests)
-  wrapup-renderer      — annual wrap-up video generator (slide compositing via image crate, charts via plotters, stitching via ffmpeg)
+  wrapup-renderer      — annual wrap-up video generator (slide compositing via image/ab_glyph, stitching via ffmpeg)
   activitypub          — ActivityPub federation adapter (follow, inbox/outbox, actor); delegates to k-ap for protocol internals
   sqlite-search        — SQLite FTS5 implementation of SearchPort + SearchCommand
   postgres-search      — PostgreSQL tsvector + GIN implementation of SearchPort + SearchCommand
@@ -114,6 +114,7 @@ IMAGE_STORAGE_PATH=./images
 # Annual Wrap-Up video (optional — requires ffmpeg)
 # WRAPUP_FONT_PATH=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf
 # WRAPUP_LOGO_PATH=./static/logo.webp   # watermark on video slides
+# WRAPUP_BG_DIR=./static/wrapup-backgrounds   # slide background images (jpg/png/webp)
 # FFMPEG_PATH=ffmpeg
 # WRAPUP_MAX_CONCURRENT=2               # max parallel video renders
 
@@ -258,7 +259,7 @@ Omit `user_id` for a global instance wrap-up. The worker computes stats in the b
 
 **Auto-generate:** The worker runs a daily job in January that generates wrap-ups for all users with reviews in the previous year.
 
-**Video:** Requires `ffmpeg` installed. Set `WRAPUP_FONT_PATH` and `WRAPUP_LOGO_PATH` for branded slides. Download via `GET /api/v1/wrapups/{id}/video`.
+**Video:** Requires `ffmpeg` installed. Set `WRAPUP_FONT_PATH` and `WRAPUP_LOGO_PATH` for branded slides. Set `WRAPUP_BG_DIR` to a directory of background images for frutiger aero-style glass-panel slides. Cast profile photos and movie posters are embedded automatically. Download via `GET /api/v1/wrapups/{id}/video`.
 
 ## License
 
