@@ -145,7 +145,6 @@ impl SlideRenderer {
 
     /// Draw a semi-transparent dark glass panel.
     fn draw_glass_panel(&self, canvas: &mut RgbaImage, x: i32, y: i32, pw: u32, ph: u32) {
-        // clamp to canvas bounds
         let x0 = x.max(0) as u32;
         let y0 = y.max(0) as u32;
         let x1 = (x as u32 + pw).min(canvas.width());
@@ -153,11 +152,17 @@ impl SlideRenderer {
         if x1 <= x0 || y1 <= y0 {
             return;
         }
-        draw_filled_rect_mut(
-            canvas,
-            Rect::at(x0 as i32, y0 as i32).of_size(x1 - x0, y1 - y0),
-            GLASS,
-        );
+        let alpha = GLASS[3] as f32 / 255.0;
+        let inv = 1.0 - alpha;
+        for py in y0..y1 {
+            for px in x0..x1 {
+                let bg = canvas.get_pixel(px, py);
+                let r = (GLASS[0] as f32 * alpha + bg[0] as f32 * inv) as u8;
+                let g = (GLASS[1] as f32 * alpha + bg[1] as f32 * inv) as u8;
+                let b = (GLASS[2] as f32 * alpha + bg[2] as f32 * inv) as u8;
+                canvas.put_pixel(px, py, Rgba([r, g, b, 255]));
+            }
+        }
     }
 
     fn stamp_logo(&self, canvas: &mut RgbaImage) {
