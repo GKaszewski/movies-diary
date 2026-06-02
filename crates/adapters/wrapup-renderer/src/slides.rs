@@ -13,7 +13,8 @@ fn decode_image(bytes: &[u8]) -> Result<DynamicImage, String> {
         std::fs::write(&input, bytes).map_err(|e| e.to_string())?;
         let status = std::process::Command::new("ffmpeg")
             .args([
-                "-y", "-i",
+                "-y",
+                "-i",
                 &input.to_string_lossy(),
                 &output.to_string_lossy(),
             ])
@@ -78,20 +79,20 @@ impl SlideRenderer {
         };
 
         let mut backgrounds = Vec::new();
-        if let Some(dir) = bg_dir {
-            if let Ok(entries) = std::fs::read_dir(dir) {
-                for entry in entries.flatten() {
-                    let path = entry.path();
-                    let ext = path
-                        .extension()
-                        .and_then(|e| e.to_str())
-                        .unwrap_or("")
-                        .to_lowercase();
-                    if matches!(ext.as_str(), "jpg" | "jpeg" | "png" | "webp") {
-                        match image::open(&path) {
-                            Ok(img) => backgrounds.push(img.to_rgba8()),
-                            Err(e) => tracing::warn!("bg load {}: {e}", path.display()),
-                        }
+        if let Some(dir) = bg_dir
+            && let Ok(entries) = std::fs::read_dir(dir)
+        {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                let ext = path
+                    .extension()
+                    .and_then(|e| e.to_str())
+                    .unwrap_or("")
+                    .to_lowercase();
+                if matches!(ext.as_str(), "jpg" | "jpeg" | "png" | "webp") {
+                    match image::open(&path) {
+                        Ok(img) => backgrounds.push(img.to_rgba8()),
+                        Err(e) => tracing::warn!("bg load {}: {e}", path.display()),
                     }
                 }
             }
@@ -208,14 +209,7 @@ impl SlideRenderer {
     }
 
     /// Draw a small thumbnail from raw image bytes, resized to `size x size`.
-    fn draw_thumbnail(
-        canvas: &mut RgbaImage,
-        bytes: &[u8],
-        x: i64,
-        y: i64,
-        tw: u32,
-        th: u32,
-    ) {
+    fn draw_thumbnail(canvas: &mut RgbaImage, bytes: &[u8], x: i64, y: i64, tw: u32, th: u32) {
         if let Ok(img) = decode_image(bytes) {
             let thumb = img.resize_exact(tw, th, image::imageops::FilterType::Triangle);
             image::imageops::overlay(canvas, &thumb.to_rgba8(), x, y);
@@ -223,10 +217,7 @@ impl SlideRenderer {
     }
 
     /// Find cast photo bytes matching `name` (case-insensitive substring).
-    fn find_cast_photo<'a>(
-        name: &str,
-        cast_images: &'a [(String, Vec<u8>)],
-    ) -> Option<&'a [u8]> {
+    fn find_cast_photo<'a>(name: &str, cast_images: &'a [(String, Vec<u8>)]) -> Option<&'a [u8]> {
         let lower = name.to_lowercase();
         cast_images
             .iter()
@@ -406,7 +397,11 @@ impl SlideRenderer {
 
         let thumb_size = 60u32;
         // offset text right when cast photos present
-        let text_offset = if cast_images.is_empty() { 60 } else { thumb_size as i32 + 20 };
+        let text_offset = if cast_images.is_empty() {
+            60
+        } else {
+            thumb_size as i32 + 20
+        };
 
         for (i, d) in report.top_directors.iter().take(5).enumerate() {
             let y = start_y + (i as i32) * row_h;
@@ -425,23 +420,9 @@ impl SlideRenderer {
 
             let rank = format!("{}.", i + 1);
             self.draw_left(&mut img, &rank, margin, y + 10, 36.0, GOLD);
-            self.draw_left(
-                &mut img,
-                &d.name,
-                margin + text_offset,
-                y + 10,
-                36.0,
-                WHITE,
-            );
+            self.draw_left(&mut img, &d.name, margin + text_offset, y + 10, 36.0, WHITE);
             let detail = format!("{} films  avg {:.1}\u{2605}", d.count, d.avg_rating);
-            self.draw_left(
-                &mut img,
-                &detail,
-                margin + text_offset,
-                y + 54,
-                24.0,
-                DIM,
-            );
+            self.draw_left(&mut img, &detail, margin + text_offset, y + 54, 24.0, DIM);
         }
 
         self.stamp_logo(&mut img);
@@ -472,7 +453,11 @@ impl SlideRenderer {
         self.draw_centered(&mut img, "Top Actors", (h / 8) as i32, 56.0, GOLD);
 
         let thumb_size = 60u32;
-        let text_offset = if cast_images.is_empty() { 60 } else { thumb_size as i32 + 20 };
+        let text_offset = if cast_images.is_empty() {
+            60
+        } else {
+            thumb_size as i32 + 20
+        };
 
         for (i, a) in report.top_actors.iter().take(5).enumerate() {
             let y = start_y + (i as i32) * row_h;
@@ -490,23 +475,9 @@ impl SlideRenderer {
 
             let rank = format!("{}.", i + 1);
             self.draw_left(&mut img, &rank, margin, y + 10, 36.0, GOLD);
-            self.draw_left(
-                &mut img,
-                &a.name,
-                margin + text_offset,
-                y + 10,
-                36.0,
-                WHITE,
-            );
+            self.draw_left(&mut img, &a.name, margin + text_offset, y + 10, 36.0, WHITE);
             let detail = format!("{} films  avg {:.1}\u{2605}", a.count, a.avg_rating);
-            self.draw_left(
-                &mut img,
-                &detail,
-                margin + text_offset,
-                y + 54,
-                24.0,
-                DIM,
-            );
+            self.draw_left(&mut img, &detail, margin + text_offset, y + 54, 24.0, DIM);
         }
 
         self.stamp_logo(&mut img);
@@ -539,7 +510,12 @@ impl SlideRenderer {
         self.draw_centered(&mut img, &detail, (h / 8) as i32 + 64, 28.0, DIM);
 
         let bar_area_w = (w as i32 - margin * 2 - 200) as u32;
-        let max_count = report.top_genres.first().map(|g| g.count).unwrap_or(1).max(1);
+        let max_count = report
+            .top_genres
+            .first()
+            .map(|g| g.count)
+            .unwrap_or(1)
+            .max(1);
 
         for (i, g) in report.top_genres.iter().take(8).enumerate() {
             let y = start_y + (i as i32) * 80;
@@ -555,11 +531,7 @@ impl SlideRenderer {
                 BAR_BG,
             );
             if bar_w > 0 {
-                draw_filled_rect_mut(
-                    &mut img,
-                    Rect::at(margin, bar_y).of_size(bar_w, 12),
-                    GOLD,
-                );
+                draw_filled_rect_mut(&mut img, Rect::at(margin, bar_y).of_size(bar_w, 12), GOLD);
             }
         }
 
@@ -649,23 +621,9 @@ impl SlideRenderer {
                 } else {
                     m.title.clone()
                 };
-                self.draw_left(
-                    &mut img,
-                    &title,
-                    x + text_x_offset,
-                    y + 36,
-                    26.0,
-                    WHITE,
-                );
+                self.draw_left(&mut img, &title, x + text_x_offset, y + 36, 26.0, WHITE);
                 let sub = format!("({})", m.year);
-                self.draw_left(
-                    &mut img,
-                    &sub,
-                    x + text_x_offset,
-                    y + 68,
-                    22.0,
-                    DIM,
-                );
+                self.draw_left(&mut img, &sub, x + text_x_offset, y + 68, 22.0, DIM);
             } else {
                 self.draw_left(&mut img, "-", x, y + 36, 26.0, DIM);
             }
@@ -702,7 +660,7 @@ impl SlideRenderer {
             .min_by_key(|&c| {
                 let tw = w / c;
                 let th = (tw as f32 / poster_ratio) as u32;
-                let rows_needed = (h + th - 1) / th;
+                let rows_needed = h.div_ceil(th);
                 let total = rows_needed * c;
                 // prefer filling screen with fewer leftover pixels
                 let waste_y = (rows_needed * th).saturating_sub(h);
@@ -713,7 +671,7 @@ impl SlideRenderer {
 
         let thumb_w = w / cols;
         let thumb_h = (thumb_w as f32 / poster_ratio) as u32;
-        let total_rows = (h + thumb_h - 1) / thumb_h;
+        let total_rows = h.div_ceil(thumb_h);
         let total_cells = (total_rows * cols) as usize;
 
         for i in 0..total_cells {

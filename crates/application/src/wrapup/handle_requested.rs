@@ -13,11 +13,11 @@ pub async fn execute(
     start_date: chrono::NaiveDate,
     end_date: chrono::NaiveDate,
 ) -> Result<(), DomainError> {
-    if let Ok(Some(rec)) = ctx.repos.wrapup_repo.get_by_id(&wrapup_id).await {
-        if rec.status == WrapUpStatus::Ready || rec.status == WrapUpStatus::Generating {
-            tracing::debug!("wrapup {} already {}, skipping", wrapup_id.value(), if rec.status == WrapUpStatus::Ready { "ready" } else { "generating" });
-            return Ok(());
-        }
+    if let Ok(Some(rec)) = ctx.repos.wrapup_repo.get_by_id(&wrapup_id).await
+        && (rec.status == WrapUpStatus::Ready || rec.status == WrapUpStatus::Generating)
+    {
+        tracing::debug!("wrapup {} already {:?}, skipping", wrapup_id.value(), rec.status);
+        return Ok(());
     }
 
     ctx.repos
@@ -99,11 +99,7 @@ pub async fn execute(
     }
 }
 
-async fn resolve_images(
-    ctx: &AppContext,
-    paths: &[String],
-    label: &str,
-) -> Vec<(String, Vec<u8>)> {
+async fn resolve_images(ctx: &AppContext, paths: &[String], label: &str) -> Vec<(String, Vec<u8>)> {
     let mut images = Vec::new();
     for path in paths.iter().take(20) {
         match ctx.services.image_storage.get(path).await {
