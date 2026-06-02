@@ -24,6 +24,7 @@ mod profile_fields;
 mod users;
 mod watch_event;
 mod watchlist;
+mod wrapup;
 
 use models::{
     DiaryRow, DirectorCountRow, FeedRow, MonthlyRatingRow, MovieRow, MovieStatsRow,
@@ -40,6 +41,7 @@ pub use profile_fields::SqliteProfileFieldsRepository;
 pub use users::SqliteUserRepository;
 pub use watch_event::{SqliteWatchEventRepository, SqliteWebhookTokenRepository};
 pub use watchlist::SqliteWatchlistRepository;
+pub use wrapup::{SqliteWrapUpRepository, SqliteWrapUpStatsQuery};
 
 pub fn create_profile_fields_repo(
     pool: sqlx::SqlitePool,
@@ -998,6 +1000,8 @@ pub struct SqliteWireOutput {
     pub movie_profile: std::sync::Arc<dyn domain::ports::MovieProfileRepository>,
     pub watchlist: std::sync::Arc<dyn domain::ports::WatchlistRepository>,
     pub ap_content: std::sync::Arc<dyn domain::ports::LocalApContentQuery>,
+    pub wrapup_repo: std::sync::Arc<dyn domain::ports::WrapUpRepository>,
+    pub wrapup_stats: std::sync::Arc<dyn domain::ports::WrapUpStatsQuery>,
 }
 
 pub async fn wire(database_url: &str) -> anyhow::Result<SqliteWireOutput> {
@@ -1031,7 +1035,9 @@ pub async fn wire(database_url: &str) -> anyhow::Result<SqliteWireOutput> {
         import_profile: std::sync::Arc::new(SqliteImportProfileRepository::new(pool.clone())) as _,
         movie_profile: std::sync::Arc::new(SqliteMovieProfileRepository::new(pool.clone())) as _,
         watchlist: std::sync::Arc::new(SqliteWatchlistRepository::new(pool.clone())) as _,
-        ap_content: std::sync::Arc::new(SqliteApContentQuery::new(pool)) as _,
+        ap_content: std::sync::Arc::new(SqliteApContentQuery::new(pool.clone())) as _,
+        wrapup_repo: std::sync::Arc::new(SqliteWrapUpRepository::new(pool.clone())) as _,
+        wrapup_stats: std::sync::Arc::new(SqliteWrapUpStatsQuery::new(pool)) as _,
     })
 }
 

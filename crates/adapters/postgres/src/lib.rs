@@ -23,6 +23,7 @@ mod profile_fields;
 mod users;
 mod watch_event;
 mod watchlist;
+mod wrapup;
 
 use models::{
     DiaryRow, DirectorCountRow, FeedRow, MonthlyRatingRow, MovieRow, MovieStatsRow,
@@ -39,6 +40,7 @@ pub use profile_fields::PostgresProfileFieldsRepository;
 pub use users::PostgresUserRepository;
 pub use watch_event::{PostgresWatchEventRepository, PostgresWebhookTokenRepository};
 pub use watchlist::PostgresWatchlistRepository;
+pub use wrapup::{PostgresWrapUpRepository, PostgresWrapUpStatsQuery};
 
 fn format_year_month(ym: &str) -> String {
     let parts: Vec<&str> = ym.splitn(2, '-').collect();
@@ -1000,6 +1002,8 @@ pub struct PostgresWireOutput {
     pub movie_profile: std::sync::Arc<dyn domain::ports::MovieProfileRepository>,
     pub watchlist: std::sync::Arc<dyn domain::ports::WatchlistRepository>,
     pub ap_content: std::sync::Arc<dyn domain::ports::LocalApContentQuery>,
+    pub wrapup_repo: std::sync::Arc<dyn domain::ports::WrapUpRepository>,
+    pub wrapup_stats: std::sync::Arc<dyn domain::ports::WrapUpStatsQuery>,
 }
 
 pub async fn wire(database_url: &str) -> anyhow::Result<PostgresWireOutput> {
@@ -1028,6 +1032,8 @@ pub async fn wire(database_url: &str) -> anyhow::Result<PostgresWireOutput> {
             as _,
         movie_profile: std::sync::Arc::new(PostgresMovieProfileRepository::new(pool.clone())) as _,
         watchlist: std::sync::Arc::new(PostgresWatchlistRepository::new(pool.clone())) as _,
-        ap_content: std::sync::Arc::new(PostgresApContentQuery::new(pool)) as _,
+        ap_content: std::sync::Arc::new(PostgresApContentQuery::new(pool.clone())) as _,
+        wrapup_repo: std::sync::Arc::new(PostgresWrapUpRepository::new(pool.clone())) as _,
+        wrapup_stats: std::sync::Arc::new(PostgresWrapUpStatsQuery::new(pool)) as _,
     })
 }
