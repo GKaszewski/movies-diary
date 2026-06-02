@@ -992,6 +992,21 @@ impl crate::ports::WebhookTokenRepository for PanicWebhookTokenRepository {
     }
 }
 
+// ── PanicWrapUpStatsQuery ───────────────────────────────────────────────────
+
+pub struct PanicWrapUpStatsQuery;
+
+#[async_trait]
+impl crate::ports::WrapUpStatsQuery for PanicWrapUpStatsQuery {
+    async fn get_reviews_with_profiles(
+        &self,
+        _scope: &crate::models::wrapup::WrapUpScope,
+        _range: &crate::models::wrapup::DateRange,
+    ) -> Result<Vec<crate::ports::WrapUpMovieRow>, DomainError> {
+        unimplemented!("WrapUpStatsQuery not wired")
+    }
+}
+
 // ── InMemoryWrapUpStatsQuery ────────────────────────────────────────────────
 
 pub struct InMemoryWrapUpStatsQuery {

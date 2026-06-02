@@ -42,7 +42,7 @@ chrono = { workspace = true }
 async-trait = { workspace = true }
 
 api-types = { workspace = true }
-domain = { workspace = true }
+domain = { workspace = true, features = ["test-helpers"] }
 application = { workspace = true }
 auth = { workspace = true }
 metadata = { workspace = true }

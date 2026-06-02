@@ -92,6 +92,7 @@ async fn main() -> anyhow::Result<()> {
             social_query: fed_social_query,
             #[cfg(not(feature = "federation"))]
             social_query: Arc::new(domain::testing::NoopSocialQueryPort),
+            wrapup_stats: Arc::new(domain::testing::PanicWrapUpStatsQuery) as Arc<dyn domain::ports::WrapUpStatsQuery>,
         },
         services: Services {
             auth: auth_service,
