@@ -568,6 +568,50 @@ impl domain::ports::WebhookTokenRepository for Panic {
     }
 }
 
+impl domain::ports::WrapUpStatsQuery for Panic {
+    async fn get_reviews_with_profiles(
+        &self,
+        _: &domain::models::wrapup::WrapUpScope,
+        _: &domain::models::wrapup::DateRange,
+    ) -> Result<Vec<domain::ports::WrapUpMovieRow>, DomainError> {
+        panic!()
+    }
+}
+
+impl domain::ports::WrapUpRepository for Panic {
+    async fn create(&self, _: &domain::models::wrapup::WrapUpRecord) -> Result<(), DomainError> {
+        panic!()
+    }
+    async fn update_status(
+        &self,
+        _: &domain::value_objects::WrapUpId,
+        _: &domain::models::wrapup::WrapUpStatus,
+        _: Option<&str>,
+    ) -> Result<(), DomainError> {
+        panic!()
+    }
+    async fn set_complete(&self, _: &domain::value_objects::WrapUpId, _: &str) -> Result<(), DomainError> {
+        panic!()
+    }
+    async fn get_by_id(&self, _: &domain::value_objects::WrapUpId) -> Result<Option<domain::models::wrapup::WrapUpRecord>, DomainError> {
+        panic!()
+    }
+    async fn list_for_user(&self, _: uuid::Uuid) -> Result<Vec<domain::models::wrapup::WrapUpRecord>, DomainError> {
+        panic!()
+    }
+    async fn list_global(&self) -> Result<Vec<domain::models::wrapup::WrapUpRecord>, DomainError> {
+        panic!()
+    }
+    async fn find_existing(
+        &self,
+        _: Option<uuid::Uuid>,
+        _: chrono::NaiveDate,
+        _: chrono::NaiveDate,
+    ) -> Result<Option<domain::models::wrapup::WrapUpRecord>, DomainError> {
+        panic!()
+    }
+}
+
 // --- Single state factory — only auth_service varies ---
 
 pub fn make_test_state(auth_service: Arc<dyn AuthService>) -> crate::state::AppState {
@@ -593,6 +637,8 @@ pub fn make_test_state(auth_service: Arc<dyn AuthService>) -> crate::state::AppS
                 search_command: Arc::clone(&repo) as _,
                 remote_watchlist: Arc::clone(&repo) as _,
                 social_query: Arc::clone(&repo) as _,
+                wrapup_stats: Arc::clone(&repo) as _,
+                wrapup_repo: Arc::clone(&repo) as _,
             },
             services: Services {
                 auth: auth_service,

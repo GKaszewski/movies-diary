@@ -415,6 +415,8 @@ async fn test_app() -> Router {
                 search_command: Arc::new(PanicSearchCommand),
                 remote_watchlist: Arc::new(PanicRemoteWatchlist),
                 social_query: Arc::new(PanicSocialQuery),
+                wrapup_stats: Arc::new(domain::testing::PanicWrapUpStatsQuery) as _,
+                wrapup_repo: Arc::new(domain::testing::PanicWrapUpRepository) as _,
             },
             services: Services {
                 auth: Arc::new(PanicAuth),

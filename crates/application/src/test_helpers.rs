@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use domain::testing::{InMemoryWrapUpStatsQuery, NoopRemoteWatchlistRepository, NoopSocialQueryPort};
+use domain::testing::{InMemoryWrapUpRepository, InMemoryWrapUpStatsQuery, NoopRemoteWatchlistRepository, NoopSocialQueryPort};
 use domain::{
     ports::{
         AuthService, DiaryExporter, DiaryRepository, DocumentParser, EventPublisher, ImageStorage,
@@ -8,7 +8,7 @@ use domain::{
         MovieRepository, PasswordHasher, PersonCommand, PersonQuery, PosterFetcherClient,
         ReviewRepository, SearchCommand, SearchPort, StatsRepository, UserProfileFieldsRepository,
         UserRepository, WatchEventRepository, WatchlistRepository, WebhookTokenRepository,
-        WrapUpStatsQuery,
+        WrapUpRepository, WrapUpStatsQuery,
     },
     testing::{
         FakeAuthService, FakeMetadataClient, FakePasswordHasher, InMemoryMovieRepository,
@@ -52,6 +52,7 @@ pub struct TestContextBuilder {
     pub search_port: Arc<dyn SearchPort>,
     pub search_command: Arc<dyn SearchCommand>,
     pub wrapup_stats: Arc<dyn WrapUpStatsQuery>,
+    pub wrapup_repo: Arc<dyn WrapUpRepository>,
     pub config: AppConfig,
 }
 
@@ -83,6 +84,7 @@ impl TestContextBuilder {
             search_port: Arc::new(PanicSearchPort),
             search_command: Arc::new(PanicSearchCommand),
             wrapup_stats: InMemoryWrapUpStatsQuery::new(),
+            wrapup_repo: InMemoryWrapUpRepository::new(),
             config: AppConfig {
                 allow_registration: true,
                 base_url: "http://localhost:3000".into(),
@@ -153,6 +155,7 @@ impl TestContextBuilder {
                 remote_watchlist: Arc::new(NoopRemoteWatchlistRepository),
                 social_query: Arc::new(NoopSocialQueryPort),
                 wrapup_stats: self.wrapup_stats,
+                wrapup_repo: self.wrapup_repo,
             },
             services: Services {
                 auth: self.auth_service,
