@@ -88,15 +88,13 @@ impl WrapUpRepository for PostgresWrapUpRepository {
         let id_str = id.value().to_string();
         let status_str = status_to_str(status);
 
-        sqlx::query(
-            "UPDATE wrap_up_records SET status = $1, error_message = $2 WHERE id = $3",
-        )
-        .bind(status_str)
-        .bind(error)
-        .bind(&id_str)
-        .execute(&self.pool)
-        .await
-        .map_err(map_err)?;
+        sqlx::query("UPDATE wrap_up_records SET status = $1, error_message = $2 WHERE id = $3")
+            .bind(status_str)
+            .bind(error)
+            .bind(&id_str)
+            .execute(&self.pool)
+            .await
+            .map_err(map_err)?;
 
         Ok(())
     }
@@ -205,10 +203,7 @@ fn row_to_record(row: &sqlx::postgres::PgRow) -> Result<WrapUpRecord, DomainErro
     let created_at_str: String = row.try_get("created_at").map_err(map_err)?;
     let completed_at_str: Option<String> = row.try_get("completed_at").map_err(map_err)?;
 
-    let user_id = user_id_str
-        .as_deref()
-        .map(parse_uuid)
-        .transpose()?;
+    let user_id = user_id_str.as_deref().map(parse_uuid).transpose()?;
 
     Ok(WrapUpRecord {
         id: WrapUpId::from_uuid(parse_uuid(&id_str)?),
@@ -219,7 +214,10 @@ fn row_to_record(row: &sqlx::postgres::PgRow) -> Result<WrapUpRecord, DomainErro
         report_json,
         error_message,
         created_at: parse_datetime(&created_at_str)?,
-        completed_at: completed_at_str.as_deref().map(parse_datetime).transpose()?,
+        completed_at: completed_at_str
+            .as_deref()
+            .map(parse_datetime)
+            .transpose()?,
     })
 }
 
@@ -261,9 +259,7 @@ impl WrapUpStatsQuery for PostgresWrapUpStatsQuery {
              ORDER BY r.watched_at ASC"
         );
 
-        let mut q = sqlx::query(&sql)
-            .bind(range.start)
-            .bind(range.end);
+        let mut q = sqlx::query(&sql).bind(range.start).bind(range.end);
         if let Some(ref uid) = scope_bind {
             q = q.bind(uid);
         }
@@ -307,18 +303,9 @@ impl WrapUpStatsQuery for PostgresWrapUpStatsQuery {
             let original_language: Option<String> =
                 row.try_get("original_language").map_err(map_err)?;
 
-            let genres = genres_map
-                .get(&movie_id_str)
-                .cloned()
-                .unwrap_or_default();
-            let keywords = keywords_map
-                .get(&movie_id_str)
-                .cloned()
-                .unwrap_or_default();
-            let cast = cast_map
-                .get(&movie_id_str)
-                .cloned()
-                .unwrap_or_default();
+            let genres = genres_map.get(&movie_id_str).cloned().unwrap_or_default();
+            let keywords = keywords_map.get(&movie_id_str).cloned().unwrap_or_default();
+            let cast = cast_map.get(&movie_id_str).cloned().unwrap_or_default();
 
             let cast_names: Vec<(String, u32)> = cast
                 .iter()

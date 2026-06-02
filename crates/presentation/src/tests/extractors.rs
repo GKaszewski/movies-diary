@@ -599,13 +599,23 @@ impl domain::ports::WrapUpRepository for Panic {
     ) -> Result<(), DomainError> {
         panic!()
     }
-    async fn set_complete(&self, _: &domain::value_objects::WrapUpId, _: &str) -> Result<(), DomainError> {
+    async fn set_complete(
+        &self,
+        _: &domain::value_objects::WrapUpId,
+        _: &str,
+    ) -> Result<(), DomainError> {
         panic!()
     }
-    async fn get_by_id(&self, _: &domain::value_objects::WrapUpId) -> Result<Option<domain::models::wrapup::WrapUpRecord>, DomainError> {
+    async fn get_by_id(
+        &self,
+        _: &domain::value_objects::WrapUpId,
+    ) -> Result<Option<domain::models::wrapup::WrapUpRecord>, DomainError> {
         panic!()
     }
-    async fn list_for_user(&self, _: uuid::Uuid) -> Result<Vec<domain::models::wrapup::WrapUpRecord>, DomainError> {
+    async fn list_for_user(
+        &self,
+        _: uuid::Uuid,
+    ) -> Result<Vec<domain::models::wrapup::WrapUpRecord>, DomainError> {
         panic!()
     }
     async fn list_global(&self) -> Result<Vec<domain::models::wrapup::WrapUpRecord>, DomainError> {

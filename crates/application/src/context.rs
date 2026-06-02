@@ -6,8 +6,8 @@ use domain::ports::{
     MovieRepository, PasswordHasher, PersonCommand, PersonQuery, PosterFetcherClient,
     RemoteWatchlistRepository, ReviewRepository, SearchCommand, SearchPort, SocialQueryPort,
     StatsRepository, UserProfileFieldsRepository, UserRepository, WatchEventRepository,
-    WatchlistRepository, WrapUpRepository, WrapUpStatsQuery, WrapUpVideoRenderer,
-    WebhookTokenRepository,
+    WatchlistRepository, WebhookTokenRepository, WrapUpRepository, WrapUpStatsQuery,
+    WrapUpVideoRenderer,
 };
 
 use crate::config::AppConfig;

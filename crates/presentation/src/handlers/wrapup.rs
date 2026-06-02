@@ -135,12 +135,9 @@ pub async fn get_report(
 ) -> impl IntoResponse {
     match get_wrapup::execute(&state.app_ctx, WrapUpId::from_uuid(id)).await {
         Ok(Some(record)) if record.status == WrapUpStatus::Ready => match record.report_json {
-            Some(json) => (
-                StatusCode::OK,
-                [("content-type", "application/json")],
-                json,
-            )
-                .into_response(),
+            Some(json) => {
+                (StatusCode::OK, [("content-type", "application/json")], json).into_response()
+            }
             None => StatusCode::NOT_FOUND.into_response(),
         },
         Ok(Some(_)) => StatusCode::ACCEPTED.into_response(),
@@ -158,10 +155,7 @@ pub async fn get_report(
     ),
     security(("bearer_auth" = []))
 )]
-pub async fn get_video(
-    State(state): State<AppState>,
-    Path(id): Path<Uuid>,
-) -> impl IntoResponse {
+pub async fn get_video(State(state): State<AppState>, Path(id): Path<Uuid>) -> impl IntoResponse {
     let record = match state
         .app_ctx
         .repos
@@ -219,11 +213,21 @@ fn render_wrapup(
     year: i32,
     ctx: &application::ports::HtmlPageContext,
 ) -> axum::response::Response {
-    let rating_max = report.rating_distribution.iter().copied().max().unwrap_or(1).max(1);
-    let rating_pcts: [f64; 5] = std::array::from_fn(|i| {
-        report.rating_distribution[i] as f64 / rating_max as f64 * 100.0
-    });
-    let genre_max = report.top_genres.first().map(|g| g.count).unwrap_or(1).max(1);
+    let rating_max = report
+        .rating_distribution
+        .iter()
+        .copied()
+        .max()
+        .unwrap_or(1)
+        .max(1);
+    let rating_pcts: [f64; 5] =
+        std::array::from_fn(|i| report.rating_distribution[i] as f64 / rating_max as f64 * 100.0);
+    let genre_max = report
+        .top_genres
+        .first()
+        .map(|g| g.count)
+        .unwrap_or(1)
+        .max(1);
     let genre_pcts: Vec<f64> = report
         .top_genres
         .iter()

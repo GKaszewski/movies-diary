@@ -196,10 +196,16 @@ async fn main() -> anyhow::Result<()> {
                 Arc::clone(&ctx.repos.movie),
                 Arc::clone(&ctx.repos.search_command),
             )) as Arc<dyn EventHandler>;
-            let wrapup_handler = Arc::new(application::wrapup::event_handler::WrapUpEventHandler::new(
-                ctx.clone(),
-            )) as Arc<dyn EventHandler>;
-            let mut h = vec![poster, cleanup, search_cleanup, discovery_indexer, wrapup_handler];
+            let wrapup_handler = Arc::new(
+                application::wrapup::event_handler::WrapUpEventHandler::new(ctx.clone()),
+            ) as Arc<dyn EventHandler>;
+            let mut h = vec![
+                poster,
+                cleanup,
+                search_cleanup,
+                discovery_indexer,
+                wrapup_handler,
+            ];
             if let Some(e) = enrichment_handler {
                 h.push(e);
             }
@@ -240,9 +246,9 @@ async fn main() -> anyhow::Result<()> {
                 Arc::clone(&ctx.repos.search_command),
             )) as Arc<dyn EventHandler>;
             tracing::info!("federation event handler registered");
-            let wrapup_handler = Arc::new(application::wrapup::event_handler::WrapUpEventHandler::new(
-                ctx.clone(),
-            )) as Arc<dyn EventHandler>;
+            let wrapup_handler = Arc::new(
+                application::wrapup::event_handler::WrapUpEventHandler::new(ctx.clone()),
+            ) as Arc<dyn EventHandler>;
             let mut h = vec![
                 poster,
                 cleanup,

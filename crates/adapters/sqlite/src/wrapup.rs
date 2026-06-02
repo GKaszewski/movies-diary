@@ -213,10 +213,7 @@ fn row_to_record(row: &sqlx::sqlite::SqliteRow) -> Result<WrapUpRecord, DomainEr
     let created_at_str: String = row.try_get("created_at").map_err(map_err)?;
     let completed_at_str: Option<String> = row.try_get("completed_at").map_err(map_err)?;
 
-    let user_id = user_id_str
-        .as_deref()
-        .map(parse_uuid)
-        .transpose()?;
+    let user_id = user_id_str.as_deref().map(parse_uuid).transpose()?;
 
     Ok(WrapUpRecord {
         id: WrapUpId::from_uuid(parse_uuid(&id_str)?),
@@ -227,7 +224,10 @@ fn row_to_record(row: &sqlx::sqlite::SqliteRow) -> Result<WrapUpRecord, DomainEr
         report_json,
         error_message,
         created_at: parse_datetime(&created_at_str)?,
-        completed_at: completed_at_str.as_deref().map(parse_datetime).transpose()?,
+        completed_at: completed_at_str
+            .as_deref()
+            .map(parse_datetime)
+            .transpose()?,
     })
 }
 
@@ -270,9 +270,7 @@ impl WrapUpStatsQuery for SqliteWrapUpStatsQuery {
              ORDER BY r.watched_at ASC"
         );
 
-        let mut q = sqlx::query(&sql)
-            .bind(&start_str)
-            .bind(&end_str);
+        let mut q = sqlx::query(&sql).bind(&start_str).bind(&end_str);
         if let Some(ref uid) = scope_bind {
             q = q.bind(uid);
         }
@@ -316,18 +314,9 @@ impl WrapUpStatsQuery for SqliteWrapUpStatsQuery {
             let original_language: Option<String> =
                 row.try_get("original_language").map_err(map_err)?;
 
-            let genres = genres_map
-                .get(&movie_id_str)
-                .cloned()
-                .unwrap_or_default();
-            let keywords = keywords_map
-                .get(&movie_id_str)
-                .cloned()
-                .unwrap_or_default();
-            let cast = cast_map
-                .get(&movie_id_str)
-                .cloned()
-                .unwrap_or_default();
+            let genres = genres_map.get(&movie_id_str).cloned().unwrap_or_default();
+            let keywords = keywords_map.get(&movie_id_str).cloned().unwrap_or_default();
+            let cast = cast_map.get(&movie_id_str).cloned().unwrap_or_default();
 
             let cast_names: Vec<(String, u32)> = cast
                 .iter()

@@ -20,11 +20,11 @@ pub mod remote_watchlist;
 pub use remote_watchlist::RemoteWatchlistEntry;
 pub mod watch_event;
 pub mod wrapup;
-pub use wrapup::*;
 pub use watch_event::{
     ParsedPlaybackEvent, PersistedWatchEvent, WatchEvent, WatchEventSource, WatchEventStatus,
     WebhookToken,
 };
+pub use wrapup::*;
 
 pub use import::{
     AnnotatedRow, DomainField, FieldMapping, FileFormat, ImportError, ImportRow, ParsedFile,

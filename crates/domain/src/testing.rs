@@ -1131,11 +1131,13 @@ impl WrapUpRepository for InMemoryWrapUpRepository {
             .collect())
     }
 
-    async fn list_global(
-        &self,
-    ) -> Result<Vec<crate::models::wrapup::WrapUpRecord>, DomainError> {
+    async fn list_global(&self) -> Result<Vec<crate::models::wrapup::WrapUpRecord>, DomainError> {
         let store = self.store.lock().unwrap();
-        Ok(store.iter().filter(|r| r.user_id.is_none()).cloned().collect())
+        Ok(store
+            .iter()
+            .filter(|r| r.user_id.is_none())
+            .cloned()
+            .collect())
     }
 
     async fn find_existing(
@@ -1184,9 +1186,7 @@ impl WrapUpRepository for PanicWrapUpRepository {
     ) -> Result<Vec<crate::models::wrapup::WrapUpRecord>, DomainError> {
         panic!("PanicWrapUpRepository called")
     }
-    async fn list_global(
-        &self,
-    ) -> Result<Vec<crate::models::wrapup::WrapUpRecord>, DomainError> {
+    async fn list_global(&self) -> Result<Vec<crate::models::wrapup::WrapUpRecord>, DomainError> {
         panic!("PanicWrapUpRepository called")
     }
     async fn find_existing(

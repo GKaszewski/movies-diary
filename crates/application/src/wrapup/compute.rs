@@ -205,26 +205,14 @@ fn compute_rating_extremes(rows: &[WrapUpMovieRow]) -> (Option<MovieRef>, Option
 }
 
 fn compute_chronological_extremes(rows: &[WrapUpMovieRow]) -> (Option<MovieRef>, Option<MovieRef>) {
-    let first = rows
-        .iter()
-        .min_by_key(|r| r.watched_at)
-        .map(movie_ref);
-    let last = rows
-        .iter()
-        .max_by_key(|r| r.watched_at)
-        .map(movie_ref);
+    let first = rows.iter().min_by_key(|r| r.watched_at).map(movie_ref);
+    let last = rows.iter().max_by_key(|r| r.watched_at).map(movie_ref);
     (first, last)
 }
 
 fn compute_year_extremes(rows: &[WrapUpMovieRow]) -> (Option<MovieRef>, Option<MovieRef>) {
-    let oldest = rows
-        .iter()
-        .min_by_key(|r| r.release_year)
-        .map(movie_ref);
-    let newest = rows
-        .iter()
-        .max_by_key(|r| r.release_year)
-        .map(movie_ref);
+    let oldest = rows.iter().min_by_key(|r| r.release_year).map(movie_ref);
+    let newest = rows.iter().max_by_key(|r| r.release_year).map(movie_ref);
     (oldest, newest)
 }
 

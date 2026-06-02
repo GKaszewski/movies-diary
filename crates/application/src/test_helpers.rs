@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use domain::testing::{InMemoryWrapUpRepository, InMemoryWrapUpStatsQuery, NoopRemoteWatchlistRepository, NoopSocialQueryPort};
+use domain::testing::{
+    InMemoryWrapUpRepository, InMemoryWrapUpStatsQuery, NoopRemoteWatchlistRepository,
+    NoopSocialQueryPort,
+};
 use domain::{
     ports::{
         AuthService, DiaryExporter, DiaryRepository, DocumentParser, EventPublisher, ImageStorage,

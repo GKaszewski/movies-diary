@@ -380,9 +380,7 @@ impl TryFrom<EventPayload> for DomainEvent {
                 end_date,
             } => {
                 let wid = parse_uuid(&wrapup_id, "wrapup_id")?;
-                let uid = user_id
-                    .map(|s| parse_uuid(&s, "user_id"))
-                    .transpose()?;
+                let uid = user_id.map(|s| parse_uuid(&s, "user_id")).transpose()?;
                 let sd = chrono::NaiveDate::parse_from_str(&start_date, "%Y-%m-%d")
                     .map_err(|e| DomainError::ValidationError(e.to_string()))?;
                 let ed = chrono::NaiveDate::parse_from_str(&end_date, "%Y-%m-%d")
