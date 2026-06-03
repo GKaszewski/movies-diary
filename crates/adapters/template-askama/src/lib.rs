@@ -379,6 +379,7 @@ pub struct ProfileSettingsTemplate<'a> {
     pub also_known_as: Option<&'a str>,
     pub profile_fields: &'a [(String, String)],
     pub saved: bool,
+    pub embed_url: String,
 }
 
 #[derive(Template)]

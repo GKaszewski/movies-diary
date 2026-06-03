@@ -1251,6 +1251,11 @@ pub async fn get_profile_settings(
         also_known_as: also_known_as.as_deref(),
         profile_fields: &profile_fields,
         saved,
+        embed_url: format!(
+            "{}/users/{}?embed=1",
+            state.app_ctx.config.base_url,
+            user_id.value()
+        ),
     })
     .into_response()
 }
