@@ -255,7 +255,7 @@ pub struct EmbedProfileTemplate<'a> {
 
 impl<'a> EmbedProfileTemplate<'a> {
     pub fn filter_qs(&self) -> String {
-        let parts = vec![
+        let parts = [
             format!("view={}", self.view),
             format!("sort_by={}", self.sort_by),
             "embed=1".to_string(),
