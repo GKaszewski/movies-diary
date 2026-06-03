@@ -42,7 +42,7 @@ use application::ports::HtmlPageContext;
 use domain::models::ExportFormat;
 use domain::{errors::DomainError, value_objects::UserId};
 use template_askama::{
-    ActivityFeedTemplate, IntegrationsTemplate, LoginTemplate, MonthlyRatingRow,
+    ActivityFeedTemplate, EmbedProfileTemplate, IntegrationsTemplate, LoginTemplate, MonthlyRatingRow,
     MovieDetailTemplate, NewReviewTemplate, ProfileSettingsTemplate, ProfileTemplate,
     RegisterTemplate, RemoteActorData, RemoteActorDisplay, UserSummaryView, UsersTemplate,
     WatchQueueTemplate, WatchlistTemplate, bar_height_px, build_heatmap, build_page_items,
@@ -613,33 +613,63 @@ pub async fn get_user_profile(
                 .iter()
                 .map(crate::mappers::users::pending_follower_data)
                 .collect();
-            render_page(ProfileTemplate {
-                ctx: &ctx,
-                profile_display_name: display_name,
-                profile_user_id: profile_user_uuid,
-                stats: &profile.stats,
-                avg_rating_display,
-                favorite_director_display,
-                most_active_month_display,
-                view: profile_view.as_str(),
-                entries: profile.entries.as_ref(),
-                current_offset: offset,
-                has_more,
-                limit,
-                history: profile.history.as_ref(),
-                trends: profile.trends.as_ref(),
-                monthly_rating_rows,
-                heatmap,
-                page_items,
-                is_own_profile,
-                error: params.error,
-                following_count: profile.following_count,
-                followers_count: profile.followers_count,
-                pending_followers,
-                sort_by: sort_by_str.to_string(),
-                search: params.search.clone(),
-            })
-            .into_response()
+            if params.embed {
+                let profile_url = format!(
+                    "{}/users/{}",
+                    state.app_ctx.config.base_url, profile_user_uuid
+                );
+                let response = render_page(EmbedProfileTemplate {
+                    profile_display_name: display_name,
+                    profile_user_id: profile_user_uuid,
+                    profile_url,
+                    stats: &profile.stats,
+                    avg_rating_display,
+                    favorite_director_display,
+                    most_active_month_display,
+                    view: profile_view.as_str(),
+                    entries: profile.entries.as_ref(),
+                    current_offset: offset,
+                    has_more,
+                    limit,
+                    history: profile.history.as_ref(),
+                    trends: profile.trends.as_ref(),
+                    monthly_rating_rows,
+                    heatmap,
+                    page_items,
+                    sort_by: sort_by_str.to_string(),
+                });
+                let mut resp = response.into_response();
+                resp.headers_mut().remove("x-frame-options");
+                resp
+            } else {
+                render_page(ProfileTemplate {
+                    ctx: &ctx,
+                    profile_display_name: display_name,
+                    profile_user_id: profile_user_uuid,
+                    stats: &profile.stats,
+                    avg_rating_display,
+                    favorite_director_display,
+                    most_active_month_display,
+                    view: profile_view.as_str(),
+                    entries: profile.entries.as_ref(),
+                    current_offset: offset,
+                    has_more,
+                    limit,
+                    history: profile.history.as_ref(),
+                    trends: profile.trends.as_ref(),
+                    monthly_rating_rows,
+                    heatmap,
+                    page_items,
+                    is_own_profile,
+                    error: params.error,
+                    following_count: profile.following_count,
+                    followers_count: profile.followers_count,
+                    pending_followers,
+                    sort_by: sort_by_str.to_string(),
+                    search: params.search.clone(),
+                })
+                .into_response()
+            }
         }
         Err(e) => crate::errors::domain_error_response(e),
     }
