@@ -2,7 +2,7 @@ use std::num::NonZeroU32;
 
 use axum::{Router, routing};
 use axum_governor::{GovernorConfigBuilder, GovernorLayer, Quota, extractor::PeerIp};
-use tower_http::{services::ServeDir, trace::TraceLayer};
+use tower_http::{cors::CorsLayer, services::ServeDir, trace::TraceLayer};
 
 use crate::{handlers, state::AppState};
 
@@ -241,6 +241,37 @@ fn federation_html_routes() -> Router<AppState> {
         )
 }
 
+fn cors_layer() -> CorsLayer {
+    use axum::http::{HeaderName, Method};
+    use tower_http::cors::AllowOrigin;
+
+    let origins = std::env::var("CORS_ORIGINS").unwrap_or_default();
+    let layer = CorsLayer::new()
+        .allow_methods([
+            Method::GET,
+            Method::POST,
+            Method::PUT,
+            Method::DELETE,
+            Method::OPTIONS,
+        ])
+        .allow_headers([
+            HeaderName::from_static("content-type"),
+            HeaderName::from_static("authorization"),
+        ]);
+
+    if origins.is_empty() || origins == "*" {
+        layer.allow_origin(AllowOrigin::any())
+    } else {
+        let parsed: Vec<_> = origins
+            .split(',')
+            .filter_map(|s| s.trim().parse().ok())
+            .collect();
+        layer
+            .allow_origin(AllowOrigin::list(parsed))
+            .allow_credentials(true)
+    }
+}
+
 fn api_routes(rate_limit: u64) -> Router<AppState> {
     let cfg = GovernorConfigBuilder::default()
         .with_extractor(PeerIp::default())
@@ -293,6 +324,10 @@ fn api_routes(rate_limit: u64) -> Router<AppState> {
         .route(
             "/import/sessions/{id}/mapping",
             routing::put(handlers::import::api_put_mapping),
+        )
+        .route(
+            "/import/sessions/{id}/preview",
+            routing::get(handlers::import::api_get_preview),
         )
         .route(
             "/import/sessions/{id}/confirm",
@@ -397,6 +432,7 @@ fn api_routes(rate_limit: u64) -> Router<AppState> {
     Router::new()
         .nest("/api/v1", base.layer(GovernorLayer::new(cfg)))
         .nest("/api/v1", webhook_routes)
+        .layer(cors_layer())
 }
 
 #[cfg(feature = "federation")]
