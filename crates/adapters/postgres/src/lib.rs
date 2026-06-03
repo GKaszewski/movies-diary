@@ -111,8 +111,10 @@ impl PostgresRepository {
         offset: i64,
     ) -> Result<Vec<DiaryRow>, DomainError> {
         let order = match sort {
+            SortDirection::ByRatingDesc => "r.rating DESC, r.watched_at DESC",
+            SortDirection::ByRatingAsc => "r.rating ASC, r.watched_at ASC",
             SortDirection::Ascending => "r.watched_at ASC",
-            _ => "r.watched_at DESC",
+            SortDirection::Descending => "r.watched_at DESC",
         };
         let sql = format!(
             "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
@@ -142,8 +144,10 @@ impl PostgresRepository {
         offset: i64,
     ) -> Result<Vec<DiaryRow>, DomainError> {
         let order = match sort {
+            SortDirection::ByRatingDesc => "r.rating DESC, r.watched_at DESC",
+            SortDirection::ByRatingAsc => "r.rating ASC, r.watched_at ASC",
             SortDirection::Ascending => "r.watched_at ASC",
-            _ => "r.watched_at DESC",
+            SortDirection::Descending => "r.watched_at DESC",
         };
         let sql = format!(
             "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,

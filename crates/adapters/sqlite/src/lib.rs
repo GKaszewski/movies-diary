@@ -110,38 +110,27 @@ impl SqliteMovieRepository {
         limit: i64,
         offset: i64,
     ) -> Result<Vec<DiaryRow>, DomainError> {
-        match sort {
-            // ByRatingDesc/ByRatingAsc only apply to user-scoped queries; fall back to date sort here
-            SortDirection::Descending | SortDirection::ByRatingDesc | SortDirection::ByRatingAsc => sqlx::query_as!(
-                DiaryRow,
-                "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
-                        r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url
-                 FROM reviews r
-                 INNER JOIN movies m ON m.id = r.movie_id
-                 ORDER BY r.watched_at DESC
-                 LIMIT ? OFFSET ?",
-                limit,
-                offset
-            )
+        let order_clause = match sort {
+            SortDirection::ByRatingDesc => "r.rating DESC, r.watched_at DESC",
+            SortDirection::ByRatingAsc => "r.rating ASC, r.watched_at ASC",
+            SortDirection::Ascending => "r.watched_at ASC",
+            SortDirection::Descending => "r.watched_at DESC",
+        };
+        let sql = format!(
+            "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
+                    r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url
+             FROM reviews r
+             INNER JOIN movies m ON m.id = r.movie_id
+             ORDER BY {}
+             LIMIT ? OFFSET ?",
+            order_clause
+        );
+        sqlx::query_as::<_, DiaryRow>(&sql)
+            .bind(limit)
+            .bind(offset)
             .fetch_all(&self.pool)
             .await
-            .map_err(Self::map_err),
-
-            SortDirection::Ascending => sqlx::query_as!(
-                DiaryRow,
-                "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
-                        r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url
-                 FROM reviews r
-                 INNER JOIN movies m ON m.id = r.movie_id
-                 ORDER BY r.watched_at ASC
-                 LIMIT ? OFFSET ?",
-                limit,
-                offset
-            )
-            .fetch_all(&self.pool)
-            .await
-            .map_err(Self::map_err),
-        }
+            .map_err(Self::map_err)
     }
 
     async fn fetch_movie_diary_rows(
@@ -151,42 +140,29 @@ impl SqliteMovieRepository {
         limit: i64,
         offset: i64,
     ) -> Result<Vec<DiaryRow>, DomainError> {
-        match sort {
-            // ByRatingDesc/ByRatingAsc only apply to user-scoped queries; fall back to date sort here
-            SortDirection::Descending | SortDirection::ByRatingDesc | SortDirection::ByRatingAsc => sqlx::query_as!(
-                DiaryRow,
-                "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
-                        r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url
-                 FROM reviews r
-                 INNER JOIN movies m ON m.id = r.movie_id
-                 WHERE r.movie_id = ?
-                 ORDER BY r.watched_at DESC
-                 LIMIT ? OFFSET ?",
-                movie_id,
-                limit,
-                offset
-            )
+        let order_clause = match sort {
+            SortDirection::ByRatingDesc => "r.rating DESC, r.watched_at DESC",
+            SortDirection::ByRatingAsc => "r.rating ASC, r.watched_at ASC",
+            SortDirection::Ascending => "r.watched_at ASC",
+            SortDirection::Descending => "r.watched_at DESC",
+        };
+        let sql = format!(
+            "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
+                    r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url
+             FROM reviews r
+             INNER JOIN movies m ON m.id = r.movie_id
+             WHERE r.movie_id = ?
+             ORDER BY {}
+             LIMIT ? OFFSET ?",
+            order_clause
+        );
+        sqlx::query_as::<_, DiaryRow>(&sql)
+            .bind(movie_id)
+            .bind(limit)
+            .bind(offset)
             .fetch_all(&self.pool)
             .await
-            .map_err(Self::map_err),
-
-            SortDirection::Ascending => sqlx::query_as!(
-                DiaryRow,
-                "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
-                        r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url
-                 FROM reviews r
-                 INNER JOIN movies m ON m.id = r.movie_id
-                 WHERE r.movie_id = ?
-                 ORDER BY r.watched_at ASC
-                 LIMIT ? OFFSET ?",
-                movie_id,
-                limit,
-                offset
-            )
-            .fetch_all(&self.pool)
-            .await
-            .map_err(Self::map_err),
-        }
+            .map_err(Self::map_err)
     }
 
     async fn count_user_diary_entries(
