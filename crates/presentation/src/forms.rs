@@ -158,6 +158,8 @@ pub struct ProfileQueryParams {
     pub sort_by: String,
     #[serde(default)]
     pub search: String,
+    #[serde(default)]
+    pub embed: bool,
 }
 
 pub struct LogReviewData {
