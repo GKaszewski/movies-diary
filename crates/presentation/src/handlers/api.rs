@@ -213,6 +213,7 @@ pub async fn login(
         user_id: result.user_id,
         email: result.email,
         expires_at: result.expires_at.to_rfc3339(),
+        role: result.role,
     }))
 }
 
@@ -415,6 +416,8 @@ pub async fn get_profile(
         username: profile.username,
         bio: profile.bio,
         avatar_url: profile.avatar_url,
+        banner_url: profile.banner_url,
+        role: profile.role,
     }))
 }
 
@@ -931,7 +934,11 @@ pub async fn get_activity_feed(
         GetActivityFeedQuery {
             limit: params.limit.unwrap_or(20),
             offset: params.offset.unwrap_or(0),
-            sort_by: domain::ports::FeedSortBy::Date,
+            sort_by: params
+                .sort_by
+                .as_deref()
+                .map(|s| s.parse().unwrap_or_default())
+                .unwrap_or_default(),
             search: None,
             viewer_user_id: None,
             filter_following: false,

@@ -47,6 +47,7 @@ pub struct DiaryQueryParams {
 pub struct ActivityFeedQueryParams {
     pub limit: Option<u32>,
     pub offset: Option<u32>,
+    pub sort_by: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
