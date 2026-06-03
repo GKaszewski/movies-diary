@@ -42,10 +42,11 @@ use application::ports::HtmlPageContext;
 use domain::models::ExportFormat;
 use domain::{errors::DomainError, value_objects::UserId};
 use template_askama::{
-    ActivityFeedTemplate, EmbedProfileTemplate, IntegrationsTemplate, LoginTemplate, MonthlyRatingRow,
-    MovieDetailTemplate, NewReviewTemplate, ProfileSettingsTemplate, ProfileTemplate,
-    RegisterTemplate, RemoteActorData, RemoteActorDisplay, UserSummaryView, UsersTemplate,
-    WatchQueueTemplate, WatchlistTemplate, bar_height_px, build_heatmap, build_page_items,
+    ActivityFeedTemplate, EmbedProfileTemplate, IntegrationsTemplate, LoginTemplate,
+    MonthlyRatingRow, MovieDetailTemplate, NewReviewTemplate, ProfileSettingsTemplate,
+    ProfileTemplate, RegisterTemplate, RemoteActorData, RemoteActorDisplay, UserSummaryView,
+    UsersTemplate, WatchQueueTemplate, WatchlistTemplate, bar_height_px, build_heatmap,
+    build_page_items,
 };
 #[cfg(feature = "federation")]
 use template_askama::{
