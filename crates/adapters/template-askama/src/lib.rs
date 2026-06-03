@@ -230,6 +230,40 @@ impl<'a> ProfileTemplate<'a> {
     }
 }
 
+#[derive(Template)]
+#[template(path = "embed_profile.html")]
+pub struct EmbedProfileTemplate<'a> {
+    pub profile_display_name: String,
+    pub profile_user_id: uuid::Uuid,
+    pub profile_url: String,
+    pub stats: &'a UserStats,
+    pub avg_rating_display: String,
+    pub favorite_director_display: String,
+    pub most_active_month_display: String,
+    pub view: &'a str,
+    pub entries: Option<&'a Paginated<DiaryEntry>>,
+    pub current_offset: u32,
+    pub has_more: bool,
+    pub limit: u32,
+    pub history: Option<&'a Vec<MonthActivity>>,
+    pub trends: Option<&'a UserTrends>,
+    pub monthly_rating_rows: Vec<MonthlyRatingRow<'a>>,
+    pub heatmap: Vec<HeatmapCell>,
+    pub page_items: Vec<PageItem>,
+    pub sort_by: String,
+}
+
+impl<'a> EmbedProfileTemplate<'a> {
+    pub fn filter_qs(&self) -> String {
+        let parts = vec![
+            format!("view={}", self.view),
+            format!("sort_by={}", self.sort_by),
+            "embed=1".to_string(),
+        ];
+        format!("&{}", parts.join("&"))
+    }
+}
+
 pub struct RemoteActorData {
     pub handle: String,
     pub display_name: Option<String>,
