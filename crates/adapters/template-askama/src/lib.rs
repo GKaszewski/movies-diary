@@ -258,7 +258,7 @@ impl<'a> EmbedProfileTemplate<'a> {
         let parts = [
             format!("view={}", self.view),
             format!("sort_by={}", self.sort_by),
-            "embed=1".to_string(),
+            "embed=true".to_string(),
         ];
         format!("&{}", parts.join("&"))
     }

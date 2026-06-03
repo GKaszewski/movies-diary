@@ -1253,7 +1253,7 @@ pub async fn get_profile_settings(
         profile_fields: &profile_fields,
         saved,
         embed_url: format!(
-            "{}/users/{}?embed=1",
+            "{}/users/{}?embed=true",
             state.app_ctx.config.base_url,
             user_id.value()
         ),
