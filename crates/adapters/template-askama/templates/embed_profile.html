@@ -1,0 +1,189 @@
+{% extends "embed_base.html" %}
+{% block content %}
+<div class="embed-profile">
+
+  <div class="embed-stats-header">
+    <div class="embed-profile-name">{{ profile_display_name }}</div>
+    <div class="embed-stats-grid">
+      <div class="embed-stat-tile">
+        <div class="embed-stat-value">{{ stats.total_movies }}</div>
+        <div class="embed-stat-label">movies</div>
+      </div>
+      <div class="embed-stat-tile">
+        <div class="embed-stat-value">{{ avg_rating_display }}★</div>
+        <div class="embed-stat-label">avg rating</div>
+      </div>
+      <div class="embed-stat-tile">
+        <div class="embed-stat-value">{{ favorite_director_display }}</div>
+        <div class="embed-stat-label">fav director</div>
+      </div>
+      <div class="embed-stat-tile">
+        <div class="embed-stat-value">{{ most_active_month_display }}</div>
+        <div class="embed-stat-label">most active</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="embed-view-tabs">
+    <a href="?view=recent&embed=1" class="embed-view-tab {% if view == "recent" %}active{% endif %}">Recent</a>
+    <a href="?view=ratings&embed=1" class="embed-view-tab {% if view == "ratings" %}active{% endif %}">Top Rated</a>
+    <a href="?view=history&embed=1" class="embed-view-tab {% if view == "history" %}active{% endif %}">History</a>
+    <a href="?view=trends&embed=1" class="embed-view-tab {% if view == "trends" %}active{% endif %}">Trends</a>
+  </div>
+
+  {% if view == "recent" || view == "ratings" %}
+  <form method="get" class="embed-sort-form" action="/users/{{ profile_user_id }}">
+    <input type="hidden" name="view" value="{{ view }}">
+    <input type="hidden" name="limit" value="{{ limit }}">
+    <input type="hidden" name="embed" value="1">
+    <div class="embed-sort-controls">
+      <select name="sort_by" onchange="this.form.submit()">
+        <option value="date"{% if sort_by == "date" %} selected{% endif %}>Date: newest first</option>
+        <option value="date_asc"{% if sort_by == "date_asc" %} selected{% endif %}>Date: oldest first</option>
+        <option value="rating"{% if sort_by == "rating" %} selected{% endif %}>Rating: highest first</option>
+        <option value="rating_asc"{% if sort_by == "rating_asc" %} selected{% endif %}>Rating: lowest first</option>
+      </select>
+    </div>
+  </form>
+  {% endif %}
+
+  {% if view == "history" %}
+  {% if let Some(hist) = history %}
+  <div class="embed-heatmap-section">
+    <div class="embed-heatmap-label">Movies watched this year</div>
+    <div class="embed-heatmap">
+      {% for cell in heatmap %}
+      <div class="embed-heatmap-cell" style="--alpha: {{ cell.alpha }}">
+        <div class="embed-heatmap-count">{{ cell.count }}</div>
+        <div class="embed-heatmap-month">{{ cell.month_label }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% for month in hist %}
+  <div class="embed-history-month">
+    <h3 class="embed-month-heading">{{ month.month_label }} <span class="embed-month-count">{{ month.count }}</span></h3>
+    <div class="embed-diary">
+      {% for entry in month.entries %}
+      <article class="embed-entry">
+        {% if let Some(poster) = entry.movie().poster_path() %}
+        <div class="embed-poster"><img src="{{ poster.value()|poster_src }}" alt="" loading="lazy"></div>
+        {% endif %}
+        <div class="embed-entry-body">
+          <div class="embed-entry-title"><a href="/movies/{{ entry.movie().id().value() }}" class="embed-movie-link" target="_blank" rel="noopener">{{ entry.movie().title().value() }}</a> <span class="embed-year">({{ entry.movie().release_year().value() }})</span></div>
+          {% if let Some(dir) = entry.movie().director() %}<div class="embed-director">{{ dir }}</div>{% endif %}
+          <div class="embed-rating">
+            {% for filled in entry.review().stars() %}
+              <span class="embed-star {% if filled %}filled{% else %}empty{% endif %}">★</span>
+            {% endfor %}
+          </div>
+          <div class="embed-watched-at">{{ entry.review().watched_at().format("%b %-d") }}</div>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+  {% else %}
+  <p class="embed-empty">No movies logged yet.</p>
+  {% endfor %}
+  {% endif %}
+
+  {% elif view == "trends" %}
+  {% if let Some(t) = trends %}
+  <div class="embed-trends-section">
+    {% if !monthly_rating_rows.is_empty() %}
+    <div class="embed-chart-block">
+      <div class="embed-chart-label">Average rating per month</div>
+      <div class="embed-bar-chart">
+        {% for row in monthly_rating_rows %}
+        <div class="embed-bar-col">
+          <div class="embed-bar-value">{{ "{:.1}"|format(row.rating.avg_rating) }}</div>
+          <div class="embed-bar-fill" style="height: {{ row.bar_height_px }}px"></div>
+          <div class="embed-bar-month">{{ row.rating.month_label }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    {% if !t.top_directors.is_empty() %}
+    <div class="embed-chart-block">
+      <div class="embed-chart-label">Most watched directors</div>
+      <div class="embed-director-chart">
+        {% for d in t.top_directors %}
+        <div class="embed-director-row">
+          <div class="embed-director-name">{{ d.director }}</div>
+          <div class="embed-director-bar">
+            {% if t.max_director_count > 0 %}
+            <div class="embed-director-bar-fill" style="width: {{ d.count * 100 / t.max_director_count }}%"></div>
+            {% else %}
+            <div class="embed-director-bar-fill" style="width: 0%"></div>
+            {% endif %}
+          </div>
+          <div class="embed-director-count">{{ d.count }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% else %}
+  {% if let Some(paged) = entries %}
+  <div class="embed-diary">
+    {% for entry in paged.items %}
+    <article class="embed-entry">
+      {% if let Some(poster) = entry.movie().poster_path() %}
+      <div class="embed-poster">
+        <img src="{{ poster.value()|poster_src }}" alt="" loading="lazy">
+      </div>
+      {% endif %}
+      <div class="embed-entry-body">
+        <div class="embed-entry-title">
+          <a href="/movies/{{ entry.movie().id().value() }}" class="embed-movie-link" target="_blank" rel="noopener">{{ entry.movie().title().value() }}</a>
+          <span class="embed-year">({{ entry.movie().release_year().value() }})</span>
+        </div>
+        {% if let Some(dir) = entry.movie().director() %}
+        <div class="embed-director">{{ dir }}</div>
+        {% endif %}
+        <div class="embed-rating">
+          {% for filled in entry.review().stars() %}
+            <span class="embed-star {% if filled %}filled{% else %}empty{% endif %}">★</span>
+          {% endfor %}
+        </div>
+        {% if let Some(comment) = entry.review().comment() %}
+        <div class="embed-comment">{{ comment.value() }}</div>
+        {% endif %}
+        <div class="embed-watched-at">{{ entry.review().watched_at().format("%Y-%m-%d") }}</div>
+      </div>
+    </article>
+    {% else %}
+    <p class="embed-empty">No reviews yet.</p>
+    {% endfor %}
+  </div>
+  <nav class="embed-pagination">
+    {% if current_offset >= limit %}
+    <a href="/users/{{ profile_user_id }}?offset={{ current_offset - limit }}{{ self.filter_qs() }}" class="embed-page-nav">&larr; Prev</a>
+    {% endif %}
+    {% for item in page_items %}
+    {% if item.is_ellipsis %}
+    <span class="embed-page-ellipsis">&hellip;</span>
+    {% elif item.is_current %}
+    <span class="embed-page-num current">{{ item.number + 1 }}</span>
+    {% else %}
+    <a href="/users/{{ profile_user_id }}?offset={{ item.number * limit }}{{ self.filter_qs() }}" class="embed-page-num">{{ item.number + 1 }}</a>
+    {% endif %}
+    {% endfor %}
+    {% if has_more %}
+    <a href="/users/{{ profile_user_id }}?offset={{ current_offset + limit }}{{ self.filter_qs() }}" class="embed-page-nav">Next &rarr;</a>
+    {% endif %}
+  </nav>
+  {% endif %}
+  {% endif %}
+
+  <div class="embed-footer">
+    <a href="{{ profile_url }}" target="_blank" rel="noopener">powered by Movies Diary</a>
+  </div>
+
+</div>
+{% endblock %}
