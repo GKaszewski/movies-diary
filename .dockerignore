@@ -7,3 +7,5 @@ target/
 # .cargo and .sqlx are needed at build time (SQLX_OFFLINE mode)
 docs/
 dev.db
+spa/node_modules/
+spa/dist/
