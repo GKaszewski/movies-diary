@@ -1,4 +1,4 @@
-use super::extractors::{Panic, make_test_state};
+use crate::extractors::tests::{Panic, make_test_state};
 use axum::{
     Router,
     body::Body,
@@ -133,7 +133,7 @@ async fn person_endpoint_returns_404_for_unknown_id() {
     let resp = app
         .oneshot(
             Request::builder()
-                .uri(&format!("/api/v1/people/{}", unknown_id))
+                .uri(format!("/api/v1/people/{}", unknown_id))
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -159,7 +159,7 @@ async fn person_credits_endpoint_returns_404_for_unknown_id() {
     let resp = app
         .oneshot(
             Request::builder()
-                .uri(&format!("/api/v1/people/{}/credits", unknown_id))
+                .uri(format!("/api/v1/people/{}/credits", unknown_id))
                 .body(Body::empty())
                 .unwrap(),
         )

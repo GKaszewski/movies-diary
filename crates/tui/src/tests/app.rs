@@ -150,7 +150,7 @@ fn login_submit_with_empty_fields_sets_error_status() {
     let mut app = login_app();
     let cmds = update(&mut app, Action::LoginSubmit);
     assert!(cmds.is_empty());
-    assert!(app.status.as_ref().map_or(false, |s| s.is_error));
+    assert!(app.status.as_ref().is_some_and(|s| s.is_error));
 }
 
 #[test]
@@ -170,7 +170,7 @@ fn auth_fail_sets_error_status_and_clears_loading() {
     app.loading = true;
     update(&mut app, Action::AuthFail("bad creds".into()));
     assert!(!app.loading);
-    assert!(app.status.as_ref().map_or(false, |s| s.is_error));
+    assert!(app.status.as_ref().is_some_and(|s| s.is_error));
 }
 
 // ── Diary ─────────────────────────────────────────────────────────────────
@@ -360,7 +360,7 @@ fn review_submit_with_missing_title_and_id_sets_error() {
     }
     let cmds = update(&mut app, Action::ReviewSubmit);
     assert!(cmds.is_empty());
-    assert!(app.status.as_ref().map_or(false, |s| s.is_error));
+    assert!(app.status.as_ref().is_some_and(|s| s.is_error));
 }
 
 // ── Bulk Import ───────────────────────────────────────────────────────────

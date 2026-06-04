@@ -59,6 +59,12 @@ pub struct TestContextBuilder {
     pub config: AppConfig,
 }
 
+impl Default for TestContextBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TestContextBuilder {
     pub fn new() -> Self {
         Self {

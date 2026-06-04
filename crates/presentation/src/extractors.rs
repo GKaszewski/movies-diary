@@ -156,4 +156,4 @@ where
 
 #[cfg(test)]
 #[path = "tests/extractors.rs"]
-mod tests;
+pub(crate) mod tests;
