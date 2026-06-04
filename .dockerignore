@@ -9,3 +9,5 @@ docs/
 dev.db
 spa/node_modules/
 spa/dist/
+spa/.env
+spa/.env.local
