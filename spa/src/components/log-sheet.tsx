@@ -1,9 +1,13 @@
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { VisuallyHidden } from "radix-ui"
+import { CalendarIcon } from "lucide-react"
+import { format } from "date-fns"
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
 import { StarRating } from "@/components/star-rating"
 import { SearchOverlay } from "@/components/search-overlay"
 import type { MovieSelection } from "@/components/search-overlay"
@@ -22,12 +26,14 @@ export function LogSheet({ open, onOpenChange }: LogSheetProps) {
   const [movie, setMovie] = useState<MovieSelection | null>(null)
   const [rating, setRating] = useState(0)
   const [comment, setComment] = useState("")
+  const [watchedAt, setWatchedAt] = useState<Date>(new Date())
   const logMutation = useLogReview()
 
   function reset() {
     setMovie(null)
     setRating(0)
     setComment("")
+    setWatchedAt(new Date())
   }
 
   function handleClose() {
@@ -45,7 +51,7 @@ export function LogSheet({ open, onOpenChange }: LogSheetProps) {
         manual_director: movie.director,
         rating,
         comment: comment || undefined,
-        watched_at: new Date().toISOString().replace("Z", "").split(".")[0]!,
+        watched_at: watchedAt.toISOString().replace("Z", "").split(".")[0]!,
       },
       {
         onSuccess: () => {
@@ -85,6 +91,28 @@ export function LogSheet({ open, onOpenChange }: LogSheetProps) {
               </div>
 
               <Textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder={t("logReview.commentPlaceholder")} className="mb-5" rows={3} />
+
+              <div className="mb-5">
+                <p className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">{t("logReview.watchedAt")}</p>
+                <Popover modal>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                      <CalendarIcon className="mr-2 size-4" />
+                      {format(watchedAt, "PPP")}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      fixedWeeks
+                      selected={watchedAt}
+                      onSelect={(d) => d && setWatchedAt(d)}
+                      disabled={(d) => d > new Date()}
+                      autoFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
 
               <Button onClick={handleSubmit} disabled={!rating || logMutation.isPending} className="w-full" size="lg">
                 {logMutation.isPending ? t("logReview.logging") : t("logReview.logReview")}

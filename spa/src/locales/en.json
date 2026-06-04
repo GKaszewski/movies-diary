@@ -274,7 +274,9 @@
     "commentPlaceholder": "Add a comment... (optional)",
     "logging": "Logging...",
     "logReview": "Log Review",
-    "logged": "{{title}} logged!"
+    "logged": "{{title}} logged!",
+    "watchedAt": "Watched on",
+    "pickDate": "Pick a date"
   },
   "searchOverlay": {
     "backToSearch": "Back to search",

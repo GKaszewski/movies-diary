@@ -11,6 +11,7 @@ import { VirtualList } from "@/components/virtual-list"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Textarea } from "@/components/ui/textarea"
 import { StarRating } from "@/components/star-rating"
 import { useAuth } from "@/components/auth-provider"
 import { useQueryClient } from "@tanstack/react-query"
@@ -204,6 +205,7 @@ function QueueTab() {
   const confirmMutation = useConfirmWatch()
   const dismissMutation = useDismissWatch()
   const [ratings, setRatings] = useState<Record<string, number>>({})
+  const [comments, setComments] = useState<Record<string, string>>({})
 
   if (isPending) return <FeedSkeleton />
   if (!data?.length)
@@ -224,13 +226,24 @@ function QueueTab() {
               size="sm"
             />
           </div>
+          <Textarea
+            className="mt-2"
+            placeholder={t("diary.commentPlaceholder")}
+            value={comments[entry.id] ?? ""}
+            onChange={(e) => setComments((p) => ({ ...p, [entry.id]: e.target.value }))}
+            rows={2}
+          />
           <div className="mt-2 flex gap-2">
             <Button
               size="sm"
               disabled={!ratings[entry.id]}
               onClick={() =>
                 confirmMutation.mutate({
-                  confirmations: [{ watch_event_id: entry.id, rating: ratings[entry.id]! }],
+                  confirmations: [{
+                    watch_event_id: entry.id,
+                    rating: ratings[entry.id]!,
+                    comment: comments[entry.id] || undefined,
+                  }],
                 })
               }
             >
