@@ -23,6 +23,19 @@ impl ObjectStorageAdapter {
     pub fn from_config(config: StorageConfig) -> Self {
         Self::new(config.build_store())
     }
+
+    async fn get_exact(&self, key: &str) -> Result<Vec<u8>, DomainError> {
+        let path = Path::from(key);
+        let result = self.store.get(&path).await.map_err(|e| match e {
+            object_store::Error::NotFound { .. } => DomainError::NotFound("Image not found".into()),
+            _ => DomainError::InfrastructureError(e.to_string()),
+        })?;
+        result
+            .bytes()
+            .await
+            .map(|b| b.to_vec())
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))
+    }
 }
 
 #[async_trait]
@@ -37,16 +50,19 @@ impl ObjectStorage for ObjectStorageAdapter {
     }
 
     async fn get(&self, key: &str) -> Result<Vec<u8>, DomainError> {
-        let path = Path::from(key);
-        let result = self.store.get(&path).await.map_err(|e| match e {
-            object_store::Error::NotFound { .. } => DomainError::NotFound("Image not found".into()),
-            _ => DomainError::InfrastructureError(e.to_string()),
-        })?;
-        result
-            .bytes()
-            .await
-            .map(|b| b.to_vec())
-            .map_err(|e| DomainError::InfrastructureError(e.to_string()))
+        match self.get_exact(key).await {
+            Ok(bytes) => return Ok(bytes),
+            Err(DomainError::NotFound(_)) if !has_image_ext(key) => {}
+            Err(e) => return Err(e),
+        }
+        // Key may reference a pre-conversion path; try converted extensions.
+        for ext in [".webp", ".avif"] {
+            let candidate = format!("{key}{ext}");
+            if let Ok(bytes) = self.get_exact(&candidate).await {
+                return Ok(bytes);
+            }
+        }
+        Err(DomainError::NotFound("Image not found".into()))
     }
 
     async fn get_stream(
@@ -75,6 +91,14 @@ impl ObjectStorage for ObjectStorageAdapter {
             Err(e) => Err(DomainError::InfrastructureError(e.to_string())),
         }
     }
+}
+
+fn has_image_ext(key: &str) -> bool {
+    key.ends_with(".webp")
+        || key.ends_with(".avif")
+        || key.ends_with(".png")
+        || key.ends_with(".jpg")
+        || key.ends_with(".jpeg")
 }
 
 pub struct ImageCleanupHandler {
