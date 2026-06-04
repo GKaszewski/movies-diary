@@ -709,6 +709,12 @@ fn ap_err(e: anyhow::Error) -> impl IntoResponse {
 }
 
 #[cfg(feature = "federation")]
+fn ap_to_domain(e: anyhow::Error) -> domain::errors::DomainError {
+    tracing::error!("ActivityPub error: {:?}", e);
+    domain::errors::DomainError::InfrastructureError(e.to_string())
+}
+
+#[cfg(feature = "federation")]
 #[utoipa::path(
     get, path = "/api/v1/social/following",
     responses(
@@ -775,21 +781,22 @@ pub async fn get_user_following(
     State(state): State<AppState>,
     _user: AuthenticatedUser,
     Path(user_id): Path<Uuid>,
-) -> impl IntoResponse {
-    match state.ap_service.get_following(user_id).await {
-        Ok(actors) => Json(ActorListResponse {
-            actors: actors
-                .into_iter()
-                .map(|a| RemoteActorDto {
-                    handle: a.handle,
-                    display_name: a.display_name,
-                    url: a.url,
-                })
-                .collect(),
-        })
-        .into_response(),
-        Err(e) => ap_err(e).into_response(),
-    }
+) -> Result<Json<ActorListResponse>, ApiError> {
+    let actors = state
+        .ap_service
+        .get_following(user_id)
+        .await
+        .map_err(ap_to_domain)?;
+    Ok(Json(ActorListResponse {
+        actors: actors
+            .into_iter()
+            .map(|a| RemoteActorDto {
+                handle: a.handle,
+                display_name: a.display_name,
+                url: a.url,
+            })
+            .collect(),
+    }))
 }
 
 #[cfg(feature = "federation")]
@@ -797,21 +804,22 @@ pub async fn get_user_followers(
     State(state): State<AppState>,
     _user: AuthenticatedUser,
     Path(user_id): Path<Uuid>,
-) -> impl IntoResponse {
-    match state.ap_service.get_accepted_followers(user_id).await {
-        Ok(actors) => Json(ActorListResponse {
-            actors: actors
-                .into_iter()
-                .map(|a| RemoteActorDto {
-                    handle: a.handle,
-                    display_name: a.display_name,
-                    url: a.url,
-                })
-                .collect(),
-        })
-        .into_response(),
-        Err(e) => ap_err(e).into_response(),
-    }
+) -> Result<Json<ActorListResponse>, ApiError> {
+    let actors = state
+        .ap_service
+        .get_accepted_followers(user_id)
+        .await
+        .map_err(ap_to_domain)?;
+    Ok(Json(ActorListResponse {
+        actors: actors
+            .into_iter()
+            .map(|a| RemoteActorDto {
+                handle: a.handle,
+                display_name: a.display_name,
+                url: a.url,
+            })
+            .collect(),
+    }))
 }
 
 #[cfg(feature = "federation")]
@@ -1120,8 +1128,12 @@ pub async fn get_user_profile(
     Json(UserProfileResponse {
         user_id,
         username: user.username().value().to_string(),
-        avatar_url: user.avatar_path().map(|s| s.to_string()),
-        banner_url: user.banner_path().map(|s| s.to_string()),
+        avatar_url: user
+            .avatar_path()
+            .map(|p| format!("{}/images/{}", state.app_ctx.config.base_url, p)),
+        banner_url: user
+            .banner_path()
+            .map(|p| format!("{}/images/{}", state.app_ctx.config.base_url, p)),
         stats: UserStatsDto {
             total_movies: profile.stats.total_movies,
             avg_rating: profile.stats.avg_rating,
