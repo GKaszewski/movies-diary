@@ -80,9 +80,6 @@ async fn load_social_counts(
     user_id: uuid::Uuid,
     is_own_profile: bool,
 ) -> (usize, usize, Vec<PendingFollowerView>) {
-    if !is_own_profile {
-        return (0, 0, vec![]);
-    }
     let following = ctx
         .repos
         .social_query
@@ -95,6 +92,9 @@ async fn load_social_counts(
         .count_accepted_followers(user_id)
         .await
         .unwrap_or(0);
+    if !is_own_profile {
+        return (following, followers, vec![]);
+    }
     let pending = ctx
         .repos
         .social_query
