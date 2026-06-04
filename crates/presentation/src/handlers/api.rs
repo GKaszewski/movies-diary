@@ -414,9 +414,19 @@ pub async fn get_profile(
     .await?;
     Ok(Json(ProfileResponse {
         username: profile.username,
+        display_name: profile.display_name,
         bio: profile.bio,
         avatar_url: profile.avatar_url,
         banner_url: profile.banner_url,
+        also_known_as: profile.also_known_as,
+        fields: profile
+            .fields
+            .into_iter()
+            .map(|f| api_types::ProfileFieldDto {
+                name: f.name,
+                value: f.value,
+            })
+            .collect(),
         role: profile.role,
     }))
 }
