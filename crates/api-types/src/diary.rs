@@ -54,6 +54,7 @@ pub struct ActivityFeedQueryParams {
 pub struct FeedEntryDto {
     pub movie: MovieDto,
     pub review: ReviewDto,
+    pub user_id: Uuid,
     pub user_email: String,
     pub user_display_name: String,
 }
