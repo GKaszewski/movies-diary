@@ -66,6 +66,10 @@ pub struct UserTrendsDto {
 pub struct UserProfileResponse {
     pub user_id: Uuid,
     pub username: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub avatar_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub banner_url: Option<String>,
     pub stats: UserStatsDto,
     pub following_count: usize,
     pub followers_count: usize,

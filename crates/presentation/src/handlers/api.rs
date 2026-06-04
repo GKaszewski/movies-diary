@@ -1120,6 +1120,8 @@ pub async fn get_user_profile(
     Json(UserProfileResponse {
         user_id,
         username: user.username().value().to_string(),
+        avatar_url: user.avatar_path().map(|s| s.to_string()),
+        banner_url: user.banner_path().map(|s| s.to_string()),
         stats: UserStatsDto {
             total_movies: profile.stats.total_movies,
             avg_rating: profile.stats.avg_rating,
