@@ -10,9 +10,10 @@ type MovieCardProps = {
   comment?: string
   subtitle?: string
   variant?: "compact" | "full"
+  action?: React.ReactNode
 }
 
-export function MovieCard({ movie, rating, comment, subtitle, variant = "full" }: MovieCardProps) {
+export function MovieCard({ movie, rating, comment, subtitle, variant = "full", action }: MovieCardProps) {
   if (variant === "compact") {
     return (
       <Link to="/movies/$id" params={{ id: movie.id }} className="glass flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors active:bg-muted/50">
@@ -41,6 +42,7 @@ export function MovieCard({ movie, rating, comment, subtitle, variant = "full" }
             {rating != null && <div className="mt-1"><StarDisplay rating={rating} /></div>}
             {comment && <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{comment}</p>}
           </div>
+          {action && <div className="flex items-center" onClick={(e) => e.preventDefault()}>{action}</div>}
         </CardContent>
       </Card>
     </Link>

@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router"
 import { Globe } from "lucide-react"
+import { timeAgo } from "@/lib/date"
 import { StarDisplay } from "@/components/star-display"
 import { Card, CardContent } from "@/components/ui/card"
 import { posterUrl } from "@/lib/api/client"
@@ -32,7 +33,7 @@ export function ReviewCard({ movie, review, userName, userId, isFederated }: Rev
               )}
               {isFederated && <Globe className="size-3 text-muted-foreground/60" />}
               <span>·</span>
-              <span>{review.watched_at.slice(0, 10)}</span>
+              <span>{timeAgo(review.watched_at)}</span>
             </div>
           )}
           <Link to="/movies/$id" params={{ id: movie.id }} className="font-semibold hover:underline">

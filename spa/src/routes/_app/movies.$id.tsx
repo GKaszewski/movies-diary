@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { useTranslation } from "react-i18next"
-import { ArrowLeft, Bookmark, BookmarkCheck, Globe, Star, TrendingUp, User, Users } from "lucide-react"
+import { Bookmark, BookmarkCheck, Globe, Star, TrendingUp, User, Users } from "lucide-react"
+import { BackButton } from "@/components/back-button"
 import { StarDisplay } from "@/components/star-display"
 import { RatingHistogram } from "@/components/rating-histogram"
 import { EmptyState } from "@/components/empty-state"
@@ -9,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { posterUrl, tmdbProfileUrl } from "@/lib/api/client"
+import { timeAgo, shortDate } from "@/lib/date"
 import { useMovie, useMovieHistory, useMovieProfile } from "@/hooks/use-movies"
 import {
   useWatchlistStatus,
@@ -36,9 +38,7 @@ function MovieDetailPage() {
 
   return (
     <div className="space-y-5 p-4">
-      <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground">
-        <ArrowLeft className="size-4" /> {t("common.back")}
-      </Link>
+      <BackButton />
 
       <HeroSection movie={movie} stats={stats} movieId={id} tagline={profile?.tagline} />
 
@@ -116,7 +116,7 @@ function MovieDetailPage() {
                         {r.user_display}
                         {r.is_federated && <Globe className="size-3 text-muted-foreground/60" />}
                       </CardTitle>
-                      <CardDescription className="text-[10px]">{r.watched_at.slice(0, 10)}</CardDescription>
+                      <CardDescription className="text-[10px]">{timeAgo(r.watched_at)}</CardDescription>
                     </div>
                     <StarDisplay rating={r.rating} size="xs" />
                   </div>
@@ -145,7 +145,7 @@ function MovieDetailPage() {
             {history.viewings.map((v) => (
               <div key={v.id} className="flex items-center justify-between rounded-xl bg-card p-3">
                 <div>
-                  <p className="text-sm font-medium">{v.watched_at}</p>
+                  <p className="text-sm font-medium">{shortDate(v.watched_at)}</p>
                   {v.comment && (
                     <p className="mt-0.5 text-xs text-muted-foreground line-clamp-1">{v.comment}</p>
                   )}

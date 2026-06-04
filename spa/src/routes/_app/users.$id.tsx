@@ -1,6 +1,7 @@
-import { createFileRoute, Link } from "@tanstack/react-router"
+import { createFileRoute } from "@tanstack/react-router"
 import { useTranslation } from "react-i18next"
-import { ArrowLeft, UserCheck, UserPlus } from "lucide-react"
+import { UserCheck, UserPlus } from "lucide-react"
+import { BackButton } from "@/components/back-button"
 import { Button } from "@/components/ui/button"
 import { ProfileView, ProfileSkeleton } from "@/components/profile-view"
 import { useAuth } from "@/components/auth-provider"
@@ -28,9 +29,7 @@ function UserProfilePage() {
 
   return (
     <div className="p-4">
-      <Link to="/" className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground">
-        <ArrowLeft className="size-4" /> {t("common.back")}
-      </Link>
+      <div className="mb-4"><BackButton /></div>
 
       <ProfileView
         data={data}

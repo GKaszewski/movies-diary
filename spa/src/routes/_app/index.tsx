@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { useCallback, useState } from "react"
 import { useTranslation } from "react-i18next"
-import { Clapperboard, Film, Inbox, Plus } from "lucide-react"
+import { Clapperboard, Film, Inbox, Plus, RefreshCw } from "lucide-react"
 import { ReviewCard } from "@/components/review-card"
 import { MovieCard } from "@/components/movie-card"
 import { EmptyState } from "@/components/empty-state"
@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton"
 import { StarRating } from "@/components/star-rating"
 import { useAuth } from "@/components/auth-provider"
+import { useQueryClient } from "@tanstack/react-query"
 import { useInfiniteActivityFeed, useDeleteReview } from "@/hooks/use-diary"
 import { SearchOverlay } from "@/components/search-overlay"
 import type { MovieSelection } from "@/components/search-overlay"
@@ -52,6 +53,8 @@ function HomePage() {
 function FeedTab() {
   const { t } = useTranslation()
   const { auth } = useAuth()
+  const qc = useQueryClient()
+  const [refreshing, setRefreshing] = useState(false)
   const [sortBy, setSortBy] = useState("date")
   const feedSortOptions = [
     { value: "date", label: t("feed.sortLatest") },
@@ -67,7 +70,19 @@ function FeedTab() {
 
   return (
     <div className="space-y-2">
-      <div className="flex justify-end">
+      <div className="flex items-center justify-end gap-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-8"
+          onClick={async () => {
+            setRefreshing(true)
+            await qc.refetchQueries({ queryKey: ["activity-feed"] })
+            setRefreshing(false)
+          }}
+        >
+          <RefreshCw className={`size-4 ${refreshing ? "animate-spin" : ""}`} />
+        </Button>
         <Select value={sortBy} onValueChange={setSortBy}>
           <SelectTrigger className="w-36">
             <SelectValue />

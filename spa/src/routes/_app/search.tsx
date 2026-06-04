@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { useCallback, useState } from "react"
 import { useTranslation } from "react-i18next"
-import { Search as SearchIcon, Film, Users } from "lucide-react"
+import { Bookmark, Search as SearchIcon, Film, Users } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { MovieCard } from "@/components/movie-card"
 import { PersonRow } from "@/components/person-row"
@@ -10,6 +11,8 @@ import { InfiniteScroll } from "@/components/infinite-scroll"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useInfiniteSearch } from "@/hooks/use-search"
 import { useDebounce } from "@/hooks/use-debounce"
+import { useAddToWatchlist } from "@/hooks/use-watchlist"
+import { toast } from "sonner"
 
 export const Route = createFileRoute("/_app/search")({
   component: SearchPage,
@@ -17,6 +20,7 @@ export const Route = createFileRoute("/_app/search")({
 
 function SearchPage() {
   const { t } = useTranslation()
+  const addToWatchlist = useAddToWatchlist()
   const [query, setQuery] = useState("")
   const debouncedQuery = useDebounce(query, 300)
   const {
@@ -87,6 +91,21 @@ function SearchPage() {
                       genres: hit.genres,
                     }}
                     variant="full"
+                    action={
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 text-muted-foreground"
+                        onClick={() => {
+                          addToWatchlist.mutate(
+                            { movie_id: hit.movie_id },
+                            { onSuccess: () => toast.success(t("feed.addedToWatchlist")) },
+                          )
+                        }}
+                      >
+                        <Bookmark className="size-4" />
+                      </Button>
+                    }
                   />
                 ))}
               </div>

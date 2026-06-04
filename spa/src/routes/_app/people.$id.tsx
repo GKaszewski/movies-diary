@@ -1,6 +1,7 @@
-import { createFileRoute, Link } from "@tanstack/react-router"
+import { createFileRoute } from "@tanstack/react-router"
 import { useTranslation } from "react-i18next"
-import { ArrowLeft, Film, User } from "lucide-react"
+import { Film, User } from "lucide-react"
+import { BackButton } from "@/components/back-button"
 import { MovieCard } from "@/components/movie-card"
 import { EmptyState } from "@/components/empty-state"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -23,9 +24,7 @@ function PersonDetailPage() {
 
   return (
     <div className="space-y-4 p-4">
-      <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground">
-        <ArrowLeft className="size-4" /> {t("common.back")}
-      </Link>
+      <BackButton />
 
       <div className="flex items-center gap-4">
         <div className="size-16 flex-shrink-0 overflow-hidden rounded-full bg-muted">

@@ -4,6 +4,7 @@ import { useDrag } from "@use-gesture/react"
 import { Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ConfirmDialog } from "@/components/confirm-dialog"
+import { hapticMedium } from "@/lib/haptics"
 
 type SwipeToDeleteProps = {
   onDelete: () => void
@@ -31,6 +32,7 @@ export function SwipeToDelete({
         setOffsetX(Math.min(0, Math.max(mx, -100)))
       } else {
         if (mx < -60) {
+          hapticMedium()
           setRevealed(true)
           setOffsetX(-80)
         } else {

@@ -1,5 +1,6 @@
 import { Star } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { hapticLight } from "@/lib/haptics"
 
 type StarRatingProps = {
   value: number
@@ -16,7 +17,7 @@ export function StarRating({ value, onChange, size = "lg" }: StarRatingProps) {
         <button
           key={star}
           type="button"
-          onClick={() => onChange(star)}
+          onClick={() => { hapticLight(); onChange(star) }}
           className="transition-transform active:scale-90"
         >
           <Star

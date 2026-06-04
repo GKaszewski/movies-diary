@@ -10,6 +10,7 @@ import type { MovieSelection } from "@/components/search-overlay"
 import { useLogReview } from "@/hooks/use-diary"
 import { toast } from "sonner"
 import { posterUrl } from "@/lib/api/client"
+import { hapticMedium } from "@/lib/haptics"
 
 type LogSheetProps = {
   open: boolean
@@ -48,6 +49,7 @@ export function LogSheet({ open, onOpenChange }: LogSheetProps) {
       },
       {
         onSuccess: () => {
+          hapticMedium()
           toast.success(t("logReview.logged", { title: movie.title }))
           handleClose()
         },

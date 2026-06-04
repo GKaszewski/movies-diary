@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { useTranslation } from "react-i18next"
-import { ArrowLeft, Star, Users } from "lucide-react"
+import { Star, Users } from "lucide-react"
+import { BackButton } from "@/components/back-button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -26,9 +27,7 @@ function WrapUpReportPage() {
 
   return (
     <div className="space-y-4 p-4">
-      <Link to="/profile" className="inline-flex items-center gap-1 text-sm text-muted-foreground">
-        <ArrowLeft className="size-4" /> {t("profile.title")}
-      </Link>
+      <BackButton />
 
       {/* Hero */}
       <Card>

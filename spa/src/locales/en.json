@@ -67,7 +67,8 @@
     "removeFromWatchlist": "Remove from watchlist?",
     "queueEmpty": "Queue empty",
     "queueEmptyDesc": "Movies from Jellyfin/Plex appear here",
-    "deleteReview": "Delete this review?"
+    "deleteReview": "Delete this review?",
+    "addedToWatchlist": "Added to watchlist"
   },
   "diary": {
     "title": "Diary",
