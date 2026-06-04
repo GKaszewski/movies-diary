@@ -95,7 +95,10 @@ async fn get_by_id_returns_person() {
     let adapter = SqlitePersonAdapter::new(pool.clone());
 
     let p = make_person(42, "Charlie", Some("Acting"));
-    adapter.upsert_batch(std::slice::from_ref(&p)).await.unwrap();
+    adapter
+        .upsert_batch(std::slice::from_ref(&p))
+        .await
+        .unwrap();
 
     let found = adapter.get_by_id(p.id()).await.unwrap().unwrap();
     assert_eq!(found.name(), "Charlie");
@@ -117,7 +120,10 @@ async fn get_credits_returns_cast_and_crew() {
     let adapter = SqlitePersonAdapter::new(pool.clone());
 
     let p = make_person(7, "Diana", Some("Acting"));
-    adapter.upsert_batch(std::slice::from_ref(&p)).await.unwrap();
+    adapter
+        .upsert_batch(std::slice::from_ref(&p))
+        .await
+        .unwrap();
 
     sqlx::query("INSERT INTO movies VALUES ('m1', 'The Film', 2020, 'Dir', NULL, NULL)")
         .execute(&pool)
