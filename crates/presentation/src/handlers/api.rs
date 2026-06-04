@@ -990,6 +990,7 @@ pub async fn list_users(State(state): State<AppState>) -> Result<Json<UsersRespo
 )]
 pub async fn get_user_profile(
     State(state): State<AppState>,
+    AuthenticatedUser(viewer_id): AuthenticatedUser,
     Path(user_id): Path<Uuid>,
     Query(params): Query<UserProfileQueryParams>,
 ) -> impl IntoResponse {
@@ -1022,7 +1023,7 @@ pub async fn get_user_profile(
             offset: params.offset,
             sort_by: domain::ports::FeedSortBy::Date,
             search: None,
-            is_own_profile: false,
+            is_own_profile: viewer_id.value() == user_id,
         },
     )
     .await
