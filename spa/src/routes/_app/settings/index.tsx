@@ -5,7 +5,6 @@ import {
   ArrowLeft,
   ChevronRight,
   Download,
-  Globe,
   Key,
   LogOut,
   RefreshCw,
@@ -69,21 +68,12 @@ function SettingsPage() {
 
   const social: SettingsItem[] = [
     {
-      label: t("settings.blockedUsers"),
+      label: isAdmin ? t("settings.blockedUsersAndDomains") : t("settings.blockedUsers"),
       description: isAdmin ? t("settings.blockedUsersDescAdmin") : t("settings.blockedUsersDesc"),
       to: "/settings/blocked",
       icon: <ShieldBan className="size-4" />,
     },
   ]
-
-  if (isAdmin) {
-    social.push({
-      label: t("settings.blockedDomains"),
-      description: t("settings.blockedDomainsDesc"),
-      to: "/settings/blocked",
-      icon: <Globe className="size-4" />,
-    })
-  }
 
   const handleLogout = () => {
     logout()

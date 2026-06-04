@@ -67,9 +67,27 @@ export type GenreStat = {
   avg_rating: number
 }
 
+export type MonthCount = {
+  year_month: string
+  label: string
+  count: number
+}
+
+export type KeywordStat = {
+  keyword: string
+  count: number
+}
+
+export type LangStat = {
+  language: string
+  count: number
+}
+
 export type WrapUpReport = {
+  date_range: { start: string; end: string }
   total_movies: number
   total_watch_time_minutes: number
+  movies_per_month: MonthCount[]
   busiest_month?: string
   busiest_day_of_week?: string
   avg_rating?: number
@@ -84,6 +102,10 @@ export type WrapUpReport = {
   genre_diversity: number
   highest_rated_genre?: string
   lowest_rated_genre?: string
+  top_keywords: KeywordStat[]
+  total_budget_watched?: number
+  avg_budget?: number
+  language_distribution: LangStat[]
   oldest_movie?: MovieRef
   newest_movie?: MovieRef
   total_rewatches: number

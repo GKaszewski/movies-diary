@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
+import { useState } from "react"
 import { useTranslation } from "react-i18next"
-import { ChevronRight, Settings, Sparkles } from "lucide-react"
+import { ChevronDown, ChevronRight, Settings, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ProfileView, ProfileSkeleton } from "@/components/profile-view"
 import { useAuth } from "@/components/auth-provider"
@@ -41,7 +42,7 @@ function ProfilePage() {
                 <ChevronRight className="size-4 text-muted-foreground" />
               </Button>
             </Link>
-            <WrapUpLink />
+            <WrapUpLinks />
           </>
         }
       />
@@ -49,22 +50,50 @@ function ProfilePage() {
   )
 }
 
-function WrapUpLink() {
+function wrapupYear(startDate: string): string {
+  return startDate.slice(0, 4)
+}
+
+function WrapUpLinks() {
   const { t } = useTranslation()
   const { data } = useWrapUps()
-  const latest = data?.items?.find((w) => w.status === "Ready")
+  const ready = (data?.items?.filter((w) => w.status === "Ready") ?? [])
+    .sort((a, b) => b.start_date.localeCompare(a.start_date))
+  const [expanded, setExpanded] = useState(false)
 
-  if (!latest) return null
+  if (!ready.length) return null
+
+  if (ready.length === 1) {
+    return (
+      <Link to="/wrapup/$id" params={{ id: ready[0].id }}>
+        <Button variant="outline" className="w-full justify-between">
+          <span className="flex items-center gap-2">
+            <Sparkles className="size-4" />
+            {t("profile.yearInReview")}
+          </span>
+          <ChevronRight className="size-4 text-muted-foreground" />
+        </Button>
+      </Link>
+    )
+  }
 
   return (
-    <Link to="/wrapup/$id" params={{ id: latest.id }}>
-      <Button variant="outline" className="w-full justify-between">
+    <div className="space-y-1.5">
+      <Button variant="outline" className="w-full justify-between" onClick={() => setExpanded(!expanded)}>
         <span className="flex items-center gap-2">
           <Sparkles className="size-4" />
           {t("profile.yearInReview")}
         </span>
-        <ChevronRight className="size-4 text-muted-foreground" />
+        <ChevronDown className={`size-4 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`} />
       </Button>
-    </Link>
+      {expanded && ready.map((w) => (
+        <Link key={w.id} to="/wrapup/$id" params={{ id: w.id }}>
+          <Button variant="ghost" size="sm" className="w-full justify-between">
+            <span>{wrapupYear(w.start_date)}</span>
+            <ChevronRight className="size-4 text-muted-foreground" />
+          </Button>
+        </Link>
+      ))}
+    </div>
   )
 }

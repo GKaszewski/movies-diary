@@ -1,7 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
+import { lazy, Suspense, useState } from "react"
 import { useTranslation } from "react-i18next"
-import { Star, Users } from "lucide-react"
+import { BarChart3, DollarSign, Globe, Hash, Share2, Star, Users } from "lucide-react"
 import { BackButton } from "@/components/back-button"
+import { Button } from "@/components/ui/button"
+
+const WrapUpShareCard = lazy(() => import("@/components/wrapup-share-card").then((m) => ({ default: m.WrapUpShareCard })))
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -20,6 +24,8 @@ function WrapUpReportPage() {
   const { id } = Route.useParams()
   const { data: report, isPending } = useWrapUpReport(id)
 
+  const [showShare, setShowShare] = useState(false)
+
   if (isPending) return <ReportSkeleton />
   if (!report) return null
 
@@ -27,7 +33,18 @@ function WrapUpReportPage() {
 
   return (
     <div className="space-y-4 p-4">
-      <BackButton />
+      <div className="flex items-center justify-between">
+        <BackButton />
+        <Button variant="ghost" size="icon" onClick={() => setShowShare(true)}>
+          <Share2 className="size-5" />
+        </Button>
+      </div>
+
+      {showShare && (
+        <Suspense>
+          <WrapUpShareCard report={report} onClose={() => setShowShare(false)} />
+        </Suspense>
+      )}
 
       {/* Hero */}
       <Card>
@@ -118,6 +135,96 @@ function WrapUpReportPage() {
         </Card>
       )}
 
+      {/* Monthly Activity */}
+      {report.movies_per_month.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <BarChart3 className="size-4" /> {t("wrapup.monthlyActivity")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {(() => {
+              const max = Math.max(...report.movies_per_month.map((x) => x.count))
+              const barHeight = 96
+              return (
+                <div className="flex items-end gap-1">
+                  {report.movies_per_month.map((m) => {
+                    const h = max > 0 ? Math.max((m.count / max) * barHeight, 4) : 4
+                    return (
+                      <div key={m.year_month} className="flex flex-1 flex-col items-center gap-1">
+                        <span className="text-[10px] text-muted-foreground">{m.count}</span>
+                        <div className="w-full rounded-t bg-primary" style={{ height: h }} />
+                        <span className="text-[9px] text-muted-foreground">{m.year_month.slice(5)}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )
+            })()}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Keywords */}
+      {report.top_keywords.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <Hash className="size-4" /> {t("wrapup.keywords")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-1.5">
+              {report.top_keywords
+                .filter((k) => !k.keyword.includes("creditsstinger"))
+                .slice(0, 15)
+                .map((k) => (
+                  <Badge key={k.keyword} variant="secondary" className="text-xs">
+                    {k.keyword} <span className="ml-1 opacity-60">{k.count}</span>
+                  </Badge>
+                ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Budget & Language */}
+      {(report.total_budget_watched != null || report.language_distribution.length > 1) && (() => {
+        const hasBudget = report.total_budget_watched != null
+        const hasLang = report.language_distribution.length > 1
+        const bothVisible = hasBudget && hasLang
+        return (
+        <div className={bothVisible ? "grid grid-cols-2 gap-3" : ""}>
+          {hasBudget && (
+            <Card>
+              <CardContent className="py-4 text-center">
+                <DollarSign className="mx-auto mb-1 size-4 text-muted-foreground" />
+                <p className="text-lg font-bold">${Math.round(report.total_budget_watched! / 1_000_000)}M</p>
+                <p className="text-[10px] text-muted-foreground">{t("wrapup.totalBudget")}</p>
+                {report.avg_budget != null && (
+                  <p className="mt-1 text-[10px] text-muted-foreground">
+                    {t("wrapup.avgBudget", { amount: `$${Math.round(report.avg_budget / 1_000_000)}M` })}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+          {hasLang && (
+            <Card>
+              <CardContent className="py-4 text-center">
+                <Globe className="mx-auto mb-1 size-4 text-muted-foreground" />
+                <p className="text-lg font-bold">{report.language_distribution.length}</p>
+                <p className="text-[10px] text-muted-foreground">{t("wrapup.languages")}</p>
+                <p className="mt-1 text-[10px] text-muted-foreground">
+                  {report.language_distribution.slice(0, 3).map((l) => l.language.toUpperCase()).join(", ")}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+        )})()}
+
       {/* Highlights */}
       <Card>
         <CardHeader>
@@ -159,7 +266,7 @@ function WrapUpReportPage() {
       {report.poster_paths.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">{t("wrapup.posterMosaic")}</CardTitle>
+            <CardTitle className="text-sm">{t("wrapup.allMovies", { count: report.poster_paths.length })}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-5 gap-1">

@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 import { ArrowLeft, Key, Plus, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -26,6 +27,7 @@ import {
   useGenerateToken,
   useDeleteToken,
 } from "@/hooks/use-webhooks"
+import { API_URL } from "@/lib/api/client"
 
 export const Route = createFileRoute("/_app/settings/webhooks")({
   component: WebhooksPage,
@@ -104,6 +106,8 @@ function WebhooksPage() {
         </div>
       )}
 
+      <SetupInstructions />
+
       <Drawer open={open} onOpenChange={setOpen}>
         <DrawerContent>
           <DrawerHeader>
@@ -140,6 +144,56 @@ function WebhooksPage() {
           </div>
         </DrawerContent>
       </Drawer>
+    </div>
+  )
+}
+
+function SetupInstructions() {
+  const { t } = useTranslation()
+  const baseUrl = API_URL || window.location.origin
+
+  return (
+    <div className="space-y-2">
+      <p className="px-1 text-xs font-medium text-muted-foreground">{t("webhooks.setup")}</p>
+
+      <Card size="sm">
+        <CardContent className="space-y-2">
+          <p className="text-sm font-medium">{t("webhooks.jellyfin")}</p>
+          <div className="rounded-lg bg-muted p-2">
+            <p className="text-[10px] text-muted-foreground">{t("webhooks.webhookUrl")}</p>
+            <code className="break-all text-xs">{baseUrl}/api/v1/webhooks/jellyfin</code>
+          </div>
+          <details className="text-xs text-muted-foreground">
+            <summary className="cursor-pointer font-medium text-foreground">{t("webhooks.setupSteps")}</summary>
+            <ol className="mt-2 list-inside list-decimal space-y-1 pl-1">
+              <li>{t("webhooks.jellyfinStep1")}</li>
+              <li>{t("webhooks.jellyfinStep2")}</li>
+              <li>{t("webhooks.jellyfinStep3")}</li>
+              <li>{t("webhooks.jellyfinStep4")}</li>
+              <li>{t("webhooks.jellyfinStep5")}</li>
+              <li>{t("webhooks.jellyfinStep6")}</li>
+            </ol>
+          </details>
+        </CardContent>
+      </Card>
+
+      <Card size="sm">
+        <CardContent className="space-y-2">
+          <p className="text-sm font-medium">{t("webhooks.plex")}</p>
+          <div className="rounded-lg bg-muted p-2">
+            <p className="text-[10px] text-muted-foreground">{t("webhooks.webhookUrl")}</p>
+            <code className="break-all text-xs">{baseUrl}/api/v1/webhooks/plex?token=YOUR_TOKEN</code>
+          </div>
+          <details className="text-xs text-muted-foreground">
+            <summary className="cursor-pointer font-medium text-foreground">{t("webhooks.setupSteps")}</summary>
+            <ol className="mt-2 list-inside list-decimal space-y-1 pl-1">
+              <li>{t("webhooks.plexStep1")}</li>
+              <li>{t("webhooks.plexStep2")}</li>
+              <li>{t("webhooks.plexStep3")}</li>
+            </ol>
+          </details>
+        </CardContent>
+      </Card>
     </div>
   )
 }
