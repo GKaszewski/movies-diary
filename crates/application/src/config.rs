@@ -25,7 +25,7 @@ impl AppConfig {
         let rate_limit = std::env::var("RATE_LIMIT")
             .ok()
             .and_then(|v| v.parse().ok())
-            .unwrap_or(20);
+            .unwrap_or(60);
         Self {
             allow_registration,
             base_url,

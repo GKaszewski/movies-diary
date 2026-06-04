@@ -6,8 +6,7 @@ pub struct StorageConfig(Arc<dyn ObjectStore>);
 
 impl StorageConfig {
     pub fn from_env() -> anyhow::Result<Self> {
-        let backend = std::env::var("IMAGE_STORAGE_BACKEND")
-            .context("IMAGE_STORAGE_BACKEND required (valid values: s3, local)")?;
+        let backend = std::env::var("IMAGE_STORAGE_BACKEND").unwrap_or_else(|_| "local".into());
 
         let store: Arc<dyn ObjectStore> = match backend.as_str() {
             "s3" => build_s3_store(
@@ -19,8 +18,7 @@ impl StorageConfig {
                 &std::env::var("MINIO_REGION").unwrap_or_else(|_| "minio".to_string()),
             )?,
             "local" => build_local_store(
-                &std::env::var("IMAGE_STORAGE_PATH")
-                    .context("IMAGE_STORAGE_PATH required when IMAGE_STORAGE_BACKEND=local")?,
+                &std::env::var("IMAGE_STORAGE_PATH").unwrap_or_else(|_| "./images".into()),
             )?,
             other => {
                 anyhow::bail!("Unknown IMAGE_STORAGE_BACKEND: {other:?}. Valid values: s3, local")

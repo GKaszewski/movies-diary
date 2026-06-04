@@ -203,38 +203,28 @@ The `application` crate has unit tests for core use cases backed by in-memory fa
 
 ## Docker
 
-The image contains both `presentation` (HTTP server) and `worker` (event processor), plus `ffmpeg` and DejaVu fonts for wrap-up video generation. Run them as separate containers sharing the same data volume:
+### Quick start
 
 ```bash
-# Build (SQLite + federation + NATS support)
-docker build -t movies-diary \
-  --build-arg FEATURES=sqlite,sqlite-federation,nats .
-
-# HTTP server
-docker run -p 3000:3000 \
-  -e DATABASE_URL=sqlite:///data/movies.db \
-  -e JWT_SECRET=change-me \
-  -e OMDB_API_KEY=your-key \
-  -e BASE_URL=https://yourdomain.example.com \
-  -e EVENT_BUS_BACKEND=nats \
-  -e NATS_URL=nats://nats:4222 \
-  -v $(pwd)/data:/data \
-  movies-diary
-
-# Event worker (separate container, same image)
-docker run \
-  -e DATABASE_URL=sqlite:///data/movies.db \
-  -e JWT_SECRET=change-me \
-  -e OMDB_API_KEY=your-key \
-  -e BASE_URL=https://yourdomain.example.com \
-  -e EVENT_BUS_BACKEND=nats \
-  -e NATS_URL=nats://nats:4222 \
-  -v $(pwd)/data:/data \
-  --entrypoint ./worker \
-  movies-diary
+cp .env.example .env
+# Edit .env — set JWT_SECRET and OMDB_API_KEY (or TMDB_API_KEY)
+docker compose up -d
 ```
 
-To build for PostgreSQL: `--build-arg FEATURES=postgres,postgres-federation,nats`
+This builds and starts the HTTP server (port 3000) and event worker. Data is persisted in a Docker volume.
+
+### Manual docker run
+
+The image contains both `presentation` and `worker` binaries. Run them as separate containers sharing the same data volume:
+
+```bash
+docker build -t movies-diary .
+
+docker run -p 3000:3000 --env-file .env -v movies-diary-data:/data movies-diary
+docker run --env-file .env -v movies-diary-data:/data --entrypoint ./worker movies-diary
+```
+
+Build for PostgreSQL: `--build-arg FEATURES=postgres,postgres-federation`
 
 ## Media Server Integration
 

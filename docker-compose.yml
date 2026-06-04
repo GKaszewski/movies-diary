@@ -1,0 +1,28 @@
+services:
+  app:
+    build:
+      context: .
+      args:
+        FEATURES: sqlite,sqlite-federation
+    ports:
+      - "3000:3000"
+    env_file: .env
+    volumes:
+      - data:/data
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      args:
+        FEATURES: sqlite,sqlite-federation
+    entrypoint: ["./worker"]
+    env_file: .env
+    volumes:
+      - data:/data
+    restart: unless-stopped
+    depends_on:
+      - app
+
+volumes:
+  data:
