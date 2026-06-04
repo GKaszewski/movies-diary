@@ -259,6 +259,13 @@
     "topDirectorLabel": "Top Director",
     "topActorLabel": "Top Actor",
     "busiestMonthLabel": "Busiest Month",
+    "funFacts": "Fun Facts",
+    "funSpan": "Your movies span {{span}} years ({{oldest}}–{{newest}})",
+    "funDays": "{{days}} days of non-stop watch time",
+    "funHours": "{{hours}} hours of watch time",
+    "funBudget": "You watched {{amount}} worth of movies",
+    "funGenres": "You explored {{count}} different genres",
+    "funActors": "You saw {{count}} different actors",
     "allMovies": "All Movies ({{count}})"
   },
   "logReview": {
