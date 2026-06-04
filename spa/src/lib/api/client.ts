@@ -56,7 +56,7 @@ async function request<T = void>(
   if (!res.ok) {
     if (res.status === 401) {
       clearAuth()
-      window.location.href = "/login"
+      window.location.href = "/app/login"
     }
     throw new ApiError(res.status, await res.text())
   }
