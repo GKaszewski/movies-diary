@@ -52,7 +52,7 @@ const GLASS_PADDING: u32 = 30;
 pub struct SlideRenderer {
     font: FontArc,
     logo: Option<RgbaImage>,
-    backgrounds: Vec<RgbaImage>,
+    bg_paths: Vec<std::path::PathBuf>,
 }
 
 impl SlideRenderer {
@@ -78,7 +78,7 @@ impl SlideRenderer {
             None
         };
 
-        let mut backgrounds = Vec::new();
+        let mut bg_paths = Vec::new();
         if let Some(dir) = bg_dir
             && let Ok(entries) = std::fs::read_dir(dir)
         {
@@ -90,28 +90,34 @@ impl SlideRenderer {
                     .unwrap_or("")
                     .to_lowercase();
                 if matches!(ext.as_str(), "jpg" | "jpeg" | "png" | "webp") {
-                    match image::open(&path) {
-                        Ok(img) => backgrounds.push(img.to_rgba8()),
-                        Err(e) => tracing::warn!("bg load {}: {e}", path.display()),
-                    }
+                    bg_paths.push(path);
                 }
             }
+            bg_paths.sort();
         }
 
         Ok(Self {
             font,
             logo,
-            backgrounds,
+            bg_paths,
         })
+    }
+
+    fn load_background(&self, index: usize) -> Option<RgbaImage> {
+        let path = self.bg_paths.get(index % self.bg_paths.len())?;
+        match image::open(path) {
+            Ok(img) => Some(img.to_rgba8()),
+            Err(e) => {
+                tracing::warn!("bg load {}: {e}", path.display());
+                None
+            }
+        }
     }
 
     /// Pick a background for slide at `index`, resized to `w x h` with dark gradient overlay.
     fn pick_background(&self, index: usize, w: u32, h: u32) -> Option<RgbaImage> {
-        if self.backgrounds.is_empty() {
-            return None;
-        }
-        let bg = &self.backgrounds[index % self.backgrounds.len()];
-        let mut out = resize_cover(bg, w, h);
+        let bg = self.load_background(index)?;
+        let mut out = resize_cover(&bg, w, h);
         // darken top 40% and bottom 40% with gradient to ~70% black
         let top_cutoff = (h as f32 * 0.4) as u32;
         let bot_start = h - top_cutoff;

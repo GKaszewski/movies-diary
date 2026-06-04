@@ -990,7 +990,9 @@ pub async fn wire(database_url: &str) -> anyhow::Result<SqliteWireOutput> {
         .create_if_missing(true)
         .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal)
         .busy_timeout(std::time::Duration::from_secs(5));
-    let pool = sqlx::SqlitePool::connect_with(opts)
+    let pool = sqlx::pool::PoolOptions::new()
+        .max_connections(4)
+        .connect_with(opts)
         .await
         .context("Failed to connect to SQLite database")?;
 
