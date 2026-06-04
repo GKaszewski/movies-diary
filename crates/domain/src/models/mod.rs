@@ -317,6 +317,15 @@ pub enum UserRole {
     Admin,
 }
 
+impl UserRole {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Standard => "standard",
+            Self::Admin => "admin",
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct ProfileField {
     pub name: String,

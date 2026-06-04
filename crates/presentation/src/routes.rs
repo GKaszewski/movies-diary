@@ -264,7 +264,16 @@ fn cors_layer() -> CorsLayer {
     } else {
         let parsed: Vec<_> = origins
             .split(',')
-            .filter_map(|s| s.trim().parse().ok())
+            .filter_map(|s| {
+                let trimmed = s.trim();
+                match trimmed.parse() {
+                    Ok(v) => Some(v),
+                    Err(e) => {
+                        tracing::warn!("ignoring invalid CORS origin {trimmed:?}: {e}");
+                        None
+                    }
+                }
+            })
             .collect();
         layer
             .allow_origin(AllowOrigin::list(parsed))

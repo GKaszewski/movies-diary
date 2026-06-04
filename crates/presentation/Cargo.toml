@@ -24,7 +24,7 @@ postgres-federation = [
 ]
 
 [dependencies]
-tower-http = { version = "0.6.8", features = ["fs", "trace", "tracing"] }
+tower-http = { version = "0.6.8", features = ["cors", "fs", "trace", "tracing"] }
 infer = "0.19.0"
 percent-encoding = "2"
 axum-governor = "2"

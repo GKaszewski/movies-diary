@@ -82,6 +82,8 @@ pub struct ProfileResponse {
     pub username: String,
     pub bio: Option<String>,
     pub avatar_url: Option<String>,
+    pub banner_url: Option<String>,
+    pub role: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]

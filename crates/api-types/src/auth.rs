@@ -13,6 +13,7 @@ pub struct LoginResponse {
     pub user_id: Uuid,
     pub email: String,
     pub expires_at: String,
+    pub role: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]

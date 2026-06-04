@@ -1,6 +1,6 @@
 use api_types::{
-    ApplyMappingRequest, ConfirmRequest, SaveProfileRequest, SessionCreatedResponse,
-    SessionStateResponse,
+    ApplyMappingRequest, ConfirmRequest, ImportPreviewResponse, PreviewRowDto, SaveProfileRequest,
+    SessionCreatedResponse, SessionStateResponse,
 };
 use axum::{
     Extension, Form,
@@ -34,6 +34,7 @@ use template_askama::{
 
 use crate::{
     csrf::CsrfToken,
+    errors::ApiError,
     extractors::{AuthenticatedUser, RequiredCookieUser},
     state::AppState,
 };
@@ -639,64 +640,62 @@ pub async fn api_get_preview(
     State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
     Path(session_id_str): Path<String>,
-) -> impl IntoResponse {
-    let Ok(session_id) = session_id_str
+) -> Result<axum::Json<ImportPreviewResponse>, ApiError> {
+    let session_id = session_id_str
         .parse::<uuid::Uuid>()
         .map(ImportSessionId::from_uuid)
-    else {
-        return (
-            StatusCode::BAD_REQUEST,
-            axum::Json(serde_json::json!({"error": "invalid session id"})),
-        )
-            .into_response();
-    };
-    match state
+        .map_err(|_| {
+            ApiError(domain::errors::DomainError::ValidationError(
+                "invalid session id".into(),
+            ))
+        })?;
+
+    let session = state
         .app_ctx
         .repos
         .import_session
         .get(&session_id, &user_id)
-        .await
-    {
-        Ok(Some(session)) => {
-            let annotated: Vec<domain::models::AnnotatedRow> =
-                session.row_results.unwrap_or_default();
-            let rows: Vec<serde_json::Value> = annotated
-                .iter()
-                .enumerate()
-                .map(|(i, a)| {
-                    use domain::models::import::RowResult;
-                    match &a.result {
-                        RowResult::Valid(row) => serde_json::json!({
-                            "index": i,
-                            "status": if a.is_duplicate { "duplicate" } else { "valid" },
-                            "title": row.title,
-                            "release_year": row.release_year,
-                            "director": row.director,
-                            "rating": row.rating,
-                            "watched_at": row.watched_at,
-                            "comment": row.comment,
-                        }),
-                        RowResult::Invalid { errors, .. } => serde_json::json!({
-                            "index": i,
-                            "status": "invalid",
-                            "errors": errors,
-                        }),
-                    }
-                })
-                .collect();
-            axum::Json(serde_json::json!({ "rows": rows })).into_response()
-        }
-        Ok(None) => (
-            StatusCode::NOT_FOUND,
-            axum::Json(serde_json::json!({"error": "session not found"})),
-        )
-            .into_response(),
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            axum::Json(serde_json::json!({"error": e.to_string()})),
-        )
-            .into_response(),
-    }
+        .await?
+        .ok_or_else(|| {
+            ApiError(domain::errors::DomainError::NotFound(
+                "session not found".into(),
+            ))
+        })?;
+
+    let annotated: Vec<AnnotatedRow> = session.row_results.unwrap_or_default();
+    let rows = annotated
+        .iter()
+        .enumerate()
+        .map(|(i, a)| {
+            use domain::models::import::RowResult;
+            match &a.result {
+                RowResult::Valid(row) if a.is_duplicate => PreviewRowDto::Duplicate {
+                    index: i,
+                    title: row.title.clone(),
+                    release_year: row.release_year.clone(),
+                    director: row.director.clone(),
+                    rating: row.rating.clone(),
+                    watched_at: row.watched_at.clone(),
+                    comment: row.comment.clone(),
+                },
+                RowResult::Valid(row) => PreviewRowDto::Valid {
+                    index: i,
+                    title: row.title.clone(),
+                    release_year: row.release_year.clone(),
+                    director: row.director.clone(),
+                    rating: row.rating.clone(),
+                    watched_at: row.watched_at.clone(),
+                    comment: row.comment.clone(),
+                },
+                RowResult::Invalid { errors, .. } => PreviewRowDto::Invalid {
+                    index: i,
+                    errors: errors.clone(),
+                },
+            }
+        })
+        .collect();
+
+    Ok(axum::Json(ImportPreviewResponse { rows }))
 }
 
 #[utoipa::path(

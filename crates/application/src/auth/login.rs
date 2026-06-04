@@ -10,6 +10,7 @@ pub struct LoginResult {
     pub user_id: Uuid,
     pub email: String,
     pub expires_at: DateTime<Utc>,
+    pub role: String,
 }
 
 pub async fn execute(ctx: &AppContext, query: LoginQuery) -> Result<LoginResult, DomainError> {
@@ -37,6 +38,7 @@ pub async fn execute(ctx: &AppContext, query: LoginQuery) -> Result<LoginResult,
         user_id: user.id().value(),
         email: user.email().value().to_string(),
         expires_at: generated.expires_at,
+        role: user.role().as_str().into(),
     })
 }
 

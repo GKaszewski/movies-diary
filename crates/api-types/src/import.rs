@@ -45,3 +45,35 @@ pub struct SaveProfileRequest {
     /// Human-readable profile name (e.g. "Letterboxd")
     pub name: String,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+#[serde(tag = "status")]
+pub enum PreviewRowDto {
+    #[serde(rename = "valid")]
+    Valid {
+        index: usize,
+        title: Option<String>,
+        release_year: Option<String>,
+        director: Option<String>,
+        rating: Option<String>,
+        watched_at: Option<String>,
+        comment: Option<String>,
+    },
+    #[serde(rename = "duplicate")]
+    Duplicate {
+        index: usize,
+        title: Option<String>,
+        release_year: Option<String>,
+        director: Option<String>,
+        rating: Option<String>,
+        watched_at: Option<String>,
+        comment: Option<String>,
+    },
+    #[serde(rename = "invalid")]
+    Invalid { index: usize, errors: Vec<String> },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct ImportPreviewResponse {
+    pub rows: Vec<PreviewRowDto>,
+}

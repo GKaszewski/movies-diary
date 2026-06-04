@@ -251,12 +251,11 @@ pub fn to_diary_query(p: DiaryQueryParams) -> GetDiaryQuery {
     GetDiaryQuery {
         limit: p.limit,
         offset: p.offset,
-        sort_by: p.sort_by.as_deref().map(|s| {
-            if s == "asc" {
-                SortDirection::Ascending
-            } else {
-                SortDirection::Descending
-            }
+        sort_by: p.sort_by.as_deref().map(|s| match s {
+            "date_asc" | "asc" => SortDirection::Ascending,
+            "rating_desc" => SortDirection::ByRatingDesc,
+            "rating_asc" => SortDirection::ByRatingAsc,
+            _ => SortDirection::Descending,
         }),
         movie_id: p.movie_id,
         user_id: None,

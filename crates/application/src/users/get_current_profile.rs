@@ -6,6 +6,8 @@ pub struct CurrentProfileData {
     pub username: String,
     pub bio: Option<String>,
     pub avatar_url: Option<String>,
+    pub banner_url: Option<String>,
+    pub role: String,
 }
 
 pub async fn execute(
@@ -23,10 +25,15 @@ pub async fn execute(
     let avatar_url = user
         .avatar_path()
         .map(|path| format!("{}/images/{}", ctx.config.base_url, path));
+    let banner_url = user
+        .banner_path()
+        .map(|path| format!("{}/images/{}", ctx.config.base_url, path));
 
     Ok(CurrentProfileData {
         username: user.username().value().to_string(),
         bio: user.bio().map(|s| s.to_string()),
         avatar_url,
+        banner_url,
+        role: user.role().as_str().into(),
     })
 }
