@@ -771,6 +771,50 @@ pub async fn get_followers(
 }
 
 #[cfg(feature = "federation")]
+pub async fn get_user_following(
+    State(state): State<AppState>,
+    _user: AuthenticatedUser,
+    Path(user_id): Path<Uuid>,
+) -> impl IntoResponse {
+    match state.ap_service.get_following(user_id).await {
+        Ok(actors) => Json(ActorListResponse {
+            actors: actors
+                .into_iter()
+                .map(|a| RemoteActorDto {
+                    handle: a.handle,
+                    display_name: a.display_name,
+                    url: a.url,
+                })
+                .collect(),
+        })
+        .into_response(),
+        Err(e) => ap_err(e).into_response(),
+    }
+}
+
+#[cfg(feature = "federation")]
+pub async fn get_user_followers(
+    State(state): State<AppState>,
+    _user: AuthenticatedUser,
+    Path(user_id): Path<Uuid>,
+) -> impl IntoResponse {
+    match state.ap_service.get_accepted_followers(user_id).await {
+        Ok(actors) => Json(ActorListResponse {
+            actors: actors
+                .into_iter()
+                .map(|a| RemoteActorDto {
+                    handle: a.handle,
+                    display_name: a.display_name,
+                    url: a.url,
+                })
+                .collect(),
+        })
+        .into_response(),
+        Err(e) => ap_err(e).into_response(),
+    }
+}
+
+#[cfg(feature = "federation")]
 #[utoipa::path(
     post, path = "/api/v1/social/follow",
     request_body = FollowRequest,

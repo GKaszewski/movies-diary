@@ -323,6 +323,14 @@ fn api_routes(rate_limit: u64) -> Router<AppState> {
         .route("/users", routing::get(handlers::api::list_users))
         .route("/users/{id}", routing::get(handlers::api::get_user_profile))
         .route(
+            "/users/{id}/following",
+            routing::get(handlers::api::get_user_following),
+        )
+        .route(
+            "/users/{id}/followers",
+            routing::get(handlers::api::get_user_followers),
+        )
+        .route(
             "/import/sessions",
             routing::post(handlers::import::api_post_session),
         )
