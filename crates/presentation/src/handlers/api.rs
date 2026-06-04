@@ -1411,10 +1411,10 @@ pub async fn post_watchlist_add(
         AddToWatchlistCommand {
             user_id: user.0.value(),
             input: MovieInput {
-                movie_id: Some(req.movie_id),
-                external_metadata_id: None,
-                manual_title: None,
-                manual_release_year: None,
+                movie_id: req.movie_id,
+                external_metadata_id: req.external_metadata_id,
+                manual_title: req.manual_title,
+                manual_release_year: req.manual_release_year,
                 manual_director: None,
             },
         },

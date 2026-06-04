@@ -20,7 +20,14 @@ pub struct WatchlistResponse {
 
 #[derive(Debug, Clone, Deserialize, utoipa::ToSchema)]
 pub struct AddToWatchlistRequest {
-    pub movie_id: Uuid,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub movie_id: Option<Uuid>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub external_metadata_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub manual_title: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub manual_release_year: Option<u16>,
 }
 
 #[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
