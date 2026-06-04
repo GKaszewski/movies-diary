@@ -685,6 +685,7 @@ impl RemoteReviewRepository for PostgresFederationRepository {
         rating: u8,
         comment: Option<&str>,
         watched_at: chrono::NaiveDateTime,
+        poster_url: Option<&str>,
     ) -> Result<()> {
         let watched_at_str = datetime_to_str(&watched_at);
         sqlx::query(
@@ -698,6 +699,17 @@ impl RemoteReviewRepository for PostgresFederationRepository {
         .bind(actor_url)
         .execute(&self.pool)
         .await?;
+        if let Some(url) = poster_url {
+            sqlx::query(
+                "UPDATE movies SET poster_path = $1
+                 WHERE id = (SELECT movie_id FROM reviews WHERE ap_id = $2 AND remote_actor_url = $3)",
+            )
+            .bind(url)
+            .bind(ap_id)
+            .bind(actor_url)
+            .execute(&self.pool)
+            .await?;
+        }
         Ok(())
     }
 

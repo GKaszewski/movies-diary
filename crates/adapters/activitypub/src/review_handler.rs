@@ -153,6 +153,7 @@ impl ApObjectHandler for ReviewObjectHandler {
                 obj.rating.min(5),
                 obj.comment.as_deref(),
                 obj.watched_at.naive_utc(),
+                obj.poster_url.as_deref(),
             )
             .await?;
 

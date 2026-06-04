@@ -23,6 +23,7 @@ pub trait RemoteReviewRepository: Send + Sync {
         rating: u8,
         comment: Option<&str>,
         watched_at: NaiveDateTime,
+        poster_url: Option<&str>,
     ) -> Result<()>;
 
     async fn delete_by_actor(&self, actor_url: &str) -> Result<()>;
