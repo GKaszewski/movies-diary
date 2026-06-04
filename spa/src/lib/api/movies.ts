@@ -60,6 +60,7 @@ export const keywordDtoSchema = z.object({
 })
 
 export const castMemberDtoSchema = z.object({
+  person_id: z.string(),
   tmdb_person_id: z.number(),
   name: z.string(),
   character: z.string(),
@@ -69,6 +70,7 @@ export const castMemberDtoSchema = z.object({
 export type CastMemberDto = z.infer<typeof castMemberDtoSchema>
 
 export const crewMemberDtoSchema = z.object({
+  person_id: z.string(),
   tmdb_person_id: z.number(),
   name: z.string(),
   job: z.string(),

@@ -47,6 +47,7 @@ export function deleteWrapUp(id: string) {
 }
 
 export type MovieRef = {
+  movie_id?: string
   title: string
   year: number
   runtime_minutes?: number
@@ -54,6 +55,7 @@ export type MovieRef = {
 }
 
 export type PersonStat = {
+  person_id?: string
   name: string
   count: number
   avg_rating: number
@@ -91,6 +93,7 @@ export type WrapUpReport = {
   first_movie_of_period?: MovieRef
   last_movie_of_period?: MovieRef
   poster_paths: string[]
+  top_cast_profile_paths: string[]
 }
 
 export function getWrapUpReport(id: string) {

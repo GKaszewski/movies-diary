@@ -83,7 +83,7 @@ export function useFollow() {
 export function useUnfollow() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: FollowRequest) => unfollow(data),
+    mutationFn: (data: ActorUrlRequest) => unfollow(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: socialKeys.following })
     },

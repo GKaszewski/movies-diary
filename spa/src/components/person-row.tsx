@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent } from "@/components/ui/card"
-import { posterUrl } from "@/lib/api/client"
+import { tmdbProfileUrl } from "@/lib/api/client"
 
 type PersonRowProps = {
   id: string
@@ -16,7 +16,7 @@ export function PersonRow({ id, name, subtitle, imagePath }: PersonRowProps) {
       <Card size="sm">
         <CardContent className="flex items-center gap-3">
           <Avatar>
-            {imagePath && <AvatarImage src={posterUrl(imagePath)} />}
+            {imagePath && <AvatarImage src={tmdbProfileUrl(imagePath)} />}
             <AvatarFallback>{name[0]?.toUpperCase()}</AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">

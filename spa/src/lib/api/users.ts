@@ -1,10 +1,12 @@
 import { z } from "zod"
 import { diaryEntryDtoSchema, paginatedSchema } from "./common"
-import { get, put, putForm } from "./client"
+import { get, post, put, putForm } from "./client"
 
 export const userSummaryDtoSchema = z.object({
   id: z.string().uuid(),
   email: z.string(),
+  username: z.string(),
+  display_name: z.string().optional(),
   total_movies: z.number(),
   avg_rating: z.number().optional(),
 })
@@ -129,4 +131,8 @@ export function updateProfile(data: UpdateProfileData) {
 
 export function updateProfileFields(data: UpdateProfileFieldsRequest) {
   return put("/profile/fields", data)
+}
+
+export function reindexSearch() {
+  return post("/admin/reindex-search")
 }

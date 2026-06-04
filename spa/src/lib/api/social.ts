@@ -68,7 +68,7 @@ export function follow(data: FollowRequest) {
   return post("/social/follow", data)
 }
 
-export function unfollow(data: FollowRequest) {
+export function unfollow(data: ActorUrlRequest) {
   return post("/social/unfollow", data)
 }
 

@@ -52,7 +52,7 @@ function ProfilePage() {
 function WrapUpLink() {
   const { t } = useTranslation()
   const { data } = useWrapUps()
-  const latest = data?.items?.find((w) => w.status === "completed")
+  const latest = data?.items?.find((w) => w.status === "Ready")
 
   if (!latest) return null
 

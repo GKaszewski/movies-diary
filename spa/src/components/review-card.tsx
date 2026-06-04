@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router"
+import { Globe } from "lucide-react"
 import { StarDisplay } from "@/components/star-display"
 import { Card, CardContent } from "@/components/ui/card"
 import { posterUrl } from "@/lib/api/client"
@@ -9,9 +10,10 @@ type ReviewCardProps = {
   review: ReviewDto
   userName?: string
   userId?: string
+  isFederated?: boolean
 }
 
-export function ReviewCard({ movie, review, userName, userId }: ReviewCardProps) {
+export function ReviewCard({ movie, review, userName, userId, isFederated }: ReviewCardProps) {
   return (
     <Card size="sm">
       <CardContent className="flex gap-3">
@@ -28,6 +30,7 @@ export function ReviewCard({ movie, review, userName, userId }: ReviewCardProps)
               ) : (
                 <span>{userName}</span>
               )}
+              {isFederated && <Globe className="size-3 text-muted-foreground/60" />}
               <span>·</span>
               <span>{review.watched_at.slice(0, 10)}</span>
             </div>

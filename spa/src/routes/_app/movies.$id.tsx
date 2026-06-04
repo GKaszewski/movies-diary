@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { useTranslation } from "react-i18next"
-import { ArrowLeft, Bookmark, BookmarkCheck, Star, TrendingUp, User, Users } from "lucide-react"
+import { ArrowLeft, Bookmark, BookmarkCheck, Globe, Star, TrendingUp, User, Users } from "lucide-react"
 import { StarDisplay } from "@/components/star-display"
 import { RatingHistogram } from "@/components/rating-histogram"
 import { EmptyState } from "@/components/empty-state"
@@ -112,7 +112,10 @@ function MovieDetailPage() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle className="text-sm">{r.user_display}</CardTitle>
+                      <CardTitle className="flex items-center gap-1.5 text-sm">
+                        {r.user_display}
+                        {r.is_federated && <Globe className="size-3 text-muted-foreground/60" />}
+                      </CardTitle>
                       <CardDescription className="text-[10px]">{r.watched_at.slice(0, 10)}</CardDescription>
                     </div>
                     <StarDisplay rating={r.rating} size="xs" />
@@ -233,7 +236,7 @@ function PersonStrip({ items, type }: { items: (CastMemberDto | CrewMemberDto)[]
           : (person as CrewMemberDto).job
 
         return (
-          <div key={`${person.tmdb_person_id}-${i}`} className="w-[72px] flex-shrink-0">
+          <Link key={`${person.tmdb_person_id}-${i}`} to="/people/$id" params={{ id: person.person_id }} className="w-[72px] flex-shrink-0">
             <div className="aspect-[2/3] overflow-hidden rounded-lg bg-muted">
               {person.profile_path ? (
                 <img src={tmdbProfileUrl(person.profile_path)} alt="" className="size-full object-cover" loading="lazy" />
@@ -245,7 +248,7 @@ function PersonStrip({ items, type }: { items: (CastMemberDto | CrewMemberDto)[]
             </div>
             <p className="mt-1 truncate text-[11px] font-semibold leading-tight">{person.name}</p>
             <p className="truncate text-[10px] italic text-muted-foreground">{subtitle}</p>
-          </div>
+          </Link>
         )
       })}
     </div>

@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import { useTranslation } from "react-i18next"
+import { useMutation } from "@tanstack/react-query"
 import {
   ArrowLeft,
   ChevronRight,
@@ -7,11 +8,14 @@ import {
   Globe,
   Key,
   LogOut,
+  RefreshCw,
   ShieldBan,
   Sparkles,
   User,
 } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { useAuth, useIsAdmin } from "@/components/auth-provider"
+import { reindexSearch } from "@/lib/api/users"
 
 export const Route = createFileRoute("/_app/settings/")({
   component: SettingsPage,
@@ -100,6 +104,8 @@ function SettingsPage() {
       <SettingsGroup label={t("settings.integrations")} items={integrations} />
       <SettingsGroup label={t("settings.socialGroup")} items={social} />
 
+      {isAdmin && <AdminActions />}
+
       <button
         onClick={handleLogout}
         className="w-full rounded-xl bg-card p-3 text-sm font-medium text-red-400"
@@ -109,6 +115,37 @@ function SettingsPage() {
           {t("settings.logOut")}
         </div>
       </button>
+    </div>
+  )
+}
+
+function AdminActions() {
+  const { t } = useTranslation()
+  const reindex = useMutation({
+    mutationFn: reindexSearch,
+  })
+
+  return (
+    <div>
+      <p className="mb-1.5 px-1 text-xs font-medium text-muted-foreground">
+        {t("settings.admin")}
+      </p>
+      <div className="divide-y divide-border rounded-xl bg-card">
+        <div className="flex items-center gap-3 p-3">
+          <span className="text-muted-foreground">
+            <RefreshCw className={`size-4 ${reindex.isPending ? "animate-spin" : ""}`} />
+          </span>
+          <div className="flex-1">
+            <p className="text-sm font-medium">{t("settings.rebuildSearch")}</p>
+            <p className="text-xs text-muted-foreground">
+              {reindex.isSuccess ? t("settings.rebuildSearchDone") : t("settings.rebuildSearchDesc")}
+            </p>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => reindex.mutate()} disabled={reindex.isPending}>
+            {reindex.isPending ? t("common.generating") : t("common.run")}
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }

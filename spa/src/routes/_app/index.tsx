@@ -100,6 +100,7 @@ function FeedTab() {
                 review={entry.review}
                 userName={entry.user_display_name}
                 userId={entry.user_id}
+                isFederated={entry.is_federated}
               />
             )
             return entry.user_id === auth?.user_id ? (

@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { RatingHistogram } from "@/components/rating-histogram"
-import { posterUrl } from "@/lib/api/client"
+import { posterUrl, tmdbProfileUrl } from "@/lib/api/client"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useWrapUpReport } from "@/hooks/use-wrapup"
 import type { MovieRef, PersonStat } from "@/lib/api/wrapup"
 
@@ -82,6 +83,7 @@ function WrapUpReportPage() {
           title={t("wrapup.topActors")}
           subtitle={t("wrapup.uniqueActors", { count: report.actor_diversity })}
           items={report.top_actors.slice(0, 5)}
+          profilePaths={report.top_cast_profile_paths}
         />
       )}
 
@@ -175,7 +177,7 @@ function WrapUpReportPage() {
   )
 }
 
-function RankCard({ title, subtitle, items }: { title: string; subtitle: string; items: PersonStat[] }) {
+function RankCard({ title, subtitle, items, profilePaths }: { title: string; subtitle: string; items: PersonStat[]; profilePaths?: string[] }) {
   const { t } = useTranslation()
   return (
     <Card>
@@ -187,15 +189,38 @@ function RankCard({ title, subtitle, items }: { title: string; subtitle: string;
       </CardHeader>
       <CardContent>
         <ol className="space-y-2">
-          {items.map((item, i) => (
-            <li key={item.name} className="flex items-center gap-3">
-              <span className="flex size-6 items-center justify-center rounded-full bg-muted text-xs font-bold">{i + 1}</span>
-              <div className="flex-1">
-                <p className="text-sm font-medium">{item.name}</p>
-                <p className="text-xs text-muted-foreground">{t("common.filmsAvg", { count: item.count, avg: item.avg_rating.toFixed(1) })}★</p>
-              </div>
-            </li>
-          ))}
+          {items.map((item, i) => {
+            const profilePath = profilePaths?.[i]
+            return (
+              <li key={item.name}>
+                {item.person_id ? (
+                  <Link to="/people/$id" params={{ id: item.person_id }} className="flex items-center gap-3">
+                    <span className="flex size-6 items-center justify-center rounded-full bg-muted text-xs font-bold">{i + 1}</span>
+                    <Avatar className="size-8">
+                      {profilePath && <AvatarImage src={tmdbProfileUrl(profilePath)} />}
+                      <AvatarFallback className="text-xs">{item.name[0]}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{item.name}</p>
+                      <p className="text-xs text-muted-foreground">{t("common.filmsAvg", { count: item.count, avg: item.avg_rating.toFixed(1) })}★</p>
+                    </div>
+                  </Link>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <span className="flex size-6 items-center justify-center rounded-full bg-muted text-xs font-bold">{i + 1}</span>
+                    <Avatar className="size-8">
+                      {profilePath && <AvatarImage src={tmdbProfileUrl(profilePath)} />}
+                      <AvatarFallback className="text-xs">{item.name[0]}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{item.name}</p>
+                      <p className="text-xs text-muted-foreground">{t("common.filmsAvg", { count: item.count, avg: item.avg_rating.toFixed(1) })}★</p>
+                    </div>
+                  </div>
+                )}
+              </li>
+            )
+          })}
         </ol>
       </CardContent>
     </Card>
@@ -204,7 +229,7 @@ function RankCard({ title, subtitle, items }: { title: string; subtitle: string;
 
 function MovieHighlight({ label, movie, showRuntime }: { label: string; movie?: MovieRef; showRuntime?: boolean }) {
   if (!movie) return null
-  return (
+  const content = (
     <div className="overflow-hidden rounded-xl bg-muted">
       {movie.poster_path && (
         <div className="aspect-[2/3] w-full">
@@ -220,6 +245,10 @@ function MovieHighlight({ label, movie, showRuntime }: { label: string; movie?: 
       </div>
     </div>
   )
+  if (movie.movie_id) {
+    return <Link to="/movies/$id" params={{ id: movie.movie_id }}>{content}</Link>
+  }
+  return content
 }
 
 function ReportSkeleton() {

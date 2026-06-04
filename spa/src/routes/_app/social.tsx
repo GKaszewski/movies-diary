@@ -105,7 +105,7 @@ function OwnFollowingTab() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => unfollowMutation.mutate({ handle: actor.handle })}
+              onClick={() => unfollowMutation.mutate({ actor_url: actor.url })}
               disabled={unfollowMutation.isPending}
             >
               <UserMinus className="mr-1 size-3.5" />
@@ -217,6 +217,15 @@ function UserFollowersTab({ userId }: { userId: string }) {
   )
 }
 
+function actorHandle(actor: RemoteActorDto): string {
+  try {
+    const host = new URL(actor.url).host
+    return `@${actor.handle}@${host}`
+  } catch {
+    return `@${actor.handle}`
+  }
+}
+
 function ActorCard({ actor, action }: { actor: RemoteActorDto; action?: React.ReactNode }) {
   const initial = (actor.display_name || actor.handle)[0]?.toUpperCase() ?? "?"
 
@@ -228,7 +237,7 @@ function ActorCard({ actor, action }: { actor: RemoteActorDto; action?: React.Re
         </Avatar>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold">{actor.display_name || actor.handle}</p>
-          <p className="truncate text-xs text-muted-foreground">{actor.handle}</p>
+          <p className="truncate text-xs text-muted-foreground">{actorHandle(actor)}</p>
         </div>
         {action}
       </CardContent>

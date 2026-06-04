@@ -74,6 +74,7 @@ export function useLogReview() {
     mutationFn: (data: LogReviewRequest) => logReview(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: diaryKeys.all })
+      qc.invalidateQueries({ queryKey: ["activity-feed"] })
     },
   })
 }
@@ -84,6 +85,7 @@ export function useDeleteReview() {
     mutationFn: (id: string) => deleteReview(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: diaryKeys.all })
+      qc.invalidateQueries({ queryKey: ["activity-feed"] })
     },
   })
 }

@@ -19,6 +19,7 @@
     "continue": "Continue",
     "generate": "Generate",
     "generating": "Generating...",
+    "run": "Run",
     "reviews": "{{count}} reviews",
     "films": "{{count}} films",
     "filmsAvg": "{{count}} films, avg {{avg}}"
@@ -154,7 +155,11 @@
     "account": "Account",
     "data": "Data",
     "integrations": "Integrations",
-    "socialGroup": "Social"
+    "socialGroup": "Social",
+    "admin": "Admin",
+    "rebuildSearch": "Rebuild Search Index",
+    "rebuildSearchDesc": "Re-index all movies and people",
+    "rebuildSearchDone": "Reindex queued"
   },
   "editProfile": {
     "title": "Edit Profile",
@@ -201,6 +206,9 @@
     "generateWrapUp": "Generate Wrap-Up",
     "startDate": "Start Date",
     "endDate": "End Date",
+    "generateFor": "Generate for",
+    "forSelf": "Myself",
+    "forGlobal": "Everyone (global)",
     "heroSubtitle": "Your Year in Movies",
     "moviesWatched": "movies watched",
     "watchHours": "{{hours}} hours of watch time",

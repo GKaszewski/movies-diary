@@ -41,7 +41,7 @@ function UserProfilePage() {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => unfollowMutation.mutate({ handle: data.username })}
+                onClick={() => unfollowMutation.mutate({ actor_url: followingData?.actors.find((a) => a.handle === data.username)?.url ?? "" })}
                 disabled={unfollowMutation.isPending}
               >
                 <UserCheck className="mr-1 size-3.5" />

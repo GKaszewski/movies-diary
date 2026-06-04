@@ -31,6 +31,7 @@ export const feedEntryDtoSchema = z.object({
   user_id: z.string().uuid(),
   user_email: z.string(),
   user_display_name: z.string(),
+  is_federated: z.boolean(),
 })
 export type FeedEntryDto = z.infer<typeof feedEntryDtoSchema>
 

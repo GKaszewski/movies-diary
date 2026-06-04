@@ -15,12 +15,14 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { EmptyState } from "@/components/empty-state"
-import { useIsAdmin } from "@/components/auth-provider"
+import { useAuth, useIsAdmin } from "@/components/auth-provider"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   useWrapUps,
   useGenerateWrapUp,
   useDeleteWrapUp,
 } from "@/hooks/use-wrapup"
+import { useUsers } from "@/hooks/use-users"
 
 export const Route = createFileRoute("/_app/settings/wrapup")({
   component: WrapupPage,
@@ -28,18 +30,22 @@ export const Route = createFileRoute("/_app/settings/wrapup")({
 
 function WrapupPage() {
   const { t } = useTranslation()
+  const { auth } = useAuth()
   const isAdmin = useIsAdmin()
   const { data, isPending } = useWrapUps()
   const generate = useGenerateWrapUp()
   const remove = useDeleteWrapUp()
 
+  const { data: usersData } = useUsers()
   const [open, setOpen] = useState(false)
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState("")
+  const [targetUserId, setTargetUserId] = useState<string>("self")
 
   const handleGenerate = () => {
+    const user_id = targetUserId === "global" ? undefined : targetUserId === "self" ? auth?.user_id : targetUserId
     generate.mutate(
-      { start_date: startDate, end_date: endDate },
+      { start_date: startDate, end_date: endDate, user_id },
       {
         onSuccess: () => {
           setOpen(false)
@@ -81,7 +87,7 @@ function WrapupPage() {
           {items.map((w) => (
             <Card key={w.id} size="sm">
               <CardContent className="flex items-center justify-between">
-                {w.status === "completed" ? (
+                {w.status === "Ready" ? (
                   <Link to="/wrapup/$id" params={{ id: w.id }} className="flex flex-1 items-center justify-between">
                     <div>
                       <p className="text-sm font-medium">{w.start_date} — {w.end_date}</p>
@@ -133,6 +139,25 @@ function WrapupPage() {
                 onChange={(e) => setEndDate(e.target.value)}
               />
             </div>
+            {isAdmin && usersData?.users && (
+              <div className="space-y-1.5">
+                <Label>{t("wrapup.generateFor")}</Label>
+                <Select value={targetUserId} onValueChange={setTargetUserId}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="self">{t("wrapup.forSelf")}</SelectItem>
+                    <SelectItem value="global">{t("wrapup.forGlobal")}</SelectItem>
+                    {usersData.users.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.display_name ?? u.username ?? u.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <Button
               onClick={handleGenerate}
               disabled={generate.isPending || !startDate || !endDate}
