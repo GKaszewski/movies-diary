@@ -1,9 +1,19 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { lazy, Suspense, useState } from "react"
 import { useTranslation } from "react-i18next"
+import { Bar, BarChart, XAxis, YAxis } from "recharts"
 import { BarChart3, DollarSign, Globe, Hash, Share2, Star, Users } from "lucide-react"
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
 import { BackButton } from "@/components/back-button"
 import { Button } from "@/components/ui/button"
+
+const monthlyChartConfig = {
+  count: { label: "Movies", color: "var(--primary)" },
+} satisfies ChartConfig
+
+const genreChartConfig = {
+  count: { label: "Movies", color: "var(--primary)" },
+} satisfies ChartConfig
 
 const WrapUpShareCard = lazy(() => import("@/components/wrapup-share-card").then((m) => ({ default: m.WrapUpShareCard })))
 import { Badge } from "@/components/ui/badge"
@@ -111,18 +121,14 @@ function WrapUpReportPage() {
             <CardDescription>{t("wrapup.genresExplored", { count: report.genre_diversity })}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
-            {report.top_genres.slice(0, 8).map((g) => {
-              const max = report.top_genres[0]?.count ?? 1
-              return (
-                <div key={g.genre} className="flex items-center gap-2 text-sm">
-                  <span className="w-20 truncate">{g.genre}</span>
-                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
-                    <div className="h-full rounded-full bg-primary" style={{ width: `${(g.count / max) * 100}%` }} />
-                  </div>
-                  <span className="w-6 text-right text-xs text-muted-foreground">{g.count}</span>
-                </div>
-              )
-            })}
+            <ChartContainer config={genreChartConfig} className="w-full" style={{ height: Math.min(report.top_genres.length, 8) * 28 + 16 }}>
+              <BarChart data={report.top_genres.slice(0, 8)} layout="vertical" margin={{ top: 0, right: 4, bottom: 0, left: 0 }}>
+                <XAxis type="number" hide />
+                <YAxis type="category" dataKey="genre" tick={{ fontSize: 11, fill: "rgba(255,255,255,0.85)" }} tickLine={false} axisLine={false} width={80} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar dataKey="count" fill="var(--color-count)" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ChartContainer>
             <div className="flex flex-wrap gap-2 pt-2">
               {report.highest_rated_genre && (
                 <Badge variant="secondary">{t("wrapup.highestRated", { genre: report.highest_rated_genre })}</Badge>
@@ -144,24 +150,14 @@ function WrapUpReportPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {(() => {
-              const max = Math.max(...report.movies_per_month.map((x) => x.count))
-              const barHeight = 96
-              return (
-                <div className="flex items-end gap-1">
-                  {report.movies_per_month.map((m) => {
-                    const h = max > 0 ? Math.max((m.count / max) * barHeight, 4) : 4
-                    return (
-                      <div key={m.year_month} className="flex flex-1 flex-col items-center gap-1">
-                        <span className="text-[10px] text-muted-foreground">{m.count}</span>
-                        <div className="w-full rounded-t bg-primary" style={{ height: h }} />
-                        <span className="text-[9px] text-muted-foreground">{m.year_month.slice(5)}</span>
-                      </div>
-                    )
-                  })}
-                </div>
-              )
-            })()}
+            <ChartContainer config={monthlyChartConfig} className="aspect-[2/1] w-full">
+              <BarChart data={report.movies_per_month} margin={{ top: 8, right: 0, bottom: 0, left: -20 }}>
+                <XAxis dataKey="year_month" tickFormatter={(v: string) => v.slice(5)} tick={{ fontSize: 10, fill: "rgba(255,255,255,0.85)" }} tickLine={false} axisLine={false} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: "rgba(255,255,255,0.85)" }} tickLine={false} axisLine={false} width={30} />
+                <ChartTooltip content={<ChartTooltipContent labelFormatter={(v) => report.movies_per_month.find((m) => m.year_month === String(v))?.label ?? String(v)} />} />
+                <Bar dataKey="count" fill="var(--color-count)" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ChartContainer>
           </CardContent>
         </Card>
       )}

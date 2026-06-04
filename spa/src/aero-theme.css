@@ -298,6 +298,11 @@ body > #root {
   color: oklch(0.985 0 0);
 }
 
+/* Chart label readability */
+[data-slot="chart"] .recharts-cartesian-axis-tick text {
+  fill: rgba(255, 255, 255, 0.85) !important;
+}
+
 /* Star glow for filled amber stars */
 .aero-star-filled {
   filter: drop-shadow(0 0 4px var(--aero-primary-glow)) drop-shadow(0 0 1px var(--aero-primary));

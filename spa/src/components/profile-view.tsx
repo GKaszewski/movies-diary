@@ -1,7 +1,9 @@
 import { Link } from "@tanstack/react-router"
 import { useCallback } from "react"
 import { useTranslation } from "react-i18next"
+import { Bar, BarChart, XAxis, YAxis } from "recharts"
 import { User } from "lucide-react"
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -136,6 +138,10 @@ function DiaryTab({ sortBy }: { sortBy: string; userId?: string }) {
   )
 }
 
+const trendChartConfig = {
+  count: { label: "Movies", color: "var(--primary)" },
+} satisfies ChartConfig
+
 function TrendsView({
   data,
 }: {
@@ -183,17 +189,14 @@ function TrendsView({
             <CardTitle className="text-sm">{t("profile.monthlyActivity")}</CardTitle>
           </CardHeader>
           <CardContent>
-            {data.trends.monthly_ratings.map((m) => (
-              <div
-                key={m.month_label}
-                className="flex items-center justify-between py-1 text-sm"
-              >
-                <span>{m.month_label}</span>
-                <span className="text-xs text-muted-foreground">
-                  {t("common.filmsAvg", { count: m.count, avg: m.avg_rating.toFixed(1) })}
-                </span>
-              </div>
-            ))}
+            <ChartContainer config={trendChartConfig} className="aspect-[2/1] w-full">
+              <BarChart data={data.trends.monthly_ratings} margin={{ top: 8, right: 0, bottom: 0, left: -20 }}>
+                <XAxis dataKey="month_label" tickFormatter={(v: string) => v.slice(0, 3)} tick={{ fontSize: 10, fill: "rgba(255,255,255,0.85)" }} tickLine={false} axisLine={false} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: "rgba(255,255,255,0.85)" }} tickLine={false} axisLine={false} width={30} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar dataKey="count" fill="var(--color-count)" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ChartContainer>
           </CardContent>
         </Card>
       )}
