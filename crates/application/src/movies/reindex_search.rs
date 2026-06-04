@@ -11,6 +11,115 @@ use crate::context::AppContext;
 
 const BATCH_SIZE: u32 = 500;
 
+pub struct ReindexResult {
+    pub movies_indexed: u64,
+    pub persons_indexed: u64,
+    pub persons_backfilled: u64,
+}
+
+pub async fn execute(ctx: &AppContext) -> Result<ReindexResult, DomainError> {
+    let movies_indexed = reindex_movies(ctx).await?;
+    let persons_backfilled = backfill_persons(ctx).await?;
+    let persons_indexed = reindex_persons(ctx).await?;
+
+    Ok(ReindexResult {
+        movies_indexed,
+        persons_indexed,
+        persons_backfilled,
+    })
+}
+
+async fn reindex_movies(ctx: &AppContext) -> Result<u64, DomainError> {
+    let mut count: u64 = 0;
+    let mut offset: u32 = 0;
+    loop {
+        let page = ctx
+            .repos
+            .movie
+            .list_movies(
+                &PageParams {
+                    limit: BATCH_SIZE,
+                    offset,
+                },
+                &MovieFilter::default(),
+            )
+            .await?;
+
+        for summary in &page.items {
+            let movie_id = summary.movie.id().clone();
+            let profile = ctx.repos.movie_profile.get_by_movie_id(&movie_id).await?;
+
+            if let Err(e) = ctx
+                .repos
+                .search_command
+                .index(IndexableDocument::Movie {
+                    id: movie_id.clone(),
+                    movie: Box::new(summary.movie.clone()),
+                    profile: profile.map(Box::new),
+                })
+                .await
+            {
+                tracing::warn!(movie_id = %movie_id.value(), "reindex movie failed: {e}");
+            }
+            count += 1;
+        }
+
+        if (page.items.len() as u32) < BATCH_SIZE {
+            break;
+        }
+        offset += BATCH_SIZE;
+        tokio::task::yield_now().await;
+    }
+    Ok(count)
+}
+
+async fn backfill_persons(ctx: &AppContext) -> Result<u64, DomainError> {
+    let mut total = 0u64;
+    loop {
+        let (count, has_more) = ctx
+            .repos
+            .person_command
+            .backfill_from_credits_batch(BATCH_SIZE)
+            .await?;
+        total += count;
+        if !has_more {
+            break;
+        }
+        tokio::task::yield_now().await;
+    }
+    Ok(total)
+}
+
+async fn reindex_persons(ctx: &AppContext) -> Result<u64, DomainError> {
+    let mut count: u64 = 0;
+    let mut offset: u32 = 0;
+    loop {
+        let persons = ctx.repos.person_query.list_page(BATCH_SIZE, offset).await?;
+
+        for person in &persons {
+            if let Err(e) = ctx
+                .repos
+                .search_command
+                .index(IndexableDocument::Person {
+                    id: person.id().clone(),
+                    person: Box::new(person.clone()),
+                })
+                .await
+            {
+                tracing::warn!(person = %person.name(), "reindex person failed: {e}");
+            }
+            count += 1;
+        }
+
+        if (persons.len() as u32) < BATCH_SIZE {
+            break;
+        }
+        offset += BATCH_SIZE;
+        tokio::task::yield_now().await;
+    }
+    Ok(count)
+}
+
 pub struct SearchReindexHandler {
     ctx: AppContext,
     running: AtomicBool,
@@ -37,129 +146,22 @@ impl EventHandler for SearchReindexHandler {
             return Ok(());
         }
 
-        let result = self.run_reindex().await;
-        self.running.store(false, Ordering::SeqCst);
-        result
-    }
-}
-
-impl SearchReindexHandler {
-    async fn run_reindex(&self) -> Result<(), DomainError> {
         tracing::info!("search reindex started");
+        let result = execute(&self.ctx).await;
+        self.running.store(false, Ordering::SeqCst);
 
-        let movies_indexed = self.reindex_movies().await?;
-        let backfilled = self.backfill_persons().await?;
-        if backfilled > 0 {
-            tracing::info!(backfilled, "backfilled missing persons from credits");
+        let r = result?;
+        if r.persons_backfilled > 0 {
+            tracing::info!(
+                backfilled = r.persons_backfilled,
+                "backfilled missing persons from credits"
+            );
         }
-        let persons_indexed = self.reindex_persons().await?;
-
-        tracing::info!(movies_indexed, persons_indexed, "search reindex completed");
+        tracing::info!(
+            movies_indexed = r.movies_indexed,
+            persons_indexed = r.persons_indexed,
+            "search reindex completed"
+        );
         Ok(())
-    }
-
-    async fn reindex_movies(&self) -> Result<u64, DomainError> {
-        let mut count: u64 = 0;
-        let mut offset: u32 = 0;
-        loop {
-            let page = self
-                .ctx
-                .repos
-                .movie
-                .list_movies(
-                    &PageParams {
-                        limit: BATCH_SIZE,
-                        offset,
-                    },
-                    &MovieFilter::default(),
-                )
-                .await?;
-
-            for summary in &page.items {
-                let movie_id = summary.movie.id().clone();
-                let profile = self
-                    .ctx
-                    .repos
-                    .movie_profile
-                    .get_by_movie_id(&movie_id)
-                    .await?;
-
-                if let Err(e) = self
-                    .ctx
-                    .repos
-                    .search_command
-                    .index(IndexableDocument::Movie {
-                        id: movie_id.clone(),
-                        movie: Box::new(summary.movie.clone()),
-                        profile: profile.map(Box::new),
-                    })
-                    .await
-                {
-                    tracing::warn!(movie_id = %movie_id.value(), "reindex movie failed: {e}");
-                }
-                count += 1;
-            }
-
-            if (page.items.len() as u32) < BATCH_SIZE {
-                break;
-            }
-            offset += BATCH_SIZE;
-            tokio::task::yield_now().await;
-        }
-        Ok(count)
-    }
-
-    async fn backfill_persons(&self) -> Result<u64, DomainError> {
-        let mut total = 0u64;
-        loop {
-            let (count, has_more) = self
-                .ctx
-                .repos
-                .person_command
-                .backfill_from_credits_batch(BATCH_SIZE)
-                .await?;
-            total += count;
-            if !has_more {
-                break;
-            }
-            tokio::task::yield_now().await;
-        }
-        Ok(total)
-    }
-
-    async fn reindex_persons(&self) -> Result<u64, DomainError> {
-        let mut count: u64 = 0;
-        let mut offset: u32 = 0;
-        loop {
-            let persons = self
-                .ctx
-                .repos
-                .person_query
-                .list_page(BATCH_SIZE, offset)
-                .await?;
-
-            for person in &persons {
-                if let Err(e) = self
-                    .ctx
-                    .repos
-                    .search_command
-                    .index(IndexableDocument::Person {
-                        id: person.id().clone(),
-                        person: Box::new(person.clone()),
-                    })
-                    .await
-                {
-                    tracing::warn!(person = %person.name(), "reindex person failed: {e}");
-                }
-                count += 1;
-            }
-
-            if (persons.len() as u32) < BATCH_SIZE {
-                break;
-            }
-            offset += BATCH_SIZE;
-            tokio::task::yield_now().await;
-        }
-        Ok(count)
     }
 }

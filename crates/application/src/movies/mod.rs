@@ -5,6 +5,7 @@ pub mod get_movie_profile;
 pub mod get_movies;
 pub mod queries;
 pub mod reindex_search;
+pub mod request_enrichment;
 pub mod search_cleanup;
 pub mod sync_poster;
 

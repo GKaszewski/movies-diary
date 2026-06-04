@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use application::movies::{commands::EnrichMovieCommand, enrich_movie};
+use application::movies::{commands::EnrichMovieCommand, enrich_movie, request_enrichment};
 use async_trait::async_trait;
 use chrono::Utc;
 use domain::{
@@ -288,42 +288,25 @@ impl EventHandler for EnrichmentHandler {
             _ => return Ok(()),
         };
 
-        // Skip if profile is fresh (< 30 days old)
-        if let Ok(Some(existing)) = self.profile_repo.get_by_movie_id(&movie_id).await {
-            let age = Utc::now() - existing.enriched_at;
-            if age.num_days() < 30 {
-                tracing::debug!(
-                    movie_id = %movie_id.value(),
-                    "skipping enrichment — profile is {} days old",
-                    age.num_days()
-                );
-                return Ok(());
-            }
-        }
+        let Some(profile) = request_enrichment::fetch_if_stale(
+            self.enrichment_client.as_ref(),
+            &self.profile_repo,
+            movie_id.clone(),
+            &external_metadata_id,
+        )
+        .await?
+        else {
+            return Ok(());
+        };
 
-        tracing::info!(movie_id = %movie_id.value(), external_id = %external_metadata_id, "enriching movie");
-
-        match self
-            .enrichment_client
-            .fetch_profile(movie_id.clone(), &external_metadata_id)
-            .await
-        {
-            Ok(profile) => {
-                self.download_cast_photos(&profile).await;
-                enrich_movie::execute(
-                    &self.movie_repository,
-                    &self.profile_repo,
-                    &self.person_command,
-                    &self.search_command,
-                    EnrichMovieCommand { movie_id, profile },
-                )
-                .await?;
-            }
-            Err(DomainError::NotFound(msg)) => {
-                tracing::warn!(movie_id = %movie_id.value(), "TMDb lookup found nothing: {msg}");
-            }
-            Err(e) => return Err(e),
-        }
-        Ok(())
+        self.download_cast_photos(&profile).await;
+        enrich_movie::execute(
+            &self.movie_repository,
+            &self.profile_repo,
+            &self.person_command,
+            &self.search_command,
+            EnrichMovieCommand { movie_id, profile },
+        )
+        .await
     }
 }
