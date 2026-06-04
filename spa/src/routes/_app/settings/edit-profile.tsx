@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 import { Skeleton } from "@/components/ui/skeleton"
-import { posterUrl } from "@/lib/api/client"
 import { useProfile, useUpdateProfile, useUpdateProfileFields } from "@/hooks/use-users"
 
 export const Route = createFileRoute("/_app/settings/edit-profile")({
@@ -93,8 +92,8 @@ function EditProfilePage() {
     )
   }
 
-  const currentAvatar = avatarPreview ?? posterUrl(data?.avatar_url)
-  const currentBanner = bannerPreview ?? posterUrl(data?.banner_url)
+  const currentAvatar = avatarPreview ?? data?.avatar_url
+  const currentBanner = bannerPreview ?? data?.banner_url
   const saving = update.isPending || updateFields.isPending
 
   return (

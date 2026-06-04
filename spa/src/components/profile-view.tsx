@@ -9,7 +9,6 @@ import { MovieCard } from "@/components/movie-card"
 import { EmptyState } from "@/components/empty-state"
 import { SwipeTabs } from "@/components/swipe-tabs"
 import { VirtualList } from "@/components/virtual-list"
-import { posterUrl } from "@/lib/api/client"
 import { useInfiniteDiary } from "@/hooks/use-diary"
 import type { UserProfileResponse } from "@/lib/api/users"
 
@@ -40,7 +39,7 @@ export function ProfileView({
     <div className="space-y-4">
       <div className="flex items-center gap-4">
         <Avatar size="lg">
-          {avatar && <AvatarImage src={posterUrl(avatar)} />}
+          {avatar && <AvatarImage src={avatar} />}
           <AvatarFallback>{initial}</AvatarFallback>
         </Avatar>
         <div className="flex-1">
