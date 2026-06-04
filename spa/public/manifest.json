@@ -1,0 +1,12 @@
+{
+  "name": "Movies Diary",
+  "short_name": "Movies",
+  "description": "Track and review movies",
+  "start_url": "/app/",
+  "display": "standalone",
+  "background_color": "#0a0a0f",
+  "theme_color": "#0a0a0f",
+  "icons": [
+    { "src": "logo.webp", "sizes": "any", "type": "image/webp" }
+  ]
+}

@@ -1,3 +1,11 @@
+# ----- spa -----
+FROM node:22-slim AS spa-builder
+WORKDIR /spa
+COPY spa/package.json spa/package-lock.json ./
+RUN npm ci
+COPY spa/ .
+RUN npm run build
+
 # ----- build -----
 FROM rust:slim-bookworm AS builder
 
@@ -81,6 +89,7 @@ WORKDIR /app
 COPY --from=builder /build/target/release/presentation ./presentation
 COPY --from=builder /build/target/release/worker ./worker
 COPY static ./static
+COPY --from=spa-builder /spa/dist ./spa/dist
 
 EXPOSE 3000
 

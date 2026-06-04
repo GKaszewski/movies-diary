@@ -2,7 +2,11 @@ use std::num::NonZeroU32;
 
 use axum::{Router, routing};
 use axum_governor::{GovernorConfigBuilder, GovernorLayer, Quota, extractor::PeerIp};
-use tower_http::{cors::CorsLayer, services::ServeDir, trace::TraceLayer};
+use tower_http::{
+    cors::CorsLayer,
+    services::{ServeDir, ServeFile},
+    trace::TraceLayer,
+};
 
 use crate::{handlers, state::AppState};
 
@@ -22,6 +26,10 @@ pub fn build_router(state: AppState, ap_router: Router) -> Router {
         .merge(html_routes(rate_limit))
         .merge(api_routes(rate_limit))
         .nest_service("/static", ServeDir::new("static"))
+        .nest_service(
+            "/app",
+            ServeDir::new("spa/dist").fallback(ServeFile::new("spa/dist/index.html")),
+        )
         .layer(TraceLayer::new_for_http())
         .with_state(state)
         .merge(ap_router)

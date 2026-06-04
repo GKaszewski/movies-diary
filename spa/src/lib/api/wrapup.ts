@@ -1,0 +1,98 @@
+import { z } from "zod"
+import { del, get, post } from "./client"
+
+export const generateWrapUpRequestSchema = z.object({
+  start_date: z.string(),
+  end_date: z.string(),
+  user_id: z.string().uuid().optional(),
+})
+export type GenerateWrapUpRequest = z.infer<typeof generateWrapUpRequestSchema>
+
+export const wrapUpGeneratedResponseSchema = z.object({
+  id: z.string(),
+})
+export type WrapUpGeneratedResponse = z.infer<typeof wrapUpGeneratedResponseSchema>
+
+export const wrapUpStatusResponseSchema = z.object({
+  id: z.string(),
+  user_id: z.string().optional(),
+  status: z.string(),
+  start_date: z.string(),
+  end_date: z.string(),
+  created_at: z.string(),
+  completed_at: z.string().optional(),
+  error_message: z.string().optional(),
+})
+export type WrapUpStatusResponse = z.infer<typeof wrapUpStatusResponseSchema>
+
+export const wrapUpListResponseSchema = z.object({
+  items: z.array(wrapUpStatusResponseSchema),
+})
+export type WrapUpListResponse = z.infer<typeof wrapUpListResponseSchema>
+
+export function generateWrapUp(data: GenerateWrapUpRequest) {
+  return post<WrapUpGeneratedResponse>("/wrapups/generate", data)
+}
+
+export function getWrapUps() {
+  return get<WrapUpListResponse>("/wrapups")
+}
+
+export function getWrapUp(id: string) {
+  return get<WrapUpStatusResponse>(`/wrapups/${id}`)
+}
+
+export function deleteWrapUp(id: string) {
+  return del(`/wrapups/${id}`)
+}
+
+export type MovieRef = {
+  title: string
+  year: number
+  runtime_minutes?: number
+  poster_path?: string
+}
+
+export type PersonStat = {
+  name: string
+  count: number
+  avg_rating: number
+}
+
+export type GenreStat = {
+  genre: string
+  count: number
+  avg_rating: number
+}
+
+export type WrapUpReport = {
+  total_movies: number
+  total_watch_time_minutes: number
+  busiest_month?: string
+  busiest_day_of_week?: string
+  avg_rating?: number
+  rating_distribution: number[]
+  longest_movie?: MovieRef
+  shortest_movie?: MovieRef
+  top_directors: PersonStat[]
+  top_actors: PersonStat[]
+  director_diversity: number
+  actor_diversity: number
+  top_genres: GenreStat[]
+  genre_diversity: number
+  highest_rated_genre?: string
+  lowest_rated_genre?: string
+  oldest_movie?: MovieRef
+  newest_movie?: MovieRef
+  total_rewatches: number
+  most_rewatched_movie?: MovieRef
+  highest_rated_movie?: MovieRef
+  lowest_rated_movie?: MovieRef
+  first_movie_of_period?: MovieRef
+  last_movie_of_period?: MovieRef
+  poster_paths: string[]
+}
+
+export function getWrapUpReport(id: string) {
+  return get<WrapUpReport>(`/wrapups/${id}/report`)
+}

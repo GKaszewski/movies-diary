@@ -24,6 +24,7 @@ A self-hosted, server-side rendered movie logging system with a full REST API. B
 - OpenAPI documentation at `/docs` (Swagger UI) and `/scalar` (Scalar)
 - CSRF protection on all HTML form routes (double-submit cookie, defense-in-depth on top of `SameSite=Strict`)
 - Per-IP rate limiting via token bucket (production-grade, backed by `axum-governor`)
+- Single-page app at `/app/` — React + TanStack Router + shadcn/ui, built with Vite, served from the backend with client-side routing fallback
 - Terminal UI client (`crates/tui`) for logging reviews, bulk CSV import, and diary browsing
 
 ## Architecture
@@ -64,6 +65,7 @@ adapters/
   sqlite-federation    — SQLite-backed federation repository
   postgres-federation  — PostgreSQL-backed federation repository
 tui                 — terminal UI client (ratatui); shares api-types with presentation for typed API access
+spa/                — React SPA (TanStack Router + shadcn/ui + Vite); served at /app/ by the backend
 ```
 
 ## Prerequisites
@@ -126,6 +128,9 @@ ALLOW_REGISTRATION=true # set to false to disable new sign-ups
 SECURE_COOKIES=true     # set when serving over HTTPS
 RUST_LOG=presentation=info,tower_http=info,worker=info,application=info
 
+# CORS — comma-separated origins for SPA dev (omit or "*" for any)
+# CORS_ORIGINS=http://localhost:5173
+
 # Event bus — "db" (default, uses same database) or "nats"
 EVENT_BUS_BACKEND=db
 # NATS_URL=nats://localhost:4222   # required when EVENT_BUS_BACKEND=nats
@@ -154,6 +159,18 @@ Interactive API documentation is available at runtime:
 
 - **Swagger UI** — `http://localhost:3000/docs`
 - **Scalar** — `http://localhost:3000/scalar`
+
+## SPA
+
+The single-page app lives in `spa/` and is served at `/app/` by the backend. For local development:
+
+```bash
+cd spa && npm install && npm run dev   # http://localhost:5173/app/
+```
+
+Set `CORS_ORIGINS=http://localhost:5173` in the backend `.env` to allow cross-origin API calls during development.
+
+For production, `npm run build` outputs to `spa/dist/` which the backend serves statically (included in Docker image automatically).
 
 ## Terminal UI
 

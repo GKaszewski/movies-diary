@@ -1,0 +1,304 @@
+/*
+ * Frutiger Aero Theme for shadcn + Tailwind v4
+ * Drop this file + a background image into any shadcn project.
+ * Import it in your index.css: @import "./aero-theme.css";
+ */
+
+/* ── Aero color overrides ─────────────────────────────────────── */
+
+:root {
+  --background: transparent;
+  --foreground: oklch(0.985 0 0);
+  --card: rgba(255, 255, 255, 0.08);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: rgba(20, 20, 30, 0.85);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.852 0.199 91.936);
+  --primary-foreground: #fff;
+  --secondary: rgba(255, 255, 255, 0.08);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: rgba(255, 255, 255, 0.06);
+  --muted-foreground: rgba(255, 255, 255, 0.6);
+  --accent: rgba(255, 255, 255, 0.1);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: rgba(200, 60, 60, 0.65);
+  --border: rgba(255, 255, 255, 0.15);
+  --input: rgba(255, 255, 255, 0.1);
+  --ring: oklch(0.852 0.199 91.936 / 0.4);
+  --chart-1: oklch(0.852 0.199 91.936);
+  --chart-2: oklch(0.89 0.13 91.936);
+  --chart-3: oklch(0.93 0.07 91.936);
+  --chart-4: rgba(255, 255, 255, 0.4);
+  --chart-5: rgba(255, 255, 255, 0.2);
+  --sidebar: rgba(0, 0, 0, 0.4);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.852 0.199 91.936);
+  --sidebar-primary-foreground: #fff;
+  --sidebar-accent: rgba(255, 255, 255, 0.1);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: rgba(255, 255, 255, 0.1);
+  --sidebar-ring: oklch(0.852 0.199 91.936 / 0.4);
+
+  --aero-primary: oklch(0.852 0.199 91.936);
+  --aero-primary-mid: oklch(0.89 0.13 91.936);
+  --aero-primary-light: oklch(0.93 0.07 91.936);
+  --aero-primary-glow: oklch(0.852 0.199 91.936 / 0.3);
+  --aero-glass-bg: rgba(255, 255, 255, 0.12);
+  --aero-glass-border: rgba(255, 255, 255, 0.2);
+  --aero-glass-shadow: 0 8px 32px oklch(0.852 0.199 91.936 / 0.1);
+  --aero-glass-inset: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  --aero-blur: 12px;
+}
+
+/* Force dark — override any .dark block from shadcn defaults */
+.dark {
+  --background: transparent;
+  --foreground: oklch(0.985 0 0);
+  --card: rgba(255, 255, 255, 0.08);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: rgba(20, 20, 30, 0.85);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.852 0.199 91.936);
+  --primary-foreground: #fff;
+  --secondary: rgba(255, 255, 255, 0.08);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: rgba(255, 255, 255, 0.06);
+  --muted-foreground: rgba(255, 255, 255, 0.6);
+  --accent: rgba(255, 255, 255, 0.1);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: rgba(200, 60, 60, 0.65);
+  --border: rgba(255, 255, 255, 0.15);
+  --input: rgba(255, 255, 255, 0.1);
+  --ring: oklch(0.852 0.199 91.936 / 0.4);
+  --chart-1: oklch(0.852 0.199 91.936);
+  --chart-2: oklch(0.89 0.13 91.936);
+  --chart-3: oklch(0.93 0.07 91.936);
+  --chart-4: rgba(255, 255, 255, 0.4);
+  --chart-5: rgba(255, 255, 255, 0.2);
+  --sidebar: rgba(0, 0, 0, 0.4);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.852 0.199 91.936);
+  --sidebar-primary-foreground: #fff;
+  --sidebar-accent: rgba(255, 255, 255, 0.1);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: rgba(255, 255, 255, 0.1);
+  --sidebar-ring: oklch(0.852 0.199 91.936 / 0.4);
+}
+
+/* ── Background treatment ─────────────────────────────────────── */
+
+body {
+  background: url("./assets/background.avif") center / cover no-repeat fixed;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.25);
+  z-index: 0;
+  pointer-events: none;
+}
+
+body > #root {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Utility classes ──────────────────────────────────────────── */
+
+@utility glass {
+  backdrop-filter: blur(var(--aero-blur));
+  -webkit-backdrop-filter: blur(var(--aero-blur));
+  background: var(--aero-glass-bg);
+  border: 1px solid var(--aero-glass-border);
+}
+
+@utility glass-card {
+  backdrop-filter: blur(var(--aero-blur));
+  -webkit-backdrop-filter: blur(var(--aero-blur));
+  background: var(--aero-glass-bg);
+  border: 1px solid var(--aero-glass-border);
+  box-shadow: var(--aero-glass-shadow), var(--aero-glass-inset);
+  position: relative;
+  overflow: hidden;
+}
+
+@utility glass-heavy {
+  backdrop-filter: blur(var(--aero-blur));
+  -webkit-backdrop-filter: blur(var(--aero-blur));
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+@utility aero-glow {
+  text-shadow:
+    0 0 8px var(--aero-primary-glow),
+    0 0 2px var(--aero-primary);
+}
+
+@utility aero-pill {
+  border-radius: 999px;
+  border: 1px solid var(--aero-glass-border);
+  background: transparent;
+}
+
+/* ── Glass card gradient overlay ──────────────────────────────── */
+
+.glass-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.1), transparent);
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ── Hover lift (pointer devices only) ────────────────────────── */
+
+@media (hover: hover) {
+  .aero-lift {
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .aero-lift:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      0 12px 40px var(--aero-primary-glow),
+      var(--aero-glass-inset);
+  }
+}
+
+/* ── shadcn data-slot overrides ───────────────────────────────── */
+
+[data-slot="card"] {
+  background: var(--aero-glass-bg);
+  backdrop-filter: blur(var(--aero-blur));
+  -webkit-backdrop-filter: blur(var(--aero-blur));
+  border-color: var(--aero-glass-border);
+  box-shadow: var(--aero-glass-shadow), var(--aero-glass-inset);
+  --tw-ring-color: transparent;
+  --tw-ring-shadow: none;
+}
+
+[data-slot="dialog-overlay"] {
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+[data-slot="dialog-content"] {
+  background: rgba(20, 20, 30, 0.8);
+  backdrop-filter: blur(var(--aero-blur));
+  -webkit-backdrop-filter: blur(var(--aero-blur));
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  --tw-ring-color: transparent;
+  --tw-ring-shadow: none;
+}
+
+[data-slot="sheet-overlay"] {
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+[data-slot="sheet-content"] {
+  background: rgba(20, 20, 30, 0.85);
+  backdrop-filter: blur(var(--aero-blur));
+  -webkit-backdrop-filter: blur(var(--aero-blur));
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+[data-slot="input"] {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border-color: var(--aero-glass-border);
+}
+
+[data-slot="input"]:focus {
+  border-color: var(--aero-primary);
+  box-shadow: 0 0 0 3px oklch(0.852 0.199 91.936 / 0.2);
+}
+
+/* Primary button — gold gradient with Aero bevel */
+[data-slot="button"][data-variant="default"] {
+  background: linear-gradient(
+    135deg,
+    var(--aero-primary-mid) 0%,
+    var(--aero-primary) 60%,
+    oklch(0.72 0.199 91.936) 100%
+  );
+  color: #fff;
+  border: none;
+  box-shadow:
+    0 4px 16px var(--aero-primary-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  position: relative;
+  overflow: hidden;
+}
+
+[data-slot="button"][data-variant="default"]::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.25), transparent);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+@media (hover: hover) {
+  [data-slot="button"][data-variant="default"]:hover {
+    transform: translateY(-1px);
+    box-shadow:
+      0 6px 24px var(--aero-primary-glow),
+      inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  }
+}
+
+/* Destructive button — glassmorphic red */
+[data-slot="button"][data-variant="destructive"] {
+  background: rgba(200, 60, 60, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: 1px solid rgba(220, 80, 80, 0.3);
+}
+
+/* Ghost/outline buttons — subtle glass on hover */
+[data-slot="button"][data-variant="ghost"]:hover,
+[data-slot="button"][data-variant="outline"]:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Drawer content (used by log-sheet, wrapup, etc.) */
+[data-slot="drawer-content"] {
+  background: rgba(20, 20, 30, 0.9);
+  backdrop-filter: blur(var(--aero-blur));
+  -webkit-backdrop-filter: blur(var(--aero-blur));
+}
+
+[data-slot="drawer-overlay"] {
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Sonner toast */
+[data-sonner-toaster] [data-sonner-toast] {
+  background: rgba(20, 20, 30, 0.85);
+  backdrop-filter: blur(var(--aero-blur));
+  -webkit-backdrop-filter: blur(var(--aero-blur));
+  border-color: rgba(255, 255, 255, 0.15);
+  color: oklch(0.985 0 0);
+}
+
+/* Star glow for filled amber stars */
+.aero-star-filled {
+  filter: drop-shadow(0 0 4px var(--aero-primary-glow)) drop-shadow(0 0 1px var(--aero-primary));
+}
