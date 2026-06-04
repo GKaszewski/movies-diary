@@ -120,6 +120,7 @@ impl NatsJetStreamConsumer {
                 pull::Config {
                     durable_name: Some(cfg.consumer_name.clone()),
                     filter_subject: subject_filter,
+                    ack_wait: std::time::Duration::from_secs(600),
                     ..Default::default()
                 },
             )

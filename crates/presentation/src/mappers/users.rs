@@ -4,7 +4,10 @@ use domain::ports::RemoteActorInfo;
 use template_askama::{RemoteActorData, RemoteActorDisplay, UserSummaryView};
 
 pub fn user_summary_view(u: &UserSummary) -> UserSummaryView {
-    let name = u.email().split('@').next().unwrap_or("?").to_string();
+    let name = u
+        .display_name()
+        .map(String::from)
+        .unwrap_or_else(|| u.username().to_string());
     let initial = name.chars().next().unwrap_or('?').to_ascii_uppercase();
     let avg_display = u
         .avg_rating

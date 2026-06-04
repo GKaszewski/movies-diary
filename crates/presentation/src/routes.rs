@@ -432,6 +432,10 @@ fn api_routes(rate_limit: u64) -> Router<AppState> {
         .route(
             "/wrapups/{id}/video",
             routing::get(handlers::wrapup::get_video),
+        )
+        .route(
+            "/admin/reindex-search",
+            routing::post(handlers::api::post_reindex_search),
         );
 
     #[cfg(feature = "federation")]

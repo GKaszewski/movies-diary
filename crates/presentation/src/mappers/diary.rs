@@ -10,5 +10,6 @@ pub fn feed_entry_to_dto(e: &FeedEntry) -> FeedEntryDto {
         user_id: e.review().user_id().value(),
         user_email: e.user_email().to_string(),
         user_display_name: e.user_display_name().to_string(),
+        is_federated: e.review().is_remote(),
     }
 }

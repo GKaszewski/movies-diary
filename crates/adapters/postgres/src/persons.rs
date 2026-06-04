@@ -57,6 +57,60 @@ impl PersonCommand for PostgresPersonAdapter {
         }
         Ok(())
     }
+
+    async fn backfill_from_credits_batch(
+        &self,
+        batch_size: u32,
+    ) -> Result<(u64, bool), DomainError> {
+        #[derive(sqlx::FromRow)]
+        struct MissingPerson {
+            tmdb_person_id: i64,
+            name: String,
+            department: Option<String>,
+            profile_path: Option<String>,
+        }
+
+        let rows = sqlx::query_as::<_, MissingPerson>(
+            "SELECT mc.tmdb_person_id, mc.name, 'Acting' AS department, mc.profile_path
+             FROM movie_cast mc
+             WHERE NOT EXISTS (SELECT 1 FROM persons WHERE persons.tmdb_person_id = mc.tmdb_person_id)
+             GROUP BY mc.tmdb_person_id, mc.name, mc.profile_path
+             UNION ALL
+             SELECT mc.tmdb_person_id, mc.name, mc.department, mc.profile_path
+             FROM movie_crew mc
+             WHERE NOT EXISTS (SELECT 1 FROM persons WHERE persons.tmdb_person_id = mc.tmdb_person_id)
+               AND NOT EXISTS (SELECT 1 FROM movie_cast c2 WHERE c2.tmdb_person_id = mc.tmdb_person_id)
+             GROUP BY mc.tmdb_person_id, mc.name, mc.department, mc.profile_path
+             LIMIT $1",
+        )
+        .bind(batch_size as i64)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(map_err)?;
+
+        let has_more = rows.len() as u32 >= batch_size;
+        let mut count = 0u64;
+        for row in &rows {
+            let ext = ExternalPersonId::new(format!("tmdb:{}", row.tmdb_person_id));
+            let pid = PersonId::from_external(&ext);
+            sqlx::query(
+                "INSERT INTO persons (id, external_id, tmdb_person_id, name, known_for_department, profile_path)
+                 VALUES ($1, $2, $3, $4, $5, $6)
+                 ON CONFLICT(tmdb_person_id) DO NOTHING",
+            )
+            .bind(pid.value().to_string())
+            .bind(ext.value())
+            .bind(row.tmdb_person_id)
+            .bind(&row.name)
+            .bind(&row.department)
+            .bind(&row.profile_path)
+            .execute(&self.pool)
+            .await
+            .map_err(map_err)?;
+            count += 1;
+        }
+        Ok((count, has_more))
+    }
 }
 
 #[async_trait]
@@ -206,6 +260,40 @@ impl PersonQuery for PostgresPersonAdapter {
         Ok(PersonCredits { person, cast, crew })
     }
 
+    async fn list_page(&self, limit: u32, offset: u32) -> Result<Vec<Person>, DomainError> {
+        #[derive(sqlx::FromRow)]
+        struct Row {
+            id: String,
+            external_id: String,
+            name: String,
+            known_for_department: Option<String>,
+            profile_path: Option<String>,
+        }
+
+        let rows = sqlx::query_as::<_, Row>(
+            "SELECT id, external_id, name, known_for_department, profile_path FROM persons ORDER BY id LIMIT $1 OFFSET $2",
+        )
+        .bind(limit as i64)
+        .bind(offset as i64)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(map_err)?;
+
+        Ok(rows
+            .into_iter()
+            .map(|r| {
+                let ext = ExternalPersonId::new(r.external_id);
+                Person::new(
+                    PersonId::from_uuid(uuid::Uuid::parse_str(&r.id).unwrap_or_default()),
+                    ext,
+                    r.name,
+                    r.known_for_department,
+                    r.profile_path,
+                )
+            })
+            .collect())
+    }
+
     async fn list_orphaned_persons(&self) -> Result<Vec<PersonId>, DomainError> {
         let rows: Vec<(String,)> = sqlx::query_as(
             "SELECT id FROM persons
@@ -214,7 +302,8 @@ impl PersonQuery for PostgresPersonAdapter {
              )
              AND NOT EXISTS (
                  SELECT 1 FROM movie_crew WHERE movie_crew.tmdb_person_id = persons.tmdb_person_id
-             )",
+             )
+             LIMIT 500",
         )
         .fetch_all(&self.pool)
         .await

@@ -61,6 +61,7 @@ impl EventHandler for RecordingHandler {
             DomainEvent::WatchEventIngested { .. } => "watch_event_ingested",
             DomainEvent::WrapUpRequested { .. } => "wrapup_requested",
             DomainEvent::WrapUpCompleted { .. } => "wrapup_completed",
+            DomainEvent::SearchReindexRequested => "search_reindex",
         };
         self.calls.lock().unwrap().push(label);
         Ok(())
@@ -85,34 +86,34 @@ async fn dispatches_to_all_handlers() {
     };
 
     WorkerService::new(Arc::new(consumer), vec![Arc::new(handler)])
-        .run()
+        .run(tokio::sync::watch::channel(false).1)
         .await;
 
     assert_eq!(*calls.lock().unwrap(), vec!["movie_discovered"]);
 }
 
 #[tokio::test]
-async fn nacks_when_handler_fails() {
-    let nack_called = Arc::new(Mutex::new(false));
+async fn acks_even_when_handler_fails() {
+    let ack_called = Arc::new(Mutex::new(false));
 
     struct TrackingAck {
-        nack_called: Arc<Mutex<bool>>,
+        ack_called: Arc<Mutex<bool>>,
     }
 
     #[async_trait]
     impl AckHandle for TrackingAck {
         async fn ack(&self) -> Result<(), DomainError> {
+            *self.ack_called.lock().unwrap() = true;
             Ok(())
         }
         async fn nack(&self) -> Result<(), DomainError> {
-            *self.nack_called.lock().unwrap() = true;
             Ok(())
         }
     }
 
     struct TrackingConsumer {
         event: DomainEvent,
-        nack_called: Arc<Mutex<bool>>,
+        ack_called: Arc<Mutex<bool>>,
     }
 
     impl EventConsumer for TrackingConsumer {
@@ -120,7 +121,7 @@ async fn nacks_when_handler_fails() {
             let envelope = EventEnvelope::new(
                 self.event.clone(),
                 Box::new(TrackingAck {
-                    nack_called: Arc::clone(&self.nack_called),
+                    ack_called: Arc::clone(&self.ack_called),
                 }),
             );
             Box::pin(stream::iter(vec![Ok(envelope)]))
@@ -138,14 +139,14 @@ async fn nacks_when_handler_fails() {
 
     let consumer = TrackingConsumer {
         event: movie_discovered(),
-        nack_called: Arc::clone(&nack_called),
+        ack_called: Arc::clone(&ack_called),
     };
 
     WorkerService::new(Arc::new(consumer), vec![Arc::new(FailingHandler)])
-        .run()
+        .run(tokio::sync::watch::channel(false).1)
         .await;
 
-    assert!(*nack_called.lock().unwrap());
+    assert!(*ack_called.lock().unwrap());
 }
 
 #[tokio::test]
@@ -189,7 +190,9 @@ async fn acks_when_all_handlers_succeed() {
         ack_called: Arc::clone(&ack_called),
     };
 
-    WorkerService::new(Arc::new(consumer), vec![]).run().await;
+    WorkerService::new(Arc::new(consumer), vec![])
+        .run(tokio::sync::watch::channel(false).1)
+        .await;
 
     assert!(*ack_called.lock().unwrap());
 }

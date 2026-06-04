@@ -431,6 +431,12 @@ impl PersonCommand for Panic {
     async fn upsert_batch(&self, _: &[Person]) -> Result<(), DomainError> {
         panic!()
     }
+    async fn backfill_from_credits_batch(
+        &self,
+        _batch_size: u32,
+    ) -> Result<(u64, bool), DomainError> {
+        panic!()
+    }
 }
 #[async_trait::async_trait]
 impl PersonQuery for Panic {
@@ -447,6 +453,13 @@ impl PersonQuery for Panic {
         panic!()
     }
     async fn list_orphaned_persons(&self) -> Result<Vec<PersonId>, DomainError> {
+        panic!()
+    }
+    async fn list_page(
+        &self,
+        _limit: u32,
+        _offset: u32,
+    ) -> Result<Vec<domain::models::Person>, DomainError> {
         panic!()
     }
 }

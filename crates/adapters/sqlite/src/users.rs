@@ -182,17 +182,15 @@ impl UserRepository for SqliteUserRepository {
     }
 
     async fn list_with_stats(&self) -> Result<Vec<domain::models::UserSummary>, DomainError> {
-        sqlx::query_as!(
-            UserSummaryRow,
-            r#"SELECT u.id AS "id!: String",
-                      u.email AS "email!: String",
-                      COUNT(DISTINCT r.movie_id) AS "total_movies!: i64",
+        sqlx::query_as::<_, UserSummaryRow>(
+            r#"SELECT u.id, u.email, u.username, u.display_name,
+                      COUNT(DISTINCT r.movie_id) AS total_movies,
                       AVG(CAST(r.rating AS REAL)) AS avg_rating,
                       u.avatar_path
                FROM users u
                LEFT JOIN reviews r ON r.user_id = u.id AND r.remote_actor_url IS NULL
-               GROUP BY u.id, u.email, u.avatar_path
-               ORDER BY u.email ASC"#
+               GROUP BY u.id, u.email, u.username, u.display_name, u.avatar_path
+               ORDER BY u.email ASC"#,
         )
         .fetch_all(&self.pool)
         .await

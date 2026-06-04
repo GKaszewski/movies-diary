@@ -40,6 +40,7 @@ pub struct KeywordDto {
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct CastMemberDto {
+    pub person_id: String,
     pub tmdb_person_id: u64,
     pub name: String,
     pub character: String,
@@ -49,6 +50,7 @@ pub struct CastMemberDto {
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct CrewMemberDto {
+    pub person_id: String,
     pub tmdb_person_id: u64,
     pub name: String,
     pub job: String,

@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use application::{
-    MovieDiscoveryIndexer, SearchCleanupHandler,
+    MovieDiscoveryIndexer, SearchCleanupHandler, SearchReindexHandler,
     config::AppConfig,
     context::{AppContext, Repositories, Services},
     worker::WorkerService,
@@ -232,12 +232,15 @@ async fn main() -> anyhow::Result<()> {
             let wrapup_handler = Arc::new(
                 application::wrapup::event_handler::WrapUpEventHandler::new(ctx.clone()),
             ) as Arc<dyn EventHandler>;
+            let reindex_handler =
+                Arc::new(SearchReindexHandler::new(ctx.clone())) as Arc<dyn EventHandler>;
             let mut h = vec![
                 poster,
                 cleanup,
                 search_cleanup,
                 discovery_indexer,
                 wrapup_handler,
+                reindex_handler,
             ];
             if let Some(e) = enrichment_handler {
                 h.push(e);
@@ -282,6 +285,8 @@ async fn main() -> anyhow::Result<()> {
             let wrapup_handler = Arc::new(
                 application::wrapup::event_handler::WrapUpEventHandler::new(ctx.clone()),
             ) as Arc<dyn EventHandler>;
+            let reindex_handler =
+                Arc::new(SearchReindexHandler::new(ctx.clone())) as Arc<dyn EventHandler>;
             let mut h = vec![
                 poster,
                 cleanup,
@@ -290,6 +295,7 @@ async fn main() -> anyhow::Result<()> {
                 search_cleanup,
                 discovery_indexer,
                 wrapup_handler,
+                reindex_handler,
             ];
             if let Some(e) = enrichment_handler {
                 h.push(e);
@@ -303,10 +309,15 @@ async fn main() -> anyhow::Result<()> {
 
     // ── Run ───────────────────────────────────────────────────────────────────
 
+    let (shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(false);
+    tokio::spawn(async move {
+        tokio::signal::ctrl_c().await.ok();
+        let _ = shutdown_tx.send(true);
+    });
+
     let worker = WorkerService::new(consumer_arc, handlers);
     tracing::info!("worker started");
-    worker.run().await;
-    tracing::info!("worker stopped");
+    worker.run(shutdown_rx).await;
 
     Ok(())
 }

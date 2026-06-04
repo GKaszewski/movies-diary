@@ -672,6 +672,12 @@ impl PersonCommand for PanicPersonCommand {
     async fn upsert_batch(&self, _persons: &[Person]) -> Result<(), DomainError> {
         panic!("PanicPersonCommand called")
     }
+    async fn backfill_from_credits_batch(
+        &self,
+        _batch_size: u32,
+    ) -> Result<(u64, bool), DomainError> {
+        panic!("PanicPersonCommand called")
+    }
 }
 
 // ── PanicPersonQuery ──────────────────────────────────────────────────────────
@@ -696,6 +702,10 @@ impl PersonQuery for PanicPersonQuery {
     }
 
     async fn list_orphaned_persons(&self) -> Result<Vec<PersonId>, DomainError> {
+        panic!("PanicPersonQuery called")
+    }
+
+    async fn list_page(&self, _limit: u32, _offset: u32) -> Result<Vec<Person>, DomainError> {
         panic!("PanicPersonQuery called")
     }
 }

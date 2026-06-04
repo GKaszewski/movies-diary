@@ -60,6 +60,13 @@ impl domain::ports::PersonQuery for PersonQueryStub {
     async fn list_orphaned_persons(&self) -> Result<Vec<domain::models::PersonId>, DomainError> {
         Ok(vec![])
     }
+    async fn list_page(
+        &self,
+        _limit: u32,
+        _offset: u32,
+    ) -> Result<Vec<domain::models::Person>, DomainError> {
+        Ok(vec![])
+    }
 }
 
 // --- Search endpoint tests ---

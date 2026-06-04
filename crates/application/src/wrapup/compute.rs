@@ -125,6 +125,7 @@ fn build_report(
 
 fn movie_ref(r: &WrapUpMovieRow) -> MovieRef {
     MovieRef {
+        movie_id: Some(r.movie_id),
         title: r.title.clone(),
         year: r.release_year,
         runtime_minutes: r.runtime_minutes,
@@ -233,6 +234,7 @@ fn compute_director_stats(rows: &[WrapUpMovieRow]) -> (Vec<PersonStat>, u32) {
             let count = ratings.len() as u32;
             let avg = ratings.iter().map(|&r| r as f64).sum::<f64>() / ratings.len() as f64;
             PersonStat {
+                person_id: None,
                 name,
                 count,
                 avg_rating: avg,
@@ -249,12 +251,16 @@ fn compute_director_stats(rows: &[WrapUpMovieRow]) -> (Vec<PersonStat>, u32) {
 }
 
 fn compute_actor_stats(rows: &[WrapUpMovieRow]) -> (Vec<PersonStat>, u32, Vec<String>) {
+    use domain::models::{ExternalPersonId, PersonId};
+
     let mut actor_movies: HashMap<String, Vec<u8>> = HashMap::new();
     let mut actor_profiles: HashMap<String, Option<String>> = HashMap::new();
+    let mut actor_tmdb_ids: HashMap<String, i64> = HashMap::new();
     for r in rows {
-        for (i, (name, billing)) in r.cast_names.iter().enumerate() {
+        for (i, (name, billing, tmdb_id)) in r.cast_names.iter().enumerate() {
             if *billing <= 3 {
                 actor_movies.entry(name.clone()).or_default().push(r.rating);
+                actor_tmdb_ids.entry(name.clone()).or_insert(*tmdb_id);
                 if let Some(path) = r.cast_profile_paths.get(i) {
                     actor_profiles
                         .entry(name.clone())
@@ -269,7 +275,12 @@ fn compute_actor_stats(rows: &[WrapUpMovieRow]) -> (Vec<PersonStat>, u32, Vec<St
         .map(|(name, ratings)| {
             let count = ratings.len() as u32;
             let avg = ratings.iter().map(|&r| r as f64).sum::<f64>() / ratings.len() as f64;
+            let person_id = actor_tmdb_ids.get(&name).map(|tid| {
+                let ext = ExternalPersonId::new(format!("tmdb:{tid}"));
+                PersonId::from_external(&ext).value()
+            });
             PersonStat {
+                person_id,
                 name,
                 count,
                 avg_rating: avg,

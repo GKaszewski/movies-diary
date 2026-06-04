@@ -461,6 +461,8 @@ impl FeedEntry {
 pub struct UserSummary {
     pub user_id: UserId,
     email: Email,
+    username: Username,
+    display_name: Option<String>,
     pub total_movies: i64,
     pub avg_rating: Option<f64>,
     pub avatar_path: Option<String>,
@@ -470,6 +472,8 @@ impl UserSummary {
     pub fn new(
         user_id: UserId,
         email: Email,
+        username: Username,
+        display_name: Option<String>,
         total_movies: i64,
         avg_rating: Option<f64>,
         avatar_path: Option<String>,
@@ -477,6 +481,8 @@ impl UserSummary {
         Self {
             user_id,
             email,
+            username,
+            display_name,
             total_movies,
             avg_rating,
             avatar_path,
@@ -484,6 +490,12 @@ impl UserSummary {
     }
     pub fn email(&self) -> &str {
         self.email.value()
+    }
+    pub fn username(&self) -> &str {
+        self.username.value()
+    }
+    pub fn display_name(&self) -> Option<&str> {
+        self.display_name.as_deref()
     }
 }
 

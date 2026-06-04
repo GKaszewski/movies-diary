@@ -20,3 +20,4 @@ pub mod test_helpers;
 
 pub use movies::MovieDiscoveryIndexer;
 pub use movies::SearchCleanupHandler;
+pub use movies::SearchReindexHandler;

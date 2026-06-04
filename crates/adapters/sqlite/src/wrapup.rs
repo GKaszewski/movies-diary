@@ -345,9 +345,9 @@ impl WrapUpStatsQuery for SqliteWrapUpStatsQuery {
             let keywords = keywords_map.get(&movie_id_str).cloned().unwrap_or_default();
             let cast = cast_map.get(&movie_id_str).cloned().unwrap_or_default();
 
-            let cast_names: Vec<(String, u32)> = cast
+            let cast_names: Vec<(String, u32, i64)> = cast
                 .iter()
-                .map(|c| (c.name.clone(), c.billing_order))
+                .map(|c| (c.name.clone(), c.billing_order, c.tmdb_person_id))
                 .collect();
             let cast_profile_paths: Vec<Option<String>> =
                 cast.iter().map(|c| c.profile_path.clone()).collect();
@@ -379,6 +379,7 @@ impl WrapUpStatsQuery for SqliteWrapUpStatsQuery {
 struct CastEntry {
     name: String,
     billing_order: u32,
+    tmdb_person_id: i64,
     profile_path: Option<String>,
 }
 
@@ -453,7 +454,7 @@ async fn fetch_cast_sqlite(
         return Ok(HashMap::new());
     }
     let sql = format!(
-        "SELECT movie_id, name, billing_order, profile_path \
+        "SELECT movie_id, name, billing_order, tmdb_person_id, profile_path \
          FROM movie_cast \
          WHERE movie_id IN ({}) AND billing_order <= 3 \
          ORDER BY billing_order ASC",
@@ -470,10 +471,12 @@ async fn fetch_cast_sqlite(
         let mid: String = row.try_get("movie_id").map_err(map_err)?;
         let name: String = row.try_get("name").map_err(map_err)?;
         let billing_order: i32 = row.try_get("billing_order").map_err(map_err)?;
+        let tmdb_person_id: i64 = row.try_get("tmdb_person_id").map_err(map_err)?;
         let profile_path: Option<String> = row.try_get("profile_path").map_err(map_err)?;
         map.entry(mid).or_default().push(CastEntry {
             name,
             billing_order: billing_order as u32,
+            tmdb_person_id,
             profile_path,
         });
     }

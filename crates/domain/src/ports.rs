@@ -332,6 +332,12 @@ pub trait ImageRefQuery: Send + Sync {
 pub trait PersonCommand: Send + Sync {
     /// Upsert a batch of persons. Uses INSERT OR REPLACE (SQLite) / ON CONFLICT DO UPDATE (Postgres).
     async fn upsert_batch(&self, persons: &[Person]) -> Result<(), DomainError>;
+    /// Insert a batch of missing persons from movie_cast/movie_crew into the persons table.
+    /// Returns (inserted_count, has_more).
+    async fn backfill_from_credits_batch(
+        &self,
+        batch_size: u32,
+    ) -> Result<(u64, bool), DomainError>;
 }
 
 /// Read port — queries persons and credits. No mutations.
@@ -347,6 +353,7 @@ pub trait PersonQuery: Send + Sync {
     /// Returns persons who have no remaining entries in movie_cast or movie_crew.
     /// Called after movie deletion to find index entries that can be pruned.
     async fn list_orphaned_persons(&self) -> Result<Vec<PersonId>, DomainError>;
+    async fn list_page(&self, limit: u32, offset: u32) -> Result<Vec<Person>, DomainError>;
 }
 
 /// Read port — executes search queries. No mutations.
@@ -519,7 +526,7 @@ pub struct WrapUpMovieRow {
     pub original_language: Option<String>,
     pub genres: Vec<String>,
     pub keywords: Vec<String>,
-    pub cast_names: Vec<(String, u32)>,
+    pub cast_names: Vec<(String, u32, i64)>,
     pub cast_profile_paths: Vec<Option<String>>,
 }
 

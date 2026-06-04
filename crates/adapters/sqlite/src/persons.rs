@@ -57,6 +57,60 @@ impl PersonCommand for SqlitePersonAdapter {
         }
         Ok(())
     }
+
+    async fn backfill_from_credits_batch(
+        &self,
+        batch_size: u32,
+    ) -> Result<(u64, bool), DomainError> {
+        #[derive(sqlx::FromRow)]
+        struct MissingPerson {
+            tmdb_person_id: i64,
+            name: String,
+            department: Option<String>,
+            profile_path: Option<String>,
+        }
+
+        let rows = sqlx::query_as::<_, MissingPerson>(
+            "SELECT mc.tmdb_person_id, mc.name, 'Acting' AS department, mc.profile_path
+             FROM movie_cast mc
+             WHERE NOT EXISTS (SELECT 1 FROM persons WHERE persons.tmdb_person_id = mc.tmdb_person_id)
+             GROUP BY mc.tmdb_person_id
+             UNION ALL
+             SELECT mc.tmdb_person_id, mc.name, mc.department, mc.profile_path
+             FROM movie_crew mc
+             WHERE NOT EXISTS (SELECT 1 FROM persons WHERE persons.tmdb_person_id = mc.tmdb_person_id)
+               AND NOT EXISTS (SELECT 1 FROM movie_cast c2 WHERE c2.tmdb_person_id = mc.tmdb_person_id)
+             GROUP BY mc.tmdb_person_id
+             LIMIT ?",
+        )
+        .bind(batch_size)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(map_err)?;
+
+        let has_more = rows.len() as u32 >= batch_size;
+        let mut count = 0u64;
+        for row in &rows {
+            let ext = ExternalPersonId::new(format!("tmdb:{}", row.tmdb_person_id));
+            let pid = PersonId::from_external(&ext);
+            sqlx::query(
+                "INSERT INTO persons (id, external_id, tmdb_person_id, name, known_for_department, profile_path)
+                 VALUES (?, ?, ?, ?, ?, ?)
+                 ON CONFLICT(tmdb_person_id) DO NOTHING",
+            )
+            .bind(pid.value().to_string())
+            .bind(ext.value())
+            .bind(row.tmdb_person_id)
+            .bind(&row.name)
+            .bind(&row.department)
+            .bind(&row.profile_path)
+            .execute(&self.pool)
+            .await
+            .map_err(map_err)?;
+            count += 1;
+        }
+        Ok((count, has_more))
+    }
 }
 
 #[async_trait]
@@ -156,6 +210,19 @@ impl PersonQuery for SqlitePersonAdapter {
         Ok(PersonCredits { person, cast, crew })
     }
 
+    async fn list_page(&self, limit: u32, offset: u32) -> Result<Vec<Person>, DomainError> {
+        let rows = sqlx::query_as::<_, PersonRow>(
+            "SELECT id, external_id, name, known_for_department, profile_path FROM persons ORDER BY id LIMIT ? OFFSET ?",
+        )
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(map_err)?;
+
+        Ok(rows.into_iter().map(PersonRow::into_person).collect())
+    }
+
     async fn list_orphaned_persons(&self) -> Result<Vec<PersonId>, DomainError> {
         let rows: Vec<(String,)> = sqlx::query_as(
             "SELECT id FROM persons
@@ -164,7 +231,8 @@ impl PersonQuery for SqlitePersonAdapter {
              )
              AND NOT EXISTS (
                  SELECT 1 FROM movie_crew WHERE movie_crew.tmdb_person_id = persons.tmdb_person_id
-             )",
+             )
+             LIMIT 500",
         )
         .fetch_all(&self.pool)
         .await

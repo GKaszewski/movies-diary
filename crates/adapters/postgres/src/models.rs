@@ -7,7 +7,7 @@ use domain::{
     },
     value_objects::{
         Comment, Email, ExternalMetadataId, MovieId, MovieTitle, PosterPath, Rating, ReleaseYear,
-        ReviewId, UserId,
+        ReviewId, UserId, Username,
     },
 };
 use uuid::Uuid;
@@ -237,6 +237,8 @@ impl MovieStatsRow {
 pub(crate) struct UserSummaryRow {
     pub id: String,
     pub email: String,
+    pub username: String,
+    pub display_name: Option<String>,
     pub total_movies: i64,
     pub avg_rating: Option<f64>,
     pub avatar_path: Option<String>,
@@ -247,6 +249,8 @@ impl UserSummaryRow {
         Ok(UserSummary::new(
             UserId::from_uuid(parse_uuid(&self.id)?),
             Email::new(self.email)?,
+            Username::new(self.username)?,
+            self.display_name,
             self.total_movies,
             self.avg_rating,
             self.avatar_path,

@@ -86,6 +86,7 @@ pub enum EventPayload {
     WrapUpCompleted {
         wrapup_id: String,
     },
+    SearchReindexRequested,
 }
 
 impl EventPayload {
@@ -107,6 +108,7 @@ impl EventPayload {
             EventPayload::WatchEventIngested { .. } => "WatchEventIngested",
             EventPayload::WrapUpRequested { .. } => "WrapUpRequested",
             EventPayload::WrapUpCompleted { .. } => "WrapUpCompleted",
+            EventPayload::SearchReindexRequested => "SearchReindexRequested",
         }
     }
 }
@@ -248,6 +250,7 @@ impl From<&DomainEvent> for EventPayload {
             DomainEvent::WrapUpCompleted { wrapup_id } => EventPayload::WrapUpCompleted {
                 wrapup_id: wrapup_id.value().to_string(),
             },
+            DomainEvent::SearchReindexRequested => EventPayload::SearchReindexRequested,
         }
     }
 }
@@ -398,6 +401,7 @@ impl TryFrom<EventPayload> for DomainEvent {
                     wrapup_id: WrapUpId::from_uuid(wid),
                 })
             }
+            EventPayload::SearchReindexRequested => Ok(DomainEvent::SearchReindexRequested),
         }
     }
 }

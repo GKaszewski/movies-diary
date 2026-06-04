@@ -332,61 +332,67 @@ pub async fn get_movie_profile(
     State(state): State<AppState>,
     Path(movie_id): Path<Uuid>,
 ) -> impl IntoResponse {
-    let id = domain::value_objects::MovieId::from_uuid(movie_id);
-    match state.app_ctx.repos.movie_profile.get_by_movie_id(&id).await {
-        Ok(Some(p)) => Json(MovieProfileResponse {
-            tmdb_id: p.tmdb_id,
-            imdb_id: p.imdb_id,
-            overview: p.overview,
-            tagline: p.tagline,
-            runtime_minutes: p.runtime_minutes,
-            budget_usd: p.budget_usd,
-            revenue_usd: p.revenue_usd,
-            vote_average: p.vote_average,
-            vote_count: p.vote_count,
-            original_language: p.original_language,
-            collection_name: p.collection_name,
-            genres: p
-                .genres
-                .into_iter()
-                .map(|g| GenreDto {
-                    tmdb_id: g.tmdb_id,
-                    name: g.name,
-                })
-                .collect(),
-            keywords: p
-                .keywords
-                .into_iter()
-                .map(|k| KeywordDto {
-                    tmdb_id: k.tmdb_id,
-                    name: k.name,
-                })
-                .collect(),
-            cast: p
-                .cast
-                .into_iter()
-                .map(|c| CastMemberDto {
-                    tmdb_person_id: c.tmdb_person_id,
-                    name: c.name,
-                    character: c.character,
-                    billing_order: c.billing_order,
-                    profile_path: c.profile_path,
-                })
-                .collect(),
-            crew: p
-                .crew
-                .into_iter()
-                .map(|c| CrewMemberDto {
-                    tmdb_person_id: c.tmdb_person_id,
-                    name: c.name,
-                    job: c.job,
-                    department: c.department,
-                    profile_path: c.profile_path,
-                })
-                .collect(),
-            enriched_at: p.enriched_at.to_rfc3339(),
-        })
-        .into_response(),
+    use application::movies::get_movie_profile;
+    let query = get_movie_profile::GetMovieProfileQuery { movie_id };
+    match get_movie_profile::execute(&state.app_ctx, query).await {
+        Ok(Some(result)) => {
+            let p = result.profile;
+            Json(MovieProfileResponse {
+                tmdb_id: p.tmdb_id,
+                imdb_id: p.imdb_id,
+                overview: p.overview,
+                tagline: p.tagline,
+                runtime_minutes: p.runtime_minutes,
+                budget_usd: p.budget_usd,
+                revenue_usd: p.revenue_usd,
+                vote_average: p.vote_average,
+                vote_count: p.vote_count,
+                original_language: p.original_language,
+                collection_name: p.collection_name,
+                genres: p
+                    .genres
+                    .into_iter()
+                    .map(|g| GenreDto {
+                        tmdb_id: g.tmdb_id,
+                        name: g.name,
+                    })
+                    .collect(),
+                keywords: p
+                    .keywords
+                    .into_iter()
+                    .map(|k| KeywordDto {
+                        tmdb_id: k.tmdb_id,
+                        name: k.name,
+                    })
+                    .collect(),
+                cast: result
+                    .cast
+                    .into_iter()
+                    .map(|c| CastMemberDto {
+                        person_id: c.person_id.value().to_string(),
+                        tmdb_person_id: c.tmdb_person_id,
+                        name: c.name,
+                        character: c.character,
+                        billing_order: c.billing_order,
+                        profile_path: c.profile_path,
+                    })
+                    .collect(),
+                crew: result
+                    .crew
+                    .into_iter()
+                    .map(|c| CrewMemberDto {
+                        person_id: c.person_id.value().to_string(),
+                        tmdb_person_id: c.tmdb_person_id,
+                        name: c.name,
+                        job: c.job,
+                        department: c.department,
+                        profile_path: c.profile_path,
+                    })
+                    .collect(),
+                enriched_at: p.enriched_at.to_rfc3339(),
+            })
+            .into_response()
+        }
         Ok(None) => StatusCode::NOT_FOUND.into_response(),
         Err(e) => crate::errors::domain_error_response(e),
     }
@@ -982,6 +988,20 @@ pub async fn get_pending_followers(
     }
 }
 
+pub async fn post_reindex_search(
+    State(state): State<AppState>,
+    _admin: crate::extractors::AdminApiUser,
+) -> impl IntoResponse {
+    let event = domain::events::DomainEvent::SearchReindexRequested;
+    match state.app_ctx.services.event_publisher.publish(&event).await {
+        Ok(()) => StatusCode::ACCEPTED,
+        Err(e) => {
+            tracing::error!("failed to publish reindex event: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        }
+    }
+}
+
 #[utoipa::path(
     get, path = "/api/v1/activity-feed",
     params(ActivityFeedQueryParams),
@@ -1032,6 +1052,8 @@ pub async fn list_users(State(state): State<AppState>) -> Result<Json<UsersRespo
             .map(|u| UserSummaryDto {
                 id: u.user_id.value(),
                 email: u.email().to_string(),
+                username: u.username().to_string(),
+                display_name: u.display_name().map(String::from),
                 total_movies: u.total_movies,
                 avg_rating: u.avg_rating,
             })

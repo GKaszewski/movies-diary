@@ -7,6 +7,8 @@ use crate::diary::{DiaryEntryDto, DiaryResponse};
 pub struct UserSummaryDto {
     pub id: Uuid,
     pub email: String,
+    pub username: String,
+    pub display_name: Option<String>,
     pub total_movies: i64,
     pub avg_rating: Option<f64>,
 }

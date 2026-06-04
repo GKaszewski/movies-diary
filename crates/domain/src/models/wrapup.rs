@@ -36,6 +36,7 @@ impl DateRange {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MovieRef {
+    pub movie_id: Option<Uuid>,
     pub title: String,
     pub year: u16,
     pub runtime_minutes: Option<u32>,
@@ -50,6 +51,7 @@ pub struct UserRef {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PersonStat {
+    pub person_id: Option<Uuid>,
     pub name: String,
     pub count: u32,
     pub avg_rating: f64,

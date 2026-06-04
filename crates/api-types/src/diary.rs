@@ -57,6 +57,7 @@ pub struct FeedEntryDto {
     pub user_id: Uuid,
     pub user_email: String,
     pub user_display_name: String,
+    pub is_federated: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]

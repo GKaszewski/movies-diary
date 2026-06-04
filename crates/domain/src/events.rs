@@ -84,6 +84,7 @@ pub enum DomainEvent {
     WrapUpCompleted {
         wrapup_id: WrapUpId,
     },
+    SearchReindexRequested,
 }
 
 #[async_trait]
