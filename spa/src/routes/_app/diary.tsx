@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { useCallback, useState } from "react"
 import { useTranslation } from "react-i18next"
-import { BookOpen, ChevronLeft, ChevronRight } from "lucide-react"
+import { BookOpen, ChevronLeft, ChevronRight, Download } from "lucide-react"
 import { format, startOfMonth, subMonths } from "date-fns"
 import { MovieCard } from "@/components/movie-card"
 import { EmptyState } from "@/components/empty-state"
@@ -10,6 +10,8 @@ import { VirtualList } from "@/components/virtual-list"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useInfiniteDiary, useDeleteReview } from "@/hooks/use-diary"
+import { API_URL } from "@/lib/api/client"
+import { getToken } from "@/lib/auth"
 import type { DiaryEntryDto } from "@/lib/api/common"
 
 export const Route = createFileRoute("/_app/diary")({
@@ -75,6 +77,25 @@ function DiaryPage() {
     <div className="space-y-4 p-4">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-bold">{t("diary.title")}</h1>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-8"
+          onClick={async () => {
+            const res = await fetch(`${API_URL}/api/v1/diary/export?format=csv`, {
+              headers: { Authorization: `Bearer ${getToken()}` },
+            })
+            const blob = await res.blob()
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement("a")
+            a.href = url
+            a.download = "diary.csv"
+            a.click()
+            URL.revokeObjectURL(url)
+          }}
+        >
+          <Download className="size-4" />
+        </Button>
       </div>
 
       <div className="flex items-center justify-between rounded-xl bg-card px-3 py-2">
