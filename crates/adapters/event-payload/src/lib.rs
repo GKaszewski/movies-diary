@@ -87,6 +87,9 @@ pub enum EventPayload {
         wrapup_id: String,
     },
     SearchReindexRequested,
+    PosterSynced {
+        movie_id: String,
+    },
 }
 
 impl EventPayload {
@@ -109,6 +112,7 @@ impl EventPayload {
             EventPayload::WrapUpRequested { .. } => "WrapUpRequested",
             EventPayload::WrapUpCompleted { .. } => "WrapUpCompleted",
             EventPayload::SearchReindexRequested => "SearchReindexRequested",
+            EventPayload::PosterSynced { .. } => "PosterSynced",
         }
     }
 }
@@ -251,6 +255,9 @@ impl From<&DomainEvent> for EventPayload {
                 wrapup_id: wrapup_id.value().to_string(),
             },
             DomainEvent::SearchReindexRequested => EventPayload::SearchReindexRequested,
+            DomainEvent::PosterSynced { movie_id } => EventPayload::PosterSynced {
+                movie_id: movie_id.value().to_string(),
+            },
         }
     }
 }
@@ -402,6 +409,9 @@ impl TryFrom<EventPayload> for DomainEvent {
                 })
             }
             EventPayload::SearchReindexRequested => Ok(DomainEvent::SearchReindexRequested),
+            EventPayload::PosterSynced { movie_id } => Ok(DomainEvent::PosterSynced {
+                movie_id: MovieId::from_uuid(parse_uuid(&movie_id, "movie_id")?),
+            }),
         }
     }
 }

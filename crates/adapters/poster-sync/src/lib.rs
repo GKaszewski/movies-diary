@@ -82,7 +82,22 @@ impl PosterSyncHandler {
         let poster_path = PosterPath::new(stored_path)?;
 
         movie.update_poster(poster_path);
-        self.movie_repository.upsert_movie(&movie).await
+        self.movie_repository.upsert_movie(&movie).await?;
+
+        if let Err(e) = self
+            .event_publisher
+            .publish(&DomainEvent::PosterSynced {
+                movie_id: movie.id().clone(),
+            })
+            .await
+        {
+            tracing::warn!(
+                "failed to emit PosterSynced for {}: {e}",
+                movie.id().value()
+            );
+        }
+
+        Ok(())
     }
 }
 

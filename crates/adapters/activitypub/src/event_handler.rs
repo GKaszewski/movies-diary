@@ -4,7 +4,7 @@ use domain::{
     errors::DomainError,
     events::DomainEvent,
     ports::LocalApContentQuery,
-    value_objects::{ReviewId, UserId},
+    value_objects::{MovieId, ReviewId, UserId},
 };
 use std::sync::Arc;
 
@@ -97,6 +97,10 @@ impl EventHandler for ActivityPubEventHandler {
                     .await
                     .map_err(|e| DomainError::InfrastructureError(e.to_string()))
             }
+            DomainEvent::PosterSynced { movie_id } => self
+                .on_poster_synced(movie_id)
+                .await
+                .map_err(|e| DomainError::InfrastructureError(e.to_string())),
             _ => Ok(()),
         }
     }
@@ -265,6 +269,46 @@ impl ActivityPubEventHandler {
         self.ap_service
             .broadcast_delete_to_followers(user_id.value(), ap_id)
             .await?;
+        Ok(())
+    }
+
+    async fn on_poster_synced(&self, movie_id: &MovieId) -> anyhow::Result<()> {
+        let entries = self
+            .content_query
+            .get_local_reviews_for_movie(movie_id)
+            .await?;
+
+        let movie = self.content_query.get_movie_by_id(movie_id).await?;
+        let movie = match movie {
+            Some(m) => m,
+            None => return Ok(()),
+        };
+        let poster_url = movie
+            .poster_path()
+            .map(|p| format!("{}/images/{}", self.base_url, p.value()));
+
+        for entry in entries {
+            let review = entry.review();
+            let user_id = review.user_id();
+            let ap_id = review_url(&self.base_url, review.id());
+            let actor = actor_url(&self.base_url, user_id.value());
+
+            let obj = review_to_ap_object(
+                review,
+                ap_id,
+                actor,
+                movie.title().value().to_string(),
+                movie.release_year().value(),
+                poster_url.clone(),
+                &self.base_url,
+            );
+            let json = serde_json::to_value(obj)?;
+
+            self.ap_service
+                .broadcast_update_note(user_id.value(), json, ApVisibility::Public, vec![])
+                .await?;
+        }
+
         Ok(())
     }
 }

@@ -62,6 +62,7 @@ impl EventHandler for RecordingHandler {
             DomainEvent::WrapUpRequested { .. } => "wrapup_requested",
             DomainEvent::WrapUpCompleted { .. } => "wrapup_completed",
             DomainEvent::SearchReindexRequested => "search_reindex",
+            DomainEvent::PosterSynced { .. } => "poster_synced",
         };
         self.calls.lock().unwrap().push(label);
         Ok(())

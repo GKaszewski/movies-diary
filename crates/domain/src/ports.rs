@@ -431,6 +431,11 @@ pub trait LocalApContentQuery: Send + Sync {
 
     async fn count_local_posts(&self) -> Result<u64, DomainError>;
 
+    async fn get_local_reviews_for_movie(
+        &self,
+        movie_id: &MovieId,
+    ) -> Result<Vec<DiaryEntry>, DomainError>;
+
     async fn get_local_reviews_page(
         &self,
         user_id: &UserId,

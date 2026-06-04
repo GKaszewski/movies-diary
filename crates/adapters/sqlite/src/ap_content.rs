@@ -67,6 +67,26 @@ impl LocalApContentQuery for SqliteApContentQuery {
         rows.into_iter().map(WatchlistRow::into_domain).collect()
     }
 
+    async fn get_local_reviews_for_movie(
+        &self,
+        movie_id: &MovieId,
+    ) -> Result<Vec<DiaryEntry>, DomainError> {
+        let mid = movie_id.value().to_string();
+        let rows = sqlx::query_as::<_, DiaryRow>(
+            "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
+                    r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url
+             FROM reviews r
+             INNER JOIN movies m ON m.id = r.movie_id
+             WHERE r.movie_id = ? AND r.remote_actor_url IS NULL
+             ORDER BY r.created_at DESC",
+        )
+        .bind(&mid)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(Self::map_err)?;
+        rows.into_iter().map(DiaryRow::into_domain).collect()
+    }
+
     async fn get_review_by_id(&self, review_id: &ReviewId) -> Result<Option<Review>, DomainError> {
         let id = review_id.value().to_string();
         sqlx::query_as::<_, ReviewRow>(

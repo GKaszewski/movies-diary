@@ -19,6 +19,7 @@ pub fn event_to_subject(prefix: &str, event: &DomainEvent) -> String {
         DomainEvent::WrapUpRequested { .. } => "wrapup.requested",
         DomainEvent::WrapUpCompleted { .. } => "wrapup.completed",
         DomainEvent::SearchReindexRequested => "search.reindex.requested",
+        DomainEvent::PosterSynced { .. } => "poster.synced",
     };
     format!("{prefix}.{suffix}")
 }

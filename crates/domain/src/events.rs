@@ -85,6 +85,9 @@ pub enum DomainEvent {
         wrapup_id: WrapUpId,
     },
     SearchReindexRequested,
+    PosterSynced {
+        movie_id: MovieId,
+    },
 }
 
 #[async_trait]
