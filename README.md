@@ -18,6 +18,7 @@ A self-hosted, server-side rendered movie logging system with a full REST API. B
 - User profiles — display name, bio, avatar, banner, custom profile fields; editable via HTML settings page or REST API
 - Jellyfin/Plex auto-import — media server sends a webhook on playback stop, movies land in a watch queue; review and confirm with a rating to create diary entries; per-user webhook tokens with SHA-256 auth; setup UI at `/settings/integrations`
 - Annual Wrap-Up — Spotify Wrapped for movies: per-user and instance-wide year-in-review with stats (top directors, actors, genres, rating distribution, watch time, rewatches, budget analysis), shareable HTML page at `/wrapups/{user_id}/{year}`, downloadable MP4 video with branded slides; admin-triggered or auto-generated in January
+- Goals — set a "watch N movies in YEAR" target with a progress bar; progress computed from existing reviews (backwards compatible); per-user federation toggle in settings; displayed on profile (SPA: interactive with create/edit/delete, classic HTML: read-only glassmorphic card)
 - CSV and JSON diary export
 - File importer: upload CSV, TSV, JSON, or XLSX from any source (Letterboxd, IMDb, etc.), map columns to domain fields via a step-by-step wizard or REST API, save mapping profiles for repeat imports
 - REST API v1 (`/api/v1/`) with full feature parity with the HTML interface

@@ -77,7 +77,7 @@ async fn search_endpoint_returns_200_with_empty_results() {
     // Override the search_port with our stub
     state.app_ctx.repos.search_port = Arc::new(SearchPortStub);
     let app = Router::new()
-        .route("/api/v1/search", get(crate::handlers::api::get_search))
+        .route("/api/v1/search", get(crate::handlers::search::get_search))
         .with_state(state);
 
     let resp = app
@@ -99,7 +99,7 @@ async fn search_endpoint_with_no_query_returns_200() {
     // Override the search_port with our stub
     state.app_ctx.repos.search_port = Arc::new(SearchPortStub);
     let app = Router::new()
-        .route("/api/v1/search", get(crate::handlers::api::get_search))
+        .route("/api/v1/search", get(crate::handlers::search::get_search))
         .with_state(state);
 
     let resp = app
@@ -125,7 +125,7 @@ async fn person_endpoint_returns_404_for_unknown_id() {
     let app = Router::new()
         .route(
             "/api/v1/people/{id}",
-            get(crate::handlers::api::get_person_handler),
+            get(crate::handlers::search::get_person_handler),
         )
         .with_state(state);
 
@@ -151,7 +151,7 @@ async fn person_credits_endpoint_returns_404_for_unknown_id() {
     let app = Router::new()
         .route(
             "/api/v1/people/{id}/credits",
-            get(crate::handlers::api::get_person_credits_handler),
+            get(crate::handlers::search::get_person_credits_handler),
         )
         .with_state(state);
 
@@ -177,7 +177,7 @@ async fn get_watchlist_requires_auth() {
     let app = Router::new()
         .route(
             "/api/v1/watchlist",
-            get(crate::handlers::api::get_watchlist_handler),
+            get(crate::handlers::watchlist::get_watchlist_handler),
         )
         .with_state(state);
 
@@ -200,7 +200,7 @@ async fn get_watchlist_status_requires_auth() {
     let app = Router::new()
         .route(
             "/api/v1/watchlist/{movie_id}",
-            get(crate::handlers::api::get_watchlist_status),
+            get(crate::handlers::watchlist::get_watchlist_status),
         )
         .with_state(state);
 

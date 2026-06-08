@@ -302,7 +302,7 @@ pub async fn get_user_wrapup_html(
     };
 
     let video_url = format!("/api/v1/wrapups/{}/video", record.id.value());
-    let ctx = super::html::build_page_context(&state, viewer, csrf.0).await;
+    let ctx = super::helpers::build_page_context(&state, viewer, csrf.0).await;
     render_wrapup(&report, year, &ctx, Some(video_url))
 }
 
@@ -338,6 +338,6 @@ pub async fn get_global_wrapup_html(
     };
 
     let video_url = format!("/api/v1/wrapups/{}/video", record.id.value());
-    let ctx = super::html::build_page_context(&state, viewer, csrf.0).await;
+    let ctx = super::helpers::build_page_context(&state, viewer, csrf.0).await;
     render_wrapup(&report, year, &ctx, Some(video_url))
 }

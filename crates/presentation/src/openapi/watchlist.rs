@@ -6,10 +6,10 @@ use utoipa::OpenApi;
 #[derive(OpenApi)]
 #[openapi(
     paths(
-        crate::handlers::api::get_watchlist_handler,
-        crate::handlers::api::post_watchlist_add,
-        crate::handlers::api::delete_watchlist_entry,
-        crate::handlers::api::get_watchlist_status,
+        crate::handlers::watchlist::get_watchlist_handler,
+        crate::handlers::watchlist::post_watchlist_add,
+        crate::handlers::watchlist::delete_watchlist_entry,
+        crate::handlers::watchlist::get_watchlist_status,
     ),
     components(schemas(
         WatchlistResponse,

@@ -7,9 +7,9 @@ use utoipa::OpenApi;
 #[derive(OpenApi)]
 #[openapi(
     paths(
-        crate::handlers::api::get_search,
-        crate::handlers::api::get_person_handler,
-        crate::handlers::api::get_person_credits_handler,
+        crate::handlers::search::get_search,
+        crate::handlers::search::get_person_handler,
+        crate::handlers::search::get_person_credits_handler,
     ),
     components(schemas(
         SearchResponse,

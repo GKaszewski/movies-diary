@@ -1,0 +1,221 @@
+use axum::{
+    Form, Json,
+    extract::{Extension, Query, State},
+    http::{HeaderValue, StatusCode, header::SET_COOKIE},
+    response::{IntoResponse, Redirect},
+};
+use chrono::Utc;
+
+use application::auth::{
+    commands::RegisterCommand, login as login_uc, queries::LoginQuery, register as register_uc,
+};
+
+use crate::{
+    csrf::CsrfToken,
+    errors::ApiError,
+    forms::{ErrorQuery, LoginForm, RegisterForm},
+    render::render_page,
+    state::AppState,
+};
+use api_types::{LoginRequest, LoginResponse, RegisterRequest};
+use application::ports::HtmlPageContext;
+use template_askama::{LoginTemplate, RegisterTemplate};
+
+// ── HTML helpers ─────────────────────────────────────────────────────────────
+
+fn secure_flag() -> &'static str {
+    if std::env::var("SECURE_COOKIES").as_deref() == Ok("true") {
+        "; Secure"
+    } else {
+        ""
+    }
+}
+
+fn set_cookie_header(token: &str, max_age: i64) -> (axum::http::HeaderName, HeaderValue) {
+    let val = format!(
+        "token={}; HttpOnly; Path=/; SameSite=Strict; Max-Age={}{}",
+        token,
+        max_age,
+        secure_flag()
+    );
+    (
+        SET_COOKIE,
+        HeaderValue::from_str(&val).expect("valid cookie"),
+    )
+}
+
+// ── API ──────────────────────────────────────────────────────────────────────
+
+#[utoipa::path(
+    post, path = "/api/v1/auth/login",
+    request_body = LoginRequest,
+    responses(
+        (status = 200, body = LoginResponse),
+        (status = 401, description = "Invalid credentials"),
+    )
+)]
+pub async fn login(
+    State(state): State<AppState>,
+    Json(req): Json<LoginRequest>,
+) -> Result<Json<LoginResponse>, ApiError> {
+    let result = login_uc::execute(
+        &state.app_ctx,
+        LoginQuery {
+            email: req.email,
+            password: req.password,
+        },
+    )
+    .await?;
+    Ok(Json(LoginResponse {
+        token: result.token,
+        user_id: result.user_id,
+        email: result.email,
+        expires_at: result.expires_at.to_rfc3339(),
+        role: result.role,
+    }))
+}
+
+#[utoipa::path(
+    post, path = "/api/v1/auth/register",
+    request_body = RegisterRequest,
+    responses(
+        (status = 201, description = "User registered"),
+        (status = 400, description = "Invalid input"),
+    )
+)]
+pub async fn register(
+    State(state): State<AppState>,
+    Json(req): Json<RegisterRequest>,
+) -> Result<StatusCode, ApiError> {
+    register_uc::execute(
+        &state.app_ctx,
+        RegisterCommand {
+            email: req.email,
+            username: req.username,
+            password: req.password,
+            role: domain::models::UserRole::Standard,
+        },
+    )
+    .await?;
+    Ok(StatusCode::CREATED)
+}
+
+// ── HTML ─────────────────────────────────────────────────────────────────────
+
+pub async fn get_login_page(
+    State(state): State<AppState>,
+    Query(params): Query<ErrorQuery>,
+    Extension(csrf): Extension<CsrfToken>,
+) -> impl IntoResponse {
+    let ctx = HtmlPageContext {
+        user_email: None,
+        user_id: None,
+        is_admin: false,
+        register_enabled: state.app_ctx.config.allow_registration,
+        rss_url: "/feed.rss".to_string(),
+        page_title: "Login — Movies Diary".to_string(),
+        canonical_url: format!("{}/login", state.app_ctx.config.base_url),
+        csrf_token: csrf.0,
+        page_rss_url: None,
+    };
+    render_page(LoginTemplate {
+        ctx: &ctx,
+        error: params.error.as_deref(),
+    })
+}
+
+pub async fn post_login(
+    State(state): State<AppState>,
+    Extension(csrf): Extension<CsrfToken>,
+    Form(form): Form<LoginForm>,
+) -> impl IntoResponse {
+    if crate::csrf::mismatch(&csrf, &form.csrf_token) {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+    match login_uc::execute(
+        &state.app_ctx,
+        LoginQuery {
+            email: form.email,
+            password: form.password,
+        },
+    )
+    .await
+    {
+        Ok(result) => {
+            let max_age = (result.expires_at - Utc::now()).num_seconds().max(0);
+            let cookie = set_cookie_header(&result.token, max_age);
+            ([cookie], Redirect::to("/")).into_response()
+        }
+        Err(_) => Redirect::to("/login?error=Invalid+credentials").into_response(),
+    }
+}
+
+pub async fn get_logout() -> impl IntoResponse {
+    let val = format!(
+        "token=; HttpOnly; Path=/; SameSite=Strict; Max-Age=0{}",
+        secure_flag()
+    );
+    let cookie = (
+        SET_COOKIE,
+        HeaderValue::from_str(&val).expect("valid cookie"),
+    );
+    ([cookie], Redirect::to("/")).into_response()
+}
+
+pub async fn get_register_page(
+    State(state): State<AppState>,
+    Query(params): Query<ErrorQuery>,
+    Extension(csrf): Extension<CsrfToken>,
+) -> impl IntoResponse {
+    if !state.app_ctx.config.allow_registration {
+        return Redirect::to("/").into_response();
+    }
+    let ctx = HtmlPageContext {
+        user_email: None,
+        user_id: None,
+        is_admin: false,
+        register_enabled: true,
+        rss_url: "/feed.rss".to_string(),
+        page_title: "Register — Movies Diary".to_string(),
+        canonical_url: format!("{}/register", state.app_ctx.config.base_url),
+        csrf_token: csrf.0,
+        page_rss_url: None,
+    };
+    render_page(RegisterTemplate {
+        ctx: &ctx,
+        error: params.error.as_deref(),
+    })
+    .into_response()
+}
+
+pub async fn post_register(
+    State(state): State<AppState>,
+    Extension(csrf): Extension<CsrfToken>,
+    Form(form): Form<RegisterForm>,
+) -> impl IntoResponse {
+    if !state.app_ctx.config.allow_registration {
+        return Redirect::to("/").into_response();
+    }
+    if crate::csrf::mismatch(&csrf, &form.csrf_token) {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+    match application::auth::register_and_login::execute(
+        &state.app_ctx,
+        application::auth::commands::RegisterAndLoginCommand {
+            email: form.email,
+            username: form.username,
+            password: form.password,
+        },
+    )
+    .await
+    {
+        Ok(result) => {
+            let max_age = (result.expires_at - Utc::now()).num_seconds().max(0);
+            let cookie = set_cookie_header(&result.token, max_age);
+            ([cookie], Redirect::to("/")).into_response()
+        }
+        Err(_) => {
+            Redirect::to("/register?error=Registration+failed.+Please+try+again.").into_response()
+        }
+    }
+}

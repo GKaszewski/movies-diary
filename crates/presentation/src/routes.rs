@@ -48,12 +48,12 @@ fn html_routes(rate_limit: u64) -> Router<AppState> {
     let auth = Router::new()
         .route(
             "/login",
-            routing::get(handlers::html::get_login_page).post(handlers::html::post_login),
+            routing::get(handlers::auth::get_login_page).post(handlers::auth::post_login),
         )
-        .route("/logout", routing::get(handlers::html::get_logout))
+        .route("/logout", routing::get(handlers::auth::get_logout))
         .route(
             "/register",
-            routing::get(handlers::html::get_register_page).post(handlers::html::post_register),
+            routing::get(handlers::auth::get_register_page).post(handlers::auth::post_register),
         )
         .layer({
             let cfg = GovernorConfigBuilder::default()
@@ -66,29 +66,29 @@ fn html_routes(rate_limit: u64) -> Router<AppState> {
         });
 
     let base = Router::new()
-        .route("/", routing::get(handlers::html::get_activity_feed))
-        .route("/users", routing::get(handlers::html::get_users_list))
+        .route("/", routing::get(handlers::diary::get_activity_feed_html))
+        .route("/users", routing::get(handlers::users::get_users_list))
         .route(
             "/u/{username}",
-            routing::get(handlers::html::get_user_by_username),
+            routing::get(handlers::users::get_user_by_username),
         )
         .route(
             "/users/{id}",
-            routing::get(handlers::html::get_user_profile),
+            routing::get(handlers::users::get_user_profile_html),
         )
         .route(
             "/movies/{movie_id}",
-            routing::get(handlers::html::get_movie_detail),
+            routing::get(handlers::movies::get_movie_detail_html),
         )
         .merge(auth)
         .route(
             "/reviews/new",
-            routing::get(handlers::html::get_new_review_page),
+            routing::get(handlers::diary::get_new_review_page),
         )
-        .route("/reviews", routing::post(handlers::html::post_review))
+        .route("/reviews", routing::post(handlers::diary::post_review_html))
         .route(
             "/reviews/{id}/delete",
-            routing::post(handlers::html::post_delete_review),
+            routing::post(handlers::diary::post_delete_review_html),
         )
         .route("/images/{*key}", routing::get(handlers::images::get_image))
         .route(
@@ -99,7 +99,10 @@ fn html_routes(rate_limit: u64) -> Router<AppState> {
                 },
             ),
         )
-        .route("/diary/export", routing::get(handlers::html::get_export))
+        .route(
+            "/diary/export",
+            routing::get(handlers::diary::get_export_html),
+        )
         .route("/import", routing::get(handlers::import::get_import_page))
         .route(
             "/import/upload",
@@ -132,45 +135,45 @@ fn html_routes(rate_limit: u64) -> Router<AppState> {
         )
         .route(
             "/settings/profile",
-            routing::get(handlers::html::get_profile_settings)
-                .post(handlers::html::post_profile_settings),
+            routing::get(handlers::users::get_profile_settings)
+                .post(handlers::users::post_profile_settings),
         )
-        .route("/tags/{tag}", routing::get(handlers::html::get_tag))
+        .route("/tags/{tag}", routing::get(handlers::search::get_tag))
         .route(
             "/users/{id}/watchlist",
-            routing::get(handlers::html::get_watchlist_page),
+            routing::get(handlers::watchlist::get_watchlist_page),
         )
         .route(
             "/watchlist/add",
-            routing::post(handlers::html::post_watchlist_add),
+            routing::post(handlers::watchlist::post_watchlist_add_html),
         )
         .route(
             "/watchlist/{movie_id}/remove",
-            routing::post(handlers::html::post_watchlist_remove),
+            routing::post(handlers::watchlist::post_watchlist_remove_html),
         )
         .route(
             "/settings/integrations",
-            routing::get(handlers::html::get_integrations_page),
+            routing::get(handlers::integrations::get_integrations_page),
         )
         .route(
             "/settings/integrations/generate",
-            routing::post(handlers::html::post_generate_token),
+            routing::post(handlers::integrations::post_generate_token),
         )
         .route(
             "/settings/integrations/{id}/revoke",
-            routing::post(handlers::html::post_revoke_token),
+            routing::post(handlers::integrations::post_revoke_token),
         )
         .route(
             "/watch-queue",
-            routing::get(handlers::html::get_watch_queue_page),
+            routing::get(handlers::integrations::get_watch_queue_page),
         )
         .route(
             "/watch-queue/{id}/confirm",
-            routing::post(handlers::html::post_confirm_single),
+            routing::post(handlers::integrations::post_confirm_single),
         )
         .route(
             "/watch-queue/{id}/dismiss",
-            routing::post(handlers::html::post_dismiss_single),
+            routing::post(handlers::integrations::post_dismiss_single),
         )
         .route(
             "/wrapups/{user_id}/{year}",
@@ -192,60 +195,60 @@ fn federation_html_routes() -> Router<AppState> {
     Router::new()
         .route(
             "/users/{id}/follow",
-            routing::post(handlers::html::follow_remote_user),
+            routing::post(handlers::social::follow_remote_user),
         )
         .route(
             "/users/{id}/unfollow",
-            routing::post(handlers::html::unfollow_remote_user),
+            routing::post(handlers::social::unfollow_remote_user),
         )
         .route(
             "/users/{id}/followers/accept",
-            routing::post(handlers::html::accept_follower),
+            routing::post(handlers::social::accept_follower_html),
         )
         .route(
             "/users/{id}/followers/reject",
-            routing::post(handlers::html::reject_follower),
+            routing::post(handlers::social::reject_follower_html),
         )
         .route(
             "/users/{id}/followers",
-            routing::get(handlers::html::get_followers_collection),
+            routing::get(handlers::social::get_followers_collection),
         )
         .route(
             "/users/{id}/following",
-            routing::get(handlers::html::get_following_collection),
+            routing::get(handlers::social::get_following_collection),
         )
         .route(
             "/users/{id}/following-list",
-            routing::get(handlers::html::get_following_page),
+            routing::get(handlers::social::get_following_page),
         )
         .route(
             "/users/{id}/followers-list",
-            routing::get(handlers::html::get_followers_page),
+            routing::get(handlers::social::get_followers_page),
         )
         .route(
             "/users/{id}/followers/remove",
-            routing::post(handlers::html::remove_follower),
+            routing::post(handlers::social::remove_follower_html),
         )
         .route(
             "/admin/blocked-domains",
-            routing::get(handlers::html::get_blocked_domains_page)
-                .post(handlers::html::post_blocked_domain),
+            routing::get(handlers::social::get_blocked_domains_page)
+                .post(handlers::social::post_blocked_domain),
         )
         .route(
             "/admin/blocked-domains/remove",
-            routing::post(handlers::html::post_remove_blocked_domain),
+            routing::post(handlers::social::post_remove_blocked_domain),
         )
         .route(
             "/social/blocked",
-            routing::get(handlers::html::get_blocked_actors_page),
+            routing::get(handlers::social::get_blocked_actors_page),
         )
         .route(
             "/social/block",
-            routing::post(handlers::html::post_block_actor_html),
+            routing::post(handlers::social::post_block_actor_html),
         )
         .route(
             "/social/unblock",
-            routing::post(handlers::html::post_unblock_actor),
+            routing::post(handlers::social::post_unblock_actor),
         )
 }
 
@@ -298,45 +301,40 @@ fn api_routes(rate_limit: u64) -> Router<AppState> {
         .unwrap();
 
     let base = Router::new()
-        .route("/diary", routing::get(handlers::api::get_diary))
+        .route("/diary", routing::get(handlers::diary::get_diary))
         .route(
             "/movies/{id}/history",
-            routing::get(handlers::api::get_review_history),
+            routing::get(handlers::movies::get_review_history),
         )
-        .route("/movies", routing::get(handlers::api::list_movies))
+        .route("/movies", routing::get(handlers::movies::list_movies))
         .route(
             "/movies/{id}",
-            routing::get(handlers::api::get_movie_detail),
+            routing::get(handlers::movies::get_movie_detail),
         )
         .route(
             "/movies/{id}/profile",
-            routing::get(handlers::api::get_movie_profile),
+            routing::get(handlers::movies::get_movie_profile),
         )
-        .route("/reviews", routing::post(handlers::api::post_review))
+        .route("/reviews", routing::post(handlers::diary::post_review))
         .route(
             "/reviews/{id}",
-            routing::delete(handlers::api::delete_review),
+            routing::delete(handlers::diary::delete_review),
         )
         .route(
             "/movies/{id}/sync-poster",
-            routing::post(handlers::api::sync_poster),
+            routing::post(handlers::movies::sync_poster),
         )
-        .route("/auth/login", routing::post(handlers::api::login))
-        .route("/auth/register", routing::post(handlers::api::register))
-        .route("/diary/export", routing::get(handlers::api::export_diary))
+        .route("/auth/login", routing::post(handlers::auth::login))
+        .route("/auth/register", routing::post(handlers::auth::register))
+        .route("/diary/export", routing::get(handlers::diary::export_diary))
         .route(
             "/activity-feed",
-            routing::get(handlers::api::get_activity_feed),
+            routing::get(handlers::diary::get_activity_feed),
         )
-        .route("/users", routing::get(handlers::api::list_users))
-        .route("/users/{id}", routing::get(handlers::api::get_user_profile))
+        .route("/users", routing::get(handlers::users::list_users))
         .route(
-            "/users/{id}/following",
-            routing::get(handlers::api::get_user_following),
-        )
-        .route(
-            "/users/{id}/followers",
-            routing::get(handlers::api::get_user_followers),
+            "/users/{id}",
+            routing::get(handlers::users::get_user_profile),
         )
         .route(
             "/import/sessions",
@@ -369,30 +367,30 @@ fn api_routes(rate_limit: u64) -> Router<AppState> {
         )
         .route(
             "/profile",
-            routing::get(handlers::api::get_profile).put(handlers::api::update_profile_handler),
+            routing::get(handlers::users::get_profile).put(handlers::users::update_profile_handler),
         )
         .route(
             "/profile/fields",
-            routing::put(handlers::api::update_profile_fields_handler),
+            routing::put(handlers::users::update_profile_fields_handler),
         )
-        .route("/search", routing::get(handlers::api::get_search))
+        .route("/search", routing::get(handlers::search::get_search))
         .route(
             "/people/{id}",
-            routing::get(handlers::api::get_person_handler),
+            routing::get(handlers::search::get_person_handler),
         )
         .route(
             "/people/{id}/credits",
-            routing::get(handlers::api::get_person_credits_handler),
+            routing::get(handlers::search::get_person_credits_handler),
         )
         .route(
             "/watchlist",
-            routing::get(handlers::api::get_watchlist_handler)
-                .post(handlers::api::post_watchlist_add),
+            routing::get(handlers::watchlist::get_watchlist_handler)
+                .post(handlers::watchlist::post_watchlist_add),
         )
         .route(
             "/watchlist/{movie_id}",
-            routing::get(handlers::api::get_watchlist_status)
-                .delete(handlers::api::delete_watchlist_entry),
+            routing::get(handlers::watchlist::get_watchlist_status)
+                .delete(handlers::watchlist::delete_watchlist_entry),
         )
         .route(
             "/settings/webhook-tokens",
@@ -435,23 +433,23 @@ fn api_routes(rate_limit: u64) -> Router<AppState> {
         )
         .route(
             "/admin/reindex-search",
-            routing::post(handlers::api::post_reindex_search),
+            routing::post(handlers::search::post_reindex_search),
         )
         .route(
             "/goals",
-            routing::get(handlers::api::list_goals).post(handlers::api::create_goal),
+            routing::get(handlers::goals::list_goals).post(handlers::goals::create_goal),
         )
         .route(
             "/goals/{year}",
-            routing::put(handlers::api::update_goal).delete(handlers::api::delete_goal),
+            routing::put(handlers::goals::update_goal).delete(handlers::goals::delete_goal),
         )
         .route(
             "/users/{id}/goals",
-            routing::get(handlers::api::get_user_goals),
+            routing::get(handlers::goals::get_user_goals),
         )
         .route(
             "/settings",
-            routing::get(handlers::api::get_settings).put(handlers::api::update_settings),
+            routing::get(handlers::goals::get_settings).put(handlers::goals::update_settings),
         );
 
     #[cfg(feature = "federation")]
@@ -485,49 +483,60 @@ fn federation_api_routes() -> Router<AppState> {
     Router::new()
         .route(
             "/social/following",
-            routing::get(handlers::api::get_following),
+            routing::get(handlers::social::get_following),
         )
         .route(
             "/social/followers",
-            routing::get(handlers::api::get_followers),
+            routing::get(handlers::social::get_followers),
         )
         .route(
             "/social/followers/pending",
-            routing::get(handlers::api::get_pending_followers),
+            routing::get(handlers::social::get_pending_followers),
         )
-        .route("/social/follow", routing::post(handlers::api::follow))
-        .route("/social/unfollow", routing::post(handlers::api::unfollow))
+        .route("/social/follow", routing::post(handlers::social::follow))
+        .route(
+            "/social/unfollow",
+            routing::post(handlers::social::unfollow),
+        )
         .route(
             "/social/followers/accept",
-            routing::post(handlers::api::accept_follower),
+            routing::post(handlers::social::accept_follower),
         )
         .route(
             "/social/followers/reject",
-            routing::post(handlers::api::reject_follower),
+            routing::post(handlers::social::reject_follower),
         )
         .route(
             "/social/followers/remove",
-            routing::post(handlers::api::remove_follower),
+            routing::post(handlers::social::remove_follower),
         )
         .route(
             "/admin/blocked-domains",
-            routing::get(handlers::api::get_blocked_domains_admin)
-                .post(handlers::api::add_blocked_domain_admin),
+            routing::get(handlers::social::get_blocked_domains_admin)
+                .post(handlers::social::add_blocked_domain_admin),
         )
         .route(
             "/admin/blocked-domains/{domain}",
-            routing::delete(handlers::api::remove_blocked_domain_admin),
+            routing::delete(handlers::social::remove_blocked_domain_admin),
         )
         .route(
             "/social/block",
-            routing::post(handlers::api::block_actor_api),
+            routing::post(handlers::social::block_actor_api),
         )
         .route(
             "/social/unblock",
-            routing::post(handlers::api::unblock_actor_api),
+            routing::post(handlers::social::unblock_actor_api),
         )
         .route(
             "/social/blocked",
-            routing::get(handlers::api::get_blocked_actors_api),
+            routing::get(handlers::social::get_blocked_actors_api),
+        )
+        .route(
+            "/users/{id}/following",
+            routing::get(handlers::social::get_user_following),
+        )
+        .route(
+            "/users/{id}/followers",
+            routing::get(handlers::social::get_user_followers),
         )
 }

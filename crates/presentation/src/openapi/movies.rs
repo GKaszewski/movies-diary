@@ -8,11 +8,11 @@ use utoipa::OpenApi;
 #[derive(OpenApi)]
 #[openapi(
     paths(
-        crate::handlers::api::list_movies,
-        crate::handlers::api::get_movie_detail,
-        crate::handlers::api::get_review_history,
-        crate::handlers::api::get_movie_profile,
-        crate::handlers::api::sync_poster,
+        crate::handlers::movies::list_movies,
+        crate::handlers::movies::get_movie_detail,
+        crate::handlers::movies::get_review_history,
+        crate::handlers::movies::get_movie_profile,
+        crate::handlers::movies::sync_poster,
     ),
     components(schemas(
         MoviesResponse,

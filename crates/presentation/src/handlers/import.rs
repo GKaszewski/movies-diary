@@ -108,7 +108,7 @@ pub async fn get_import_page(
     RequiredCookieUser(user_id): RequiredCookieUser,
     Extension(csrf): Extension<CsrfToken>,
 ) -> impl IntoResponse {
-    let ctx = super::html::build_page_context(&state, Some(user_id.clone()), csrf.0).await;
+    let ctx = super::helpers::build_page_context(&state, Some(user_id.clone()), csrf.0).await;
     let profiles = list_import_profiles::execute(&state.app_ctx, &user_id)
         .await
         .unwrap_or_default()
@@ -202,7 +202,7 @@ pub async fn get_mapping_page(
         return Redirect::to("/import").into_response();
     };
 
-    let ctx = super::html::build_page_context(&state, Some(user_id), csrf.0).await;
+    let ctx = super::helpers::build_page_context(&state, Some(user_id), csrf.0).await;
     let sample_rows: Vec<Vec<String>> = parsed.rows.into_iter().take(5).collect();
     let domain_fields: Vec<(&str, &str)> = vec![
         ("title", "Title"),
@@ -304,7 +304,7 @@ pub async fn get_preview_page(
         .map(|(i, a)| annotated_to_preview_row(i, a))
         .collect();
 
-    let ctx = super::html::build_page_context(&state, Some(user_id), csrf.0).await;
+    let ctx = super::helpers::build_page_context(&state, Some(user_id), csrf.0).await;
     render_page(ImportPreviewTemplate {
         ctx: &ctx,
         session_id: &session_id_str,
@@ -421,7 +421,7 @@ pub async fn get_import_done(
     Extension(csrf): Extension<CsrfToken>,
     axum::extract::Query(params): axum::extract::Query<ImportDoneParams>,
 ) -> impl IntoResponse {
-    let _ctx = super::html::build_page_context(&state, Some(user_id.clone()), csrf.0).await;
+    let _ctx = super::helpers::build_page_context(&state, Some(user_id.clone()), csrf.0).await;
     let html = format!(
         r#"<!doctype html><html><body>
         <h1>Import Complete</h1>

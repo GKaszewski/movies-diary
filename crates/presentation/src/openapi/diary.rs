@@ -6,11 +6,11 @@ use utoipa::OpenApi;
 #[derive(OpenApi)]
 #[openapi(
     paths(
-        crate::handlers::api::get_diary,
-        crate::handlers::api::post_review,
-        crate::handlers::api::delete_review,
-        crate::handlers::api::export_diary,
-        crate::handlers::api::get_activity_feed,
+        crate::handlers::diary::get_diary,
+        crate::handlers::diary::post_review,
+        crate::handlers::diary::delete_review,
+        crate::handlers::diary::export_diary,
+        crate::handlers::diary::get_activity_feed,
     ),
     components(schemas(
         DiaryResponse,

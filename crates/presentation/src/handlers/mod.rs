@@ -1,8 +1,17 @@
-pub mod api;
-pub mod html;
+pub mod auth;
+pub mod diary;
+pub mod goals;
+mod helpers;
 pub mod images;
 pub mod import;
+pub mod integrations;
+pub mod movies;
 pub mod rss;
+pub mod search;
+#[cfg(feature = "federation")]
+pub mod social;
+pub mod users;
+pub mod watchlist;
 pub mod webhook;
 pub mod wrapup;
 
