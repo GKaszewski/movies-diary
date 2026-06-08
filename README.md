@@ -26,7 +26,7 @@ A self-hosted, server-side rendered movie logging system with a full REST API. B
 - CSRF protection on all HTML form routes (double-submit cookie, defense-in-depth on top of `SameSite=Strict`)
 - Per-IP rate limiting via token bucket (production-grade, backed by `axum-governor`)
 - Single-page app at `/app/` — React + TanStack Router + shadcn/ui, built with Vite, served from the backend with client-side routing fallback
-- Terminal UI client (`crates/tui`) for logging reviews, bulk CSV import, and diary browsing
+- Terminal UI client (`crates/tui`, deprecated) for logging reviews, bulk CSV import, and diary browsing
 
 ## Architecture
 
@@ -173,13 +173,15 @@ Set `CORS_ORIGINS=http://localhost:5173` in the backend `.env` to allow cross-or
 
 For production, `npm run build` outputs to `spa/dist/` which the backend serves statically (included in Docker image automatically).
 
-## Terminal UI
+## Terminal UI (deprecated)
+
+> **Note:** The TUI was an experiment with ratatui and is no longer actively maintained. It may not support newer features (goals, watchlist, federation, etc.). Contributions welcome — if you'd like to maintain it, open a PR.
 
 ```bash
 cargo run -p tui
 ```
 
-Supports review logging, bulk CSV import (column order matches the export format), and diary browsing with review history.
+Supports review logging, bulk CSV import, and diary browsing.
 
 ## Development
 
