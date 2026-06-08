@@ -214,8 +214,6 @@ body > #root {
 
 [data-slot="input"] {
   background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
   border-color: var(--aero-glass-border);
 }
 
