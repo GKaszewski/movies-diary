@@ -450,7 +450,6 @@ async fn test_app() -> Router {
                 event_publisher: Arc::new(NoopEventPublisher),
                 diary_exporter: Arc::new(PanicExporter),
                 document_parser: Arc::new(PanicDocumentParser),
-                video_renderer: None,
             },
             config: AppConfig {
                 allow_registration: false,
@@ -460,8 +459,6 @@ async fn test_app() -> Router {
                     font_path: None,
                     logo_path: None,
                     bg_dir: None,
-                    ffmpeg_path: "ffmpeg".into(),
-                    max_concurrent_renders: 2,
                 },
             },
         },

@@ -148,54 +148,6 @@ pub async fn get_report(
 }
 
 #[utoipa::path(
-    get, path = "/api/v1/wrapups/{id}/video",
-    params(("id" = Uuid, Path, description = "Wrap-up ID")),
-    responses(
-        (status = 200, description = "MP4 video file", content_type = "video/mp4"),
-        (status = 404, description = "Not found or video not generated"),
-    ),
-    security(("bearer_auth" = []))
-)]
-pub async fn get_video(State(state): State<AppState>, Path(id): Path<Uuid>) -> impl IntoResponse {
-    let record = match state
-        .app_ctx
-        .repos
-        .wrapup_repo
-        .get_by_id(&WrapUpId::from_uuid(id))
-        .await
-    {
-        Ok(Some(r)) if r.status == WrapUpStatus::Ready => r,
-        _ => return StatusCode::NOT_FOUND.into_response(),
-    };
-    let _ = record;
-    let video_key = format!("wrapups/{}/video.mp4", id);
-    match state
-        .app_ctx
-        .services
-        .object_storage
-        .get_stream(&video_key)
-        .await
-    {
-        Ok(stream) => {
-            let body = axum::body::Body::from_stream(stream);
-            (
-                StatusCode::OK,
-                [
-                    (axum::http::header::CONTENT_TYPE, "video/mp4"),
-                    (
-                        axum::http::header::CONTENT_DISPOSITION,
-                        "attachment; filename=\"wrapup.mp4\"",
-                    ),
-                ],
-                body,
-            )
-                .into_response()
-        }
-        Err(_) => StatusCode::NOT_FOUND.into_response(),
-    }
-}
-
-#[utoipa::path(
     delete, path = "/api/v1/wrapups/{id}",
     params(("id" = Uuid, Path, description = "Wrap-up ID")),
     responses(
@@ -233,7 +185,6 @@ fn render_wrapup(
     report: &WrapUpReport,
     year: i32,
     ctx: &application::ports::HtmlPageContext,
-    video_url: Option<String>,
 ) -> axum::response::Response {
     let rating_max = report
         .rating_distribution
@@ -265,7 +216,6 @@ fn render_wrapup(
         genre_max,
         rating_pcts,
         genre_pcts,
-        video_url,
     };
     render_page(tmpl)
 }
@@ -301,9 +251,8 @@ pub async fn get_user_wrapup_html(
         None => return StatusCode::NOT_FOUND.into_response(),
     };
 
-    let video_url = format!("/api/v1/wrapups/{}/video", record.id.value());
     let ctx = super::helpers::build_page_context(&state, viewer, csrf.0).await;
-    render_wrapup(&report, year, &ctx, Some(video_url))
+    render_wrapup(&report, year, &ctx)
 }
 
 pub async fn get_global_wrapup_html(
@@ -337,7 +286,6 @@ pub async fn get_global_wrapup_html(
         None => return StatusCode::NOT_FOUND.into_response(),
     };
 
-    let video_url = format!("/api/v1/wrapups/{}/video", record.id.value());
     let ctx = super::helpers::build_page_context(&state, viewer, csrf.0).await;
-    render_wrapup(&report, year, &ctx, Some(video_url))
+    render_wrapup(&report, year, &ctx)
 }

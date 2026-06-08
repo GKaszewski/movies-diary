@@ -354,16 +354,14 @@ impl ImportSessionRepository for SqliteImportSessionRepository {
     async fn update(&self, s: &ImportSession) -> Result<(), DomainError> {
         let id = s.id.value().to_string();
         let (_, field_mappings, row_results) = Self::serialize_session(s)?;
-        sqlx::query(
-            "UPDATE import_sessions SET field_mappings = ?, row_results = ? WHERE id = ?",
-        )
-        .bind(&field_mappings)
-        .bind(&row_results)
-        .bind(&id)
-        .execute(&self.pool)
-        .await
-        .map(|_| ())
-        .map_err(Self::map_err)
+        sqlx::query("UPDATE import_sessions SET field_mappings = ?, row_results = ? WHERE id = ?")
+            .bind(&field_mappings)
+            .bind(&row_results)
+            .bind(&id)
+            .execute(&self.pool)
+            .await
+            .map(|_| ())
+            .map_err(Self::map_err)
     }
 
     async fn delete(&self, id: &ImportSessionId) -> Result<(), DomainError> {
@@ -377,11 +375,10 @@ impl ImportSessionRepository for SqliteImportSessionRepository {
     }
 
     async fn delete_expired(&self) -> Result<u64, DomainError> {
-        let result =
-            sqlx::query("DELETE FROM import_sessions WHERE expires_at < datetime('now')")
-                .execute(&self.pool)
-                .await
-                .map_err(Self::map_err)?;
+        let result = sqlx::query("DELETE FROM import_sessions WHERE expires_at < datetime('now')")
+            .execute(&self.pool)
+            .await
+            .map_err(Self::map_err)?;
         Ok(result.rows_affected())
     }
 

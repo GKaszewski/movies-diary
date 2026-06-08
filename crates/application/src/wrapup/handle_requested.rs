@@ -1,9 +1,8 @@
 use crate::context::AppContext;
-use crate::wrapup::{compute, queries::ComputeWrapUpQuery, storage::WrapUpStorage};
+use crate::wrapup::{compute, queries::ComputeWrapUpQuery};
 use domain::errors::DomainError;
 use domain::events::DomainEvent;
 use domain::models::wrapup::{DateRange, WrapUpScope, WrapUpStatus};
-use domain::ports::VideoRenderAssets;
 use domain::value_objects::WrapUpId;
 
 pub async fn execute(
@@ -44,30 +43,6 @@ pub async fn execute(
                 .wrapup_repo
                 .set_complete(&wrapup_id, &report)
                 .await?;
-
-            if let Some(ref renderer) = ctx.services.video_renderer {
-                let asset_storage = WrapUpStorage::new(ctx.services.object_storage.clone());
-                let poster_images = asset_storage
-                    .resolve_poster_images(&report.poster_paths)
-                    .await;
-                let cast_images = asset_storage
-                    .resolve_cast_images(&report.top_cast_profile_paths)
-                    .await;
-                let assets = VideoRenderAssets {
-                    poster_images,
-                    cast_images,
-                };
-                match renderer.render(&report, assets).await {
-                    Ok(video_bytes) => {
-                        if let Err(e) = asset_storage.store_video(&wrapup_id, &video_bytes).await {
-                            tracing::warn!("failed to store wrapup video: {e}");
-                        }
-                    }
-                    Err(e) => {
-                        tracing::warn!("video render failed (non-fatal): {e}");
-                    }
-                }
-            }
 
             ctx.services
                 .event_publisher

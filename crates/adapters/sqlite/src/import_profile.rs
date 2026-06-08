@@ -152,11 +152,13 @@ impl ImportProfileRepository for SqliteImportProfileRepository {
                 let ca: String = r.get("created_at");
                 Ok(ImportProfile {
                     id: ImportProfileId::from_uuid(
-                        id_str.parse::<uuid::Uuid>()
+                        id_str
+                            .parse::<uuid::Uuid>()
                             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
                     ),
                     user_id: UserId::from_uuid(
-                        uid_str.parse::<uuid::Uuid>()
+                        uid_str
+                            .parse::<uuid::Uuid>()
                             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
                     ),
                     name: r.get("name"),

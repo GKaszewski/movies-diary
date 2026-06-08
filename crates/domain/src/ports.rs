@@ -587,19 +587,3 @@ pub trait WrapUpStatsQuery: Send + Sync {
         range: &DateRange,
     ) -> Result<Vec<WrapUpMovieRow>, DomainError>;
 }
-
-// ── Video renderer ──────────────────────────────────────────────────────────
-
-pub struct VideoRenderAssets {
-    pub poster_images: Vec<(String, Vec<u8>)>,
-    pub cast_images: Vec<(String, Vec<u8>)>,
-}
-
-#[async_trait]
-pub trait WrapUpVideoRenderer: Send + Sync {
-    async fn render(
-        &self,
-        report: &WrapUpReport,
-        assets: VideoRenderAssets,
-    ) -> Result<Vec<u8>, DomainError>;
-}

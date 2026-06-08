@@ -102,8 +102,6 @@ impl TestContextBuilder {
                     font_path: None,
                     logo_path: None,
                     bg_dir: None,
-                    ffmpeg_path: "ffmpeg".into(),
-                    max_concurrent_renders: 2,
                 },
             },
         }
@@ -185,7 +183,6 @@ impl TestContextBuilder {
                 event_publisher: self.event_publisher,
                 diary_exporter: self.diary_exporter,
                 document_parser: self.document_parser,
-                video_renderer: None,
             },
             config: self.config,
         }

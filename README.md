@@ -17,7 +17,7 @@ A self-hosted, server-side rendered movie logging system with a full REST API. B
 - Watchlist — add movies to watch later, per-user; federated watchlist entries visible for remote actors
 - User profiles — display name, bio, avatar, banner, custom profile fields; editable via HTML settings page or REST API
 - Jellyfin/Plex auto-import — media server sends a webhook on playback stop, movies land in a watch queue; review and confirm with a rating to create diary entries; per-user webhook tokens with SHA-256 auth; setup UI at `/settings/integrations`
-- Annual Wrap-Up — Spotify Wrapped for movies: per-user and instance-wide year-in-review with stats (top directors, actors, genres, rating distribution, watch time, rewatches, budget analysis), shareable HTML page at `/wrapups/{user_id}/{year}`, downloadable MP4 video with branded slides; admin-triggered or auto-generated in January
+- Annual Wrap-Up — Spotify Wrapped for movies: per-user and instance-wide year-in-review with stats (top directors, actors, genres, rating distribution, watch time, rewatches, budget analysis), shareable HTML page at `/wrapups/{user_id}/{year}`; admin-triggered or auto-generated in January
 - Goals — set a "watch N movies in YEAR" target with a progress bar; progress computed from existing reviews (backwards compatible); per-user federation toggle in settings; displayed on profile (SPA: interactive with create/edit/delete, classic HTML: read-only glassmorphic card)
 - CSV and JSON diary export
 - File importer: upload CSV, TSV, JSON, or XLSX from any source (Letterboxd, IMDb, etc.), map columns to domain fields via a step-by-step wizard or REST API, save mapping profiles for repeat imports
@@ -59,7 +59,6 @@ adapters/
   postgres-event-queue — durable polling event queue backed by PostgreSQL
   nats                 — NATS Core / JetStream event publisher and consumer
   event-publisher      — in-memory event channel (used in tests)
-  wrapup-renderer      — annual wrap-up video generator (slide compositing via image/ab_glyph, stitching via ffmpeg)
   activitypub          — ActivityPub federation adapter (follow, inbox/outbox, actor); delegates to k-ap for protocol internals
   sqlite-search        — SQLite FTS5 implementation of SearchPort + SearchCommand
   postgres-search      — PostgreSQL tsvector + GIN implementation of SearchPort + SearchCommand
@@ -113,13 +112,6 @@ IMAGE_STORAGE_PATH=./images
 # Image conversion (optional — converts stored images to AVIF or WebP to save space)
 # IMAGE_CONVERSION_ENABLED=false
 # IMAGE_CONVERSION_FORMAT=avif   # avif or webp
-
-# Annual Wrap-Up video (optional — requires ffmpeg)
-# WRAPUP_FONT_PATH=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf
-# WRAPUP_LOGO_PATH=./static/logo.webp   # watermark on video slides
-# WRAPUP_BG_DIR=./static/wrapup-backgrounds   # slide background images (jpg/png/webp)
-# FFMPEG_PATH=ffmpeg
-# WRAPUP_MAX_CONCURRENT=2               # max parallel video renders
 
 # Optional
 HOST=0.0.0.0
@@ -253,7 +245,7 @@ Movies you finish watching appear in your watch queue at `/watch-queue` — rate
 
 ## Annual Wrap-Up
 
-Generate a year-in-review summary for any user — top directors, actors, genres, rating distribution, total watch time, rewatch stats, and more. Available as a shareable HTML page and downloadable MP4 video.
+Generate a year-in-review summary for any user — top directors, actors, genres, rating distribution, total watch time, rewatch stats, and more. Available as a shareable HTML page.
 
 **Generate via API** (admin only):
 ```bash
@@ -268,8 +260,6 @@ Omit `user_id` for a global instance wrap-up. The worker computes stats in the b
 **View:** `http://localhost:3000/wrapups/{user_id}/2025` (public, no login required)
 
 **Auto-generate:** The worker runs a daily job in January that generates wrap-ups for all users with reviews in the previous year.
-
-**Video:** Requires `ffmpeg` installed. Set `WRAPUP_FONT_PATH` and `WRAPUP_LOGO_PATH` for branded slides. Set `WRAPUP_BG_DIR` to a directory of background images for frutiger aero-style glass-panel slides. Cast profile photos and movie posters are embedded automatically. Download via `GET /api/v1/wrapups/{id}/video`.
 
 ## Contributing
 

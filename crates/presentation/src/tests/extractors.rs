@@ -759,7 +759,6 @@ pub fn make_test_state(auth_service: Arc<dyn AuthService>) -> crate::state::AppS
                 event_publisher: Arc::clone(&repo) as _,
                 diary_exporter: Arc::clone(&repo) as _,
                 document_parser: Arc::clone(&repo) as _,
-                video_renderer: None,
             },
             config: AppConfig {
                 allow_registration: false,
@@ -769,8 +768,6 @@ pub fn make_test_state(auth_service: Arc<dyn AuthService>) -> crate::state::AppS
                     font_path: None,
                     logo_path: None,
                     bg_dir: None,
-                    ffmpeg_path: "ffmpeg".into(),
-                    max_concurrent_renders: 2,
                 },
             },
         },

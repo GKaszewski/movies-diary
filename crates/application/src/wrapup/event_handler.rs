@@ -15,10 +15,9 @@ pub struct WrapUpEventHandler {
 
 impl WrapUpEventHandler {
     pub fn new(ctx: AppContext) -> Self {
-        let max = ctx.config.wrapup.max_concurrent_renders;
         Self {
             ctx,
-            semaphore: Arc::new(Semaphore::new(max)),
+            semaphore: Arc::new(Semaphore::new(2)),
         }
     }
 }
