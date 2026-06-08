@@ -166,12 +166,12 @@ Interactive API documentation is available at runtime:
 The single-page app lives in `spa/` and is served at `/app/` by the backend. For local development:
 
 ```bash
-cd spa && npm install && npm run dev   # http://localhost:5173/app/
+cd spa && bun install && bun run dev   # http://localhost:5173/app/
 ```
 
 Set `CORS_ORIGINS=http://localhost:5173` in the backend `.env` to allow cross-origin API calls during development.
 
-For production, `npm run build` outputs to `spa/dist/` which the backend serves statically (included in Docker image automatically).
+For production, `bun run build` outputs to `spa/dist/` which the backend serves statically (included in Docker image automatically).
 
 ## Terminal UI (deprecated)
 

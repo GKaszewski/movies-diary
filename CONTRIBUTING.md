@@ -6,7 +6,7 @@ Thanks for your interest in Movies Diary! This is a personal project but contrib
 
 1. Fork and clone the repo
 2. Copy `.env.example` to `.env` and fill in at least `JWT_SECRET` and `OMDB_API_KEY`
-3. Install Rust (stable, 2024 edition) and Node.js (for the SPA)
+3. Install Rust (stable, 2024 edition) and Bun (for the SPA)
 4. Run the backend and worker:
 
 ```bash
@@ -17,7 +17,7 @@ cargo run -p worker          # event worker (separate terminal)
 5. Run the SPA dev server:
 
 ```bash
-cd spa && npm install && npm run dev
+cd spa && bun install && bun run dev
 ```
 
 ## Before submitting a PR
@@ -32,7 +32,7 @@ Or individually:
 cargo fmt --check
 cargo clippy -- -D warnings
 cargo test
-cd spa && npx tsc --noEmit
+cd spa && bunx tsc --noEmit
 ```
 
 All four must pass. PRs with clippy warnings or failing tests won't be merged.
