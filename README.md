@@ -271,6 +271,10 @@ Omit `user_id` for a global instance wrap-up. The worker computes stats in the b
 
 **Video:** Requires `ffmpeg` installed. Set `WRAPUP_FONT_PATH` and `WRAPUP_LOGO_PATH` for branded slides. Set `WRAPUP_BG_DIR` to a directory of background images for frutiger aero-style glass-panel slides. Cast profile photos and movie posters are embedded automatically. Download via `GET /api/v1/wrapups/{id}/video`.
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions, architecture overview, and PR guidelines.
+
 ## License
 
 MIT License. See [LICENSE](LICENSE).
