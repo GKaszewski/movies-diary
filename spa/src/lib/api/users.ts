@@ -63,6 +63,16 @@ export type MonthActivityDto = z.infer<typeof monthActivityDtoSchema>
 
 const userDiaryResponseSchema = paginatedSchema(diaryEntryDtoSchema)
 
+export const goalDtoSchema = z.object({
+  year: z.number(),
+  target_count: z.number(),
+  current_count: z.number(),
+  percentage: z.number(),
+  is_complete: z.boolean(),
+  goal_type: z.string(),
+})
+export type GoalDto = z.infer<typeof goalDtoSchema>
+
 export const userProfileResponseSchema = z.object({
   user_id: z.string().uuid(),
   username: z.string(),
@@ -74,6 +84,7 @@ export const userProfileResponseSchema = z.object({
   entries: userDiaryResponseSchema.optional(),
   history: z.array(monthActivityDtoSchema).optional(),
   trends: userTrendsDtoSchema.optional(),
+  goals: z.array(goalDtoSchema).optional(),
 })
 export type UserProfileResponse = z.infer<typeof userProfileResponseSchema>
 

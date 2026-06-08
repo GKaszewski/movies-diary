@@ -436,6 +436,22 @@ fn api_routes(rate_limit: u64) -> Router<AppState> {
         .route(
             "/admin/reindex-search",
             routing::post(handlers::api::post_reindex_search),
+        )
+        .route(
+            "/goals",
+            routing::get(handlers::api::list_goals).post(handlers::api::create_goal),
+        )
+        .route(
+            "/goals/{year}",
+            routing::put(handlers::api::update_goal).delete(handlers::api::delete_goal),
+        )
+        .route(
+            "/users/{id}/goals",
+            routing::get(handlers::api::get_user_goals),
+        )
+        .route(
+            "/settings",
+            routing::get(handlers::api::get_settings).put(handlers::api::update_settings),
         );
 
     #[cfg(feature = "federation")]

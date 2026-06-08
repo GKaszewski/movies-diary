@@ -2,7 +2,9 @@ use chrono::NaiveDateTime;
 use domain::{
     errors::DomainError,
     events::DomainEvent,
-    value_objects::{ExternalMetadataId, MovieId, PosterPath, Rating, ReviewId, UserId, WrapUpId},
+    value_objects::{
+        ExternalMetadataId, GoalId, MovieId, PosterPath, Rating, ReviewId, UserId, WrapUpId,
+    },
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -90,6 +92,23 @@ pub enum EventPayload {
     PosterSynced {
         movie_id: String,
     },
+    GoalCreated {
+        goal_id: String,
+        user_id: String,
+        year: u16,
+        target_count: u32,
+    },
+    GoalUpdated {
+        goal_id: String,
+        user_id: String,
+        year: u16,
+        target_count: u32,
+    },
+    GoalDeleted {
+        goal_id: String,
+        user_id: String,
+        year: u16,
+    },
 }
 
 impl EventPayload {
@@ -113,6 +132,9 @@ impl EventPayload {
             EventPayload::WrapUpCompleted { .. } => "WrapUpCompleted",
             EventPayload::SearchReindexRequested => "SearchReindexRequested",
             EventPayload::PosterSynced { .. } => "PosterSynced",
+            EventPayload::GoalCreated { .. } => "GoalCreated",
+            EventPayload::GoalUpdated { .. } => "GoalUpdated",
+            EventPayload::GoalDeleted { .. } => "GoalDeleted",
         }
     }
 }
@@ -257,6 +279,37 @@ impl From<&DomainEvent> for EventPayload {
             DomainEvent::SearchReindexRequested => EventPayload::SearchReindexRequested,
             DomainEvent::PosterSynced { movie_id } => EventPayload::PosterSynced {
                 movie_id: movie_id.value().to_string(),
+            },
+            DomainEvent::GoalCreated {
+                goal_id,
+                user_id,
+                year,
+                target_count,
+            } => EventPayload::GoalCreated {
+                goal_id: goal_id.value().to_string(),
+                user_id: user_id.value().to_string(),
+                year: *year,
+                target_count: *target_count,
+            },
+            DomainEvent::GoalUpdated {
+                goal_id,
+                user_id,
+                year,
+                target_count,
+            } => EventPayload::GoalUpdated {
+                goal_id: goal_id.value().to_string(),
+                user_id: user_id.value().to_string(),
+                year: *year,
+                target_count: *target_count,
+            },
+            DomainEvent::GoalDeleted {
+                goal_id,
+                user_id,
+                year,
+            } => EventPayload::GoalDeleted {
+                goal_id: goal_id.value().to_string(),
+                user_id: user_id.value().to_string(),
+                year: *year,
             },
         }
     }
@@ -411,6 +464,37 @@ impl TryFrom<EventPayload> for DomainEvent {
             EventPayload::SearchReindexRequested => Ok(DomainEvent::SearchReindexRequested),
             EventPayload::PosterSynced { movie_id } => Ok(DomainEvent::PosterSynced {
                 movie_id: MovieId::from_uuid(parse_uuid(&movie_id, "movie_id")?),
+            }),
+            EventPayload::GoalCreated {
+                goal_id,
+                user_id,
+                year,
+                target_count,
+            } => Ok(DomainEvent::GoalCreated {
+                goal_id: GoalId::from_uuid(parse_uuid(&goal_id, "goal_id")?),
+                user_id: UserId::from_uuid(parse_uuid(&user_id, "user_id")?),
+                year,
+                target_count,
+            }),
+            EventPayload::GoalUpdated {
+                goal_id,
+                user_id,
+                year,
+                target_count,
+            } => Ok(DomainEvent::GoalUpdated {
+                goal_id: GoalId::from_uuid(parse_uuid(&goal_id, "goal_id")?),
+                user_id: UserId::from_uuid(parse_uuid(&user_id, "user_id")?),
+                year,
+                target_count,
+            }),
+            EventPayload::GoalDeleted {
+                goal_id,
+                user_id,
+                year,
+            } => Ok(DomainEvent::GoalDeleted {
+                goal_id: GoalId::from_uuid(parse_uuid(&goal_id, "goal_id")?),
+                user_id: UserId::from_uuid(parse_uuid(&user_id, "user_id")?),
+                year,
             }),
         }
     }

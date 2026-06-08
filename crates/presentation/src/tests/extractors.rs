@@ -650,6 +650,75 @@ impl domain::ports::WrapUpRepository for Panic {
     }
 }
 
+#[async_trait::async_trait]
+impl domain::ports::GoalRepository for Panic {
+    async fn save(&self, _: &domain::models::Goal) -> Result<(), DomainError> {
+        panic!()
+    }
+    async fn update(&self, _: &domain::models::Goal) -> Result<(), DomainError> {
+        panic!()
+    }
+    async fn delete(
+        &self,
+        _: &domain::value_objects::GoalId,
+        _: &domain::value_objects::UserId,
+    ) -> Result<(), DomainError> {
+        panic!()
+    }
+    async fn find_by_user_and_year(
+        &self,
+        _: &domain::value_objects::UserId,
+        _: u16,
+    ) -> Result<Option<domain::models::Goal>, DomainError> {
+        panic!()
+    }
+    async fn list_for_user(
+        &self,
+        _: &domain::value_objects::UserId,
+    ) -> Result<Vec<domain::models::Goal>, DomainError> {
+        panic!()
+    }
+    async fn count_reviews_in_year(
+        &self,
+        _: &domain::value_objects::UserId,
+        _: u16,
+    ) -> Result<u32, DomainError> {
+        panic!()
+    }
+}
+
+#[async_trait::async_trait]
+impl domain::ports::UserSettingsRepository for Panic {
+    async fn get(
+        &self,
+        _: &domain::value_objects::UserId,
+    ) -> Result<domain::models::UserSettings, DomainError> {
+        panic!()
+    }
+    async fn save(&self, _: &domain::models::UserSettings) -> Result<(), DomainError> {
+        panic!()
+    }
+}
+
+#[async_trait::async_trait]
+impl domain::ports::RemoteGoalRepository for Panic {
+    async fn save(&self, _: domain::models::RemoteGoalEntry) -> Result<(), DomainError> {
+        panic!()
+    }
+    async fn update_by_ap_id(&self, _: &str, _: u32, _: u32) -> Result<(), DomainError> {
+        panic!()
+    }
+    async fn remove_by_ap_id(&self, _: &str, _: &str) -> Result<(), DomainError> {
+        panic!()
+    }
+    async fn get_by_actor_url(
+        &self,
+        _: &str,
+    ) -> Result<Vec<domain::models::RemoteGoalEntry>, DomainError> {
+        panic!()
+    }
+}
+
 // --- Single state factory — only auth_service varies ---
 
 pub fn make_test_state(auth_service: Arc<dyn AuthService>) -> crate::state::AppState {
@@ -677,6 +746,9 @@ pub fn make_test_state(auth_service: Arc<dyn AuthService>) -> crate::state::AppS
                 social_query: Arc::clone(&repo) as _,
                 wrapup_stats: Arc::clone(&repo) as _,
                 wrapup_repo: Arc::clone(&repo) as _,
+                goal: Arc::clone(&repo) as _,
+                user_settings: Arc::clone(&repo) as _,
+                remote_goal: Arc::clone(&repo) as _,
             },
             services: Services {
                 auth: auth_service,

@@ -5,11 +5,15 @@ use chrono::{DateTime, Utc};
 use k_ap::{ApContentReader, ApObjectHandler};
 use url::Url;
 
-use crate::{review_handler::ReviewObjectHandler, watchlist_handler::WatchlistObjectHandler};
+use crate::{
+    goal_handler::GoalObjectHandler, review_handler::ReviewObjectHandler,
+    watchlist_handler::WatchlistObjectHandler,
+};
 
 pub struct CompositeObjectHandler {
     pub review: Arc<ReviewObjectHandler>,
     pub watchlist: Arc<WatchlistObjectHandler>,
+    pub goal: Arc<GoalObjectHandler>,
 }
 
 #[async_trait]
@@ -40,8 +44,11 @@ impl ApObjectHandler for CompositeObjectHandler {
     ) -> anyhow::Result<()> {
         let is_watchlist = object.get("watchlistEntry").and_then(|v| v.as_bool()) == Some(true)
             || (object.get("movieTitle").is_some() && object.get("rating").is_none());
+        let is_goal = object.get("goal").and_then(|v| v.as_bool()) == Some(true);
         if object.get("rating").is_some() {
             self.review.on_create(ap_id, actor_url, object).await
+        } else if is_goal {
+            self.goal.on_create(ap_id, actor_url, object).await
         } else if is_watchlist {
             self.watchlist.on_create(ap_id, actor_url, object).await
         } else {
@@ -56,8 +63,11 @@ impl ApObjectHandler for CompositeObjectHandler {
         actor_url: &Url,
         object: serde_json::Value,
     ) -> anyhow::Result<()> {
+        let is_goal = object.get("goal").and_then(|v| v.as_bool()) == Some(true);
         if object.get("rating").is_some() {
             self.review.on_update(ap_id, actor_url, object).await
+        } else if is_goal {
+            self.goal.on_update(ap_id, actor_url, object).await
         } else {
             Ok(())
         }
@@ -66,12 +76,14 @@ impl ApObjectHandler for CompositeObjectHandler {
     async fn on_delete(&self, ap_id: &Url, actor_url: &Url) -> anyhow::Result<()> {
         self.review.on_delete(ap_id, actor_url).await?;
         self.watchlist.on_delete(ap_id, actor_url).await?;
+        self.goal.on_delete(ap_id, actor_url).await?;
         Ok(())
     }
 
     async fn on_actor_removed(&self, actor_url: &Url) -> anyhow::Result<()> {
         self.review.on_actor_removed(actor_url).await?;
         self.watchlist.on_actor_removed(actor_url).await?;
+        self.goal.on_actor_removed(actor_url).await?;
         Ok(())
     }
 

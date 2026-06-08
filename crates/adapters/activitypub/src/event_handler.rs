@@ -10,8 +10,8 @@ use std::sync::Arc;
 
 use k_ap::{ActivityPubService, ApVisibility};
 
-use crate::objects::review_to_ap_object;
-use crate::urls::{actor_url, review_url};
+use crate::objects::{goal_to_ap_object, review_to_ap_object};
+use crate::urls::{actor_url, goal_url, review_url};
 
 pub struct ActivityPubEventHandler {
     ap_service: Arc<ActivityPubService>,
@@ -99,6 +99,28 @@ impl EventHandler for ActivityPubEventHandler {
             }
             DomainEvent::PosterSynced { movie_id } => self
                 .on_poster_synced(movie_id)
+                .await
+                .map_err(|e| DomainError::InfrastructureError(e.to_string())),
+            DomainEvent::GoalCreated {
+                user_id,
+                year,
+                target_count,
+                ..
+            } => self
+                .broadcast_goal(user_id, *year, *target_count, true)
+                .await
+                .map_err(|e| DomainError::InfrastructureError(e.to_string())),
+            DomainEvent::GoalUpdated {
+                user_id,
+                year,
+                target_count,
+                ..
+            } => self
+                .broadcast_goal(user_id, *year, *target_count, false)
+                .await
+                .map_err(|e| DomainError::InfrastructureError(e.to_string())),
+            DomainEvent::GoalDeleted { user_id, year, .. } => self
+                .on_goal_deleted(user_id, *year)
                 .await
                 .map_err(|e| DomainError::InfrastructureError(e.to_string())),
             _ => Ok(()),
@@ -309,6 +331,62 @@ impl ActivityPubEventHandler {
                 .await?;
         }
 
+        Ok(())
+    }
+
+    async fn broadcast_goal(
+        &self,
+        user_id: &UserId,
+        year: u16,
+        target_count: u32,
+        is_create: bool,
+    ) -> anyhow::Result<()> {
+        if !self
+            .content_query
+            .get_user_federate_goals(user_id)
+            .await
+            .unwrap_or(false)
+        {
+            return Ok(());
+        }
+        let current = self
+            .content_query
+            .get_goal_with_progress(user_id, year)
+            .await
+            .ok()
+            .flatten()
+            .map(|(_, c)| c)
+            .unwrap_or(0);
+
+        let ap_id = goal_url(&self.base_url, user_id.value(), year);
+        let actor = actor_url(&self.base_url, user_id.value());
+        let obj = goal_to_ap_object(ap_id, actor, year, target_count, current, &self.base_url);
+        let json = serde_json::to_value(obj)?;
+        if is_create {
+            self.ap_service
+                .broadcast_create_note(user_id.value(), json, ApVisibility::Public, vec![])
+                .await?;
+        } else {
+            self.ap_service
+                .broadcast_update_note(user_id.value(), json, ApVisibility::Public, vec![])
+                .await?;
+        }
+        Ok(())
+    }
+
+    async fn on_goal_deleted(&self, user_id: &UserId, year: u16) -> anyhow::Result<()> {
+        if !self
+            .content_query
+            .get_user_federate_goals(user_id)
+            .await
+            .unwrap_or(false)
+        {
+            return Ok(());
+        }
+        let ap_id = goal_url(&self.base_url, user_id.value(), year);
+        self.ap_service
+            .broadcast_delete_to_followers(user_id.value(), ap_id)
+            .await?;
         Ok(())
     }
 }

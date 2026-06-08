@@ -1,6 +1,7 @@
 pub mod composite_handler;
 pub mod event_handler;
 pub mod federation_event_bridge;
+pub mod goal_handler;
 pub mod objects;
 pub mod port;
 pub mod remote_review_repository;
@@ -48,6 +49,7 @@ pub struct ActivityPubDeps {
     pub blocklist_repo: std::sync::Arc<dyn BlocklistRepository>,
     pub review_store: std::sync::Arc<dyn RemoteReviewRepository>,
     pub remote_watchlist_repo: std::sync::Arc<dyn domain::ports::RemoteWatchlistRepository>,
+    pub remote_goal_repo: std::sync::Arc<dyn domain::ports::RemoteGoalRepository>,
     pub local_ap_content: std::sync::Arc<dyn domain::ports::LocalApContentQuery>,
     pub user_repo: std::sync::Arc<dyn domain::ports::UserRepository>,
     pub base_url: String,
@@ -63,6 +65,7 @@ pub async fn wire(deps: ActivityPubDeps) -> anyhow::Result<ActivityPubWire> {
         blocklist_repo,
         review_store,
         remote_watchlist_repo,
+        remote_goal_repo,
         local_ap_content,
         user_repo,
         base_url,
@@ -79,9 +82,11 @@ pub async fn wire(deps: ActivityPubDeps) -> anyhow::Result<ActivityPubWire> {
         content_query: std::sync::Arc::clone(&local_ap_content),
         base_url: base_url.clone(),
     });
+    let goal_handler = std::sync::Arc::new(goal_handler::GoalObjectHandler { remote_goal_repo });
     let composite = std::sync::Arc::new(composite_handler::CompositeObjectHandler {
         review: review_handler,
         watchlist: watchlist_handler,
+        goal: goal_handler,
     });
 
     let federation_debug = std::env::var("FEDERATION_DEBUG")

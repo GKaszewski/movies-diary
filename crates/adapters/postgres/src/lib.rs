@@ -13,6 +13,7 @@ use domain::{
 use sqlx::PgPool;
 
 mod ap_content;
+mod goals;
 mod image_ref;
 mod import_profile;
 mod import_session;
@@ -20,6 +21,8 @@ mod models;
 mod persons;
 mod profile;
 mod profile_fields;
+mod remote_goals;
+mod user_settings;
 mod users;
 mod watch_event;
 mod watchlist;
@@ -1008,6 +1011,9 @@ pub struct PostgresWireOutput {
     pub ap_content: std::sync::Arc<dyn domain::ports::LocalApContentQuery>,
     pub wrapup_repo: std::sync::Arc<dyn domain::ports::WrapUpRepository>,
     pub wrapup_stats: std::sync::Arc<dyn domain::ports::WrapUpStatsQuery>,
+    pub goal: std::sync::Arc<dyn domain::ports::GoalRepository>,
+    pub user_settings: std::sync::Arc<dyn domain::ports::UserSettingsRepository>,
+    pub remote_goal: std::sync::Arc<dyn domain::ports::RemoteGoalRepository>,
 }
 
 pub async fn wire(database_url: &str) -> anyhow::Result<PostgresWireOutput> {
@@ -1038,6 +1044,12 @@ pub async fn wire(database_url: &str) -> anyhow::Result<PostgresWireOutput> {
         watchlist: std::sync::Arc::new(PostgresWatchlistRepository::new(pool.clone())) as _,
         ap_content: std::sync::Arc::new(PostgresApContentQuery::new(pool.clone())) as _,
         wrapup_repo: std::sync::Arc::new(PostgresWrapUpRepository::new(pool.clone())) as _,
-        wrapup_stats: std::sync::Arc::new(PostgresWrapUpStatsQuery::new(pool)) as _,
+        wrapup_stats: std::sync::Arc::new(PostgresWrapUpStatsQuery::new(pool.clone())) as _,
+        goal: std::sync::Arc::new(goals::PostgresGoalRepository::new(pool.clone())) as _,
+        user_settings: std::sync::Arc::new(user_settings::PostgresUserSettingsRepository::new(
+            pool.clone(),
+        )) as _,
+        remote_goal: std::sync::Arc::new(remote_goals::PostgresRemoteGoalRepository::new(pool))
+            as _,
     })
 }

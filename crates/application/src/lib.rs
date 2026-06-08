@@ -6,6 +6,7 @@ pub mod worker;
 
 pub mod auth;
 pub mod diary;
+pub mod goals;
 pub mod import;
 pub mod integrations;
 pub mod movies;

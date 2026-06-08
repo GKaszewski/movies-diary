@@ -209,6 +209,15 @@ pub struct ProfileTemplate<'a> {
     pub pending_followers: Vec<RemoteActorData>,
     pub sort_by: String,
     pub search: String,
+    pub goals: Vec<GoalViewData>,
+}
+
+pub struct GoalViewData {
+    pub year: u16,
+    pub target_count: u32,
+    pub current_count: u32,
+    pub percentage: f64,
+    pub is_complete: bool,
 }
 
 impl<'a> ProfileTemplate<'a> {

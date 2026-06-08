@@ -437,6 +437,9 @@ async fn test_app() -> Router {
                 social_query: Arc::new(PanicSocialQuery),
                 wrapup_stats: Arc::new(domain::testing::PanicWrapUpStatsQuery) as _,
                 wrapup_repo: Arc::new(domain::testing::PanicWrapUpRepository) as _,
+                goal: Arc::new(domain::testing::NoopGoalRepository),
+                user_settings: Arc::new(domain::testing::NoopUserSettingsRepository),
+                remote_goal: Arc::new(domain::testing::NoopRemoteGoalRepository),
             },
             services: Services {
                 auth: Arc::new(PanicAuth),

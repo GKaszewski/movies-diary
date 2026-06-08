@@ -8,16 +8,17 @@ use crate::{
     models::wrapup::WrapUpReport,
     models::{
         AnnotatedRow, DiaryEntry, DiaryFilter, EntityType, ExportFormat, ExternalPersonId,
-        FeedEntry, FieldMapping, FileFormat, ImportError, ImportProfile, ImportSession,
+        FeedEntry, FieldMapping, FileFormat, Goal, ImportError, ImportProfile, ImportSession,
         IndexableDocument, Movie, MovieFilter, MovieProfile, MovieStats, MovieSummary, ParsedFile,
-        ParsedPlaybackEvent, Person, PersonCredits, PersonId, RemoteWatchlistEntry, Review,
-        ReviewHistory, SearchQuery, SearchResults, User, UserStats, UserSummary, UserTrends,
-        WatchEvent, WatchEventStatus, WatchlistEntry, WatchlistWithMovie, WebhookToken,
+        ParsedPlaybackEvent, Person, PersonCredits, PersonId, RemoteGoalEntry,
+        RemoteWatchlistEntry, Review, ReviewHistory, SearchQuery, SearchResults, User,
+        UserSettings, UserStats, UserSummary, UserTrends, WatchEvent, WatchEventStatus,
+        WatchlistEntry, WatchlistWithMovie, WebhookToken,
         collections::{self, PageParams, Paginated},
         wrapup::{DateRange, WrapUpRecord, WrapUpScope, WrapUpStatus},
     },
     value_objects::{
-        Email, ExternalMetadataId, ImportProfileId, ImportSessionId, MovieId, MovieTitle,
+        Email, ExternalMetadataId, GoalId, ImportProfileId, ImportSessionId, MovieId, MovieTitle,
         PasswordHash, PosterUrl, ReleaseYear, ReviewId, UserId, Username, WatchEventId,
         WebhookTokenId, WrapUpId,
     },
@@ -411,6 +412,41 @@ pub trait RemoteWatchlistRepository: Send + Sync {
     ) -> Result<Vec<RemoteWatchlistEntry>, DomainError>;
 }
 
+// ── Goals ────────────────────────────────────────────────────────────────────
+
+#[async_trait]
+pub trait GoalRepository: Send + Sync {
+    async fn save(&self, goal: &Goal) -> Result<(), DomainError>;
+    async fn update(&self, goal: &Goal) -> Result<(), DomainError>;
+    async fn delete(&self, id: &GoalId, user_id: &UserId) -> Result<(), DomainError>;
+    async fn find_by_user_and_year(
+        &self,
+        user_id: &UserId,
+        year: u16,
+    ) -> Result<Option<Goal>, DomainError>;
+    async fn list_for_user(&self, user_id: &UserId) -> Result<Vec<Goal>, DomainError>;
+    async fn count_reviews_in_year(&self, user_id: &UserId, year: u16) -> Result<u32, DomainError>;
+}
+
+#[async_trait]
+pub trait UserSettingsRepository: Send + Sync {
+    async fn get(&self, user_id: &UserId) -> Result<UserSettings, DomainError>;
+    async fn save(&self, settings: &UserSettings) -> Result<(), DomainError>;
+}
+
+#[async_trait]
+pub trait RemoteGoalRepository: Send + Sync {
+    async fn save(&self, entry: RemoteGoalEntry) -> Result<(), DomainError>;
+    async fn update_by_ap_id(
+        &self,
+        ap_id: &str,
+        target: u32,
+        current: u32,
+    ) -> Result<(), DomainError>;
+    async fn remove_by_ap_id(&self, ap_id: &str, actor_url: &str) -> Result<(), DomainError>;
+    async fn get_by_actor_url(&self, actor_url: &str) -> Result<Vec<RemoteGoalEntry>, DomainError>;
+}
+
 /// Read-only query port used exclusively by the ActivityPub adapter.
 /// Consolidates all reads the AP adapter needs so it never touches write repositories.
 #[async_trait]
@@ -442,6 +478,14 @@ pub trait LocalApContentQuery: Send + Sync {
         before: Option<chrono::NaiveDateTime>,
         limit: usize,
     ) -> Result<Vec<DiaryEntry>, DomainError>;
+
+    async fn get_user_federate_goals(&self, user_id: &UserId) -> Result<bool, DomainError>;
+
+    async fn get_goal_with_progress(
+        &self,
+        user_id: &UserId,
+        year: u16,
+    ) -> Result<Option<(Goal, u32)>, DomainError>;
 }
 
 // ── Media server integration ──────────────────────────────────────────────────

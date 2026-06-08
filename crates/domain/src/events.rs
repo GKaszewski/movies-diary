@@ -3,7 +3,9 @@ use chrono::NaiveDateTime;
 
 use crate::{
     errors::DomainError,
-    value_objects::{ExternalMetadataId, MovieId, PosterPath, Rating, ReviewId, UserId, WrapUpId},
+    value_objects::{
+        ExternalMetadataId, GoalId, MovieId, PosterPath, Rating, ReviewId, UserId, WrapUpId,
+    },
 };
 
 #[derive(Clone, Debug)]
@@ -87,6 +89,23 @@ pub enum DomainEvent {
     SearchReindexRequested,
     PosterSynced {
         movie_id: MovieId,
+    },
+    GoalCreated {
+        goal_id: GoalId,
+        user_id: UserId,
+        year: u16,
+        target_count: u32,
+    },
+    GoalUpdated {
+        goal_id: GoalId,
+        user_id: UserId,
+        year: u16,
+        target_count: u32,
+    },
+    GoalDeleted {
+        goal_id: GoalId,
+        user_id: UserId,
+        year: u16,
     },
 }
 

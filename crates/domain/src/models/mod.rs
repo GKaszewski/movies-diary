@@ -18,6 +18,12 @@ pub mod watchlist;
 pub use watchlist::{WatchlistEntry, WatchlistWithMovie};
 pub mod remote_watchlist;
 pub use remote_watchlist::RemoteWatchlistEntry;
+pub mod goal;
+pub use goal::{Goal, GoalWithProgress};
+pub mod user_settings;
+pub use user_settings::UserSettings;
+pub mod remote_goal;
+pub use remote_goal::RemoteGoalEntry;
 pub mod watch_event;
 pub mod wrapup;
 pub use watch_event::{
@@ -37,6 +43,32 @@ pub use search::{
     EntityType, IndexableDocument, MovieSearchHit, PersonSearchHit, SearchFilters, SearchQuery,
     SearchResults,
 };
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum GoalType {
+    Movies,
+}
+
+impl GoalType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Movies => "movies",
+        }
+    }
+}
+
+impl std::str::FromStr for GoalType {
+    type Err = DomainError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "movies" => Ok(Self::Movies),
+            other => Err(DomainError::ValidationError(format!(
+                "Unknown goal type: {other}"
+            ))),
+        }
+    }
+}
 
 #[derive(Clone, Debug, Default)]
 pub enum SortDirection {

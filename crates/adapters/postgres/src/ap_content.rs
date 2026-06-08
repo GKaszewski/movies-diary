@@ -228,4 +228,48 @@ impl LocalApContentQuery for PostgresApContentQuery {
         };
         rows.into_iter().map(DiaryRow::into_domain).collect()
     }
+
+    async fn get_user_federate_goals(&self, user_id: &UserId) -> Result<bool, DomainError> {
+        let uid = user_id.value().to_string();
+        let row = sqlx::query("SELECT federate_goals FROM user_settings WHERE user_id = $1")
+            .bind(&uid)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(Self::map_err)?;
+
+        match row {
+            Some(r) => {
+                let val: i64 = r.try_get("federate_goals").unwrap_or(0);
+                Ok(val != 0)
+            }
+            None => Ok(false),
+        }
+    }
+
+    async fn get_goal_with_progress(
+        &self,
+        user_id: &UserId,
+        year: u16,
+    ) -> Result<Option<(domain::models::Goal, u32)>, DomainError> {
+        let uid = user_id.value().to_string();
+        let y = year as i64;
+
+        let row = sqlx::query(
+            "SELECT id, user_id, year, target_count, goal_type, \
+             to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS created_at \
+             FROM goals WHERE user_id = $1 AND year = $2",
+        )
+        .bind(&uid)
+        .bind(y)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(Self::map_err)?;
+
+        let Some(r) = row else { return Ok(None) };
+
+        let goal = crate::goals::row_to_goal(&r)?;
+        let count = crate::goals::count_reviews_in_year(&self.pool, user_id, year).await?;
+
+        Ok(Some((goal, count)))
+    }
 }

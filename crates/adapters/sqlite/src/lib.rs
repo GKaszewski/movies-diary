@@ -13,6 +13,7 @@ use domain::{
 use sqlx::SqlitePool;
 
 mod ap_content;
+mod goals;
 mod image_ref;
 mod import_profile;
 mod import_session;
@@ -21,6 +22,8 @@ mod models;
 mod persons;
 mod profile;
 mod profile_fields;
+mod remote_goals;
+mod user_settings;
 mod users;
 mod watch_event;
 mod watchlist;
@@ -978,6 +981,9 @@ pub struct SqliteWireOutput {
     pub ap_content: std::sync::Arc<dyn domain::ports::LocalApContentQuery>,
     pub wrapup_repo: std::sync::Arc<dyn domain::ports::WrapUpRepository>,
     pub wrapup_stats: std::sync::Arc<dyn domain::ports::WrapUpStatsQuery>,
+    pub goal: std::sync::Arc<dyn domain::ports::GoalRepository>,
+    pub user_settings: std::sync::Arc<dyn domain::ports::UserSettingsRepository>,
+    pub remote_goal: std::sync::Arc<dyn domain::ports::RemoteGoalRepository>,
 }
 
 pub async fn wire(database_url: &str) -> anyhow::Result<SqliteWireOutput> {
@@ -1015,7 +1021,12 @@ pub async fn wire(database_url: &str) -> anyhow::Result<SqliteWireOutput> {
         watchlist: std::sync::Arc::new(SqliteWatchlistRepository::new(pool.clone())) as _,
         ap_content: std::sync::Arc::new(SqliteApContentQuery::new(pool.clone())) as _,
         wrapup_repo: std::sync::Arc::new(SqliteWrapUpRepository::new(pool.clone())) as _,
-        wrapup_stats: std::sync::Arc::new(SqliteWrapUpStatsQuery::new(pool)) as _,
+        wrapup_stats: std::sync::Arc::new(SqliteWrapUpStatsQuery::new(pool.clone())) as _,
+        goal: std::sync::Arc::new(goals::SqliteGoalRepository::new(pool.clone())) as _,
+        user_settings: std::sync::Arc::new(user_settings::SqliteUserSettingsRepository::new(
+            pool.clone(),
+        )) as _,
+        remote_goal: std::sync::Arc::new(remote_goals::SqliteRemoteGoalRepository::new(pool)) as _,
     })
 }
 

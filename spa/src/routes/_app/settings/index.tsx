@@ -10,11 +10,14 @@ import {
   RefreshCw,
   ShieldBan,
   Sparkles,
+  Target,
   User,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Switch } from "@/components/ui/switch"
 import { useAuth, useIsAdmin } from "@/components/auth-provider"
 import { reindexSearch } from "@/lib/api/users"
+import { useSettings, useUpdateSettings } from "@/hooks/use-goals"
 
 export const Route = createFileRoute("/_app/settings/")({
   component: SettingsPage,
@@ -94,6 +97,8 @@ function SettingsPage() {
       <SettingsGroup label={t("settings.integrations")} items={integrations} />
       <SettingsGroup label={t("settings.socialGroup")} items={social} />
 
+      <PrivacySection />
+
       {isAdmin && <AdminActions />}
 
       <button
@@ -105,6 +110,40 @@ function SettingsPage() {
           {t("settings.logOut")}
         </div>
       </button>
+    </div>
+  )
+}
+
+function PrivacySection() {
+  const { t } = useTranslation()
+  const { data: settings } = useSettings()
+  const updateMutation = useUpdateSettings()
+
+  return (
+    <div>
+      <p className="mb-1.5 px-1 text-xs font-medium text-muted-foreground">
+        {t("settings.privacy")}
+      </p>
+      <div className="divide-y divide-border rounded-xl bg-card">
+        <div className="flex items-center gap-3 p-3">
+          <span className="text-muted-foreground">
+            <Target className="size-4" />
+          </span>
+          <div className="flex-1">
+            <p className="text-sm font-medium">{t("settings.federateGoals")}</p>
+            <p className="text-xs text-muted-foreground">
+              {t("settings.federateGoalsDesc")}
+            </p>
+          </div>
+          <Switch
+            checked={settings?.federate_goals ?? false}
+            onCheckedChange={(checked) =>
+              updateMutation.mutate({ federate_goals: checked })
+            }
+            disabled={updateMutation.isPending}
+          />
+        </div>
+      </div>
     </div>
   )
 }

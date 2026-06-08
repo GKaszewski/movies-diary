@@ -118,6 +118,7 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
             blocklist_repo,
             review_store,
             remote_watchlist_repo: remote_watchlist_repo.clone(),
+            remote_goal_repo: Arc::clone(&db.remote_goal),
             local_ap_content: Arc::clone(&ap_content_repo),
             user_repo: Arc::clone(&db.user),
             base_url: app_config.base_url.clone(),
@@ -195,6 +196,9 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
             social_query: Arc::new(domain::testing::NoopSocialQueryPort),
             wrapup_stats: db.wrapup_stats,
             wrapup_repo: db.wrapup_repo,
+            goal: db.goal,
+            user_settings: db.user_settings,
+            remote_goal: db.remote_goal,
         },
         services: Services {
             auth: auth_service,

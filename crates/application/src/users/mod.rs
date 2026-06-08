@@ -1,7 +1,9 @@
 pub mod commands;
 pub mod get_current_profile;
 pub mod get_profile;
+pub mod get_settings;
 pub mod get_users;
 pub mod queries;
 pub mod update_profile;
 pub mod update_profile_fields;
+pub mod update_settings;

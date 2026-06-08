@@ -668,6 +668,26 @@ pub async fn get_user_profile(
                     pending_followers,
                     sort_by: sort_by_str.to_string(),
                     search: params.search.clone(),
+                    goals: {
+                        let goals_list = application::goals::list::execute(
+                            &state.app_ctx,
+                            application::goals::queries::ListGoalsQuery {
+                                user_id: profile_user_uuid,
+                            },
+                        )
+                        .await
+                        .unwrap_or_default();
+                        goals_list
+                            .iter()
+                            .map(|g| template_askama::GoalViewData {
+                                year: g.goal.year(),
+                                target_count: g.goal.target_count(),
+                                current_count: g.current_count,
+                                percentage: g.percentage().round(),
+                                is_complete: g.is_complete(),
+                            })
+                            .collect()
+                    },
                 })
                 .into_response()
             }

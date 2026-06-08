@@ -1240,3 +1240,70 @@ impl WrapUpRepository for PanicWrapUpRepository {
         panic!("PanicWrapUpRepository called")
     }
 }
+
+// ── Noop Goal/Settings repos ────────────────────────────────────────────────
+
+pub struct NoopGoalRepository;
+
+#[async_trait]
+impl crate::ports::GoalRepository for NoopGoalRepository {
+    async fn save(&self, _: &crate::models::Goal) -> Result<(), DomainError> {
+        Ok(())
+    }
+    async fn update(&self, _: &crate::models::Goal) -> Result<(), DomainError> {
+        Ok(())
+    }
+    async fn delete(
+        &self,
+        _: &crate::value_objects::GoalId,
+        _: &UserId,
+    ) -> Result<(), DomainError> {
+        Ok(())
+    }
+    async fn find_by_user_and_year(
+        &self,
+        _: &UserId,
+        _: u16,
+    ) -> Result<Option<crate::models::Goal>, DomainError> {
+        Ok(None)
+    }
+    async fn list_for_user(&self, _: &UserId) -> Result<Vec<crate::models::Goal>, DomainError> {
+        Ok(vec![])
+    }
+    async fn count_reviews_in_year(&self, _: &UserId, _: u16) -> Result<u32, DomainError> {
+        Ok(0)
+    }
+}
+
+pub struct NoopUserSettingsRepository;
+
+#[async_trait]
+impl crate::ports::UserSettingsRepository for NoopUserSettingsRepository {
+    async fn get(&self, user_id: &UserId) -> Result<crate::models::UserSettings, DomainError> {
+        Ok(crate::models::UserSettings::new(user_id.clone()))
+    }
+    async fn save(&self, _: &crate::models::UserSettings) -> Result<(), DomainError> {
+        Ok(())
+    }
+}
+
+pub struct NoopRemoteGoalRepository;
+
+#[async_trait]
+impl crate::ports::RemoteGoalRepository for NoopRemoteGoalRepository {
+    async fn save(&self, _: crate::models::RemoteGoalEntry) -> Result<(), DomainError> {
+        Ok(())
+    }
+    async fn update_by_ap_id(&self, _: &str, _: u32, _: u32) -> Result<(), DomainError> {
+        Ok(())
+    }
+    async fn remove_by_ap_id(&self, _: &str, _: &str) -> Result<(), DomainError> {
+        Ok(())
+    }
+    async fn get_by_actor_url(
+        &self,
+        _: &str,
+    ) -> Result<Vec<crate::models::RemoteGoalEntry>, DomainError> {
+        Ok(vec![])
+    }
+}

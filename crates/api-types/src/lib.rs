@@ -1,6 +1,7 @@
 pub mod auth;
 pub mod common;
 pub mod diary;
+pub mod goals;
 pub mod import;
 pub mod movies;
 pub mod search;
@@ -13,6 +14,7 @@ pub mod wrapup;
 pub use auth::*;
 pub use common::*;
 pub use diary::*;
+pub use goals::*;
 pub use import::*;
 pub use movies::*;
 pub use social::*;

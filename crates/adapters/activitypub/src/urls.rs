@@ -13,6 +13,11 @@ pub fn review_url(base_url: &str, review_id: &ReviewId) -> Url {
         .expect("base_url is always a valid URL prefix")
 }
 
+pub fn goal_url(base_url: &str, user_id: uuid::Uuid, year: u16) -> Url {
+    Url::parse(&format!("{}/users/{}/goals/{}", base_url, user_id, year))
+        .expect("base_url is always a valid URL prefix")
+}
+
 /// Builds the canonical watchlist entry URL: `{base_url}/users/{user_id}/watchlist/{movie_id}`
 pub fn watchlist_entry_url(base_url: &str, user_id: uuid::Uuid, movie_id: uuid::Uuid) -> Url {
     Url::parse(&format!(

@@ -159,7 +159,22 @@
     "admin": "Admin",
     "rebuildSearch": "Rebuild Search Index",
     "rebuildSearchDesc": "Re-index all movies and people",
-    "rebuildSearchDone": "Reindex queued"
+    "rebuildSearchDone": "Reindex queued",
+    "privacy": "Privacy",
+    "federateGoals": "Share goals on Fediverse",
+    "federateGoalsDesc": "Broadcast goal progress to followers"
+  },
+  "goals": {
+    "yearGoal": "{{year}} Goal",
+    "movies": "movies",
+    "reached": "Goal reached!",
+    "setGoal": "Set Goal",
+    "editGoal": "Edit Goal",
+    "year": "Year",
+    "targetMovies": "Target (movies)",
+    "created": "Goal created",
+    "updated": "Goal updated",
+    "deleted": "Goal deleted"
   },
   "editProfile": {
     "title": "Edit Profile",

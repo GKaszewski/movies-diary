@@ -1300,3 +1300,52 @@ form button[type="submit"]:hover {
   .wu-card { padding: 1.5rem; }
   .wu-genre-name { width: 5rem; }
 }
+
+/* ── Goals ─────────────────────────────────────────────────────────────────── */
+.goals-section { margin: 1rem 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.goal-card {
+  background: var(--glass-bg);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  box-shadow: var(--glass-shadow), var(--glass-inset);
+  position: relative;
+  overflow: hidden;
+}
+.goal-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 50%;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.08), transparent);
+  border-radius: inherit;
+  pointer-events: none;
+}
+.goal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; }
+.goal-label { font-weight: 700; font-size: 0.85rem; color: var(--primary); }
+.goal-count { font-size: 0.8rem; color: var(--text-muted); }
+.progress-track {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  height: 6px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--primary-mid), var(--primary));
+  box-shadow: 0 0 8px var(--primary-glow);
+  transition: width 0.4s ease;
+}
+.goal-complete {
+  font-size: 0.75rem;
+  color: var(--primary);
+  margin-top: 0.3rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  text-shadow: 0 0 6px var(--primary-glow);
+}

@@ -33,6 +33,9 @@ pub struct DatabaseOutput {
     pub ap_content: Arc<dyn LocalApContentQuery>,
     pub wrapup_stats: Arc<dyn domain::ports::WrapUpStatsQuery>,
     pub wrapup_repo: Arc<dyn domain::ports::WrapUpRepository>,
+    pub goal: Arc<dyn domain::ports::GoalRepository>,
+    pub user_settings: Arc<dyn domain::ports::UserSettingsRepository>,
+    pub remote_goal: Arc<dyn domain::ports::RemoteGoalRepository>,
     pub db_pool: DbPool,
 }
 
@@ -71,6 +74,9 @@ pub async fn build_database_adapters(backend: &str, url: &str) -> anyhow::Result
                 ap_content: w.ap_content,
                 wrapup_stats: w.wrapup_stats,
                 wrapup_repo: w.wrapup_repo,
+                goal: w.goal,
+                user_settings: w.user_settings,
+                remote_goal: w.remote_goal,
                 db_pool: DbPool::Postgres(w.pool),
             })
         }
@@ -106,6 +112,9 @@ pub async fn build_database_adapters(backend: &str, url: &str) -> anyhow::Result
                 ap_content: w.ap_content,
                 wrapup_stats: w.wrapup_stats,
                 wrapup_repo: w.wrapup_repo,
+                goal: w.goal,
+                user_settings: w.user_settings,
+                remote_goal: w.remote_goal,
                 db_pool: DbPool::Sqlite(w.pool),
             })
         }

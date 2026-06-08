@@ -24,6 +24,25 @@
     </div>
   </div>
 
+  {% if !goals.is_empty() %}
+  <div class="goals-section">
+    {% for g in goals %}
+    <div class="goal-card">
+      <div class="goal-header">
+        <span class="goal-label">{{ g.year }} Goal</span>
+        <span class="goal-count">{{ g.current_count }}&thinsp;/&thinsp;{{ g.target_count }} movies</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" style="width: {{ g.percentage }}%"></div>
+      </div>
+      {% if g.is_complete %}
+      <span class="goal-complete">✦ Goal reached!</span>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
   {% if is_own_profile %}
   <section class="follow-section">
     <h3>Follow remote user</h3>

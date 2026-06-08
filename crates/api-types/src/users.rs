@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::diary::{DiaryEntryDto, DiaryResponse};
+use crate::goals::GoalDto;
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct UserSummaryDto {
@@ -81,6 +82,8 @@ pub struct UserProfileResponse {
     pub history: Option<Vec<MonthActivityDto>>,
     /// Populated for view=trends
     pub trends: Option<UserTrendsDto>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub goals: Option<Vec<GoalDto>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]

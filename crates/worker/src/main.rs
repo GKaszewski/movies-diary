@@ -94,6 +94,9 @@ async fn main() -> anyhow::Result<()> {
             social_query: Arc::new(domain::testing::NoopSocialQueryPort),
             wrapup_stats: db.wrapup_stats,
             wrapup_repo: db.wrapup_repo,
+            goal: db.goal,
+            user_settings: db.user_settings,
+            remote_goal: db.remote_goal,
         },
         services: Services {
             auth: auth_service,
@@ -260,6 +263,7 @@ async fn main() -> anyhow::Result<()> {
                 blocklist_repo: fed_blocklist_repo,
                 review_store: fed_review_store,
                 remote_watchlist_repo: fed_remote_watchlist_repo,
+                remote_goal_repo: Arc::clone(&ctx.repos.remote_goal),
                 local_ap_content: fed_ap_content,
                 user_repo: fed_user_repo,
                 base_url,

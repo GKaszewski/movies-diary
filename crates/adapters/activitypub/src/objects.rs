@@ -191,6 +191,64 @@ pub fn watchlist_to_ap_object(input: WatchlistApInput) -> WatchlistObject {
     }
 }
 
+// ── Goal object ──────────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GoalObject {
+    #[serde(rename = "type")]
+    pub(crate) kind: NoteType,
+    pub(crate) id: Url,
+    pub(crate) attributed_to: Url,
+    pub(crate) content: String,
+    pub(crate) published: chrono::DateTime<chrono::Utc>,
+    pub(crate) goal_year: u16,
+    pub(crate) goal_target: u32,
+    pub(crate) goal_current: u32,
+    #[serde(default)]
+    pub(crate) goal: bool,
+    #[serde(default)]
+    pub(crate) tag: Vec<ApHashtag>,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub(crate) to: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub(crate) cc: Vec<String>,
+}
+
+pub fn goal_to_ap_object(
+    ap_id: Url,
+    actor_url: Url,
+    year: u16,
+    target: u32,
+    current: u32,
+    base_url: &str,
+) -> GoalObject {
+    let content = format!(
+        "🎯 Goal: Watch {} movies in {} ({}/{})",
+        target, year, current, target
+    );
+    let tag = vec![ApHashtag {
+        kind: "Hashtag".to_string(),
+        href: Url::parse(&format!("{}/tags/moviesdiary", base_url)).expect("valid base_url"),
+        name: "#MoviesDiary".to_string(),
+    }];
+
+    GoalObject {
+        kind: NoteType::default(),
+        id: ap_id,
+        attributed_to: actor_url.clone(),
+        content,
+        published: chrono::Utc::now(),
+        goal_year: year,
+        goal_target: target,
+        goal_current: current,
+        goal: true,
+        tag,
+        to: vec![AS_PUBLIC.to_string()],
+        cc: vec![format!("{}/followers", actor_url)],
+    }
+}
+
 #[cfg(test)]
 #[path = "tests/objects.rs"]
 mod tests;

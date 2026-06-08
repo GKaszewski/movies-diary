@@ -172,6 +172,9 @@ impl TestContextBuilder {
                 social_query: Arc::new(NoopSocialQueryPort),
                 wrapup_stats: self.wrapup_stats,
                 wrapup_repo: self.wrapup_repo,
+                goal: Arc::new(domain::testing::NoopGoalRepository),
+                user_settings: Arc::new(domain::testing::NoopUserSettingsRepository),
+                remote_goal: Arc::new(domain::testing::NoopRemoteGoalRepository),
             },
             services: Services {
                 auth: self.auth_service,

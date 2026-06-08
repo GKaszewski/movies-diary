@@ -4,6 +4,7 @@ import { UserCheck, UserPlus } from "lucide-react"
 import { BackButton } from "@/components/back-button"
 import { Button } from "@/components/ui/button"
 import { ProfileView, ProfileSkeleton } from "@/components/profile-view"
+import { GoalCard } from "@/components/goal-card"
 import { useAuth } from "@/components/auth-provider"
 import { useUserProfile } from "@/hooks/use-users"
 import { useFollow, useUnfollow, useFollowing } from "@/hooks/use-social"
@@ -34,6 +35,15 @@ function UserProfilePage() {
       <ProfileView
         data={data}
         userId={id}
+        actions={
+          data.goals?.length ? (
+            <div className="space-y-2">
+              {data.goals.map((g) => (
+                <GoalCard key={g.year} goal={g} />
+              ))}
+            </div>
+          ) : undefined
+        }
         headerRight={
           !isSelf ? (
             isFollowing ? (

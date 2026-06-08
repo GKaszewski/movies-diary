@@ -1,12 +1,17 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
-import { ChevronDown, ChevronRight, Settings, Sparkles } from "lucide-react"
+import { ChevronDown, ChevronRight, Plus, Settings, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ProfileView, ProfileSkeleton } from "@/components/profile-view"
 import { useAuth } from "@/components/auth-provider"
 import { useWrapUps } from "@/hooks/use-wrapup"
 import { useUserProfile } from "@/hooks/use-users"
+import { useDeleteGoal } from "@/hooks/use-goals"
+import { GoalCard } from "@/components/goal-card"
+import { GoalSheet } from "@/components/goal-sheet"
+import { toast } from "sonner"
+import type { GoalDto } from "@/lib/api/users"
 
 export const Route = createFileRoute("/_app/profile")({
   component: ProfilePage,
@@ -36,6 +41,7 @@ function ProfilePage() {
         data={data}
         actions={
           <>
+            <GoalSection goals={data.goals ?? []} />
             <Link to="/social" className="block">
               <Button variant="outline" size="sm" className="w-full justify-between">
                 <span>{t("profile.followingFollowers")}</span>
@@ -45,6 +51,58 @@ function ProfilePage() {
             <WrapUpLinks />
           </>
         }
+      />
+    </div>
+  )
+}
+
+function GoalSection({ goals }: { goals: GoalDto[] }) {
+  const { t } = useTranslation()
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [editGoal, setEditGoal] = useState<GoalDto | null>(null)
+  const deleteMutation = useDeleteGoal()
+
+  function handleEdit(goal: GoalDto) {
+    setEditGoal(goal)
+    setSheetOpen(true)
+  }
+
+  function handleDelete(year: number) {
+    deleteMutation.mutate(year, {
+      onSuccess: () => toast.success(t("goals.deleted")),
+    })
+  }
+
+  function handleSheetClose(open: boolean) {
+    setSheetOpen(open)
+    if (!open) setEditGoal(null)
+  }
+
+  return (
+    <div className="space-y-2">
+      {goals.map((g) => (
+        <GoalCard
+          key={g.year}
+          goal={g}
+          editable
+          onEdit={() => handleEdit(g)}
+          onDelete={() => handleDelete(g.year)}
+        />
+      ))}
+      <Button
+        variant="outline"
+        size="sm"
+        className="w-full"
+        onClick={() => setSheetOpen(true)}
+      >
+        <Plus className="mr-1.5 size-3.5" />
+        {t("goals.setGoal")}
+      </Button>
+      <GoalSheet
+        open={sheetOpen}
+        onOpenChange={handleSheetClose}
+        editYear={editGoal?.year}
+        editTarget={editGoal?.target_count}
       />
     </div>
   )
