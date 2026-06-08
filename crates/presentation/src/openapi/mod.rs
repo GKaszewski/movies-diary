@@ -1,5 +1,6 @@
 mod auth;
 mod diary;
+mod goals;
 mod import;
 mod movies;
 mod search;
@@ -42,6 +43,7 @@ fn build() -> utoipa::openapi::OpenApi {
     api.merge(import::ImportDoc::openapi());
     api.merge(search::SearchDoc::openapi());
     api.merge(watchlist::WatchlistDoc::openapi());
+    api.merge(goals::GoalsDoc::openapi());
     api.merge(webhook::WebhookDoc::openapi());
     api.merge(wrapup::WrapUpDoc::openapi());
     #[cfg(feature = "federation")]
