@@ -302,11 +302,17 @@ impl ImportSessionRepository for SqliteImportSessionRepository {
         let created_at = s.created_at.format("%Y-%m-%d %H:%M:%S").to_string();
         let expires_at = s.expires_at.format("%Y-%m-%d %H:%M:%S").to_string();
         let (parsed_data, field_mappings, row_results) = Self::serialize_session(s)?;
-        sqlx::query!(
+        sqlx::query(
             "INSERT INTO import_sessions (id, user_id, parsed_data, field_mappings, row_results, created_at, expires_at)
              VALUES (?, ?, ?, ?, ?, ?, ?)",
-            id, user_id, parsed_data, field_mappings, row_results, created_at, expires_at
         )
+        .bind(&id)
+        .bind(&user_id)
+        .bind(&parsed_data)
+        .bind(&field_mappings)
+        .bind(&row_results)
+        .bind(&created_at)
+        .bind(&expires_at)
         .execute(&self.pool)
         .await
         .map(|_| ())
@@ -320,25 +326,26 @@ impl ImportSessionRepository for SqliteImportSessionRepository {
     ) -> Result<Option<ImportSession>, DomainError> {
         let id_str = id.value().to_string();
         let uid_str = user_id.value().to_string();
-        let row = sqlx::query!(
+        let row = sqlx::query(
             "SELECT id, user_id, parsed_data, field_mappings, row_results, created_at, expires_at
              FROM import_sessions WHERE id = ? AND user_id = ?",
-            id_str,
-            uid_str
         )
+        .bind(&id_str)
+        .bind(&uid_str)
         .fetch_optional(&self.pool)
         .await
         .map_err(Self::map_err)?;
 
         row.map(|r| {
+            use sqlx::Row;
             Self::deserialize_session(
-                r.id,
-                r.user_id,
-                r.parsed_data,
-                r.field_mappings,
-                r.row_results,
-                &r.created_at,
-                &r.expires_at,
+                r.get("id"),
+                r.get("user_id"),
+                r.get("parsed_data"),
+                r.get("field_mappings"),
+                r.get("row_results"),
+                &r.get::<String, _>("created_at"),
+                &r.get::<String, _>("expires_at"),
             )
         })
         .transpose()
@@ -347,12 +354,12 @@ impl ImportSessionRepository for SqliteImportSessionRepository {
     async fn update(&self, s: &ImportSession) -> Result<(), DomainError> {
         let id = s.id.value().to_string();
         let (_, field_mappings, row_results) = Self::serialize_session(s)?;
-        sqlx::query!(
+        sqlx::query(
             "UPDATE import_sessions SET field_mappings = ?, row_results = ? WHERE id = ?",
-            field_mappings,
-            row_results,
-            id
         )
+        .bind(&field_mappings)
+        .bind(&row_results)
+        .bind(&id)
         .execute(&self.pool)
         .await
         .map(|_| ())
@@ -361,7 +368,8 @@ impl ImportSessionRepository for SqliteImportSessionRepository {
 
     async fn delete(&self, id: &ImportSessionId) -> Result<(), DomainError> {
         let id_str = id.value().to_string();
-        sqlx::query!("DELETE FROM import_sessions WHERE id = ?", id_str)
+        sqlx::query("DELETE FROM import_sessions WHERE id = ?")
+            .bind(&id_str)
             .execute(&self.pool)
             .await
             .map(|_| ())
@@ -369,19 +377,20 @@ impl ImportSessionRepository for SqliteImportSessionRepository {
     }
 
     async fn delete_expired(&self) -> Result<u64, DomainError> {
-        let result = sqlx::query!("DELETE FROM import_sessions WHERE expires_at < datetime('now')")
-            .execute(&self.pool)
-            .await
-            .map_err(Self::map_err)?;
+        let result =
+            sqlx::query("DELETE FROM import_sessions WHERE expires_at < datetime('now')")
+                .execute(&self.pool)
+                .await
+                .map_err(Self::map_err)?;
         Ok(result.rows_affected())
     }
 
     async fn delete_expired_for_user(&self, user_id: &UserId) -> Result<(), DomainError> {
         let uid = user_id.value().to_string();
-        sqlx::query!(
+        sqlx::query(
             "DELETE FROM import_sessions WHERE user_id = ? AND expires_at < datetime('now')",
-            uid
         )
+        .bind(&uid)
         .execute(&self.pool)
         .await
         .map(|_| ())

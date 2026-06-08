@@ -118,15 +118,15 @@ impl ImportProfileRepository for SqliteImportProfileRepository {
         let user_id = p.user_id.value().to_string();
         let created_at = p.created_at.format("%Y-%m-%d %H:%M:%S").to_string();
         let field_mappings = serialize_mappings(&p.field_mappings)?;
-        sqlx::query!(
+        sqlx::query(
             "INSERT OR REPLACE INTO import_profiles (id, user_id, name, field_mappings, created_at)
              VALUES (?, ?, ?, ?, ?)",
-            id,
-            user_id,
-            p.name,
-            field_mappings,
-            created_at
         )
+        .bind(&id)
+        .bind(&user_id)
+        .bind(&p.name)
+        .bind(&field_mappings)
+        .bind(&created_at)
         .execute(&self.pool)
         .await
         .map(|_| ())
@@ -135,29 +135,33 @@ impl ImportProfileRepository for SqliteImportProfileRepository {
 
     async fn list_for_user(&self, user_id: &UserId) -> Result<Vec<ImportProfile>, DomainError> {
         let uid = user_id.value().to_string();
-        let rows = sqlx::query!(
+        let rows = sqlx::query(
             "SELECT id, user_id, name, field_mappings, created_at FROM import_profiles WHERE user_id = ? ORDER BY created_at DESC",
-            uid
         )
+        .bind(&uid)
         .fetch_all(&self.pool)
         .await
         .map_err(Self::map_err)?;
 
-        rows.into_iter()
+        rows.iter()
             .map(|r| {
+                use sqlx::Row;
+                let id_str: String = r.get("id");
+                let uid_str: String = r.get("user_id");
+                let fm: String = r.get("field_mappings");
+                let ca: String = r.get("created_at");
                 Ok(ImportProfile {
                     id: ImportProfileId::from_uuid(
-                        r.id.parse::<uuid::Uuid>()
+                        id_str.parse::<uuid::Uuid>()
                             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
                     ),
                     user_id: UserId::from_uuid(
-                        r.user_id
-                            .parse::<uuid::Uuid>()
+                        uid_str.parse::<uuid::Uuid>()
                             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
                     ),
-                    name: r.name,
-                    field_mappings: deserialize_mappings(&r.field_mappings)?,
-                    created_at: Self::parse_dt(&r.created_at)?,
+                    name: r.get("name"),
+                    field_mappings: deserialize_mappings(&fm)?,
+                    created_at: Self::parse_dt(&ca)?,
                 })
             })
             .collect()
@@ -170,28 +174,33 @@ impl ImportProfileRepository for SqliteImportProfileRepository {
     ) -> Result<Option<ImportProfile>, DomainError> {
         let id_str = id.value().to_string();
         let uid_str = user_id.value().to_string();
-        let row = sqlx::query!(
+        let row = sqlx::query(
             "SELECT id, user_id, name, field_mappings, created_at FROM import_profiles WHERE id = ? AND user_id = ?",
-            id_str, uid_str
         )
+        .bind(&id_str)
+        .bind(&uid_str)
         .fetch_optional(&self.pool)
         .await
         .map_err(Self::map_err)?;
 
         row.map(|r| {
+            use sqlx::Row;
+            let rid: String = r.get("id");
+            let ruid: String = r.get("user_id");
+            let fm: String = r.get("field_mappings");
+            let ca: String = r.get("created_at");
             Ok(ImportProfile {
                 id: ImportProfileId::from_uuid(
-                    r.id.parse::<uuid::Uuid>()
+                    rid.parse::<uuid::Uuid>()
                         .map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
                 ),
                 user_id: UserId::from_uuid(
-                    r.user_id
-                        .parse::<uuid::Uuid>()
+                    ruid.parse::<uuid::Uuid>()
                         .map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
                 ),
-                name: r.name,
-                field_mappings: deserialize_mappings(&r.field_mappings)?,
-                created_at: Self::parse_dt(&r.created_at)?,
+                name: r.get("name"),
+                field_mappings: deserialize_mappings(&fm)?,
+                created_at: Self::parse_dt(&ca)?,
             })
         })
         .transpose()
@@ -199,7 +208,8 @@ impl ImportProfileRepository for SqliteImportProfileRepository {
 
     async fn delete(&self, id: &ImportProfileId) -> Result<(), DomainError> {
         let id_str = id.value().to_string();
-        sqlx::query!("DELETE FROM import_profiles WHERE id = ?", id_str)
+        sqlx::query("DELETE FROM import_profiles WHERE id = ?")
+            .bind(&id_str)
             .execute(&self.pool)
             .await
             .map(|_| ())

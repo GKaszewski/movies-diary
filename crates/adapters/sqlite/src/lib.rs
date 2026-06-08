@@ -96,14 +96,17 @@ impl SqliteMovieRepository {
 
     async fn count_diary_entries(&self, movie_id: Option<&str>) -> Result<i64, DomainError> {
         match movie_id {
-            None => sqlx::query_scalar!("SELECT COUNT(*) FROM reviews")
+            None => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM reviews")
                 .fetch_one(&self.pool)
                 .await
                 .map_err(Self::map_err),
-            Some(id) => sqlx::query_scalar!("SELECT COUNT(*) FROM reviews WHERE movie_id = ?", id)
-                .fetch_one(&self.pool)
-                .await
-                .map_err(Self::map_err),
+            Some(id) => {
+                sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM reviews WHERE movie_id = ?")
+                    .bind(id)
+                    .fetch_one(&self.pool)
+                    .await
+                    .map_err(Self::map_err)
+            }
         }
     }
 
@@ -234,13 +237,12 @@ impl SqliteMovieRepository {
     }
 
     async fn fetch_user_totals(&self, user_id: &str) -> Result<UserTotalsRow, DomainError> {
-        sqlx::query_as!(
-            UserTotalsRow,
-            r#"SELECT COUNT(DISTINCT movie_id) AS "total!: i64",
-                      AVG(CAST(rating AS REAL)) AS avg_rating
-               FROM reviews WHERE user_id = ?"#,
-            user_id
+        sqlx::query_as::<_, UserTotalsRow>(
+            "SELECT COUNT(DISTINCT movie_id) AS total,
+                    AVG(CAST(rating AS REAL)) AS avg_rating
+             FROM reviews WHERE user_id = ?",
         )
+        .bind(user_id)
         .fetch_one(&self.pool)
         .await
         .map_err(Self::map_err)
@@ -250,7 +252,7 @@ impl SqliteMovieRepository {
         &self,
         user_id: &str,
     ) -> Result<Option<String>, DomainError> {
-        let row = sqlx::query_scalar!(
+        let row: Option<String> = sqlx::query_scalar(
             "SELECT m.director
              FROM reviews r
              INNER JOIN movies m ON m.id = r.movie_id
@@ -258,31 +260,31 @@ impl SqliteMovieRepository {
              GROUP BY m.director
              ORDER BY COUNT(*) DESC
              LIMIT 1",
-            user_id
         )
+        .bind(user_id)
         .fetch_optional(&self.pool)
         .await
         .map_err(Self::map_err)?;
-        Ok(row.flatten())
+        Ok(row)
     }
 
     async fn fetch_user_most_active_month(
         &self,
         user_id: &str,
     ) -> Result<Option<String>, DomainError> {
-        let result: Option<Option<String>> = sqlx::query_scalar!(
-            "SELECT strftime('%Y-%m', watched_at) AS month
+        let row: Option<String> = sqlx::query_scalar(
+            "SELECT strftime('%Y-%m', watched_at)
              FROM reviews
              WHERE user_id = ?
-             GROUP BY month
+             GROUP BY strftime('%Y-%m', watched_at)
              ORDER BY COUNT(*) DESC
              LIMIT 1",
-            user_id
         )
+        .bind(user_id)
         .fetch_optional(&self.pool)
         .await
         .map_err(Self::map_err)?;
-        Ok(result.flatten())
+        Ok(row)
     }
 }
 
@@ -293,12 +295,11 @@ impl MovieRepository for SqliteMovieRepository {
         external_metadata_id: &ExternalMetadataId,
     ) -> Result<Option<Movie>, DomainError> {
         let id = external_metadata_id.value();
-        sqlx::query_as!(
-            MovieRow,
+        sqlx::query_as::<_, MovieRow>(
             "SELECT id, external_metadata_id, title, release_year, director, poster_path
              FROM movies WHERE external_metadata_id = ?",
-            id
         )
+        .bind(id)
         .fetch_optional(&self.pool)
         .await
         .map_err(Self::map_err)?
@@ -308,12 +309,11 @@ impl MovieRepository for SqliteMovieRepository {
 
     async fn get_movie_by_id(&self, movie_id: &MovieId) -> Result<Option<Movie>, DomainError> {
         let id = movie_id.value().to_string();
-        sqlx::query_as!(
-            MovieRow,
+        sqlx::query_as::<_, MovieRow>(
             "SELECT id, external_metadata_id, title, release_year, director, poster_path
              FROM movies WHERE id = ?",
-            id
         )
+        .bind(&id)
         .fetch_optional(&self.pool)
         .await
         .map_err(Self::map_err)?
@@ -326,15 +326,14 @@ impl MovieRepository for SqliteMovieRepository {
         title: &MovieTitle,
         year: &ReleaseYear,
     ) -> Result<Vec<Movie>, DomainError> {
-        let title = title.value();
-        let year = year.value() as i64;
-        sqlx::query_as!(
-            MovieRow,
+        let t = title.value();
+        let y = year.value() as i64;
+        sqlx::query_as::<_, MovieRow>(
             "SELECT id, external_metadata_id, title, release_year, director, poster_path
              FROM movies WHERE title = ? AND release_year = ?",
-            title,
-            year
         )
+        .bind(t)
+        .bind(y)
         .fetch_all(&self.pool)
         .await
         .map_err(Self::map_err)?
@@ -351,7 +350,7 @@ impl MovieRepository for SqliteMovieRepository {
         let director = movie.director();
         let poster_path = movie.poster_path().map(|p| p.value().to_string());
 
-        sqlx::query!(
+        sqlx::query(
             "INSERT INTO movies (id, external_metadata_id, title, release_year, director, poster_path)
              VALUES (?, ?, ?, ?, ?, ?)
              ON CONFLICT(id) DO UPDATE SET
@@ -360,13 +359,13 @@ impl MovieRepository for SqliteMovieRepository {
                  release_year         = excluded.release_year,
                  director             = excluded.director,
                  poster_path          = excluded.poster_path",
-            id,
-            external_metadata_id,
-            title,
-            release_year,
-            director,
-            poster_path
         )
+        .bind(&id)
+        .bind(&external_metadata_id)
+        .bind(title)
+        .bind(release_year)
+        .bind(director)
+        .bind(&poster_path)
         .execute(&self.pool)
         .await
         .map_err(Self::map_err)?;
@@ -376,7 +375,8 @@ impl MovieRepository for SqliteMovieRepository {
 
     async fn delete_movie(&self, movie_id: &MovieId) -> Result<(), DomainError> {
         let id = movie_id.value().to_string();
-        sqlx::query!("DELETE FROM movies WHERE id = ?", id)
+        sqlx::query("DELETE FROM movies WHERE id = ?")
+            .bind(&id)
             .execute(&self.pool)
             .await
             .map_err(Self::map_err)?;
@@ -527,18 +527,18 @@ impl ReviewRepository for SqliteMovieRepository {
             ReviewSource::Remote { actor_url } => Some(actor_url.clone()),
         };
 
-        sqlx::query!(
+        sqlx::query(
             "INSERT INTO reviews (id, movie_id, user_id, rating, comment, watched_at, created_at, remote_actor_url)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            id,
-            movie_id,
-            user_id,
-            rating,
-            comment,
-            watched_at,
-            created_at,
-            remote_actor_url
         )
+        .bind(&id)
+        .bind(&movie_id)
+        .bind(&user_id)
+        .bind(rating)
+        .bind(&comment)
+        .bind(&watched_at)
+        .bind(&created_at)
+        .bind(&remote_actor_url)
         .execute(&self.pool)
         .await
         .map_err(Self::map_err)?;
@@ -554,12 +554,11 @@ impl ReviewRepository for SqliteMovieRepository {
 
     async fn get_review_by_id(&self, review_id: &ReviewId) -> Result<Option<Review>, DomainError> {
         let id = review_id.value().to_string();
-        sqlx::query_as!(
-            ReviewRow,
+        sqlx::query_as::<_, ReviewRow>(
             "SELECT id, movie_id, user_id, rating, comment, watched_at, created_at, remote_actor_url
              FROM reviews WHERE id = ?",
-            id
         )
+        .bind(&id)
         .fetch_optional(&self.pool)
         .await
         .map_err(Self::map_err)?
@@ -569,7 +568,8 @@ impl ReviewRepository for SqliteMovieRepository {
 
     async fn delete_review(&self, review_id: &ReviewId) -> Result<(), DomainError> {
         let id = review_id.value().to_string();
-        sqlx::query!("DELETE FROM reviews WHERE id = ?", id)
+        sqlx::query("DELETE FROM reviews WHERE id = ?")
+            .bind(&id)
             .execute(&self.pool)
             .await
             .map_err(Self::map_err)?;
@@ -760,24 +760,22 @@ impl DiaryRepository for SqliteMovieRepository {
     async fn get_review_history(&self, movie_id: &MovieId) -> Result<ReviewHistory, DomainError> {
         let id_str = movie_id.value().to_string();
 
-        let movie = sqlx::query_as!(
-            MovieRow,
+        let movie = sqlx::query_as::<_, MovieRow>(
             "SELECT id, external_metadata_id, title, release_year, director, poster_path
              FROM movies WHERE id = ?",
-            id_str
         )
+        .bind(&id_str)
         .fetch_optional(&self.pool)
         .await
         .map_err(Self::map_err)?
         .ok_or_else(|| DomainError::NotFound(format!("Movie {}", id_str)))?
         .into_domain()?;
 
-        let viewings = sqlx::query_as!(
-            ReviewRow,
+        let viewings = sqlx::query_as::<_, ReviewRow>(
             "SELECT id, movie_id, user_id, rating, comment, watched_at, created_at, remote_actor_url
              FROM reviews WHERE movie_id = ? ORDER BY watched_at ASC",
-            id_str
         )
+        .bind(&id_str)
         .fetch_all(&self.pool)
         .await
         .map_err(Self::map_err)?
@@ -790,16 +788,15 @@ impl DiaryRepository for SqliteMovieRepository {
 
     async fn get_user_history(&self, user_id: &UserId) -> Result<Vec<DiaryEntry>, DomainError> {
         let uid = user_id.value().to_string();
-        let rows = sqlx::query_as!(
-            DiaryRow,
+        let rows = sqlx::query_as::<_, DiaryRow>(
             "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
                     r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url
              FROM reviews r
              INNER JOIN movies m ON m.id = r.movie_id
              WHERE r.user_id = ?
              ORDER BY r.watched_at DESC",
-            uid
         )
+        .bind(&uid)
         .fetch_all(&self.pool)
         .await
         .map_err(Self::map_err)?;
@@ -837,10 +834,12 @@ impl DiaryRepository for SqliteMovieRepository {
         let limit = page.limit as i64;
         let offset = page.offset as i64;
 
-        let total = sqlx::query_scalar!("SELECT COUNT(*) FROM reviews WHERE movie_id = ?", id_str)
-            .fetch_one(&self.pool)
-            .await
-            .map_err(Self::map_err)?;
+        let total: i64 =
+            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM reviews WHERE movie_id = ?")
+                .bind(&id_str)
+                .fetch_one(&self.pool)
+                .await
+                .map_err(Self::map_err)?;
 
         let rows = sqlx::query_as::<_, FeedRow>(
             "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
@@ -911,30 +910,28 @@ impl StatsRepository for SqliteMovieRepository {
         let uid = user_id.value().to_string();
 
         let (rating_rows, director_rows) = tokio::try_join!(
-            sqlx::query_as!(
-                MonthlyRatingRow,
-                r#"SELECT strftime('%Y-%m', watched_at) AS "month!",
-                          AVG(CAST(rating AS REAL)) AS "avg_rating!: f64",
-                          COUNT(*) AS "count!: i64"
-                   FROM reviews
-                   WHERE user_id = ? AND watched_at >= datetime('now', '-12 months')
-                   GROUP BY "month!"
-                   ORDER BY "month!" ASC"#,
-                uid
+            sqlx::query_as::<_, MonthlyRatingRow>(
+                "SELECT strftime('%Y-%m', watched_at) AS month,
+                        AVG(CAST(rating AS REAL)) AS avg_rating,
+                        COUNT(*) AS count
+                 FROM reviews
+                 WHERE user_id = ? AND watched_at >= datetime('now', '-12 months')
+                 GROUP BY month
+                 ORDER BY month ASC",
             )
+            .bind(&uid)
             .fetch_all(&self.pool),
-            sqlx::query_as!(
-                DirectorCountRow,
-                r#"SELECT m.director AS "director!",
-                          COUNT(*) AS "count!: i64"
-                   FROM reviews r
-                   INNER JOIN movies m ON m.id = r.movie_id
-                   WHERE r.user_id = ? AND m.director IS NOT NULL
-                   GROUP BY m.director
-                   ORDER BY COUNT(*) DESC
-                   LIMIT 5"#,
-                uid
+            sqlx::query_as::<_, DirectorCountRow>(
+                "SELECT m.director,
+                        COUNT(*) AS count
+                 FROM reviews r
+                 INNER JOIN movies m ON m.id = r.movie_id
+                 WHERE r.user_id = ? AND m.director IS NOT NULL
+                 GROUP BY m.director
+                 ORDER BY COUNT(*) DESC
+                 LIMIT 5",
             )
+            .bind(&uid)
             .fetch_all(&self.pool)
         )
         .map_err(Self::map_err)?;
