@@ -11,6 +11,7 @@ graph TB
     subgraph Application["Application Layer"]
         direction TB
         CTX["AppContext<br/><i>Repositories + Services</i>"]
+        APP_PORTS["ReviewLogger<br/><i>application-layer port</i>"]
         subgraph UseCases["Use Cases"]
             UC_AUTH["auth<br/>login, register"]
             UC_DIARY["diary<br/>log_review, get_diary,<br/>get_activity_feed, export"]
