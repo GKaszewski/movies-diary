@@ -1,4 +1,7 @@
-use super::{movie::Movie, review::{DiaryEntry, Review}};
+use super::{
+    movie::Movie,
+    review::{DiaryEntry, Review},
+};
 
 #[derive(Clone, Debug)]
 pub struct FeedEntry {

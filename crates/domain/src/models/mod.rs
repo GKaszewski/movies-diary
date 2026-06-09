@@ -1,40 +1,40 @@
-mod movie;
-mod review;
-mod user;
-mod stats;
 mod enrichment;
 mod feed;
+mod movie;
+mod review;
+mod stats;
+mod user;
 
 pub mod collections;
+pub mod goal;
 pub mod import;
 pub mod import_profile;
 pub mod import_session;
 pub mod person;
-pub mod search;
-pub mod watchlist;
-pub mod remote_watchlist;
-pub mod goal;
-pub mod user_settings;
 pub mod remote_goal;
+pub mod remote_watchlist;
+pub mod search;
+pub mod user_settings;
 pub mod watch_event;
+pub mod watchlist;
 pub mod wrapup;
 
-pub use movie::*;
-pub use review::*;
-pub use user::*;
-pub use stats::*;
 pub use enrichment::*;
 pub use feed::*;
+pub use movie::*;
+pub use review::*;
+pub use stats::*;
+pub use user::*;
 
-pub use watchlist::{WatchlistEntry, WatchlistWithMovie};
-pub use remote_watchlist::RemoteWatchlistEntry;
 pub use goal::{Goal, GoalWithProgress};
-pub use user_settings::UserSettings;
 pub use remote_goal::RemoteGoalEntry;
+pub use remote_watchlist::RemoteWatchlistEntry;
+pub use user_settings::UserSettings;
 pub use watch_event::{
     ParsedPlaybackEvent, PersistedWatchEvent, WatchEvent, WatchEventSource, WatchEventStatus,
     WebhookToken,
 };
+pub use watchlist::{WatchlistEntry, WatchlistWithMovie};
 pub use wrapup::*;
 
 pub use import::{
