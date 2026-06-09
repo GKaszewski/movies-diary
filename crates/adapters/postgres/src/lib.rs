@@ -586,9 +586,23 @@ impl ReviewRepository for PostgresRepository {
 
     async fn get_all_reviews_for_user(
         &self,
-        _user_id: &UserId,
+        user_id: &UserId,
     ) -> Result<Vec<Review>, DomainError> {
-        todo!()
+        let uid = user_id.value().to_string();
+        sqlx::query_as::<_, ReviewRow>(
+            "SELECT id, movie_id, user_id, rating, comment,
+                    to_char(watched_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS watched_at,
+                    to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS created_at,
+                    remote_actor_url
+             FROM reviews WHERE user_id = $1 ORDER BY watched_at DESC",
+        )
+        .bind(&uid)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(Self::map_err)?
+        .into_iter()
+        .map(ReviewRow::into_domain)
+        .collect()
     }
 }
 

@@ -2,6 +2,8 @@
 name = "presentation"
 version = "0.1.0"
 edition = "2024"
+description = "Self-hosted movie diary with REST API and ActivityPub federation"
+license = "MIT"
 
 [features]
 default = ["sqlite", "sqlite-federation"]
