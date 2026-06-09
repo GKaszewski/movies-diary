@@ -18,3 +18,7 @@ pub async fn execute(
         None => ctx.repos.wrapup_repo.list_global().await,
     }
 }
+
+#[cfg(test)]
+#[path = "tests/list_wrapups.rs"]
+mod tests;

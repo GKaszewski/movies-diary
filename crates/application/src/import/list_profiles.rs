@@ -7,3 +7,7 @@ pub async fn execute(
 ) -> Result<Vec<ImportProfile>, DomainError> {
     ctx.repos.import_profile.list_for_user(user_id).await
 }
+
+#[cfg(test)]
+#[path = "tests/list_profiles.rs"]
+mod tests;

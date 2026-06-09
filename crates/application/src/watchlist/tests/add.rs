@@ -85,3 +85,54 @@ async fn test_add_to_watchlist_already_present_is_idempotent() {
 
     assert_eq!(watchlist.count(), 1, "idempotent add should not duplicate");
 }
+
+#[tokio::test]
+async fn test_add_to_watchlist_with_manual_movie() {
+    let movies = InMemoryMovieRepository::new();
+    let watchlist = InMemoryWatchlistRepository::new();
+
+    let ctx = TestContextBuilder::new()
+        .with_movies(Arc::clone(&movies) as _)
+        .with_watchlist(Arc::clone(&watchlist) as _)
+        .build();
+
+    let cmd = AddToWatchlistCommand {
+        user_id: uuid::Uuid::new_v4(),
+        input: MovieInput {
+            movie_id: None,
+            external_metadata_id: None,
+            manual_title: Some("New Manual Movie".into()),
+            manual_release_year: Some(2024),
+            manual_director: None,
+        },
+    };
+
+    add::execute(&ctx, cmd).await.unwrap();
+
+    assert_eq!(watchlist.count(), 1);
+    assert_eq!(movies.count(), 1);
+}
+
+#[tokio::test]
+async fn test_add_to_watchlist_movie_not_found_by_id() {
+    let movies = InMemoryMovieRepository::new();
+    let watchlist = InMemoryWatchlistRepository::new();
+
+    let ctx = TestContextBuilder::new()
+        .with_movies(Arc::clone(&movies) as _)
+        .with_watchlist(Arc::clone(&watchlist) as _)
+        .build();
+
+    let cmd = AddToWatchlistCommand {
+        user_id: uuid::Uuid::new_v4(),
+        input: MovieInput {
+            movie_id: Some(uuid::Uuid::new_v4()),
+            external_metadata_id: None,
+            manual_title: None,
+            manual_release_year: None,
+            manual_director: None,
+        },
+    };
+
+    assert!(add::execute(&ctx, cmd).await.is_err());
+}

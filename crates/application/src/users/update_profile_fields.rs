@@ -19,3 +19,7 @@ pub async fn execute(ctx: &AppContext, cmd: UpdateProfileFieldsCommand) -> Resul
         .await?;
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "tests/update_profile_fields.rs"]
+mod tests;

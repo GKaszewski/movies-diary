@@ -58,3 +58,7 @@ pub async fn execute(ctx: &AppContext, cmd: RequestWrapUpCommand) -> Result<Wrap
 
     Ok(id)
 }
+
+#[cfg(test)]
+#[path = "tests/generate.rs"]
+mod tests;

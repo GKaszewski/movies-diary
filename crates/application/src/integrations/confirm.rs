@@ -7,7 +7,6 @@ use domain::{
 use crate::{
     context::AppContext,
     diary::commands::{LogReviewCommand, MovieInput},
-    diary::log_review,
     integrations::commands::ConfirmWatchEventsCommand,
 };
 
@@ -54,7 +53,7 @@ pub async fn execute(ctx: &AppContext, cmd: ConfirmWatchEventsCommand) -> Result
             watched_at: *event.watched_at(),
         };
 
-        log_review::execute(ctx, review_cmd).await?;
+        ctx.services.review_logger.log_review(review_cmd).await?;
 
         ctx.repos
             .watch_event
@@ -66,3 +65,7 @@ pub async fn execute(ctx: &AppContext, cmd: ConfirmWatchEventsCommand) -> Result
 
     Ok(confirmed)
 }
+
+#[cfg(test)]
+#[path = "tests/confirm.rs"]
+mod tests;

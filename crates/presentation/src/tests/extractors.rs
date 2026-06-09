@@ -719,6 +719,16 @@ impl domain::ports::RemoteGoalRepository for Panic {
     }
 }
 
+#[async_trait::async_trait]
+impl application::ports::ReviewLogger for Panic {
+    async fn log_review(
+        &self,
+        _: application::diary::commands::LogReviewCommand,
+    ) -> Result<(), DomainError> {
+        panic!()
+    }
+}
+
 // --- Single state factory — only auth_service varies ---
 
 pub fn make_test_state(auth_service: Arc<dyn AuthService>) -> crate::state::AppState {
@@ -759,6 +769,7 @@ pub fn make_test_state(auth_service: Arc<dyn AuthService>) -> crate::state::AppS
                 event_publisher: Arc::clone(&repo) as _,
                 diary_exporter: Arc::clone(&repo) as _,
                 document_parser: Arc::clone(&repo) as _,
+                review_logger: Arc::clone(&repo) as _,
             },
             config: AppConfig {
                 allow_registration: false,

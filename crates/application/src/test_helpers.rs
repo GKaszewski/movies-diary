@@ -1,33 +1,48 @@
 use std::sync::Arc;
 
 use domain::testing::{
-    InMemoryWrapUpRepository, InMemoryWrapUpStatsQuery, NoopRemoteWatchlistRepository,
-    NoopSocialQueryPort,
+    InMemoryGoalRepository, InMemoryWrapUpRepository, InMemoryWrapUpStatsQuery,
+    NoopRemoteWatchlistRepository, NoopSocialQueryPort,
 };
 use domain::{
     ports::{
         AuthService, DiaryExporter, DiaryRepository, DocumentParser, EventPublisher,
-        ImportProfileRepository, ImportSessionRepository, MetadataClient, MovieProfileRepository,
-        MovieRepository, ObjectStorage, PasswordHasher, PersonCommand, PersonQuery,
-        PosterFetcherClient, ReviewRepository, SearchCommand, SearchPort, StatsRepository,
-        UserProfileFieldsRepository, UserRepository, WatchEventRepository, WatchlistRepository,
-        WebhookTokenRepository, WrapUpRepository, WrapUpStatsQuery,
+        GoalRepository, ImportProfileRepository, ImportSessionRepository, MetadataClient,
+        MovieProfileRepository, MovieRepository, ObjectStorage, PasswordHasher, PersonCommand,
+        PersonQuery, PosterFetcherClient, ReviewRepository, SearchCommand, SearchPort,
+        StatsRepository, UserProfileFieldsRepository, UserRepository, UserSettingsRepository,
+        WatchEventRepository, WatchlistRepository, WebhookTokenRepository, WrapUpRepository,
+        WrapUpStatsQuery,
     },
     testing::{
-        FakeAuthService, FakeMetadataClient, FakePasswordHasher, InMemoryMovieRepository,
-        InMemoryReviewRepository, InMemoryUserRepository, InMemoryWatchlistRepository,
-        NoopEventPublisher, NoopObjectStorage, PanicDiaryExporter, PanicDiaryRepository,
-        PanicDocumentParser, PanicImportProfileRepository, PanicImportSessionRepository,
-        PanicMovieProfileRepository, PanicPersonCommand, PanicPersonQuery, PanicPosterFetcher,
-        PanicProfileFieldsRepo, PanicSearchCommand, PanicSearchPort, PanicStatsRepository,
-        PanicWatchEventRepository, PanicWebhookTokenRepository,
+        FakeAuthService, FakeDiaryRepository, FakeDocumentParser, FakeMetadataClient,
+        FakePasswordHasher, FakePersonQuery, FakePosterFetcher, FakeSearchCommand, FakeSearchPort,
+        FakeStatsRepository, InMemoryImportProfileRepository, InMemoryImportSessionRepository,
+        InMemoryMovieProfileRepository, InMemoryMovieRepository, InMemoryProfileFieldsRepo,
+        InMemoryReviewRepository, InMemoryUserRepository, InMemoryUserSettingsRepository,
+        InMemoryWatchEventRepository, InMemoryWatchlistRepository, InMemoryWebhookTokenRepository,
+        NoopEventPublisher, NoopObjectStorage, PanicDiaryExporter, PanicPersonCommand,
     },
 };
+
+use async_trait::async_trait;
+use domain::errors::DomainError;
 
 use crate::{
     config::AppConfig,
     context::{AppContext, Repositories, Services},
+    diary::commands::LogReviewCommand,
+    ports::ReviewLogger,
 };
+
+pub struct NoopReviewLogger;
+
+#[async_trait]
+impl ReviewLogger for NoopReviewLogger {
+    async fn log_review(&self, _cmd: LogReviewCommand) -> Result<(), DomainError> {
+        Ok(())
+    }
+}
 
 pub struct TestContextBuilder {
     pub movie_repo: Arc<dyn MovieRepository>,
@@ -56,6 +71,10 @@ pub struct TestContextBuilder {
     pub search_command: Arc<dyn SearchCommand>,
     pub wrapup_stats: Arc<dyn WrapUpStatsQuery>,
     pub wrapup_repo: Arc<dyn WrapUpRepository>,
+    pub goal_repo: Arc<dyn GoalRepository>,
+    pub user_settings_repo: Arc<dyn UserSettingsRepository>,
+    pub review_logger: Arc<dyn ReviewLogger>,
+    pub social_query: Arc<dyn domain::ports::SocialQueryPort>,
     pub config: AppConfig,
 }
 
@@ -70,30 +89,34 @@ impl TestContextBuilder {
         Self {
             movie_repo: InMemoryMovieRepository::new(),
             review_repo: InMemoryReviewRepository::new(),
-            diary_repo: Arc::new(PanicDiaryRepository),
+            diary_repo: FakeDiaryRepository::new(),
             diary_exporter: Arc::new(PanicDiaryExporter),
-            document_parser: Arc::new(PanicDocumentParser),
-            stats_repo: Arc::new(PanicStatsRepository),
+            document_parser: Arc::new(FakeDocumentParser),
+            stats_repo: Arc::new(FakeStatsRepository),
             metadata_client: Arc::new(FakeMetadataClient),
-            poster_fetcher: Arc::new(PanicPosterFetcher),
+            poster_fetcher: Arc::new(FakePosterFetcher),
             object_storage: Arc::new(NoopObjectStorage),
             event_publisher: NoopEventPublisher::new(),
             auth_service: Arc::new(FakeAuthService),
             password_hasher: Arc::new(FakePasswordHasher),
             user_repo: InMemoryUserRepository::new(),
-            import_session_repo: Arc::new(PanicImportSessionRepository),
-            import_profile_repo: Arc::new(PanicImportProfileRepository),
-            movie_profile_repo: Arc::new(PanicMovieProfileRepository),
+            import_session_repo: InMemoryImportSessionRepository::new(),
+            import_profile_repo: InMemoryImportProfileRepository::new(),
+            movie_profile_repo: InMemoryMovieProfileRepository::new(),
             watchlist_repo: InMemoryWatchlistRepository::new(),
-            watch_event_repo: Arc::new(PanicWatchEventRepository),
-            webhook_token_repo: Arc::new(PanicWebhookTokenRepository),
-            profile_fields_repo: Arc::new(PanicProfileFieldsRepo),
+            watch_event_repo: InMemoryWatchEventRepository::new(),
+            webhook_token_repo: InMemoryWebhookTokenRepository::new(),
+            profile_fields_repo: InMemoryProfileFieldsRepo::new(),
             person_command: Arc::new(PanicPersonCommand),
-            person_query: Arc::new(PanicPersonQuery),
-            search_port: Arc::new(PanicSearchPort),
-            search_command: Arc::new(PanicSearchCommand),
+            person_query: Arc::new(FakePersonQuery),
+            search_port: Arc::new(FakeSearchPort),
+            search_command: Arc::new(FakeSearchCommand),
             wrapup_stats: InMemoryWrapUpStatsQuery::new(),
             wrapup_repo: InMemoryWrapUpRepository::new(),
+            goal_repo: InMemoryGoalRepository::new(),
+            user_settings_repo: InMemoryUserSettingsRepository::new(),
+            review_logger: Arc::new(NoopReviewLogger),
+            social_query: Arc::new(NoopSocialQueryPort),
             config: AppConfig {
                 allow_registration: true,
                 base_url: "http://localhost:3000".into(),
@@ -142,6 +165,96 @@ impl TestContextBuilder {
         self
     }
 
+    pub fn with_goal(mut self, r: Arc<dyn GoalRepository>) -> Self {
+        self.goal_repo = r;
+        self
+    }
+
+    pub fn with_webhook_tokens(mut self, r: Arc<dyn WebhookTokenRepository>) -> Self {
+        self.webhook_token_repo = r;
+        self
+    }
+
+    pub fn with_watch_events(mut self, r: Arc<dyn WatchEventRepository>) -> Self {
+        self.watch_event_repo = r;
+        self
+    }
+
+    pub fn with_import_sessions(mut self, r: Arc<dyn ImportSessionRepository>) -> Self {
+        self.import_session_repo = r;
+        self
+    }
+
+    pub fn with_import_profiles(mut self, r: Arc<dyn ImportProfileRepository>) -> Self {
+        self.import_profile_repo = r;
+        self
+    }
+
+    pub fn with_movie_profiles(mut self, r: Arc<dyn MovieProfileRepository>) -> Self {
+        self.movie_profile_repo = r;
+        self
+    }
+
+    pub fn with_user_settings(mut self, r: Arc<dyn UserSettingsRepository>) -> Self {
+        self.user_settings_repo = r;
+        self
+    }
+
+    pub fn with_profile_fields(mut self, r: Arc<dyn UserProfileFieldsRepository>) -> Self {
+        self.profile_fields_repo = r;
+        self
+    }
+
+    pub fn with_review_logger(mut self, r: Arc<dyn ReviewLogger>) -> Self {
+        self.review_logger = r;
+        self
+    }
+
+    pub fn with_stats(mut self, r: Arc<dyn StatsRepository>) -> Self {
+        self.stats_repo = r;
+        self
+    }
+
+    pub fn with_person_query(mut self, r: Arc<dyn PersonQuery>) -> Self {
+        self.person_query = r;
+        self
+    }
+
+    pub fn with_search_port(mut self, r: Arc<dyn SearchPort>) -> Self {
+        self.search_port = r;
+        self
+    }
+
+    pub fn with_search_command(mut self, r: Arc<dyn SearchCommand>) -> Self {
+        self.search_command = r;
+        self
+    }
+
+    pub fn with_document_parser(mut self, r: Arc<dyn DocumentParser>) -> Self {
+        self.document_parser = r;
+        self
+    }
+
+    pub fn with_poster_fetcher(mut self, r: Arc<dyn PosterFetcherClient>) -> Self {
+        self.poster_fetcher = r;
+        self
+    }
+
+    pub fn with_metadata_client(mut self, r: Arc<dyn MetadataClient>) -> Self {
+        self.metadata_client = r;
+        self
+    }
+
+    pub fn with_social_query(mut self, r: Arc<dyn domain::ports::SocialQueryPort>) -> Self {
+        self.social_query = r;
+        self
+    }
+
+    pub fn with_wrapup_repo(mut self, r: Arc<dyn WrapUpRepository>) -> Self {
+        self.wrapup_repo = r;
+        self
+    }
+
     pub fn with_config(mut self, config: AppConfig) -> Self {
         self.config = config;
         self
@@ -167,11 +280,11 @@ impl TestContextBuilder {
                 search_port: self.search_port,
                 search_command: self.search_command,
                 remote_watchlist: Arc::new(NoopRemoteWatchlistRepository),
-                social_query: Arc::new(NoopSocialQueryPort),
+                social_query: self.social_query,
                 wrapup_stats: self.wrapup_stats,
                 wrapup_repo: self.wrapup_repo,
-                goal: Arc::new(domain::testing::NoopGoalRepository),
-                user_settings: Arc::new(domain::testing::NoopUserSettingsRepository),
+                goal: self.goal_repo,
+                user_settings: self.user_settings_repo,
                 remote_goal: Arc::new(domain::testing::NoopRemoteGoalRepository),
             },
             services: Services {
@@ -183,6 +296,7 @@ impl TestContextBuilder {
                 event_publisher: self.event_publisher,
                 diary_exporter: self.diary_exporter,
                 document_parser: self.document_parser,
+                review_logger: self.review_logger,
             },
             config: self.config,
         }

@@ -190,11 +190,13 @@ make test      # cargo test
 ## Test
 
 ```bash
-cargo test           # full workspace (requires DATABASE_URL for sqlx offline checks)
-cargo test -p application   # domain-level unit tests only — no database required
+cargo test                    # full workspace (requires DATABASE_URL for sqlx offline checks)
+cargo test -p application     # business logic tests only — no database required
+cargo test -p domain          # domain model + value object tests
+cargo llvm-cov -p application -p domain   # line coverage report (requires cargo-llvm-cov)
 ```
 
-The `application` crate has unit tests for core use cases backed by in-memory fakes from `domain`'s `test-helpers` feature. These run without a database and are the fastest feedback loop for business logic changes.
+The `application` and `domain` crates have 400+ unit tests covering all use case modules (auth, diary, goals, import, integrations, movies, person, search, users, watchlist, wrapup) backed by in-memory fakes from `domain`'s `test-helpers` feature. These run without a database and are the fastest feedback loop for business logic changes.
 
 ## Docker
 

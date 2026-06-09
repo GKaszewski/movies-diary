@@ -89,3 +89,7 @@ async fn mark_duplicates(ctx: &AppContext, rows: &mut [AnnotatedRow]) -> Result<
 
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "tests/apply_mapping.rs"]
+mod tests;

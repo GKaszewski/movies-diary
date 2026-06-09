@@ -1,6 +1,15 @@
+use async_trait::async_trait;
 use uuid::Uuid;
 
+use domain::errors::DomainError;
 use domain::models::DiaryEntry;
+
+use crate::diary::commands::LogReviewCommand;
+
+#[async_trait]
+pub trait ReviewLogger: Send + Sync {
+    async fn log_review(&self, cmd: LogReviewCommand) -> Result<(), DomainError>;
+}
 
 pub struct HtmlPageContext {
     pub user_email: Option<String>,

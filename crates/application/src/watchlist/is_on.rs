@@ -10,3 +10,7 @@ pub async fn execute(ctx: &AppContext, query: IsOnWatchlistQuery) -> Result<bool
     let movie_id = MovieId::from_uuid(query.movie_id);
     ctx.repos.watchlist.contains(&user_id, &movie_id).await
 }
+
+#[cfg(test)]
+#[path = "tests/is_on.rs"]
+mod tests;

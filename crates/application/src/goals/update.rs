@@ -42,3 +42,7 @@ pub async fn execute(
         current_count,
     })
 }
+
+#[cfg(test)]
+#[path = "tests/update.rs"]
+mod tests;

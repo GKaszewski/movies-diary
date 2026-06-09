@@ -39,3 +39,7 @@ pub async fn execute(ctx: &AppContext, cmd: DismissWatchEventsCommand) -> Result
 
     Ok(count as u32)
 }
+
+#[cfg(test)]
+#[path = "tests/dismiss.rs"]
+mod tests;

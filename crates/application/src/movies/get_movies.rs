@@ -18,3 +18,7 @@ pub async fn execute(
     };
     ctx.repos.movie.list_movies(&page, &filter).await
 }
+
+#[cfg(test)]
+#[path = "tests/get_movies.rs"]
+mod tests;

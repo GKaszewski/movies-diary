@@ -39,6 +39,17 @@ impl EventPublisher for NoopEventPublisher {
     }
 }
 
+struct PanicReviewLogger;
+#[async_trait]
+impl application::ports::ReviewLogger for PanicReviewLogger {
+    async fn log_review(
+        &self,
+        _: application::diary::commands::LogReviewCommand,
+    ) -> Result<(), DomainError> {
+        panic!("review_logger not wired in tests")
+    }
+}
+
 struct PanicMeta;
 #[async_trait]
 impl MetadataClient for PanicMeta {
@@ -450,6 +461,7 @@ async fn test_app() -> Router {
                 event_publisher: Arc::new(NoopEventPublisher),
                 diary_exporter: Arc::new(PanicExporter),
                 document_parser: Arc::new(PanicDocumentParser),
+                review_logger: Arc::new(PanicReviewLogger),
             },
             config: AppConfig {
                 allow_registration: false,

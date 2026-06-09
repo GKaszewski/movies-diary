@@ -11,6 +11,7 @@ use domain::ports::{
 };
 
 use crate::config::AppConfig;
+use crate::ports::ReviewLogger;
 
 #[derive(Clone)]
 pub struct Repositories {
@@ -49,6 +50,7 @@ pub struct Services {
     pub event_publisher: Arc<dyn EventPublisher>,
     pub diary_exporter: Arc<dyn DiaryExporter>,
     pub document_parser: Arc<dyn DocumentParser>,
+    pub review_logger: Arc<dyn ReviewLogger>,
 }
 
 #[derive(Clone)]

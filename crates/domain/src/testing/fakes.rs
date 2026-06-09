@@ -8,12 +8,16 @@ use uuid::Uuid;
 use crate::{
     errors::DomainError,
     models::{
-        DiaryEntry, DiaryFilter, FeedEntry, Movie, MovieStats, Review, ReviewHistory,
+        AnnotatedRow, DiaryEntry, DiaryFilter, ExternalPersonId, FeedEntry, FieldMapping,
+        FileFormat, ImportError, ImportRow, Movie, MovieProfile, MovieStats, ParsedFile, Person,
+        PersonCredits, PersonId, Review, ReviewHistory, RowResult, SearchQuery, SearchResults,
+        UserStats, UserTrends,
         collections::{PageParams, Paginated},
     },
     ports::{
-        AuthService, DiaryRepository, FeedSortBy, FollowingFilter, GeneratedToken, MetadataClient,
-        MetadataSearchCriteria, PasswordHasher,
+        AuthService, DiaryRepository, DocumentParser, FeedSortBy, FollowingFilter, GeneratedToken,
+        MetadataClient, MetadataSearchCriteria, MovieEnrichmentClient, PasswordHasher, PersonQuery,
+        PosterFetcherClient, SearchCommand, SearchPort, StatsRepository,
     },
     value_objects::{ExternalMetadataId, MovieId, PasswordHash, PosterUrl, UserId},
 };
@@ -103,14 +107,24 @@ impl DiaryRepository for FakeDiaryRepository {
         &self,
         _filter: &DiaryFilter,
     ) -> Result<Paginated<DiaryEntry>, DomainError> {
-        unimplemented!("FakeDiaryRepository::query_diary")
+        Ok(Paginated {
+            items: vec![],
+            total_count: 0,
+            limit: 10,
+            offset: 0,
+        })
     }
 
     async fn query_activity_feed(
         &self,
         _page: &PageParams,
     ) -> Result<Paginated<FeedEntry>, DomainError> {
-        unimplemented!("FakeDiaryRepository::query_activity_feed")
+        Ok(Paginated {
+            items: vec![],
+            total_count: 0,
+            limit: 10,
+            offset: 0,
+        })
     }
 
     async fn query_activity_feed_filtered(
@@ -120,7 +134,12 @@ impl DiaryRepository for FakeDiaryRepository {
         _search: Option<&str>,
         _following: Option<&FollowingFilter>,
     ) -> Result<Paginated<FeedEntry>, DomainError> {
-        unimplemented!("FakeDiaryRepository::query_activity_feed_filtered")
+        Ok(Paginated {
+            items: vec![],
+            total_count: 0,
+            limit: 10,
+            offset: 0,
+        })
     }
 
     async fn get_review_history(&self, movie_id: &MovieId) -> Result<ReviewHistory, DomainError> {
@@ -132,11 +151,16 @@ impl DiaryRepository for FakeDiaryRepository {
     }
 
     async fn get_user_history(&self, _user_id: &UserId) -> Result<Vec<DiaryEntry>, DomainError> {
-        unimplemented!("FakeDiaryRepository::get_user_history")
+        Ok(vec![])
     }
 
     async fn get_movie_stats(&self, _movie_id: &MovieId) -> Result<MovieStats, DomainError> {
-        unimplemented!("FakeDiaryRepository::get_movie_stats")
+        Ok(MovieStats {
+            total_count: 0,
+            avg_rating: None,
+            federated_count: 0,
+            rating_histogram: [0; 5],
+        })
     }
 
     async fn get_movie_social_feed(
@@ -144,10 +168,186 @@ impl DiaryRepository for FakeDiaryRepository {
         _movie_id: &MovieId,
         _page: &PageParams,
     ) -> Result<Paginated<FeedEntry>, DomainError> {
-        unimplemented!("FakeDiaryRepository::get_movie_social_feed")
+        Ok(Paginated {
+            items: vec![],
+            total_count: 0,
+            limit: 10,
+            offset: 0,
+        })
     }
 
     async fn count_local_posts(&self) -> Result<u64, DomainError> {
-        unimplemented!("FakeDiaryRepository::count_local_posts")
+        Ok(0)
+    }
+}
+
+// ── FakeStatsRepository ─────────────────────────────────────────────────────
+
+pub struct FakeStatsRepository;
+
+#[async_trait]
+impl StatsRepository for FakeStatsRepository {
+    async fn get_user_stats(&self, _: &UserId) -> Result<UserStats, DomainError> {
+        Ok(UserStats {
+            total_movies: 0,
+            avg_rating: None,
+            favorite_director: None,
+            most_active_month: None,
+        })
+    }
+
+    async fn get_user_trends(&self, _: &UserId) -> Result<UserTrends, DomainError> {
+        Ok(UserTrends {
+            monthly_ratings: vec![],
+            top_directors: vec![],
+            max_director_count: 0,
+        })
+    }
+}
+
+// ── FakePersonQuery ─────────────────────────────────────────────────────────
+
+pub struct FakePersonQuery;
+
+#[async_trait]
+impl PersonQuery for FakePersonQuery {
+    async fn get_by_id(&self, _: &PersonId) -> Result<Option<Person>, DomainError> {
+        Ok(None)
+    }
+
+    async fn get_by_external_id(
+        &self,
+        _: &ExternalPersonId,
+    ) -> Result<Option<Person>, DomainError> {
+        Ok(None)
+    }
+
+    async fn get_credits(&self, id: &PersonId) -> Result<PersonCredits, DomainError> {
+        let dummy = Person::new(
+            id.clone(),
+            ExternalPersonId::new("tmdb:0"),
+            "Unknown".into(),
+            None,
+            None,
+        );
+        Ok(PersonCredits {
+            person: dummy,
+            cast: vec![],
+            crew: vec![],
+        })
+    }
+
+    async fn list_orphaned_persons(&self) -> Result<Vec<PersonId>, DomainError> {
+        Ok(vec![])
+    }
+
+    async fn list_page(&self, _: u32, _: u32) -> Result<Vec<Person>, DomainError> {
+        Ok(vec![])
+    }
+}
+
+// ── FakeSearchPort ──────────────────────────────────────────────────────────
+
+pub struct FakeSearchPort;
+
+#[async_trait]
+impl SearchPort for FakeSearchPort {
+    async fn search(&self, _: &SearchQuery) -> Result<SearchResults, DomainError> {
+        Ok(SearchResults {
+            movies: Paginated {
+                items: vec![],
+                total_count: 0,
+                limit: 10,
+                offset: 0,
+            },
+            people: Paginated {
+                items: vec![],
+                total_count: 0,
+                limit: 10,
+                offset: 0,
+            },
+        })
+    }
+}
+
+// ── FakeSearchCommand ───────────────────────────────────────────────────────
+
+pub struct FakeSearchCommand;
+
+#[async_trait]
+impl SearchCommand for FakeSearchCommand {
+    async fn index(&self, _: crate::models::IndexableDocument) -> Result<(), DomainError> {
+        Ok(())
+    }
+
+    async fn remove(&self, _: crate::models::EntityType, _: &str) -> Result<(), DomainError> {
+        Ok(())
+    }
+}
+
+// ── FakeDocumentParser ──────────────────────────────────────────────────────
+
+pub struct FakeDocumentParser;
+
+impl DocumentParser for FakeDocumentParser {
+    fn parse(&self, _: &[u8], _: FileFormat) -> Result<ParsedFile, ImportError> {
+        Ok(ParsedFile {
+            columns: vec!["title".into()],
+            rows: vec![vec!["Test Movie".into()]],
+        })
+    }
+
+    fn apply_mapping(&self, _: &ParsedFile, _: &[FieldMapping]) -> Vec<AnnotatedRow> {
+        vec![AnnotatedRow {
+            result: RowResult::Valid(ImportRow {
+                title: Some("Test Movie".into()),
+                ..ImportRow::default()
+            }),
+            is_duplicate: false,
+        }]
+    }
+}
+
+// ── FakePosterFetcher ───────────────────────────────────────────────────────
+
+pub struct FakePosterFetcher;
+
+#[async_trait]
+impl PosterFetcherClient for FakePosterFetcher {
+    async fn fetch_poster_bytes(&self, _: &PosterUrl) -> Result<Vec<u8>, DomainError> {
+        Ok(vec![1, 2, 3])
+    }
+}
+
+// ── FakeMovieEnrichmentClient ───────────────────────────────────────────────
+
+pub struct FakeMovieEnrichmentClient;
+
+#[async_trait]
+impl MovieEnrichmentClient for FakeMovieEnrichmentClient {
+    async fn fetch_profile(
+        &self,
+        movie_id: MovieId,
+        _external_metadata_id: &str,
+    ) -> Result<MovieProfile, DomainError> {
+        Ok(MovieProfile {
+            movie_id,
+            tmdb_id: 0,
+            imdb_id: None,
+            overview: None,
+            tagline: None,
+            runtime_minutes: None,
+            budget_usd: None,
+            revenue_usd: None,
+            vote_average: None,
+            vote_count: None,
+            original_language: None,
+            collection_name: None,
+            genres: vec![],
+            keywords: vec![],
+            cast: vec![],
+            crew: vec![],
+            enriched_at: Utc::now(),
+        })
     }
 }

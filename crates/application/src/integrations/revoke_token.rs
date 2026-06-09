@@ -10,3 +10,7 @@ pub async fn execute(ctx: &AppContext, cmd: RevokeWebhookTokenCommand) -> Result
     let token_id = WebhookTokenId::from_uuid(cmd.token_id);
     ctx.repos.webhook_token.delete(&token_id, &user_id).await
 }
+
+#[cfg(test)]
+#[path = "tests/revoke_token.rs"]
+mod tests;

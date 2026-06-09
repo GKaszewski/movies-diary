@@ -33,3 +33,7 @@ pub async fn execute(
     ctx.repos.import_profile.save(&profile).await?;
     Ok(id)
 }
+
+#[cfg(test)]
+#[path = "tests/save_profile.rs"]
+mod tests;

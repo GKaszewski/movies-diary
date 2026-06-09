@@ -10,3 +10,7 @@ pub async fn execute(ctx: &AppContext) -> Result<u64, DomainError> {
         .delete_non_pending_older_than(cutoff)
         .await
 }
+
+#[cfg(test)]
+#[path = "tests/cleanup.rs"]
+mod tests;

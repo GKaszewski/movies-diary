@@ -27,3 +27,7 @@ pub async fn execute(ctx: &AppContext, cmd: ApplyImportProfileCommand) -> Result
     session.row_results = None;
     ctx.repos.import_session.update(&session).await
 }
+
+#[cfg(test)]
+#[path = "tests/apply_profile.rs"]
+mod tests;

@@ -59,3 +59,7 @@ pub async fn execute(
         }
     }
 }
+
+#[cfg(test)]
+#[path = "tests/handle_requested.rs"]
+mod tests;

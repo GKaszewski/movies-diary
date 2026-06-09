@@ -64,3 +64,7 @@ async fn build_following_filter(
         remote_actor_urls: remote_urls,
     })
 }
+
+#[cfg(test)]
+#[path = "tests/get_activity_feed.rs"]
+mod tests;

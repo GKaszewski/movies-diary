@@ -20,3 +20,7 @@ pub async fn execute(
         remote_actors: actors_result?,
     })
 }
+
+#[cfg(test)]
+#[path = "tests/get_users.rs"]
+mod tests;

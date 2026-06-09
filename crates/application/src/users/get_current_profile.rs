@@ -57,3 +57,7 @@ pub async fn execute(
         role: user.role().as_str().into(),
     })
 }
+
+#[cfg(test)]
+#[path = "tests/get_current_profile.rs"]
+mod tests;

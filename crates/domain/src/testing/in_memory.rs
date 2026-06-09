@@ -4,17 +4,25 @@ use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use uuid::Uuid;
 
+use chrono::NaiveDateTime;
+
 use crate::{
     errors::DomainError,
     events::DomainEvent,
     models::{
-        Movie, MovieFilter, MovieSummary, Review, User, UserSummary, WatchlistEntry,
-        WatchlistWithMovie,
+        Goal, ImportProfile, ImportSession, Movie, MovieFilter, MovieProfile, MovieSummary,
+        ProfileField, Review, User, UserSettings, UserSummary, WatchEvent, WatchEventStatus,
+        WatchlistEntry, WatchlistWithMovie, WebhookToken,
         collections::{PageParams, Paginated},
     },
-    ports::{MovieRepository, ReviewRepository, UserRepository, WatchlistRepository},
+    ports::{
+        GoalRepository, ImportProfileRepository, ImportSessionRepository, MovieProfileRepository,
+        MovieRepository, ReviewRepository, UserProfileFieldsRepository, UserRepository,
+        UserSettingsRepository, WatchEventRepository, WatchlistRepository, WebhookTokenRepository,
+    },
     value_objects::{
-        Email, ExternalMetadataId, MovieId, MovieTitle, ReleaseYear, ReviewId, UserId, Username,
+        Email, ExternalMetadataId, GoalId, ImportProfileId, ImportSessionId, MovieId, MovieTitle,
+        ReleaseYear, ReviewId, UserId, Username, WatchEventId, WebhookTokenId,
     },
 };
 
@@ -308,5 +316,464 @@ impl WatchlistRepository for InMemoryWatchlistRepository {
     async fn contains(&self, user_id: &UserId, movie_id: &MovieId) -> Result<bool, DomainError> {
         let key = (user_id.value(), movie_id.value());
         Ok(self.store.lock().unwrap().contains_key(&key))
+    }
+}
+
+// ── InMemoryGoalRepository ──────────────────────────────────────────────────
+
+pub struct InMemoryGoalRepository {
+    store: Mutex<HashMap<Uuid, Goal>>,
+    review_counts: Mutex<HashMap<(Uuid, u16), u32>>,
+}
+
+impl InMemoryGoalRepository {
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self {
+            store: Mutex::new(HashMap::new()),
+            review_counts: Mutex::new(HashMap::new()),
+        })
+    }
+
+    pub fn count(&self) -> usize {
+        self.store.lock().unwrap().len()
+    }
+
+    pub fn set_review_count(&self, user_id: Uuid, year: u16, count: u32) {
+        self.review_counts
+            .lock()
+            .unwrap()
+            .insert((user_id, year), count);
+    }
+}
+
+#[async_trait]
+impl GoalRepository for InMemoryGoalRepository {
+    async fn save(&self, goal: &Goal) -> Result<(), DomainError> {
+        self.store
+            .lock()
+            .unwrap()
+            .insert(goal.id().value(), goal.clone());
+        Ok(())
+    }
+
+    async fn update(&self, goal: &Goal) -> Result<(), DomainError> {
+        let mut store = self.store.lock().unwrap();
+        match store.entry(goal.id().value()) {
+            std::collections::hash_map::Entry::Occupied(mut e) => {
+                e.insert(goal.clone());
+                Ok(())
+            }
+            std::collections::hash_map::Entry::Vacant(_) => {
+                Err(DomainError::NotFound("goal".into()))
+            }
+        }
+    }
+
+    async fn delete(&self, id: &GoalId, _user_id: &UserId) -> Result<(), DomainError> {
+        self.store.lock().unwrap().remove(&id.value());
+        Ok(())
+    }
+
+    async fn find_by_user_and_year(
+        &self,
+        user_id: &UserId,
+        year: u16,
+    ) -> Result<Option<Goal>, DomainError> {
+        let store = self.store.lock().unwrap();
+        Ok(store
+            .values()
+            .find(|g| g.user_id().value() == user_id.value() && g.year() == year)
+            .cloned())
+    }
+
+    async fn list_for_user(&self, user_id: &UserId) -> Result<Vec<Goal>, DomainError> {
+        let store = self.store.lock().unwrap();
+        Ok(store
+            .values()
+            .filter(|g| g.user_id().value() == user_id.value())
+            .cloned()
+            .collect())
+    }
+
+    async fn count_reviews_in_year(&self, user_id: &UserId, year: u16) -> Result<u32, DomainError> {
+        let counts = self.review_counts.lock().unwrap();
+        Ok(counts.get(&(user_id.value(), year)).copied().unwrap_or(0))
+    }
+}
+
+// ── InMemoryUserSettingsRepository ──────────────────────────────────────────
+
+pub struct InMemoryUserSettingsRepository {
+    store: Mutex<HashMap<Uuid, UserSettings>>,
+}
+
+impl InMemoryUserSettingsRepository {
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self {
+            store: Mutex::new(HashMap::new()),
+        })
+    }
+
+    pub fn count(&self) -> usize {
+        self.store.lock().unwrap().len()
+    }
+}
+
+#[async_trait]
+impl UserSettingsRepository for InMemoryUserSettingsRepository {
+    async fn get(&self, user_id: &UserId) -> Result<UserSettings, DomainError> {
+        let store = self.store.lock().unwrap();
+        Ok(store
+            .get(&user_id.value())
+            .cloned()
+            .unwrap_or_else(|| UserSettings::new(user_id.clone())))
+    }
+
+    async fn save(&self, settings: &UserSettings) -> Result<(), DomainError> {
+        self.store
+            .lock()
+            .unwrap()
+            .insert(settings.user_id().value(), settings.clone());
+        Ok(())
+    }
+}
+
+// ── InMemoryWebhookTokenRepository ──────────────────────────────────────────
+
+pub struct InMemoryWebhookTokenRepository {
+    store: Mutex<Vec<WebhookToken>>,
+}
+
+impl InMemoryWebhookTokenRepository {
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self {
+            store: Mutex::new(Vec::new()),
+        })
+    }
+
+    pub fn count(&self) -> usize {
+        self.store.lock().unwrap().len()
+    }
+}
+
+#[async_trait]
+impl WebhookTokenRepository for InMemoryWebhookTokenRepository {
+    async fn save(&self, token: &WebhookToken) -> Result<(), DomainError> {
+        self.store.lock().unwrap().push(token.clone());
+        Ok(())
+    }
+
+    async fn find_by_token_hash(&self, hash: &str) -> Result<Option<WebhookToken>, DomainError> {
+        let store = self.store.lock().unwrap();
+        Ok(store.iter().find(|t| t.token_hash() == hash).cloned())
+    }
+
+    async fn list_by_user(&self, user_id: &UserId) -> Result<Vec<WebhookToken>, DomainError> {
+        let store = self.store.lock().unwrap();
+        Ok(store
+            .iter()
+            .filter(|t| t.user_id().value() == user_id.value())
+            .cloned()
+            .collect())
+    }
+
+    async fn delete(&self, id: &WebhookTokenId, _user_id: &UserId) -> Result<(), DomainError> {
+        self.store
+            .lock()
+            .unwrap()
+            .retain(|t| t.id().value() != id.value());
+        Ok(())
+    }
+
+    async fn touch_last_used(&self, _id: &WebhookTokenId) -> Result<(), DomainError> {
+        Ok(())
+    }
+}
+
+// ── InMemoryWatchEventRepository ────────────────────────────────────────────
+
+pub struct InMemoryWatchEventRepository {
+    store: Mutex<Vec<WatchEvent>>,
+}
+
+impl InMemoryWatchEventRepository {
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self {
+            store: Mutex::new(Vec::new()),
+        })
+    }
+
+    pub fn count(&self) -> usize {
+        self.store.lock().unwrap().len()
+    }
+}
+
+#[async_trait]
+impl WatchEventRepository for InMemoryWatchEventRepository {
+    async fn save(&self, event: &WatchEvent) -> Result<(), DomainError> {
+        self.store.lock().unwrap().push(event.clone());
+        Ok(())
+    }
+
+    async fn update_status(
+        &self,
+        _id: &WatchEventId,
+        _status: WatchEventStatus,
+    ) -> Result<(), DomainError> {
+        Ok(())
+    }
+
+    async fn list_pending(&self, user_id: &UserId) -> Result<Vec<WatchEvent>, DomainError> {
+        let store = self.store.lock().unwrap();
+        Ok(store
+            .iter()
+            .filter(|e| {
+                e.user_id().value() == user_id.value() && *e.status() == WatchEventStatus::Pending
+            })
+            .cloned()
+            .collect())
+    }
+
+    async fn get_by_id(&self, id: &WatchEventId) -> Result<Option<WatchEvent>, DomainError> {
+        let store = self.store.lock().unwrap();
+        Ok(store.iter().find(|e| e.id().value() == id.value()).cloned())
+    }
+
+    async fn get_by_ids(&self, ids: &[WatchEventId]) -> Result<Vec<WatchEvent>, DomainError> {
+        let id_vals: Vec<Uuid> = ids.iter().map(|id| id.value()).collect();
+        let store = self.store.lock().unwrap();
+        Ok(store
+            .iter()
+            .filter(|e| id_vals.contains(&e.id().value()))
+            .cloned()
+            .collect())
+    }
+
+    async fn update_status_batch(
+        &self,
+        ids: &[WatchEventId],
+        _status: WatchEventStatus,
+    ) -> Result<u64, DomainError> {
+        Ok(ids.len() as u64)
+    }
+
+    async fn find_duplicate(
+        &self,
+        user_id: &UserId,
+        external_id: &str,
+        after: NaiveDateTime,
+    ) -> Result<bool, DomainError> {
+        let store = self.store.lock().unwrap();
+        Ok(store.iter().any(|e| {
+            e.user_id().value() == user_id.value()
+                && e.external_metadata_id() == Some(external_id)
+                && *e.watched_at() > after
+        }))
+    }
+
+    async fn delete_non_pending_older_than(
+        &self,
+        before: NaiveDateTime,
+    ) -> Result<u64, DomainError> {
+        let mut store = self.store.lock().unwrap();
+        let before_len = store.len();
+        store.retain(|e| *e.status() == WatchEventStatus::Pending || *e.created_at() >= before);
+        Ok((before_len - store.len()) as u64)
+    }
+}
+
+// ── InMemoryImportSessionRepository ─────────────────────────────────────────
+
+pub struct InMemoryImportSessionRepository {
+    store: Mutex<HashMap<Uuid, ImportSession>>,
+}
+
+impl InMemoryImportSessionRepository {
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self {
+            store: Mutex::new(HashMap::new()),
+        })
+    }
+
+    pub fn count(&self) -> usize {
+        self.store.lock().unwrap().len()
+    }
+}
+
+#[async_trait]
+impl ImportSessionRepository for InMemoryImportSessionRepository {
+    async fn create(&self, session: &ImportSession) -> Result<(), DomainError> {
+        self.store
+            .lock()
+            .unwrap()
+            .insert(session.id.value(), session.clone());
+        Ok(())
+    }
+
+    async fn get(
+        &self,
+        id: &ImportSessionId,
+        user_id: &UserId,
+    ) -> Result<Option<ImportSession>, DomainError> {
+        let store = self.store.lock().unwrap();
+        Ok(store
+            .get(&id.value())
+            .filter(|s| s.user_id.value() == user_id.value())
+            .cloned())
+    }
+
+    async fn update(&self, session: &ImportSession) -> Result<(), DomainError> {
+        self.store
+            .lock()
+            .unwrap()
+            .insert(session.id.value(), session.clone());
+        Ok(())
+    }
+
+    async fn delete(&self, id: &ImportSessionId) -> Result<(), DomainError> {
+        self.store.lock().unwrap().remove(&id.value());
+        Ok(())
+    }
+
+    async fn delete_expired(&self) -> Result<u64, DomainError> {
+        let mut store = self.store.lock().unwrap();
+        let now = chrono::Utc::now().naive_utc();
+        let before_len = store.len();
+        store.retain(|_, s| s.expires_at > now);
+        Ok((before_len - store.len()) as u64)
+    }
+
+    async fn delete_expired_for_user(&self, user_id: &UserId) -> Result<(), DomainError> {
+        let mut store = self.store.lock().unwrap();
+        let now = chrono::Utc::now().naive_utc();
+        store.retain(|_, s| !(s.user_id.value() == user_id.value() && s.expires_at <= now));
+        Ok(())
+    }
+}
+
+// ── InMemoryImportProfileRepository ─────────────────────────────────────────
+
+pub struct InMemoryImportProfileRepository {
+    store: Mutex<HashMap<Uuid, ImportProfile>>,
+}
+
+impl InMemoryImportProfileRepository {
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self {
+            store: Mutex::new(HashMap::new()),
+        })
+    }
+
+    pub fn count(&self) -> usize {
+        self.store.lock().unwrap().len()
+    }
+}
+
+#[async_trait]
+impl ImportProfileRepository for InMemoryImportProfileRepository {
+    async fn save(&self, profile: &ImportProfile) -> Result<(), DomainError> {
+        self.store
+            .lock()
+            .unwrap()
+            .insert(profile.id.value(), profile.clone());
+        Ok(())
+    }
+
+    async fn list_for_user(&self, user_id: &UserId) -> Result<Vec<ImportProfile>, DomainError> {
+        let store = self.store.lock().unwrap();
+        Ok(store
+            .values()
+            .filter(|p| p.user_id.value() == user_id.value())
+            .cloned()
+            .collect())
+    }
+
+    async fn get(
+        &self,
+        id: &ImportProfileId,
+        user_id: &UserId,
+    ) -> Result<Option<ImportProfile>, DomainError> {
+        let store = self.store.lock().unwrap();
+        Ok(store
+            .get(&id.value())
+            .filter(|p| p.user_id.value() == user_id.value())
+            .cloned())
+    }
+
+    async fn delete(&self, id: &ImportProfileId) -> Result<(), DomainError> {
+        self.store.lock().unwrap().remove(&id.value());
+        Ok(())
+    }
+}
+
+// ── InMemoryMovieProfileRepository ──────────────────────────────────────────
+
+pub struct InMemoryMovieProfileRepository {
+    store: Mutex<HashMap<Uuid, MovieProfile>>,
+}
+
+impl InMemoryMovieProfileRepository {
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self {
+            store: Mutex::new(HashMap::new()),
+        })
+    }
+
+    pub fn count(&self) -> usize {
+        self.store.lock().unwrap().len()
+    }
+}
+
+#[async_trait]
+impl MovieProfileRepository for InMemoryMovieProfileRepository {
+    async fn upsert(&self, profile: &MovieProfile) -> Result<(), DomainError> {
+        self.store
+            .lock()
+            .unwrap()
+            .insert(profile.movie_id.value(), profile.clone());
+        Ok(())
+    }
+
+    async fn get_by_movie_id(&self, id: &MovieId) -> Result<Option<MovieProfile>, DomainError> {
+        Ok(self.store.lock().unwrap().get(&id.value()).cloned())
+    }
+
+    async fn list_stale(&self) -> Result<Vec<(MovieId, String)>, DomainError> {
+        Ok(vec![])
+    }
+}
+
+// ── InMemoryProfileFieldsRepo ───────────────────────────────────────────────
+
+pub struct InMemoryProfileFieldsRepo {
+    store: Mutex<HashMap<Uuid, Vec<ProfileField>>>,
+}
+
+impl InMemoryProfileFieldsRepo {
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self {
+            store: Mutex::new(HashMap::new()),
+        })
+    }
+
+    pub fn count(&self) -> usize {
+        self.store.lock().unwrap().len()
+    }
+}
+
+#[async_trait]
+impl UserProfileFieldsRepository for InMemoryProfileFieldsRepo {
+    async fn get_fields(&self, user_id: &UserId) -> Result<Vec<ProfileField>, DomainError> {
+        let store = self.store.lock().unwrap();
+        Ok(store.get(&user_id.value()).cloned().unwrap_or_default())
+    }
+
+    async fn set_fields(
+        &self,
+        user_id: &UserId,
+        fields: Vec<ProfileField>,
+    ) -> Result<(), DomainError> {
+        self.store.lock().unwrap().insert(user_id.value(), fields);
+        Ok(())
     }
 }

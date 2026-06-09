@@ -92,3 +92,7 @@ fn extract_persons(cast: &[CastMember], crew: &[CrewMember]) -> Vec<Person> {
 
     seen.into_values().collect()
 }
+
+#[cfg(test)]
+#[path = "tests/enrich_movie.rs"]
+mod tests;

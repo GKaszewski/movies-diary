@@ -25,3 +25,7 @@ pub async fn execute(
 
     Ok(result)
 }
+
+#[cfg(test)]
+#[path = "tests/list.rs"]
+mod tests;

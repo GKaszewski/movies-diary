@@ -13,8 +13,29 @@ use domain::testing::{InMemoryMovieRepository, InMemoryReviewRepository, NoopEve
 use crate::{
     diary::commands::{LogReviewCommand, MovieInput},
     diary::log_review,
+    diary::review_logger::DefaultReviewLogger,
     test_helpers::TestContextBuilder,
 };
+
+fn build_ctx_with_real_logger(
+    movies: &Arc<InMemoryMovieRepository>,
+    reviews: &Arc<InMemoryReviewRepository>,
+    events: &Arc<NoopEventPublisher>,
+) -> crate::context::AppContext {
+    let logger = Arc::new(DefaultReviewLogger::new(
+        Arc::clone(movies) as _,
+        Arc::clone(reviews) as _,
+        crate::test_helpers::TestContextBuilder::new().watchlist_repo,
+        Arc::new(domain::testing::FakeMetadataClient) as _,
+        Arc::clone(events) as _,
+    ));
+    TestContextBuilder::new()
+        .with_movies(Arc::clone(movies) as _)
+        .with_reviews(Arc::clone(reviews) as _)
+        .with_event_publisher(Arc::clone(events) as _)
+        .with_review_logger(logger)
+        .build()
+}
 
 fn movie_input_manual(title: &str, year: u16) -> MovieInput {
     MovieInput {
@@ -41,11 +62,7 @@ async fn test_log_review_creates_movie_and_review() {
     let movies = InMemoryMovieRepository::new();
     let reviews = InMemoryReviewRepository::new();
     let events = NoopEventPublisher::new();
-    let ctx = TestContextBuilder::new()
-        .with_movies(Arc::clone(&movies) as _)
-        .with_reviews(Arc::clone(&reviews) as _)
-        .with_event_publisher(Arc::clone(&events) as _)
-        .build();
+    let ctx = build_ctx_with_real_logger(&movies, &reviews, &events);
 
     let user_id = uuid::Uuid::new_v4();
     let cmd = LogReviewCommand {
@@ -77,10 +94,8 @@ async fn test_log_review_reuses_existing_movie() {
     let movie_uuid = existing_movie.id().value();
     movies.upsert_movie(&existing_movie).await.unwrap();
 
-    let ctx = TestContextBuilder::new()
-        .with_movies(Arc::clone(&movies) as _)
-        .with_reviews(Arc::clone(&reviews) as _)
-        .build();
+    let events = NoopEventPublisher::new();
+    let ctx = build_ctx_with_real_logger(&movies, &reviews, &events);
 
     let cmd = LogReviewCommand {
         user_id: uuid::Uuid::new_v4(),
@@ -98,7 +113,10 @@ async fn test_log_review_reuses_existing_movie() {
 
 #[tokio::test]
 async fn test_log_review_with_invalid_rating_fails() {
-    let ctx = TestContextBuilder::new().build();
+    let movies = InMemoryMovieRepository::new();
+    let reviews = InMemoryReviewRepository::new();
+    let events = NoopEventPublisher::new();
+    let ctx = build_ctx_with_real_logger(&movies, &reviews, &events);
     let cmd = LogReviewCommand {
         user_id: uuid::Uuid::new_v4(),
         input: movie_input_manual("Some Film", 2000),

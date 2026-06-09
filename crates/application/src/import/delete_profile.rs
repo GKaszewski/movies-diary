@@ -15,3 +15,7 @@ pub async fn execute(ctx: &AppContext, cmd: DeleteImportProfileCommand) -> Resul
         .ok_or_else(|| DomainError::NotFound("import profile".into()))?;
     ctx.repos.import_profile.delete(&profile_id).await
 }
+
+#[cfg(test)]
+#[path = "tests/delete_profile.rs"]
+mod tests;

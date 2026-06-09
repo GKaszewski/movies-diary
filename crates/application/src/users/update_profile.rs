@@ -90,3 +90,7 @@ pub async fn execute(ctx: &AppContext, cmd: UpdateProfileCommand) -> Result<(), 
 
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "tests/update_profile.rs"]
+mod tests;

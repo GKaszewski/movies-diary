@@ -8,3 +8,4 @@ pub mod get_review_history;
 pub mod log_review;
 pub mod movie_resolver;
 pub mod queries;
+pub mod review_logger;

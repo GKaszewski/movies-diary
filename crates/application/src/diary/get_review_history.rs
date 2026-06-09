@@ -21,3 +21,7 @@ pub async fn execute(
 
     Ok((history, trend))
 }
+
+#[cfg(test)]
+#[path = "tests/get_review_history.rs"]
+mod tests;

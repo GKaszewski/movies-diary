@@ -9,7 +9,6 @@ use uuid::Uuid;
 use crate::{
     context::AppContext,
     diary::commands::{LogReviewCommand, MovieInput},
-    diary::log_review,
     import::commands::ExecuteImportCommand,
 };
 
@@ -47,7 +46,7 @@ pub async fn execute(
         }
         match annotated.result {
             RowResult::Valid(row) => match row_to_command(&row, user_id.value()) {
-                Ok(cmd) => match log_review::execute(ctx, cmd).await {
+                Ok(cmd) => match ctx.services.review_logger.log_review(cmd).await {
                     Ok(_) => imported += 1,
                     Err(e) => failed.push((idx, e.to_string())),
                 },
@@ -67,6 +66,10 @@ pub async fn execute(
         failed,
     })
 }
+
+#[cfg(test)]
+#[path = "tests/execute.rs"]
+mod tests;
 
 fn row_to_command(row: &ImportRow, user_id: Uuid) -> Result<LogReviewCommand, String> {
     let rating = row

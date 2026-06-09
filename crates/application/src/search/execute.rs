@@ -7,3 +7,7 @@ use domain::{
 pub async fn execute(ctx: &AppContext, query: SearchQuery) -> Result<SearchResults, DomainError> {
     ctx.repos.search_port.search(&query).await
 }
+
+#[cfg(test)]
+#[path = "tests/execute.rs"]
+mod tests;

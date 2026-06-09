@@ -96,3 +96,7 @@ pub async fn execute(ctx: &AppContext, cmd: SyncPosterCommand) -> Result<(), Dom
 
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "tests/sync_poster.rs"]
+mod tests;

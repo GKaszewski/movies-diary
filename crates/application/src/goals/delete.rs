@@ -26,3 +26,7 @@ pub async fn execute(ctx: &AppContext, cmd: DeleteGoalCommand) -> Result<(), Dom
 
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "tests/delete.rs"]
+mod tests;

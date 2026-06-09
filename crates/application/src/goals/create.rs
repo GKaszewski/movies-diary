@@ -54,3 +54,7 @@ pub async fn execute(
         current_count,
     })
 }
+
+#[cfg(test)]
+#[path = "tests/create.rs"]
+mod tests;

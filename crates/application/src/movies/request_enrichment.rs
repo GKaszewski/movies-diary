@@ -42,3 +42,7 @@ pub async fn fetch_if_stale(
         Err(e) => Err(e),
     }
 }
+
+#[cfg(test)]
+#[path = "tests/request_enrichment.rs"]
+mod tests;

@@ -9,3 +9,7 @@ pub async fn execute(
     let user_id = UserId::from_uuid(query.user_id);
     ctx.repos.webhook_token.list_by_user(&user_id).await
 }
+
+#[cfg(test)]
+#[path = "tests/get_tokens.rs"]
+mod tests;

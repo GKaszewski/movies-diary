@@ -36,3 +36,7 @@ pub fn hash_token(plaintext: &str) -> String {
     hasher.update(plaintext.as_bytes());
     hex::encode(hasher.finalize())
 }
+
+#[cfg(test)]
+#[path = "tests/generate_token.rs"]
+mod tests;

@@ -168,6 +168,14 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
     #[cfg(not(feature = "federation"))]
     let ap_router = axum::Router::new();
 
+    let review_logger = Arc::new(application::diary::review_logger::DefaultReviewLogger::new(
+        Arc::clone(&db.movie),
+        Arc::clone(&db.review),
+        Arc::clone(&db.watchlist),
+        Arc::clone(&metadata_client),
+        Arc::clone(&event_publisher_arc),
+    ));
+
     let app_ctx = AppContext {
         repos: Repositories {
             movie: db.movie,
@@ -209,6 +217,7 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
             event_publisher: event_publisher_arc,
             diary_exporter: Arc::new(ExportAdapter) as Arc<dyn DiaryExporter>,
             document_parser: Arc::new(ImporterDocumentParser) as Arc<dyn DocumentParser>,
+            review_logger,
         },
         config: app_config,
     };

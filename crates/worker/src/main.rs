@@ -66,6 +66,14 @@ async fn main() -> anyhow::Result<()> {
         db::DbPool::Postgres(pool) => postgres_federation::wire(pool.clone()),
     };
 
+    let review_logger = Arc::new(application::diary::review_logger::DefaultReviewLogger::new(
+        Arc::clone(&db.movie),
+        Arc::clone(&db.review),
+        Arc::clone(&db.watchlist),
+        Arc::clone(&metadata_client),
+        Arc::clone(&event_publisher_arc),
+    ));
+
     let ctx = AppContext {
         repos: Repositories {
             movie: db.movie,
@@ -107,6 +115,7 @@ async fn main() -> anyhow::Result<()> {
             event_publisher: event_publisher_arc,
             diary_exporter: Arc::new(ExportAdapter) as Arc<dyn DiaryExporter>,
             document_parser: Arc::new(ImporterDocumentParser) as Arc<dyn DocumentParser>,
+            review_logger,
         },
         config: app_config,
     };

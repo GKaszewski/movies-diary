@@ -1,0 +1,115 @@
+use std::sync::Arc;
+
+use domain::models::{ProfileField, User, UserProfile, UserRole};
+use domain::ports::UserRepository;
+use domain::testing::InMemoryUserRepository;
+use domain::value_objects::{Email, PasswordHash, UserId, Username};
+use uuid::Uuid;
+
+use crate::{
+    auth::{commands::RegisterCommand, register},
+    test_helpers::TestContextBuilder,
+    users::{get_current_profile, queries::GetCurrentProfileQuery},
+};
+
+#[tokio::test]
+async fn returns_profile_for_existing_user() {
+    let users = InMemoryUserRepository::new();
+    let ctx = TestContextBuilder::new()
+        .with_users(Arc::clone(&users) as _)
+        .build();
+
+    register::execute(
+        &ctx,
+        RegisterCommand {
+            email: "alice@example.com".into(),
+            username: "alice".into(),
+            password: "password123".into(),
+            role: UserRole::Standard,
+        },
+    )
+    .await
+    .unwrap();
+
+    let user = users
+        .find_by_email(&domain::value_objects::Email::new("alice@example.com".into()).unwrap())
+        .await
+        .unwrap()
+        .unwrap();
+
+    let profile = get_current_profile::execute(
+        &ctx,
+        GetCurrentProfileQuery {
+            user_id: user.id().value(),
+        },
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(profile.username, "alice");
+}
+
+#[tokio::test]
+async fn fails_for_nonexistent_user() {
+    let ctx = TestContextBuilder::new().build();
+
+    let result = get_current_profile::execute(
+        &ctx,
+        GetCurrentProfileQuery {
+            user_id: Uuid::new_v4(),
+        },
+    )
+    .await;
+
+    assert!(result.is_err());
+}
+
+#[tokio::test]
+async fn returns_profile_with_avatar_banner_and_fields() {
+    let users = InMemoryUserRepository::new();
+    let uid = UserId::generate();
+
+    let user = User::from_persistence(
+        uid.clone(),
+        Email::new("full@example.com".into()).unwrap(),
+        Username::new("fulluser".into()).unwrap(),
+        PasswordHash::new("hashed".into()).unwrap(),
+        UserRole::Standard,
+        UserProfile {
+            display_name: Some("Full Name".into()),
+            bio: Some("My bio".into()),
+            avatar_path: Some("avatars/abc123".into()),
+            banner_path: Some("banners/def456".into()),
+            also_known_as: None,
+            profile_fields: vec![ProfileField {
+                name: "Website".into(),
+                value: "https://example.com".into(),
+            }],
+        },
+    );
+    users.store.lock().unwrap().insert(uid.value(), user);
+
+    let ctx = TestContextBuilder::new()
+        .with_users(Arc::clone(&users) as _)
+        .build();
+
+    let profile = get_current_profile::execute(
+        &ctx,
+        GetCurrentProfileQuery {
+            user_id: uid.value(),
+        },
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(profile.username, "fulluser");
+    assert_eq!(profile.display_name.as_deref(), Some("Full Name"));
+    assert_eq!(profile.bio.as_deref(), Some("My bio"));
+    assert!(profile.avatar_url.is_some());
+    assert!(profile.avatar_url.unwrap().contains("avatars/abc123"));
+    assert!(profile.banner_url.is_some());
+    assert!(profile.banner_url.unwrap().contains("banners/def456"));
+    assert_eq!(profile.fields.len(), 1);
+    assert_eq!(profile.fields[0].name, "Website");
+    assert_eq!(profile.fields[0].value, "https://example.com");
+}

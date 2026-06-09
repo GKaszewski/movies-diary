@@ -183,3 +183,139 @@ fn format_year_month_long(ym: &str) -> String {
     };
     format!("{} {}", month, parts[0])
 }
+
+#[cfg(test)]
+#[path = "tests/get_profile.rs"]
+mod tests;
+
+#[cfg(test)]
+mod helper_tests {
+    use super::*;
+
+    #[test]
+    fn format_year_month_long_all_months() {
+        assert_eq!(format_year_month_long("2024-01"), "January 2024");
+        assert_eq!(format_year_month_long("2024-02"), "February 2024");
+        assert_eq!(format_year_month_long("2024-03"), "March 2024");
+        assert_eq!(format_year_month_long("2024-04"), "April 2024");
+        assert_eq!(format_year_month_long("2024-05"), "May 2024");
+        assert_eq!(format_year_month_long("2024-06"), "June 2024");
+        assert_eq!(format_year_month_long("2024-07"), "July 2024");
+        assert_eq!(format_year_month_long("2024-08"), "August 2024");
+        assert_eq!(format_year_month_long("2024-09"), "September 2024");
+        assert_eq!(format_year_month_long("2024-10"), "October 2024");
+        assert_eq!(format_year_month_long("2024-11"), "November 2024");
+        assert_eq!(format_year_month_long("2024-12"), "December 2024");
+    }
+
+    #[test]
+    fn format_year_month_long_invalid() {
+        assert_eq!(format_year_month_long("invalid"), "invalid");
+        assert_eq!(format_year_month_long("2024-99"), "99 2024");
+    }
+
+    #[test]
+    fn feed_sort_to_direction_all_variants() {
+        use domain::ports::FeedSortBy;
+        assert!(matches!(
+            feed_sort_to_direction(FeedSortBy::Date),
+            SortDirection::Descending
+        ));
+        assert!(matches!(
+            feed_sort_to_direction(FeedSortBy::DateAsc),
+            SortDirection::Ascending
+        ));
+        assert!(matches!(
+            feed_sort_to_direction(FeedSortBy::Rating),
+            SortDirection::ByRatingDesc
+        ));
+        assert!(matches!(
+            feed_sort_to_direction(FeedSortBy::RatingAsc),
+            SortDirection::ByRatingAsc
+        ));
+    }
+
+    #[test]
+    fn group_by_month_empty() {
+        assert!(group_by_month(vec![]).is_empty());
+    }
+
+    #[test]
+    fn group_by_month_groups_entries() {
+        use chrono::NaiveDateTime;
+        use domain::models::{Movie, Review};
+        use domain::value_objects::{MovieId, MovieTitle, Rating, ReleaseYear, UserId};
+
+        let movie = Movie::from_persistence(
+            MovieId::generate(),
+            None,
+            MovieTitle::new("Test".into()).unwrap(),
+            ReleaseYear::new(2024).unwrap(),
+            None,
+            None,
+        );
+        let uid = UserId::from_uuid(uuid::Uuid::new_v4());
+
+        let jan =
+            NaiveDateTime::parse_from_str("2024-01-15 10:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let jan2 =
+            NaiveDateTime::parse_from_str("2024-01-20 10:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let mar =
+            NaiveDateTime::parse_from_str("2024-03-05 10:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+
+        let r1 = Review::new(
+            movie.id().clone(),
+            uid.clone(),
+            Rating::new(4).unwrap(),
+            None,
+            jan,
+        )
+        .unwrap();
+        let r2 = Review::new(
+            movie.id().clone(),
+            uid.clone(),
+            Rating::new(3).unwrap(),
+            None,
+            jan2,
+        )
+        .unwrap();
+        let r3 = Review::new(
+            movie.id().clone(),
+            uid.clone(),
+            Rating::new(5).unwrap(),
+            None,
+            mar,
+        )
+        .unwrap();
+
+        let entries = vec![
+            DiaryEntry::new(movie.clone(), r1),
+            DiaryEntry::new(movie.clone(), r2),
+            DiaryEntry::new(movie.clone(), r3),
+        ];
+
+        let result = group_by_month(entries);
+        // Reversed: March first, then January
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0].month_label, "March 2024");
+        assert_eq!(result[0].count, 1);
+        assert_eq!(result[1].month_label, "January 2024");
+        assert_eq!(result[1].count, 2);
+    }
+
+    #[test]
+    fn paged_user_filter_builds_correctly() {
+        let uid = UserId::from_uuid(uuid::Uuid::new_v4());
+        let filter = paged_user_filter(
+            uid.clone(),
+            SortDirection::Descending,
+            Some(20),
+            Some(5),
+            Some("blade".into()),
+        )
+        .unwrap();
+
+        assert_eq!(filter.user_id.unwrap().value(), uid.value());
+        assert_eq!(filter.search.as_deref(), Some("blade"));
+    }
+}

@@ -13,3 +13,7 @@ pub async fn execute(ctx: &AppContext, cmd: UpdateUserSettingsCommand) -> Result
     settings.set_federate_goals(cmd.federate_goals);
     ctx.repos.user_settings.save(&settings).await
 }
+
+#[cfg(test)]
+#[path = "tests/update_settings.rs"]
+mod tests;

@@ -12,3 +12,7 @@ pub async fn execute(ctx: &AppContext, id: WrapUpId) -> Result<(), DomainError> 
 
     ctx.repos.wrapup_repo.delete(&id).await
 }
+
+#[cfg(test)]
+#[path = "tests/delete.rs"]
+mod tests;

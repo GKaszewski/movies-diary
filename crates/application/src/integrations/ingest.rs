@@ -69,3 +69,7 @@ pub async fn execute(
 
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "tests/ingest.rs"]
+mod tests;

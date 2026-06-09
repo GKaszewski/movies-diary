@@ -9,3 +9,7 @@ pub async fn execute(
     let user_id = UserId::from_uuid(query.user_id);
     ctx.repos.watch_event.list_pending(&user_id).await
 }
+
+#[cfg(test)]
+#[path = "tests/get_queue.rs"]
+mod tests;

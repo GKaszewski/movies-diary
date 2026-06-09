@@ -84,3 +84,7 @@ async fn load_remote_watchlist(
         limit: len,
     })
 }
+
+#[cfg(test)]
+#[path = "tests/get_page.rs"]
+mod tests;

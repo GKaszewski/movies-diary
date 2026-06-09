@@ -19,3 +19,7 @@ pub async fn execute(ctx: &AppContext, cmd: RemoveFromWatchlistCommand) -> Resul
 
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "tests/remove.rs"]
+mod tests;
