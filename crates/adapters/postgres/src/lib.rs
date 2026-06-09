@@ -584,10 +584,7 @@ impl ReviewRepository for PostgresRepository {
         Ok(())
     }
 
-    async fn get_all_reviews_for_user(
-        &self,
-        user_id: &UserId,
-    ) -> Result<Vec<Review>, DomainError> {
+    async fn get_all_reviews_for_user(&self, user_id: &UserId) -> Result<Vec<Review>, DomainError> {
         let uid = user_id.value().to_string();
         sqlx::query_as::<_, ReviewRow>(
             "SELECT id, movie_id, user_id, rating, comment,
