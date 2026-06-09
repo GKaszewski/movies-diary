@@ -41,7 +41,10 @@ All four must pass. PRs with clippy warnings or failing tests won't be merged.
 
 The project follows hexagonal (ports & adapters) architecture. See `architecture.mmd` for the full diagram.
 
-**Key rule:** presentation handlers never touch repositories directly — all domain logic goes through use cases in the `application` crate.
+**Key rules:**
+- Presentation handlers never touch repositories directly — all domain logic goes through use cases in the `application` crate
+- Application use cases return raw domain data — URL formatting, date display, and view model assembly belong in presentation mappers (`presentation/src/mappers/`)
+- Use cases called from presentation handlers take `&AppContext`. Functions called from adapter event handlers take individual `Arc<dyn Trait>` params to keep adapter dependencies explicit
 
 ```
 domain         → pure types, traits (ports), zero deps
@@ -80,5 +83,5 @@ Federation is feature-gated (`#[cfg(feature = "federation")]`). If your feature 
 ## Areas seeking help
 
 - **TUI** (`crates/tui`) — deprecated, needs a maintainer to bring it up to feature parity
-- **Tests** — integration tests for newer features (goals, watchlist, federation)
+- **Tests** — the domain and application crates have 400+ unit tests; integration tests for the presentation layer are welcome
 - **Docs** — API usage examples, deployment guides

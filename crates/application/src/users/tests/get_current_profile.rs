@@ -105,10 +105,8 @@ async fn returns_profile_with_avatar_banner_and_fields() {
     assert_eq!(profile.username, "fulluser");
     assert_eq!(profile.display_name.as_deref(), Some("Full Name"));
     assert_eq!(profile.bio.as_deref(), Some("My bio"));
-    assert!(profile.avatar_url.is_some());
-    assert!(profile.avatar_url.unwrap().contains("avatars/abc123"));
-    assert!(profile.banner_url.is_some());
-    assert!(profile.banner_url.unwrap().contains("banners/def456"));
+    assert_eq!(profile.avatar_path.as_deref(), Some("avatars/abc123"));
+    assert_eq!(profile.banner_path.as_deref(), Some("banners/def456"));
     assert_eq!(profile.fields.len(), 1);
     assert_eq!(profile.fields[0].name, "Website");
     assert_eq!(profile.fields[0].value, "https://example.com");

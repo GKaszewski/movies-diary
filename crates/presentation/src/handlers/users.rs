@@ -58,12 +58,13 @@ pub async fn get_profile(
         },
     )
     .await?;
+    let base_url = &state.app_ctx.config.base_url;
     Ok(Json(ProfileResponse {
         username: profile.username,
         display_name: profile.display_name,
         bio: profile.bio,
-        avatar_url: profile.avatar_url,
-        banner_url: profile.banner_url,
+        avatar_url: profile.avatar_path.map(|p| format!("{}/images/{}", base_url, p)),
+        banner_url: profile.banner_path.map(|p| format!("{}/images/{}", base_url, p)),
         also_known_as: profile.also_known_as,
         fields: profile
             .fields
@@ -286,8 +287,8 @@ pub async fn get_user_profile(
         offset: p.offset,
     });
 
-    let history = profile.history.map(|months| {
-        months
+    let history = profile.history.map(|entries| {
+        crate::mappers::users::group_by_month(entries)
             .into_iter()
             .map(|m| MonthActivityDto {
                 year_month: m.year_month,
@@ -542,8 +543,10 @@ pub async fn get_user_profile_html(
                 .most_active_month
                 .clone()
                 .unwrap_or_else(|| "\u{2014}".to_string());
-            let heatmap = profile
+            let history = profile
                 .history
+                .map(crate::mappers::users::group_by_month);
+            let heatmap = history
                 .as_deref()
                 .map(build_heatmap)
                 .unwrap_or_default();
@@ -594,7 +597,7 @@ pub async fn get_user_profile_html(
                     current_offset: offset,
                     has_more,
                     limit,
-                    history: profile.history.as_ref(),
+                    history: history.as_ref(),
                     trends: profile.trends.as_ref(),
                     monthly_rating_rows,
                     heatmap,
@@ -618,7 +621,7 @@ pub async fn get_user_profile_html(
                     current_offset: offset,
                     has_more,
                     limit,
-                    history: profile.history.as_ref(),
+                    history: history.as_ref(),
                     trends: profile.trends.as_ref(),
                     monthly_rating_rows,
                     heatmap,

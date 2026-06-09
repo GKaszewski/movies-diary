@@ -29,16 +29,6 @@ impl HtmlPageContext {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct WatchlistDisplayEntry {
-    pub poster_url: Option<String>,
-    pub movie_title: String,
-    pub release_year: u16,
-    pub movie_url: Option<String>,
-    pub added_at: String,
-    pub remove_url: Option<String>,
-}
-
 pub trait RssFeedRenderer: Send + Sync {
     fn render_feed(&self, entries: &[DiaryEntry], title: &str) -> Result<String, String>;
 }

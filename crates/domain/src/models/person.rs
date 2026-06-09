@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-use crate::models::MovieId;
+use crate::value_objects::MovieId;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct PersonId(Uuid);

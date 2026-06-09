@@ -1,7 +1,8 @@
 use crate::models::{
-    Movie, MovieId, MovieProfile, Person, PersonId,
+    Movie, MovieProfile, Person, PersonId,
     collections::{PageParams, Paginated},
 };
+use crate::value_objects::MovieId;
 
 #[derive(Clone, Debug, Default)]
 pub struct SearchQuery {

@@ -11,8 +11,8 @@ pub struct CurrentProfileData {
     pub username: String,
     pub display_name: Option<String>,
     pub bio: Option<String>,
-    pub avatar_url: Option<String>,
-    pub banner_url: Option<String>,
+    pub avatar_path: Option<String>,
+    pub banner_path: Option<String>,
     pub also_known_as: Option<String>,
     pub fields: Vec<ProfileFieldData>,
     pub role: String,
@@ -30,13 +30,6 @@ pub async fn execute(
         .await?
         .ok_or_else(|| DomainError::NotFound("User not found".into()))?;
 
-    let avatar_url = user
-        .avatar_path()
-        .map(|path| format!("{}/images/{}", ctx.config.base_url, path));
-    let banner_url = user
-        .banner_path()
-        .map(|path| format!("{}/images/{}", ctx.config.base_url, path));
-
     let fields = user
         .profile_fields()
         .iter()
@@ -50,8 +43,8 @@ pub async fn execute(
         username: user.username().value().to_string(),
         display_name: user.display_name().map(|s| s.to_string()),
         bio: user.bio().map(|s| s.to_string()),
-        avatar_url,
-        banner_url,
+        avatar_path: user.avatar_path().map(|s| s.to_string()),
+        banner_path: user.banner_path().map(|s| s.to_string()),
         also_known_as: user.also_known_as().map(|s| s.to_string()),
         fields,
         role: user.role().as_str().into(),

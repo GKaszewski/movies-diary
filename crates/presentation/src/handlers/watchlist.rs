@@ -178,19 +178,39 @@ pub async fn get_watchlist_page(
     let ctx = build_page_context(&state, viewer_id.clone(), csrf.0).await;
     let is_owner = viewer_id.map(|u| u.value() == owner_id).unwrap_or(false);
 
-    let result = match application::watchlist::get_page::execute(
-        &state.app_ctx,
-        application::watchlist::queries::GetWatchlistQuery {
-            user_id: owner_id,
-            limit: params.limit.or(Some(20)),
-            offset: params.offset.or(Some(0)),
-        },
-        is_owner,
-    )
-    .await
-    {
-        Ok(r) => r,
-        Err(e) => return crate::errors::domain_error_response(e),
+    let user_id = domain::value_objects::UserId::from_uuid(owner_id);
+    let is_local = state
+        .app_ctx
+        .repos
+        .user
+        .find_by_id(&user_id)
+        .await
+        .map(|u| u.is_some())
+        .unwrap_or(false);
+
+    let result = if is_local {
+        match get_watchlist::execute(
+            &state.app_ctx,
+            application::watchlist::queries::GetWatchlistQuery {
+                user_id: owner_id,
+                limit: params.limit.or(Some(20)),
+                offset: params.offset.or(Some(0)),
+            },
+        )
+        .await
+        {
+            Ok(page) => crate::mappers::watchlist::build_watchlist_page(page, is_owner),
+            Err(e) => return crate::errors::domain_error_response(e),
+        }
+    } else {
+        let remote_entries = state
+            .app_ctx
+            .repos
+            .remote_watchlist
+            .get_by_derived_uuid(owner_id)
+            .await
+            .unwrap_or_default();
+        crate::mappers::watchlist::build_remote_watchlist_page(remote_entries)
     };
 
     render_page(WatchlistTemplate {

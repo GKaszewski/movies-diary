@@ -8,6 +8,16 @@ use domain::models::{
     collections::Paginated,
 };
 
+#[derive(Clone, Debug)]
+pub struct WatchlistDisplayEntry {
+    pub poster_url: Option<String>,
+    pub movie_title: String,
+    pub release_year: u16,
+    pub movie_url: Option<String>,
+    pub added_at: String,
+    pub remove_url: Option<String>,
+}
+
 mod filters {
     #[askama::filter_fn]
     pub fn poster_src<T: std::fmt::Display>(
@@ -126,7 +136,7 @@ pub struct MovieDetailTemplate<'a> {
 pub struct WatchlistTemplate<'a> {
     pub ctx: &'a HtmlPageContext,
     pub owner_id: uuid::Uuid,
-    pub display_entries: &'a [application::ports::WatchlistDisplayEntry],
+    pub display_entries: &'a [crate::WatchlistDisplayEntry],
     pub current_offset: u32,
     pub has_more: bool,
     pub limit: u32,
