@@ -252,14 +252,20 @@ impl PosterUrl {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Password(String);
+
+impl std::fmt::Debug for Password {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Password([REDACTED])")
+    }
+}
 
 impl Password {
     const MIN_LENGTH: usize = 8;
 
     pub fn new(raw: String) -> Result<Self, DomainError> {
-        if raw.len() < Self::MIN_LENGTH {
+        if raw.chars().count() < Self::MIN_LENGTH {
             Err(DomainError::ValidationError(
                 "Password must be at least 8 characters".into(),
             ))

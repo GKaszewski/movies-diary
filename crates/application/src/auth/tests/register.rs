@@ -60,5 +60,6 @@ async fn test_register_short_password_fails() {
         },
     )
     .await;
-    assert!(result.is_err());
+    let err = result.unwrap_err().to_string();
+    assert!(err.contains("8 characters"), "expected password length error, got: {err}");
 }
