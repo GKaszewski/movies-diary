@@ -228,7 +228,7 @@ function QueueTab() {
           </div>
           <Textarea
             className="mt-2"
-            placeholder={t("diary.commentPlaceholder")}
+            placeholder={t("logReview.commentPlaceholder")}
             value={comments[entry.id] ?? ""}
             onChange={(e) => setComments((p) => ({ ...p, [entry.id]: e.target.value }))}
             rows={2}
