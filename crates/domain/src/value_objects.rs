@@ -255,4 +255,3 @@ impl PosterUrl {
 #[cfg(test)]
 #[path = "tests/value_objects.rs"]
 mod tests;
-

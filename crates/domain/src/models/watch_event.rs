@@ -238,4 +238,3 @@ pub struct ParsedPlaybackEvent {
 #[cfg(test)]
 #[path = "tests/watch_event.rs"]
 mod tests;
-
