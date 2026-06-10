@@ -14,7 +14,6 @@ WORKDIR /build
 # Cache dependency compilation separately from source
 COPY Cargo.toml Cargo.lock ./
 COPY .cargo ./.cargo
-COPY .sqlx ./.sqlx
 COPY crates/adapters/activitypub/Cargo.toml       crates/adapters/activitypub/Cargo.toml
 COPY crates/adapters/auth/Cargo.toml              crates/adapters/auth/Cargo.toml
 COPY crates/adapters/event-payload/Cargo.toml     crates/adapters/event-payload/Cargo.toml
@@ -62,8 +61,8 @@ RUN cargo fetch
 # Now copy real sources (invalidates cache only on source changes)
 COPY crates ./crates
 
-# .cargo/config.toml sets SQLX_OFFLINE=true; .sqlx contains the pre-verified query cache.
-# No live database needed at compile time.
+# All sqlx queries use the runtime API (no query! macros), so no database
+# or .sqlx cache is needed at compile time.
 #
 # To build with PostgreSQL backend instead:
 #   --build-arg FEATURES=postgres,postgres-federation
