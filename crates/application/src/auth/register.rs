@@ -1,24 +1,17 @@
 use domain::{
     errors::DomainError,
     models::User,
-    value_objects::{Email, Username},
+    value_objects::{Email, Password, Username},
 };
 
 use crate::{auth::commands::RegisterCommand, context::AppContext};
-
-const MIN_PASSWORD_LENGTH: usize = 8;
 
 pub async fn execute(ctx: &AppContext, cmd: RegisterCommand) -> Result<(), DomainError> {
     if !ctx.config.allow_registration {
         return Err(DomainError::Unauthorized("Registration is disabled".into()));
     }
 
-    if cmd.password.len() < MIN_PASSWORD_LENGTH {
-        return Err(DomainError::ValidationError(
-            "Password must be at least 8 characters".into(),
-        ));
-    }
-
+    let password = Password::new(cmd.password)?;
     let email = Email::new(cmd.email)?;
     let username = Username::new(cmd.username)?;
 
@@ -34,7 +27,7 @@ pub async fn execute(ctx: &AppContext, cmd: RegisterCommand) -> Result<(), Domai
         ));
     }
 
-    let hash = ctx.services.password_hasher.hash(&cmd.password).await?;
+    let hash = ctx.services.password_hasher.hash(password.value()).await?;
     ctx.repos
         .user
         .save(&User::new(email, username, hash, cmd.role))

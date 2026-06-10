@@ -139,3 +139,22 @@ fn poster_url_valid() {
 fn poster_url_empty_rejected() {
     assert!(PosterUrl::new("".into()).is_err());
 }
+
+#[test]
+fn password_min_length_enforced() {
+    assert!(Password::new("short".to_string()).is_err());
+    assert!(Password::new("1234567".to_string()).is_err()); // 7 chars
+}
+
+#[test]
+fn password_valid_at_eight_chars() {
+    let p = Password::new("12345678".to_string());
+    assert!(p.is_ok());
+    assert_eq!(p.unwrap().value(), "12345678");
+}
+
+#[test]
+fn password_value_preserves_content() {
+    let raw = "supersecret!".to_string();
+    assert_eq!(Password::new(raw.clone()).unwrap().value(), raw);
+}

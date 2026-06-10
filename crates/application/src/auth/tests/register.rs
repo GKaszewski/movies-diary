@@ -46,3 +46,19 @@ async fn test_register_duplicate_email_fails() {
     let result = register::execute(&ctx, cmd("bob@example.com")).await;
     assert!(result.is_err(), "duplicate email should fail");
 }
+
+#[tokio::test]
+async fn test_register_short_password_fails() {
+    let ctx = TestContextBuilder::new().build();
+    let result = register::execute(
+        &ctx,
+        RegisterCommand {
+            email: "x@y.com".to_string(),
+            username: "testuser".to_string(),
+            password: "short".to_string(),
+            role: UserRole::Standard,
+        },
+    )
+    .await;
+    assert!(result.is_err());
+}

@@ -252,6 +252,27 @@ impl PosterUrl {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Password(String);
+
+impl Password {
+    const MIN_LENGTH: usize = 8;
+
+    pub fn new(raw: String) -> Result<Self, DomainError> {
+        if raw.len() < Self::MIN_LENGTH {
+            Err(DomainError::ValidationError(
+                "Password must be at least 8 characters".into(),
+            ))
+        } else {
+            Ok(Self(raw))
+        }
+    }
+
+    pub fn value(&self) -> &str {
+        &self.0
+    }
+}
+
 #[cfg(test)]
 #[path = "tests/value_objects.rs"]
 mod tests;
