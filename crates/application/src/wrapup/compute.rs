@@ -13,7 +13,11 @@ pub async fn execute(
         .wrapup_stats
         .get_reviews_with_profiles(&query.scope, &query.date_range)
         .await?;
-    Ok(wrapup_analyzer::build_report(query.scope, query.date_range, &rows))
+    Ok(wrapup_analyzer::build_report(
+        query.scope,
+        query.date_range,
+        &rows,
+    ))
 }
 
 #[cfg(test)]

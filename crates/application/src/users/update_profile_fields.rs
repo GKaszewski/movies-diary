@@ -1,4 +1,6 @@
-use domain::{errors::DomainError, events::DomainEvent, models::UserProfile, value_objects::UserId};
+use domain::{
+    errors::DomainError, events::DomainEvent, models::UserProfile, value_objects::UserId,
+};
 
 use crate::{context::AppContext, users::commands::UpdateProfileFieldsCommand};
 

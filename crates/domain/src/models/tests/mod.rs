@@ -236,7 +236,10 @@ fn movie_is_manual_match_different_director_fails() {
 #[test]
 fn profile_fields_validates_max_count() {
     let fields: Vec<ProfileField> = (0..5)
-        .map(|i| ProfileField { name: format!("f{i}"), value: format!("v{i}") })
+        .map(|i| ProfileField {
+            name: format!("f{i}"),
+            value: format!("v{i}"),
+        })
         .collect();
     assert!(UserProfile::validate_custom_fields(&fields).is_err());
 }
@@ -244,7 +247,10 @@ fn profile_fields_validates_max_count() {
 #[test]
 fn profile_fields_allows_four() {
     let fields: Vec<ProfileField> = (0..4)
-        .map(|i| ProfileField { name: format!("f{i}"), value: format!("v{i}") })
+        .map(|i| ProfileField {
+            name: format!("f{i}"),
+            value: format!("v{i}"),
+        })
         .collect();
     assert!(UserProfile::validate_custom_fields(&fields).is_ok());
 }

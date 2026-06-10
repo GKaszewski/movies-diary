@@ -63,7 +63,11 @@ fn avg_rating_is_correct() {
 
 #[test]
 fn rating_distribution_counts_correctly() {
-    let rows = vec![row("A", 5, "2024-01"), row("B", 5, "2024-02"), row("C", 3, "2024-03")];
+    let rows = vec![
+        row("A", 5, "2024-01"),
+        row("B", 5, "2024-02"),
+        row("C", 3, "2024-03"),
+    ];
     let report = build_report(WrapUpScope::Global, range(), &rows);
     assert_eq!(report.rating_distribution[4], 2);
     assert_eq!(report.rating_distribution[2], 1);
@@ -71,9 +75,17 @@ fn rating_distribution_counts_correctly() {
 
 #[test]
 fn movies_per_month_sorted_chronologically() {
-    let rows = vec![row("A", 3, "2024-03"), row("B", 3, "2024-01"), row("C", 3, "2024-02")];
+    let rows = vec![
+        row("A", 3, "2024-03"),
+        row("B", 3, "2024-01"),
+        row("C", 3, "2024-02"),
+    ];
     let report = build_report(WrapUpScope::Global, range(), &rows);
-    let yms: Vec<&str> = report.movies_per_month.iter().map(|m| m.year_month.as_str()).collect();
+    let yms: Vec<&str> = report
+        .movies_per_month
+        .iter()
+        .map(|m| m.year_month.as_str())
+        .collect();
     assert_eq!(yms, ["2024-01", "2024-02", "2024-03"]);
 }
 
