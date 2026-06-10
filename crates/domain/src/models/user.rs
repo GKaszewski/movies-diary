@@ -32,6 +32,20 @@ pub struct UserProfile {
     pub profile_fields: Vec<ProfileField>,
 }
 
+impl UserProfile {
+    pub const MAX_CUSTOM_FIELDS: usize = 4;
+
+    pub fn validate_custom_fields(fields: &[ProfileField]) -> Result<(), crate::errors::DomainError> {
+        if fields.len() > Self::MAX_CUSTOM_FIELDS {
+            Err(crate::errors::DomainError::ValidationError(
+                "Maximum 4 profile fields allowed".into(),
+            ))
+        } else {
+            Ok(())
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct User {
     id: UserId,

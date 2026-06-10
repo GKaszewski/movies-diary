@@ -230,3 +230,26 @@ fn movie_is_manual_match_different_director_fails() {
     let year = crate::value_objects::ReleaseYear::new(1982).unwrap();
     assert!(!m.is_manual_match(&title, &year, Some("Denis Villeneuve")));
 }
+
+// ── UserProfile field validation ─────────────────────────────────────────────
+
+#[test]
+fn profile_fields_validates_max_count() {
+    let fields: Vec<ProfileField> = (0..5)
+        .map(|i| ProfileField { name: format!("f{i}"), value: format!("v{i}") })
+        .collect();
+    assert!(UserProfile::validate_custom_fields(&fields).is_err());
+}
+
+#[test]
+fn profile_fields_allows_four() {
+    let fields: Vec<ProfileField> = (0..4)
+        .map(|i| ProfileField { name: format!("f{i}"), value: format!("v{i}") })
+        .collect();
+    assert!(UserProfile::validate_custom_fields(&fields).is_ok());
+}
+
+#[test]
+fn profile_fields_allows_zero() {
+    assert!(UserProfile::validate_custom_fields(&[]).is_ok());
+}
