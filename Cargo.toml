@@ -52,7 +52,6 @@ sqlx = { version = "0.8.6", features = [
     "runtime-tokio-rustls",
     "sqlite",
     "uuid",
-    "macros",
 ] }
 rand = "0.9"
 reqwest = { version = "0.13", features = ["json", "query"] }
@@ -91,3 +90,10 @@ plex = { path = "crates/adapters/plex" }
 image-converter = { path = "crates/adapters/image-converter" }
 sqlite-search = { path = "crates/adapters/sqlite-search" }
 postgres-search = { path = "crates/adapters/postgres-search" }
+
+[profile.dev]
+debug = 1                    # line tables only — still debuggable, much faster linking
+split-debuginfo = "unpacked" # macOS: skip dsymutil on every link
+
+[profile.dev.package."*"]
+opt-level = 2                # compile deps faster at runtime; paid once, cached after
