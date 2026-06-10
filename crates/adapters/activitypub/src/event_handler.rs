@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use chrono::Datelike;
 use domain::ports::EventHandler;
 use domain::{
     errors::DomainError,
@@ -172,6 +173,9 @@ impl ActivityPubEventHandler {
             .broadcast_create_note(user_id.value(), json, ApVisibility::Public, vec![])
             .await?;
 
+        let year = review.watched_at().year() as u16;
+        self.broadcast_goal_progress_update(user_id, year).await?;
+
         Ok(())
     }
 
@@ -331,6 +335,45 @@ impl ActivityPubEventHandler {
                 .await?;
         }
 
+        Ok(())
+    }
+
+    async fn broadcast_goal_progress_update(
+        &self,
+        user_id: &UserId,
+        year: u16,
+    ) -> anyhow::Result<()> {
+        if !self
+            .content_query
+            .get_user_federate_goals(user_id)
+            .await
+            .unwrap_or(false)
+        {
+            return Ok(());
+        }
+        let Some((goal, current)) = self
+            .content_query
+            .get_goal_with_progress(user_id, year)
+            .await
+            .ok()
+            .flatten()
+        else {
+            return Ok(());
+        };
+        let ap_id = goal_url(&self.base_url, user_id.value(), year);
+        let actor = actor_url(&self.base_url, user_id.value());
+        let obj = goal_to_ap_object(
+            ap_id,
+            actor,
+            year,
+            goal.target_count(),
+            current,
+            &self.base_url,
+        );
+        let json = serde_json::to_value(obj)?;
+        self.ap_service
+            .broadcast_update_note(user_id.value(), json, ApVisibility::Public, vec![])
+            .await?;
         Ok(())
     }
 

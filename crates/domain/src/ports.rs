@@ -444,6 +444,7 @@ pub trait RemoteGoalRepository: Send + Sync {
         current: u32,
     ) -> Result<(), DomainError>;
     async fn remove_by_ap_id(&self, ap_id: &str, actor_url: &str) -> Result<(), DomainError>;
+    async fn remove_all_by_actor(&self, actor_url: &str) -> Result<(), DomainError>;
     async fn get_by_actor_url(&self, actor_url: &str) -> Result<Vec<RemoteGoalEntry>, DomainError>;
 }
 

@@ -42,7 +42,7 @@ impl ApObjectHandler for GoalObjectHandler {
     async fn on_update(
         &self,
         ap_id: &Url,
-        _actor_url: &Url,
+        actor_url: &Url,
         object: serde_json::Value,
     ) -> anyhow::Result<()> {
         let obj: GoalObject = match serde_json::from_value(object) {
@@ -52,6 +52,9 @@ impl ApObjectHandler for GoalObjectHandler {
                 return Ok(());
             }
         };
+        if obj.attributed_to != *actor_url {
+            anyhow::bail!("goal Update actor does not match object attributed_to");
+        }
         self.remote_goal_repo
             .update_by_ap_id(ap_id.as_str(), obj.goal_target, obj.goal_current)
             .await?;
@@ -67,7 +70,10 @@ impl ApObjectHandler for GoalObjectHandler {
         Ok(())
     }
 
-    async fn on_actor_removed(&self, _actor_url: &Url) -> anyhow::Result<()> {
+    async fn on_actor_removed(&self, actor_url: &Url) -> anyhow::Result<()> {
+        self.remote_goal_repo
+            .remove_all_by_actor(actor_url.as_str())
+            .await?;
         Ok(())
     }
 

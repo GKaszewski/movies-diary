@@ -69,6 +69,16 @@ impl RemoteGoalRepository for SqliteRemoteGoalRepository {
         Ok(())
     }
 
+    async fn remove_all_by_actor(&self, actor_url: &str) -> Result<(), DomainError> {
+        sqlx::query("DELETE FROM remote_goals WHERE actor_url = ?")
+            .bind(actor_url)
+            .execute(&self.pool)
+            .await
+            .map_err(Self::map_err)?;
+
+        Ok(())
+    }
+
     async fn get_by_actor_url(&self, actor_url: &str) -> Result<Vec<RemoteGoalEntry>, DomainError> {
         let rows = sqlx::query(
             "SELECT ap_id, actor_url, year, target_count, current_count, received_at \

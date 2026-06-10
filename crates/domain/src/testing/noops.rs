@@ -182,6 +182,9 @@ impl crate::ports::RemoteGoalRepository for NoopRemoteGoalRepository {
     async fn remove_by_ap_id(&self, _: &str, _: &str) -> Result<(), DomainError> {
         Ok(())
     }
+    async fn remove_all_by_actor(&self, _: &str) -> Result<(), DomainError> {
+        Ok(())
+    }
     async fn get_by_actor_url(
         &self,
         _: &str,
