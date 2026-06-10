@@ -59,8 +59,12 @@ graph TB
             P_SEARCH["SearchPort<br/>SearchCommand<br/>PersonQuery<br/>PersonCommand"]
             P_FEDERATION["SocialQueryPort<br/>LocalApContentQuery<br/>RemoteWatchlistRepository<br/>RemoteGoalRepository"]
         end
+        subgraph DomainServices["Services (pure, no I/O)"]
+            DS_WRAPUP["WrapUpAnalyzer<br/><i>build_report, compute_*</i>"]
+            DS_REVIEW["ReviewHistoryAnalyzer<br/><i>rating_trend</i>"]
+        end
         EVENTS["DomainEvent enum<br/><i>ReviewLogged, MovieDiscovered,<br/>GoalCreated, GoalUpdated,<br/>SearchReindexRequested, ...</i>"]
-        VO["Value Objects<br/><i>MovieId, UserId, Rating,<br/>Email, Username, ...</i>"]
+        VO["Value Objects<br/><i>MovieId, UserId, Rating,<br/>Email, Username, Password, ...</i>"]
     end
 
     subgraph ApiTypes["api-types (0 domain deps)"]
@@ -114,6 +118,7 @@ graph TB
     WORKER -->|"uses"| Application
 
     Application -->|"depends on"| Domain
+    UC_WRAPUP -->|"delegates to"| DS_WRAPUP
 
     Adapters -.->|"implements"| Ports
 
@@ -128,6 +133,7 @@ graph TB
     classDef api fill:#2a2a4a,stroke:#e94560,color:#fff
 
     class Domain domain
+    class DomainServices domain
     class Application app
     class Adapters adapter
     class Binaries binary
