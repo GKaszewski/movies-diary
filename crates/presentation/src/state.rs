@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use application::context::AppContext;
+use crate::context::AppContext;
 
 use crate::ports::RssFeedRenderer;
 

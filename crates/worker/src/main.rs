@@ -6,20 +6,12 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use application::{
-    MovieDiscoveryIndexer, SearchCleanupHandler, SearchReindexHandler,
-    config::AppConfig,
-    context::{AppContext, Repositories, Services},
-    movies::deps::ReindexSearchDeps,
-    worker::WorkerService,
+    MovieDiscoveryIndexer, SearchCleanupHandler, SearchReindexHandler, config::AppConfig,
+    movies::deps::ReindexSearchDeps, worker::WorkerService,
 };
-use export::ExportAdapter;
-use importer::ImporterDocumentParser;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use domain::ports::{
-    DiaryExporter, DocumentParser, EventHandler, MovieEnrichmentClient, PeriodicJob,
-    PersonEnrichmentClient,
-};
+use domain::ports::{EventHandler, MovieEnrichmentClient, PeriodicJob, PersonEnrichmentClient};
 
 #[cfg(not(any(feature = "sqlite", feature = "postgres")))]
 compile_error!(
@@ -35,7 +27,6 @@ async fn main() -> anyhow::Result<()> {
     let backend = std::env::var("DATABASE_BACKEND").unwrap_or_else(|_| "sqlite".to_string());
     let app_config = AppConfig::from_env();
 
-    let (auth_service, password_hasher) = auth::create()?;
     let metadata_client = metadata::create()?;
     let poster_fetcher = poster_fetcher::create()?;
     let object_storage = object_storage::create()?;
@@ -60,7 +51,7 @@ async fn main() -> anyhow::Result<()> {
         fed_follow_repo,
         fed_actor_repo,
         fed_blocklist_repo,
-        fed_social_query,
+        _fed_social_query,
         fed_review_store,
         fed_remote_watchlist_repo,
     ) = match &db.db_pool {
@@ -70,61 +61,22 @@ async fn main() -> anyhow::Result<()> {
         db::DbPool::Postgres(pool) => postgres_federation::wire(pool.clone()),
     };
 
-    let review_logger = Arc::new(application::diary::review_logger::DefaultReviewLogger::new(
-        Arc::clone(&db.movie),
-        Arc::clone(&db.review),
-        Arc::clone(&db.watchlist),
-        Arc::clone(&metadata_client),
-        Arc::clone(&event_publisher_arc),
-    ));
+    let movie = db.movie;
+    let user = db.user;
+    let import_session = db.import_session;
+    let movie_profile = db.movie_profile;
+    let watch_event = db.watch_event;
+    let person_command = db.person_command;
+    let person_query = db.person_query;
+    let search_command = db.search_command;
+    let wrapup_stats = db.wrapup_stats;
+    let wrapup_repo = db.wrapup_repo;
+    let remote_goal = db.remote_goal;
+    let refresh_session = db.refresh_session;
 
-    let mut ctx = AppContext {
-        repos: Repositories {
-            movie: db.movie,
-            review: db.review,
-            diary: db.diary,
-            stats: db.stats,
-            user: db.user,
-            import_session: db.import_session,
-            import_profile: db.import_profile,
-            movie_profile: db.movie_profile,
-            watchlist: db.watchlist,
-            watch_event: db.watch_event,
-            webhook_token: db.webhook_token,
-            profile_fields: db.profile_fields,
-            person_command: db.person_command,
-            person_query: db.person_query,
-            search_port: db.search_port,
-            search_command: db.search_command,
-            #[cfg(feature = "federation")]
-            remote_watchlist: fed_remote_watchlist_repo.clone(),
-            #[cfg(not(feature = "federation"))]
-            remote_watchlist: Arc::new(domain::testing::NoopRemoteWatchlistRepository),
-            #[cfg(feature = "federation")]
-            social_query: fed_social_query,
-            #[cfg(not(feature = "federation"))]
-            social_query: Arc::new(domain::testing::NoopSocialQueryPort),
-            wrapup_stats: db.wrapup_stats,
-            wrapup_repo: db.wrapup_repo,
-            goal: db.goal,
-            user_settings: db.user_settings,
-            remote_goal: db.remote_goal,
-            refresh_session: db.refresh_session,
-        },
-        services: Services {
-            auth: auth_service,
-            password_hasher,
-            metadata: metadata_client,
-            poster_fetcher,
-            object_storage,
-            event_publisher: event_publisher_arc,
-            diary_exporter: Arc::new(ExportAdapter) as Arc<dyn DiaryExporter>,
-            document_parser: Arc::new(ImporterDocumentParser) as Arc<dyn DocumentParser>,
-            review_logger,
-            person_enrichment: None,
-        },
-        config: app_config,
-    };
+    let event_publisher = event_publisher_arc;
+    let object_storage = object_storage;
+    let metadata = metadata_client;
 
     // ── Enrichment ────────────────────────────────────────────────────────────
     // Both the event handler and the staleness job are gated on TMDB_API_KEY.
@@ -142,23 +94,21 @@ async fn main() -> anyhow::Result<()> {
                 let client = Arc::new(client);
                 let handler = Arc::new(tmdb_enrichment::MovieEnrichmentHandler::new(
                     Arc::clone(&client) as Arc<dyn MovieEnrichmentClient>,
-                    Arc::clone(&ctx.repos.movie),
-                    Arc::clone(&ctx.repos.movie_profile),
-                    Arc::clone(&ctx.repos.person_command),
-                    Arc::clone(&ctx.repos.search_command),
-                    Arc::clone(&ctx.services.object_storage),
+                    Arc::clone(&movie),
+                    Arc::clone(&movie_profile),
+                    Arc::clone(&person_command),
+                    Arc::clone(&search_command),
+                    Arc::clone(&object_storage),
                 )) as Arc<dyn EventHandler>;
-                let person_enrichment_arc =
-                    Arc::clone(&client) as Arc<dyn PersonEnrichmentClient>;
-                ctx.services.person_enrichment = Some(Arc::clone(&person_enrichment_arc));
+                let person_enrichment_arc = Arc::clone(&client) as Arc<dyn PersonEnrichmentClient>;
                 let person_handler = Arc::new(tmdb_enrichment::PersonEnrichmentHandler::new(
-                    Arc::clone(&ctx.repos.person_query),
+                    Arc::clone(&person_query),
                     Some(person_enrichment_arc),
-                    Arc::clone(&ctx.repos.person_command),
+                    Arc::clone(&person_command),
                 )) as Arc<dyn EventHandler>;
                 let job = Arc::new(application::jobs::EnrichmentStalenessJob::new(
-                    Arc::clone(&ctx.repos.movie_profile),
-                    Arc::clone(&ctx.services.event_publisher),
+                    Arc::clone(&movie_profile),
+                    Arc::clone(&event_publisher),
                 )) as Arc<dyn PeriodicJob>;
                 (Some(handler), Some(person_handler), Some(job))
             }
@@ -171,27 +121,31 @@ async fn main() -> anyhow::Result<()> {
     // ── Image conversion ──────────────────────────────────────────────────────
 
     let conversion = image_converter::build(
-        Arc::clone(&ctx.services.object_storage),
+        Arc::clone(&object_storage),
         image_ref_command,
         image_ref_query,
-        Arc::clone(&ctx.services.event_publisher),
+        Arc::clone(&event_publisher),
     )?;
 
     // ── Periodic jobs ─────────────────────────────────────────────────────────
 
     let mut periodic_jobs: Vec<Arc<dyn PeriodicJob>> = vec![
-        Arc::new(application::jobs::ImportSessionCleanupJob::new(ctx.repos.import_session.clone())),
-        Arc::new(application::jobs::WatchEventCleanupJob::new(ctx.repos.watch_event.clone())),
+        Arc::new(application::jobs::ImportSessionCleanupJob::new(
+            import_session.clone(),
+        )),
+        Arc::new(application::jobs::WatchEventCleanupJob::new(
+            watch_event.clone(),
+        )),
         Arc::new(application::jobs::WrapUpAutoGenerateJob::new(
-            Arc::clone(&ctx.repos.user),
-            Arc::clone(&ctx.repos.wrapup_repo),
-            Arc::clone(&ctx.services.event_publisher),
+            Arc::clone(&user),
+            Arc::clone(&wrapup_repo),
+            Arc::clone(&event_publisher),
         )),
-        Arc::new(application::jobs::WrapUpCleanupJob::new(
-            Arc::clone(&ctx.repos.wrapup_repo),
-        )),
+        Arc::new(application::jobs::WrapUpCleanupJob::new(Arc::clone(
+            &wrapup_repo,
+        ))),
         Arc::new(application::jobs::RefreshSessionCleanupJob::new(
-            Arc::clone(&ctx.repos.refresh_session),
+            Arc::clone(&refresh_session),
         )),
     ];
     if let Some(job) = enrichment_job {
@@ -217,42 +171,40 @@ async fn main() -> anyhow::Result<()> {
 
     let handlers: Vec<Arc<dyn EventHandler>> = {
         let poster = Arc::new(poster_sync::PosterSyncHandler::new(
-            Arc::clone(&ctx.repos.movie),
-            Arc::clone(&ctx.services.metadata),
-            Arc::clone(&ctx.services.poster_fetcher),
-            Arc::clone(&ctx.services.object_storage),
-            Arc::clone(&ctx.services.event_publisher),
+            Arc::clone(&movie),
+            Arc::clone(&metadata),
+            Arc::clone(&poster_fetcher),
+            Arc::clone(&object_storage),
+            Arc::clone(&event_publisher),
             3,
         )) as Arc<dyn EventHandler>;
 
         let cleanup = Arc::new(object_storage::ImageCleanupHandler::new(Arc::clone(
-            &ctx.services.object_storage,
+            &object_storage,
         ))) as Arc<dyn EventHandler>;
 
         #[cfg(not(feature = "federation"))]
         {
             let search_cleanup = Arc::new(SearchCleanupHandler::new(
-                Arc::clone(&ctx.repos.search_command),
-                Arc::clone(&ctx.repos.person_query),
+                Arc::clone(&search_command),
+                Arc::clone(&person_query),
             )) as Arc<dyn EventHandler>;
             let discovery_indexer = Arc::new(MovieDiscoveryIndexer::new(
-                Arc::clone(&ctx.repos.movie),
-                Arc::clone(&ctx.repos.search_command),
+                Arc::clone(&movie),
+                Arc::clone(&search_command),
             )) as Arc<dyn EventHandler>;
-            let wrapup_handler = Arc::new(
-                application::wrapup::event_handler::WrapUpEventHandler::new(
-                    Arc::clone(&ctx.repos.wrapup_repo),
-                    Arc::clone(&ctx.services.event_publisher),
-                    Arc::clone(&ctx.repos.wrapup_stats),
-                ),
-            ) as Arc<dyn EventHandler>;
-            let reindex_handler =
-                Arc::new(SearchReindexHandler::new(ReindexSearchDeps {
-                movie: Arc::clone(&ctx.repos.movie),
-                movie_profile: Arc::clone(&ctx.repos.movie_profile),
-                search_command: Arc::clone(&ctx.repos.search_command),
-                person_command: Arc::clone(&ctx.repos.person_command),
-                person_query: Arc::clone(&ctx.repos.person_query),
+            let wrapup_handler =
+                Arc::new(application::wrapup::event_handler::WrapUpEventHandler::new(
+                    Arc::clone(&wrapup_repo),
+                    Arc::clone(&event_publisher),
+                    Arc::clone(&wrapup_stats),
+                )) as Arc<dyn EventHandler>;
+            let reindex_handler = Arc::new(SearchReindexHandler::new(ReindexSearchDeps {
+                movie: Arc::clone(&movie),
+                movie_profile: Arc::clone(&movie_profile),
+                search_command: Arc::clone(&search_command),
+                person_command: Arc::clone(&person_command),
+                person_query: Arc::clone(&person_query),
             })) as Arc<dyn EventHandler>;
             let mut h = vec![
                 poster,
@@ -283,12 +235,12 @@ async fn main() -> anyhow::Result<()> {
                 blocklist_repo: fed_blocklist_repo,
                 review_store: fed_review_store,
                 remote_watchlist_repo: fed_remote_watchlist_repo,
-                remote_goal_repo: Arc::clone(&ctx.repos.remote_goal),
+                remote_goal_repo: Arc::clone(&remote_goal),
                 local_ap_content: fed_ap_content,
                 user_repo: fed_user_repo,
                 base_url,
                 allow_registration,
-                event_publisher: Arc::clone(&ctx.services.event_publisher),
+                event_publisher: Arc::clone(&event_publisher),
             })
             .await?;
 
@@ -298,28 +250,26 @@ async fn main() -> anyhow::Result<()> {
             }) as Arc<dyn EventHandler>;
 
             let search_cleanup = Arc::new(SearchCleanupHandler::new(
-                Arc::clone(&ctx.repos.search_command),
-                Arc::clone(&ctx.repos.person_query),
+                Arc::clone(&search_command),
+                Arc::clone(&person_query),
             )) as Arc<dyn EventHandler>;
             let discovery_indexer = Arc::new(MovieDiscoveryIndexer::new(
-                Arc::clone(&ctx.repos.movie),
-                Arc::clone(&ctx.repos.search_command),
+                Arc::clone(&movie),
+                Arc::clone(&search_command),
             )) as Arc<dyn EventHandler>;
             tracing::info!("federation event handler registered");
-            let wrapup_handler = Arc::new(
-                application::wrapup::event_handler::WrapUpEventHandler::new(
-                    Arc::clone(&ctx.repos.wrapup_repo),
-                    Arc::clone(&ctx.services.event_publisher),
-                    Arc::clone(&ctx.repos.wrapup_stats),
-                ),
-            ) as Arc<dyn EventHandler>;
-            let reindex_handler =
-                Arc::new(SearchReindexHandler::new(ReindexSearchDeps {
-                movie: Arc::clone(&ctx.repos.movie),
-                movie_profile: Arc::clone(&ctx.repos.movie_profile),
-                search_command: Arc::clone(&ctx.repos.search_command),
-                person_command: Arc::clone(&ctx.repos.person_command),
-                person_query: Arc::clone(&ctx.repos.person_query),
+            let wrapup_handler =
+                Arc::new(application::wrapup::event_handler::WrapUpEventHandler::new(
+                    Arc::clone(&wrapup_repo),
+                    Arc::clone(&event_publisher),
+                    Arc::clone(&wrapup_stats),
+                )) as Arc<dyn EventHandler>;
+            let reindex_handler = Arc::new(SearchReindexHandler::new(ReindexSearchDeps {
+                movie: Arc::clone(&movie),
+                movie_profile: Arc::clone(&movie_profile),
+                search_command: Arc::clone(&search_command),
+                person_command: Arc::clone(&person_command),
+                person_query: Arc::clone(&person_query),
             })) as Arc<dyn EventHandler>;
             let mut h = vec![
                 poster,

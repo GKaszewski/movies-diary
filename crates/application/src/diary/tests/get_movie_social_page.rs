@@ -10,8 +10,7 @@ use domain::{
 };
 
 use crate::{
-    diary::deps::GetMovieSocialPageDeps,
-    diary::get_movie_social_page,
+    diary::deps::GetMovieSocialPageDeps, diary::get_movie_social_page,
     diary::queries::GetMovieSocialPageQuery,
 };
 

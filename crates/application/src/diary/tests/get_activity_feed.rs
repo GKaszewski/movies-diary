@@ -5,11 +5,8 @@ use domain::errors::DomainError;
 use domain::testing::{FakeDiaryRepository, NoopSocialQueryPort};
 
 use crate::{
-    config::AppConfig,
-    diary::deps::GetActivityFeedDeps,
-    diary::get_activity_feed,
-    diary::queries::GetActivityFeedQuery,
-    test_helpers::TestContextBuilder,
+    config::AppConfig, diary::deps::GetActivityFeedDeps, diary::get_activity_feed,
+    diary::queries::GetActivityFeedQuery, test_helpers::TestContextBuilder,
 };
 
 fn default_deps() -> GetActivityFeedDeps {

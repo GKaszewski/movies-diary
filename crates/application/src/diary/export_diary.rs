@@ -16,5 +16,7 @@ pub async fn execute(
     let entries = diary
         .get_user_history(&UserId::from_uuid(query.user_id))
         .await?;
-    diary_exporter.serialize_entries(&entries, query.format).await
+    diary_exporter
+        .serialize_entries(&entries, query.format)
+        .await
 }

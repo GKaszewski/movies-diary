@@ -37,9 +37,7 @@ pub async fn execute(
 
     match compute::execute(deps.wrapup_stats.clone(), query).await {
         Ok(report) => {
-            deps.wrapup_repo
-                .set_complete(&wrapup_id, &report)
-                .await?;
+            deps.wrapup_repo.set_complete(&wrapup_id, &report).await?;
 
             deps.event_publisher
                 .publish(&DomainEvent::WrapUpCompleted { wrapup_id })

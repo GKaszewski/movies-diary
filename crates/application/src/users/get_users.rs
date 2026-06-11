@@ -1,7 +1,11 @@
 use std::sync::Arc;
 
 use crate::users::queries::GetUsersQuery;
-use domain::{errors::DomainError, models::UserSummary, ports::{RemoteActorInfo, SocialQueryPort, UserRepository}};
+use domain::{
+    errors::DomainError,
+    models::UserSummary,
+    ports::{RemoteActorInfo, SocialQueryPort, UserRepository},
+};
 
 pub struct UsersListData {
     pub users: Vec<UserSummary>,

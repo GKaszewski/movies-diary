@@ -7,8 +7,9 @@ use crate::{
     auth::{
         commands::RegisterCommand,
         deps::{LoginDeps, RefreshDeps, RegisterDeps},
-        login, refresh, register,
+        login,
         queries::LoginQuery,
+        refresh, register,
     },
     test_helpers::TestContextBuilder,
 };

@@ -12,9 +12,7 @@ use domain::{
 };
 
 use crate::{
-    diary::commands::DeleteReviewCommand,
-    diary::delete_review,
-    diary::deps::DeleteReviewDeps,
+    diary::commands::DeleteReviewCommand, diary::delete_review, diary::deps::DeleteReviewDeps,
 };
 
 fn make_movie() -> Movie {

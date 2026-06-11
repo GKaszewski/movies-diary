@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use domain::{errors::DomainError, models::WatchEvent, ports::WatchEventRepository, value_objects::UserId};
+use domain::{
+    errors::DomainError, models::WatchEvent, ports::WatchEventRepository, value_objects::UserId,
+};
 
 use crate::integrations::queries::GetWatchQueueQuery;
 

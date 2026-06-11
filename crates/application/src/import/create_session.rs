@@ -22,9 +22,7 @@ pub async fn execute(
     cmd: CreateImportSessionCommand,
 ) -> Result<CreateSessionResult, DomainError> {
     let user_id = UserId::from_uuid(cmd.user_id);
-    import_session
-        .delete_expired_for_user(&user_id)
-        .await?;
+    import_session.delete_expired_for_user(&user_id).await?;
 
     let parsed = document_parser
         .parse(&cmd.bytes, cmd.format)

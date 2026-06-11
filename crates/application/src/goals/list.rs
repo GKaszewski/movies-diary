@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use domain::{errors::DomainError, models::GoalWithProgress, ports::GoalRepository, value_objects::UserId};
+use domain::{
+    errors::DomainError, models::GoalWithProgress, ports::GoalRepository, value_objects::UserId,
+};
 
 use super::queries::ListGoalsQuery;
 
@@ -13,9 +15,7 @@ pub async fn execute(
 
     let mut result = Vec::with_capacity(goals.len());
     for g in goals {
-        let current_count = goal
-            .count_reviews_in_year(&user_id, g.year())
-            .await?;
+        let current_count = goal.count_reviews_in_year(&user_id, g.year()).await?;
         result.push(GoalWithProgress {
             goal: g,
             current_count,

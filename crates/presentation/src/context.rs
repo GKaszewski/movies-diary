@@ -11,8 +11,8 @@ use domain::ports::{
     WrapUpStatsQuery,
 };
 
-use crate::config::AppConfig;
-use crate::ports::ReviewLogger;
+use application::config::AppConfig;
+use application::ports::ReviewLogger;
 
 #[derive(Clone)]
 pub struct Repositories {

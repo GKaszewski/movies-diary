@@ -2,7 +2,9 @@ use std::sync::Arc;
 
 use domain::models::WatchEventSource;
 use domain::ports::{EventPublisher, WatchEventRepository, WebhookTokenRepository};
-use domain::testing::{InMemoryWebhookTokenRepository, InMemoryWatchEventRepository, NoopEventPublisher};
+use domain::testing::{
+    InMemoryWatchEventRepository, InMemoryWebhookTokenRepository, NoopEventPublisher,
+};
 use uuid::Uuid;
 
 use crate::integrations::commands::{GenerateWebhookTokenCommand, IngestWatchEventCommand};

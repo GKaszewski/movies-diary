@@ -2,7 +2,10 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use async_trait::async_trait;
-use domain::{errors::DomainError, ports::{ImportSessionRepository, PeriodicJob}};
+use domain::{
+    errors::DomainError,
+    ports::{ImportSessionRepository, PeriodicJob},
+};
 
 pub struct ImportSessionCleanupJob {
     import_session: Arc<dyn ImportSessionRepository>,

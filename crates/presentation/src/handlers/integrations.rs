@@ -116,7 +116,9 @@ pub async fn post_revoke_token(
         user_id: user_id.value(),
         token_id,
     };
-    if let Err(e) = revoke_webhook_token::execute(state.app_ctx.repos.webhook_token.clone(), cmd).await {
+    if let Err(e) =
+        revoke_webhook_token::execute(state.app_ctx.repos.webhook_token.clone(), cmd).await
+    {
         tracing::error!("revoke token failed: {:?}", e);
     }
 

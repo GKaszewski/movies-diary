@@ -2,7 +2,10 @@ use domain::{errors::DomainError, events::DomainEvent, value_objects::UserId};
 
 use crate::users::{commands::UpdateProfileCommand, deps::UpdateProfileDeps};
 
-pub async fn execute(deps: &UpdateProfileDeps, cmd: UpdateProfileCommand) -> Result<(), DomainError> {
+pub async fn execute(
+    deps: &UpdateProfileDeps,
+    cmd: UpdateProfileCommand,
+) -> Result<(), DomainError> {
     let user_id = UserId::from_uuid(cmd.user_id);
 
     let user = deps

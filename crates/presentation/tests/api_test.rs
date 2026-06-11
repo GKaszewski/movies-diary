@@ -1,9 +1,6 @@
 use std::sync::Arc;
 
-use application::{
-    config::AppConfig,
-    context::{AppContext, Repositories, Services},
-};
+use application::config::AppConfig;
 use async_trait::async_trait;
 use axum::{
     Router,
@@ -25,6 +22,7 @@ use domain::{
     value_objects::{Email, ExternalMetadataId, PasswordHash, PosterUrl, UserId},
 };
 use http_body_util::BodyExt;
+use presentation::context::{AppContext, Repositories, Services};
 use presentation::{routes, state::AppState};
 use rss::RssAdapter;
 use sqlite::SqliteMovieRepository;

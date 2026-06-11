@@ -30,11 +30,7 @@ pub async fn execute(deps: &SyncPosterDeps, cmd: SyncPosterCommand) -> Result<()
         })?
         .clone();
 
-    let poster_url = match deps
-        .metadata
-        .get_poster_url(&external_metadata_id)
-        .await
-    {
+    let poster_url = match deps.metadata.get_poster_url(&external_metadata_id).await {
         Ok(Some(url)) => url,
         Ok(None) => return Ok(()),
         Err(e) => {
@@ -43,10 +39,7 @@ pub async fn execute(deps: &SyncPosterDeps, cmd: SyncPosterCommand) -> Result<()
         }
     };
 
-    let image_bytes = deps
-        .poster_fetcher
-        .fetch_poster_bytes(&poster_url)
-        .await?;
+    let image_bytes = deps.poster_fetcher.fetch_poster_bytes(&poster_url).await?;
 
     let stored_path = deps
         .object_storage

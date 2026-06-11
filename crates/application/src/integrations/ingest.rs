@@ -17,10 +17,7 @@ pub async fn execute(
         .await?
         .ok_or_else(|| DomainError::Unauthorized("invalid webhook token".into()))?;
 
-    let _ = deps
-        .webhook_token
-        .touch_last_used(webhook_token.id())
-        .await;
+    let _ = deps.webhook_token.touch_last_used(webhook_token.id()).await;
 
     let parsed = match parser.parse_playback_event(&cmd.raw_payload)? {
         Some(event) => event,

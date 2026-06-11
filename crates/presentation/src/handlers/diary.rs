@@ -8,10 +8,10 @@ use uuid::Uuid;
 
 use application::diary::{
     commands::DeleteReviewCommand,
-    delete_review, export_diary as export_diary_uc, get_activity_feed as get_feed_uc, get_diary,
-    log_review,
-    queries::{ExportQuery, GetActivityFeedQuery},
+    delete_review,
     deps::{DeleteReviewDeps, GetActivityFeedDeps},
+    export_diary as export_diary_uc, get_activity_feed as get_feed_uc, get_diary, log_review,
+    queries::{ExportQuery, GetActivityFeedQuery},
 };
 use domain::models::ExportFormat;
 
@@ -81,7 +81,11 @@ pub async fn post_review(
     Json(req): Json<LogReviewRequest>,
 ) -> Result<impl IntoResponse, ApiError> {
     let data = LogReviewData::try_from(req).map_err(ApiError)?;
-    log_review::execute(&state.app_ctx.services.review_logger, data.into_command(user.0.value())).await?;
+    log_review::execute(
+        &state.app_ctx.services.review_logger,
+        data.into_command(user.0.value()),
+    )
+    .await?;
     Ok(StatusCode::CREATED)
 }
 
@@ -244,7 +248,12 @@ pub async fn post_review_html(
         }
     };
 
-    match log_review::execute(&state.app_ctx.services.review_logger, data.into_command(user_id.value())).await {
+    match log_review::execute(
+        &state.app_ctx.services.review_logger,
+        data.into_command(user_id.value()),
+    )
+    .await
+    {
         Ok(_) => Redirect::to("/").into_response(),
         Err(e) => {
             let msg = encode_error(&e.to_string());

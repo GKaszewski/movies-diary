@@ -25,9 +25,7 @@ pub async fn execute(
     g.update_target(cmd.target_count)?;
     goal.update(&g).await?;
 
-    let current_count = goal
-        .count_reviews_in_year(&user_id, cmd.year)
-        .await?;
+    let current_count = goal.count_reviews_in_year(&user_id, cmd.year).await?;
 
     event_publisher
         .publish(&DomainEvent::GoalUpdated {

@@ -2,7 +2,10 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use async_trait::async_trait;
-use domain::{errors::DomainError, ports::{PeriodicJob, WatchEventRepository}};
+use domain::{
+    errors::DomainError,
+    ports::{PeriodicJob, WatchEventRepository},
+};
 
 pub struct WatchEventCleanupJob {
     watch_event: Arc<dyn WatchEventRepository>,

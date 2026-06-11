@@ -10,7 +10,10 @@ use crate::{
     watchlist::{commands::AddToWatchlistCommand, deps::WatchlistAddDeps},
 };
 
-pub async fn execute(deps: &WatchlistAddDeps, cmd: AddToWatchlistCommand) -> Result<(), DomainError> {
+pub async fn execute(
+    deps: &WatchlistAddDeps,
+    cmd: AddToWatchlistCommand,
+) -> Result<(), DomainError> {
     let user_id = UserId::from_uuid(cmd.user_id);
 
     let movie = if let Some(id) = cmd.input.movie_id {

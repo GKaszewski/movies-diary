@@ -7,8 +7,9 @@ use crate::{
     auth::{
         commands::RegisterCommand,
         deps::{LoginDeps, RefreshDeps, RegisterDeps},
-        login, logout, refresh, register,
+        login, logout,
         queries::LoginQuery,
+        refresh, register,
     },
     test_helpers::TestContextBuilder,
 };
@@ -52,12 +53,9 @@ async fn logout_revokes_refresh_token() {
     .await
     .unwrap();
 
-    logout::execute(
-        b.refresh_session_repo.clone(),
-        &login_result.refresh_token,
-    )
-    .await
-    .unwrap();
+    logout::execute(b.refresh_session_repo.clone(), &login_result.refresh_token)
+        .await
+        .unwrap();
 
     let refresh_deps = RefreshDeps {
         refresh_session: b.refresh_session_repo.clone(),

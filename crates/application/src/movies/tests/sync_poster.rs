@@ -6,7 +6,10 @@ use domain::{
     errors::DomainError,
     models::Movie,
     ports::{MetadataClient, MovieRepository},
-    testing::{InMemoryMovieProfileRepository, InMemoryMovieRepository, NoopEventPublisher, NoopObjectStorage, FakeSearchCommand},
+    testing::{
+        FakeSearchCommand, InMemoryMovieProfileRepository, InMemoryMovieRepository,
+        NoopEventPublisher, NoopObjectStorage,
+    },
     value_objects::{ExternalMetadataId, MovieTitle, PosterUrl, ReleaseYear},
 };
 

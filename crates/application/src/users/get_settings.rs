@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use domain::{errors::DomainError, models::UserSettings, ports::UserSettingsRepository, value_objects::UserId};
+use domain::{
+    errors::DomainError, models::UserSettings, ports::UserSettingsRepository, value_objects::UserId,
+};
 
 pub async fn execute(
     user_settings: Arc<dyn UserSettingsRepository>,

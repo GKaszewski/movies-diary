@@ -1,8 +1,7 @@
 use std::sync::Arc;
 
 use domain::testing::{
-    InMemoryGoalRepository, InMemoryWrapUpRepository, InMemoryWrapUpStatsQuery,
-    NoopRemoteWatchlistRepository, NoopSocialQueryPort,
+    InMemoryGoalRepository, InMemoryWrapUpRepository, InMemoryWrapUpStatsQuery, NoopSocialQueryPort,
 };
 use domain::{
     ports::{
@@ -29,12 +28,7 @@ use domain::{
 use async_trait::async_trait;
 use domain::errors::DomainError;
 
-use crate::{
-    config::AppConfig,
-    context::{AppContext, Repositories, Services},
-    diary::commands::LogReviewCommand,
-    ports::ReviewLogger,
-};
+use crate::{config::AppConfig, diary::commands::LogReviewCommand, ports::ReviewLogger};
 
 pub struct NoopReviewLogger;
 
@@ -262,49 +256,5 @@ impl TestContextBuilder {
     pub fn with_config(mut self, config: AppConfig) -> Self {
         self.config = config;
         self
-    }
-
-    pub fn build(self) -> AppContext {
-        AppContext {
-            repos: Repositories {
-                movie: self.movie_repo,
-                review: self.review_repo,
-                diary: self.diary_repo,
-                stats: self.stats_repo,
-                user: self.user_repo,
-                import_session: self.import_session_repo,
-                import_profile: self.import_profile_repo,
-                movie_profile: self.movie_profile_repo,
-                watchlist: self.watchlist_repo,
-                watch_event: self.watch_event_repo,
-                webhook_token: self.webhook_token_repo,
-                profile_fields: self.profile_fields_repo,
-                person_command: self.person_command,
-                person_query: self.person_query,
-                search_port: self.search_port,
-                search_command: self.search_command,
-                remote_watchlist: Arc::new(NoopRemoteWatchlistRepository),
-                social_query: self.social_query,
-                wrapup_stats: self.wrapup_stats,
-                wrapup_repo: self.wrapup_repo,
-                goal: self.goal_repo,
-                user_settings: self.user_settings_repo,
-                remote_goal: Arc::new(domain::testing::NoopRemoteGoalRepository),
-                refresh_session: self.refresh_session_repo,
-            },
-            services: Services {
-                auth: self.auth_service,
-                password_hasher: self.password_hasher,
-                metadata: self.metadata_client,
-                poster_fetcher: self.poster_fetcher,
-                object_storage: self.object_storage,
-                event_publisher: self.event_publisher,
-                diary_exporter: self.diary_exporter,
-                document_parser: self.document_parser,
-                review_logger: self.review_logger,
-                person_enrichment: None,
-            },
-            config: self.config,
-        }
     }
 }

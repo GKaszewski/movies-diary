@@ -1,10 +1,7 @@
 use std::sync::Arc;
 
 use application::movies::{
-    commands::EnrichMovieCommand,
-    deps::EnrichMovieDeps,
-    enrich_movie,
-    request_enrichment,
+    commands::EnrichMovieCommand, deps::EnrichMovieDeps, enrich_movie, request_enrichment,
 };
 use async_trait::async_trait;
 use domain::{

@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use domain::{errors::DomainError, models::WebhookToken, ports::WebhookTokenRepository, value_objects::UserId};
+use domain::{
+    errors::DomainError, models::WebhookToken, ports::WebhookTokenRepository, value_objects::UserId,
+};
 use sha2::{Digest, Sha256};
 
 use crate::integrations::commands::GenerateWebhookTokenCommand;

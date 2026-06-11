@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use domain::{errors::DomainError, models::WebhookToken, ports::WebhookTokenRepository, value_objects::UserId};
+use domain::{
+    errors::DomainError, models::WebhookToken, ports::WebhookTokenRepository, value_objects::UserId,
+};
 
 use crate::integrations::queries::GetWebhookTokensQuery;
 

@@ -1,9 +1,9 @@
-use std::sync::Arc;
 use domain::{
     errors::DomainError,
     models::{SearchQuery, SearchResults},
     ports::SearchPort,
 };
+use std::sync::Arc;
 
 pub async fn execute(
     search_port: Arc<dyn SearchPort>,

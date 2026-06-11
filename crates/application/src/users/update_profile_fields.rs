@@ -1,7 +1,11 @@
 use std::sync::Arc;
 
 use domain::{
-    errors::DomainError, events::DomainEvent, models::UserProfile, ports::{EventPublisher, UserProfileFieldsRepository}, value_objects::UserId,
+    errors::DomainError,
+    events::DomainEvent,
+    models::UserProfile,
+    ports::{EventPublisher, UserProfileFieldsRepository},
+    value_objects::UserId,
 };
 
 use crate::users::commands::UpdateProfileFieldsCommand;

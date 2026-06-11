@@ -114,10 +114,7 @@ impl PeriodicJob for WrapUpCleanupJob {
 
     async fn run(&self) -> Result<(), DomainError> {
         let cutoff = chrono::Utc::now().naive_utc() - chrono::Duration::days(7);
-        let n = self
-            .wrapup_repo
-            .delete_failed_older_than(cutoff)
-            .await?;
+        let n = self.wrapup_repo.delete_failed_older_than(cutoff).await?;
         if n > 0 {
             tracing::info!("wrapup cleanup: removed {n} failed records");
         }

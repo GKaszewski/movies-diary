@@ -5,12 +5,10 @@ use anyhow::Context;
 use tokio::net::TcpListener;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use application::{
-    config::AppConfig,
-    context::{AppContext, Repositories, Services},
-};
+use application::config::AppConfig;
 use export::ExportAdapter;
 use importer::ImporterDocumentParser;
+use presentation::context::{AppContext, Repositories, Services};
 use presentation::{factory, openapi, routes, state::AppState};
 use rss::RssAdapter;
 

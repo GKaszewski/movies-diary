@@ -109,18 +109,16 @@ pub async fn get_import_page(
     Extension(csrf): Extension<CsrfToken>,
 ) -> impl IntoResponse {
     let ctx = super::helpers::build_page_context(&state, Some(user_id.clone()), csrf.0).await;
-    let profiles = list_import_profiles::execute(
-        state.app_ctx.repos.import_profile.clone(),
-        &user_id,
-    )
-    .await
-    .unwrap_or_default()
-        .into_iter()
-        .map(|p| ImportProfileView {
-            id: p.id.value().to_string(),
-            name: p.name,
-        })
-        .collect::<Vec<_>>();
+    let profiles =
+        list_import_profiles::execute(state.app_ctx.repos.import_profile.clone(), &user_id)
+            .await
+            .unwrap_or_default()
+            .into_iter()
+            .map(|p| ImportProfileView {
+                id: p.id.value().to_string(),
+                name: p.name,
+            })
+            .collect::<Vec<_>>();
     render_page(ImportUploadTemplate {
         ctx: &ctx,
         profiles: &profiles,
@@ -765,7 +763,8 @@ pub async fn api_get_profiles(
     State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
 ) -> impl IntoResponse {
-    match list_import_profiles::execute(state.app_ctx.repos.import_profile.clone(), &user_id).await {
+    match list_import_profiles::execute(state.app_ctx.repos.import_profile.clone(), &user_id).await
+    {
         Ok(profiles) => axum::Json(
             profiles
                 .into_iter()

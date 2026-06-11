@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use domain::{errors::DomainError, models::ImportProfile, ports::ImportProfileRepository, value_objects::UserId};
+use domain::{
+    errors::DomainError, models::ImportProfile, ports::ImportProfileRepository,
+    value_objects::UserId,
+};
 
 pub async fn execute(
     import_profile: Arc<dyn ImportProfileRepository>,

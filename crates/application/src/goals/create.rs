@@ -17,9 +17,7 @@ pub async fn execute(
 ) -> Result<GoalWithProgress, DomainError> {
     let user_id = UserId::from_uuid(cmd.user_id);
 
-    let existing = goal
-        .find_by_user_and_year(&user_id, cmd.year)
-        .await?;
+    let existing = goal.find_by_user_and_year(&user_id, cmd.year).await?;
     if existing.is_some() {
         return Err(DomainError::ValidationError(
             "Goal already exists for this year".into(),
@@ -34,9 +32,7 @@ pub async fn execute(
     )?;
     goal.save(&g).await?;
 
-    let current_count = goal
-        .count_reviews_in_year(&user_id, cmd.year)
-        .await?;
+    let current_count = goal.count_reviews_in_year(&user_id, cmd.year).await?;
 
     event_publisher
         .publish(&DomainEvent::GoalCreated {

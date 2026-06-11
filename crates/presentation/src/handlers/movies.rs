@@ -9,16 +9,11 @@ use uuid::Uuid;
 use application::{
     diary::{
         commands::SyncPosterCommand,
-        deps::{GetMovieSocialPageDeps},
+        deps::GetMovieSocialPageDeps,
         get_movie_social_page, get_review_history,
         queries::{GetMovieSocialPageQuery, GetReviewHistoryQuery},
     },
-    movies::{
-        deps::SyncPosterDeps,
-        get_movies,
-        queries::GetMoviesQuery,
-        sync_poster,
-    },
+    movies::{deps::SyncPosterDeps, get_movies, queries::GetMoviesQuery, sync_poster},
     watchlist::{is_on as is_on_watchlist, queries::IsOnWatchlistQuery},
 };
 use domain::services::review_history::Trend;
@@ -88,8 +83,11 @@ pub async fn get_review_history(
     State(state): State<AppState>,
     Path(movie_id): Path<Uuid>,
 ) -> Result<Json<ReviewHistoryResponse>, ApiError> {
-    let (history, trend) =
-        get_review_history::execute(&state.app_ctx.repos.diary, GetReviewHistoryQuery { movie_id }).await?;
+    let (history, trend) = get_review_history::execute(
+        &state.app_ctx.repos.diary,
+        GetReviewHistoryQuery { movie_id },
+    )
+    .await?;
 
     Ok(Json(ReviewHistoryResponse {
         movie: crate::mappers::movies::movie_to_dto(history.movie()),
@@ -210,12 +208,7 @@ pub async fn get_movie_profile(
 ) -> impl IntoResponse {
     use application::movies::get_movie_profile;
     let query = get_movie_profile::GetMovieProfileQuery { movie_id };
-    match get_movie_profile::execute(
-        state.app_ctx.repos.movie_profile.clone(),
-        query,
-    )
-    .await
-    {
+    match get_movie_profile::execute(state.app_ctx.repos.movie_profile.clone(), query).await {
         Ok(Some(result)) => {
             let p = result.profile;
             Json(MovieProfileResponse {
