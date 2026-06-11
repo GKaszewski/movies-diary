@@ -138,7 +138,7 @@ async fn main() -> anyhow::Result<()> {
             Ok(client) => {
                 tracing::info!("TMDb enrichment enabled");
                 let client = Arc::new(client);
-                let handler = Arc::new(tmdb_enrichment::EnrichmentHandler::new(
+                let handler = Arc::new(tmdb_enrichment::MovieEnrichmentHandler::new(
                     Arc::clone(&client) as Arc<dyn MovieEnrichmentClient>,
                     Arc::clone(&ctx.repos.movie),
                     Arc::clone(&ctx.repos.movie_profile),
