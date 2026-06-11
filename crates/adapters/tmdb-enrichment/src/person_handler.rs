@@ -41,13 +41,12 @@ impl EventHandler for PersonEnrichmentHandler {
             _ => return Ok(()),
         };
 
-        if let Some(person) = self.person_query.get_by_id(&person_id).await? {
-            if let Some(at) = person.enriched_at() {
-                if (Utc::now() - at).num_days() < STALENESS_DAYS {
-                    tracing::debug!(person_id = %person_id.value(), "person enrichment still fresh");
-                    return Ok(());
-                }
-            }
+        if let Some(person) = self.person_query.get_by_id(&person_id).await?
+            && let Some(at) = person.enriched_at()
+            && (Utc::now() - at).num_days() < STALENESS_DAYS
+        {
+            tracing::debug!(person_id = %person_id.value(), "person enrichment still fresh");
+            return Ok(());
         }
 
         tracing::info!(person_id = %person_id.value(), "enriching person from TMDb");
