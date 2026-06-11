@@ -8,16 +8,16 @@ use domain::{
     ports::MovieRepository,
     value_objects::{ExternalMetadataId, MovieId, MovieTitle, ReleaseYear},
 };
-use sqlx::SqlitePool;
+use sqlx::PgPool;
 
 use crate::models::{MovieRow, MovieSummaryRow};
 
-pub struct SqliteMovieRepository {
-    pool: SqlitePool,
+pub struct PostgresMovieRepository {
+    pool: PgPool,
 }
 
-impl SqliteMovieRepository {
-    pub fn new(pool: SqlitePool) -> Self {
+impl PostgresMovieRepository {
+    pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
 
@@ -28,7 +28,7 @@ impl SqliteMovieRepository {
 }
 
 #[async_trait]
-impl MovieRepository for SqliteMovieRepository {
+impl MovieRepository for PostgresMovieRepository {
     async fn get_movie_by_external_id(
         &self,
         external_metadata_id: &ExternalMetadataId,
@@ -36,7 +36,7 @@ impl MovieRepository for SqliteMovieRepository {
         let id = external_metadata_id.value();
         sqlx::query_as::<_, MovieRow>(
             "SELECT id, external_metadata_id, title, release_year, director, poster_path
-             FROM movies WHERE external_metadata_id = ?",
+             FROM movies WHERE external_metadata_id = $1",
         )
         .bind(id)
         .fetch_optional(&self.pool)
@@ -50,7 +50,7 @@ impl MovieRepository for SqliteMovieRepository {
         let id = movie_id.value().to_string();
         sqlx::query_as::<_, MovieRow>(
             "SELECT id, external_metadata_id, title, release_year, director, poster_path
-             FROM movies WHERE id = ?",
+             FROM movies WHERE id = $1",
         )
         .bind(&id)
         .fetch_optional(&self.pool)
@@ -65,14 +65,14 @@ impl MovieRepository for SqliteMovieRepository {
         title: &MovieTitle,
         year: &ReleaseYear,
     ) -> Result<Vec<Movie>, DomainError> {
-        let t = title.value();
-        let y = year.value() as i64;
+        let title = title.value();
+        let year = year.value() as i64;
         sqlx::query_as::<_, MovieRow>(
             "SELECT id, external_metadata_id, title, release_year, director, poster_path
-             FROM movies WHERE title = ? AND release_year = ?",
+             FROM movies WHERE title = $1 AND release_year = $2",
         )
-        .bind(t)
-        .bind(y)
+        .bind(title)
+        .bind(year)
         .fetch_all(&self.pool)
         .await
         .map_err(Self::map_err)?
@@ -91,7 +91,7 @@ impl MovieRepository for SqliteMovieRepository {
 
         sqlx::query(
             "INSERT INTO movies (id, external_metadata_id, title, release_year, director, poster_path)
-             VALUES (?, ?, ?, ?, ?, ?)
+             VALUES ($1, $2, $3, $4, $5, $6)
              ON CONFLICT(id) DO UPDATE SET
                  external_metadata_id = excluded.external_metadata_id,
                  title                = excluded.title,
@@ -114,7 +114,7 @@ impl MovieRepository for SqliteMovieRepository {
 
     async fn delete_movie(&self, movie_id: &MovieId) -> Result<(), DomainError> {
         let id = movie_id.value().to_string();
-        sqlx::query("DELETE FROM movies WHERE id = ?")
+        sqlx::query("DELETE FROM movies WHERE id = $1")
             .bind(&id)
             .execute(&self.pool)
             .await
@@ -129,17 +129,15 @@ impl MovieRepository for SqliteMovieRepository {
         if ids.is_empty() {
             return Ok(Default::default());
         }
-        let placeholders: Vec<&str> = ids.iter().map(|_| "?").collect();
-        let sql = format!(
-            "SELECT external_metadata_id FROM movies WHERE external_metadata_id IN ({})",
-            placeholders.join(",")
-        );
-        let mut q = sqlx::query_scalar::<_, String>(&sql);
-        for id in ids {
-            q = q.bind(id.value().to_string());
-        }
-        let rows = q.fetch_all(&self.pool).await.map_err(Self::map_err)?;
-        Ok(rows.into_iter().collect())
+        let vals: Vec<String> = ids.iter().map(|id| id.value().to_string()).collect();
+        let rows: Vec<(String,)> = sqlx::query_as(
+            "SELECT external_metadata_id FROM movies WHERE external_metadata_id = ANY($1)",
+        )
+        .bind(&vals)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(Self::map_err)?;
+        Ok(rows.into_iter().map(|(id,)| id).collect())
     }
 
     async fn existing_title_year_pairs(
@@ -149,20 +147,19 @@ impl MovieRepository for SqliteMovieRepository {
         if pairs.is_empty() {
             return Ok(Default::default());
         }
-        let conditions: Vec<String> = pairs
-            .iter()
-            .map(|_| "(title = ? AND release_year = ?)".to_string())
-            .collect();
-        let sql = format!(
-            "SELECT DISTINCT title, release_year FROM movies WHERE {}",
-            conditions.join(" OR ")
-        );
+        let titles: Vec<&str> = pairs.iter().map(|(t, _)| t.value()).collect();
+        let years: Vec<i64> = pairs.iter().map(|(_, y)| y.value() as i64).collect();
         use sqlx::Row;
-        let mut q = sqlx::query(&sql);
-        for (t, y) in pairs {
-            q = q.bind(t.value().to_string()).bind(y.value() as i64);
-        }
-        let rows = q.fetch_all(&self.pool).await.map_err(Self::map_err)?;
+        let rows = sqlx::query(
+            "SELECT DISTINCT m.title, m.release_year FROM movies m \
+             INNER JOIN unnest($1::text[], $2::bigint[]) AS p(title, release_year) \
+             ON m.title = p.title AND m.release_year = p.release_year",
+        )
+        .bind(&titles)
+        .bind(&years)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(Self::map_err)?;
         Ok(rows
             .into_iter()
             .map(|r| {
@@ -192,23 +189,20 @@ impl MovieRepository for SqliteMovieRepository {
             "SELECT \
                m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path, \
                p.overview, p.runtime_minutes, p.original_language, p.collection_name, \
-               GROUP_CONCAT(g.name) AS genres \
+               array_agg(g.name) FILTER (WHERE g.name IS NOT NULL) AS genres \
              FROM movies m \
              LEFT JOIN movie_profiles p ON p.movie_id = m.id \
              LEFT JOIN movie_genres g ON g.movie_id = m.id \
-             WHERE (? IS NULL OR LOWER(m.title) LIKE ?) \
-               AND (? IS NULL OR p.original_language = ?) \
-               AND (? IS NULL OR m.id IN (SELECT movie_id FROM movie_genres WHERE LOWER(name) = LOWER(?))) \
+             WHERE ($1::text IS NULL OR LOWER(m.title) LIKE $1) \
+               AND ($2::text IS NULL OR p.original_language = $2) \
+               AND ($3::text IS NULL OR m.id IN (SELECT movie_id FROM movie_genres WHERE LOWER(name) = LOWER($3))) \
              GROUP BY m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path, \
                       p.overview, p.runtime_minutes, p.original_language, p.collection_name \
              ORDER BY m.title ASC \
-             LIMIT ? OFFSET ?",
+             LIMIT $4 OFFSET $5",
         )
         .bind(&pattern)
-        .bind(&pattern)
         .bind(language)
-        .bind(language)
-        .bind(genre)
         .bind(genre)
         .bind(limit)
         .bind(offset)
@@ -220,15 +214,12 @@ impl MovieRepository for SqliteMovieRepository {
             "SELECT COUNT(DISTINCT m.id) \
              FROM movies m \
              LEFT JOIN movie_profiles p ON p.movie_id = m.id \
-             WHERE (? IS NULL OR LOWER(m.title) LIKE ?) \
-               AND (? IS NULL OR p.original_language = ?) \
-               AND (? IS NULL OR m.id IN (SELECT movie_id FROM movie_genres WHERE LOWER(name) = LOWER(?)))",
+             WHERE ($1::text IS NULL OR LOWER(m.title) LIKE $1) \
+               AND ($2::text IS NULL OR p.original_language = $2) \
+               AND ($3::text IS NULL OR m.id IN (SELECT movie_id FROM movie_genres WHERE LOWER(name) = LOWER($3)))",
         )
         .bind(&pattern)
-        .bind(&pattern)
         .bind(language)
-        .bind(language)
-        .bind(genre)
         .bind(genre)
         .fetch_one(&self.pool)
         .await
