@@ -83,6 +83,13 @@ impl domain::ports::PersonCommand for NoopPersonCommand {
     ) -> Result<(u64, bool), domain::errors::DomainError> {
         Ok((0, false))
     }
+    async fn update_enrichment(
+        &self,
+        _: &domain::models::PersonId,
+        _: &domain::models::PersonEnrichmentData,
+    ) -> Result<(), domain::errors::DomainError> {
+        Ok(())
+    }
 }
 
 #[tokio::test]

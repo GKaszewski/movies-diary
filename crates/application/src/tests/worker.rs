@@ -66,6 +66,7 @@ impl EventHandler for RecordingHandler {
             DomainEvent::GoalCreated { .. }
             | DomainEvent::GoalUpdated { .. }
             | DomainEvent::GoalDeleted { .. } => "goal",
+            DomainEvent::PersonEnrichmentRequested { .. } => "person_enrichment_requested",
         };
         self.calls.lock().unwrap().push(label);
         Ok(())
