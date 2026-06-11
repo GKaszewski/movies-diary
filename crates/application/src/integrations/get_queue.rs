@@ -1,13 +1,15 @@
-use domain::{errors::DomainError, models::WatchEvent, value_objects::UserId};
+use std::sync::Arc;
 
-use crate::{context::AppContext, integrations::queries::GetWatchQueueQuery};
+use domain::{errors::DomainError, models::WatchEvent, ports::WatchEventRepository, value_objects::UserId};
+
+use crate::integrations::queries::GetWatchQueueQuery;
 
 pub async fn execute(
-    ctx: &AppContext,
+    watch_event: Arc<dyn WatchEventRepository>,
     query: GetWatchQueueQuery,
 ) -> Result<Vec<WatchEvent>, DomainError> {
     let user_id = UserId::from_uuid(query.user_id);
-    ctx.repos.watch_event.list_pending(&user_id).await
+    watch_event.list_pending(&user_id).await
 }
 
 #[cfg(test)]

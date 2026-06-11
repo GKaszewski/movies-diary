@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use domain::models::WatchEventSource;
+use domain::ports::WebhookTokenRepository;
 use domain::testing::InMemoryWebhookTokenRepository;
 use uuid::Uuid;
 
@@ -8,17 +9,13 @@ use crate::integrations::{
     commands::GenerateWebhookTokenCommand, generate_token, get_tokens,
     queries::GetWebhookTokensQuery,
 };
-use crate::test_helpers::TestContextBuilder;
 
 #[tokio::test]
 async fn returns_empty_when_no_tokens() {
-    let tokens = InMemoryWebhookTokenRepository::new();
-    let ctx = TestContextBuilder::new()
-        .with_webhook_tokens(Arc::clone(&tokens) as _)
-        .build();
+    let tokens: Arc<dyn WebhookTokenRepository> = InMemoryWebhookTokenRepository::new();
 
     let result = get_tokens::execute(
-        &ctx,
+        Arc::clone(&tokens),
         GetWebhookTokensQuery {
             user_id: Uuid::new_v4(),
         },
@@ -31,15 +28,12 @@ async fn returns_empty_when_no_tokens() {
 
 #[tokio::test]
 async fn returns_tokens_after_generate() {
-    let tokens = InMemoryWebhookTokenRepository::new();
-    let ctx = TestContextBuilder::new()
-        .with_webhook_tokens(Arc::clone(&tokens) as _)
-        .build();
+    let tokens: Arc<dyn WebhookTokenRepository> = InMemoryWebhookTokenRepository::new();
 
     let user_id = Uuid::new_v4();
 
     generate_token::execute(
-        &ctx,
+        Arc::clone(&tokens),
         GenerateWebhookTokenCommand {
             user_id,
             provider: WatchEventSource::Jellyfin,
@@ -50,7 +44,7 @@ async fn returns_tokens_after_generate() {
     .unwrap();
 
     generate_token::execute(
-        &ctx,
+        Arc::clone(&tokens),
         GenerateWebhookTokenCommand {
             user_id,
             provider: WatchEventSource::Plex,
@@ -60,7 +54,7 @@ async fn returns_tokens_after_generate() {
     .await
     .unwrap();
 
-    let result = get_tokens::execute(&ctx, GetWebhookTokensQuery { user_id })
+    let result = get_tokens::execute(Arc::clone(&tokens), GetWebhookTokensQuery { user_id })
         .await
         .unwrap();
 

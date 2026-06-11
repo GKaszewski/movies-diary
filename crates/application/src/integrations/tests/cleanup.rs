@@ -1,11 +1,15 @@
+use std::sync::Arc;
+
+use domain::ports::WatchEventRepository;
+use domain::testing::InMemoryWatchEventRepository;
+
 use crate::integrations::cleanup;
-use crate::test_helpers::TestContextBuilder;
 
 #[tokio::test]
 async fn returns_zero_when_nothing_to_clean() {
-    let ctx = TestContextBuilder::new().build();
+    let watch_events: Arc<dyn WatchEventRepository> = InMemoryWatchEventRepository::new();
 
-    let count = cleanup::execute(&ctx).await.unwrap();
+    let count = cleanup::execute(watch_events).await.unwrap();
 
     assert_eq!(count, 0);
 }

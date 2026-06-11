@@ -7,17 +7,13 @@ use domain::value_objects::UserId;
 use uuid::Uuid;
 
 use crate::integrations::{commands::DismissWatchEventsCommand, dismiss};
-use crate::test_helpers::TestContextBuilder;
 
 #[tokio::test]
 async fn dismisses_empty_list_returns_zero() {
-    let events = InMemoryWatchEventRepository::new();
-    let ctx = TestContextBuilder::new()
-        .with_watch_events(Arc::clone(&events) as _)
-        .build();
+    let events: Arc<dyn WatchEventRepository> = InMemoryWatchEventRepository::new();
 
     let result = dismiss::execute(
-        &ctx,
+        Arc::clone(&events),
         DismissWatchEventsCommand {
             user_id: Uuid::new_v4(),
             event_ids: vec![],
@@ -31,13 +27,10 @@ async fn dismisses_empty_list_returns_zero() {
 
 #[tokio::test]
 async fn fails_when_event_not_found() {
-    let events = InMemoryWatchEventRepository::new();
-    let ctx = TestContextBuilder::new()
-        .with_watch_events(Arc::clone(&events) as _)
-        .build();
+    let events: Arc<dyn WatchEventRepository> = InMemoryWatchEventRepository::new();
 
     let result = dismiss::execute(
-        &ctx,
+        Arc::clone(&events),
         DismissWatchEventsCommand {
             user_id: Uuid::new_v4(),
             event_ids: vec![Uuid::new_v4()],
@@ -50,7 +43,7 @@ async fn fails_when_event_not_found() {
 
 #[tokio::test]
 async fn dismisses_existing_events() {
-    let watch_events = InMemoryWatchEventRepository::new();
+    let watch_events: Arc<dyn WatchEventRepository> = InMemoryWatchEventRepository::new();
     let uid = Uuid::new_v4();
     let user_id = UserId::from_uuid(uid);
 
@@ -77,12 +70,8 @@ async fn dismisses_existing_events() {
     watch_events.save(&e1).await.unwrap();
     watch_events.save(&e2).await.unwrap();
 
-    let ctx = TestContextBuilder::new()
-        .with_watch_events(Arc::clone(&watch_events) as _)
-        .build();
-
     let result = dismiss::execute(
-        &ctx,
+        Arc::clone(&watch_events),
         DismissWatchEventsCommand {
             user_id: uid,
             event_ids: vec![id1, id2],

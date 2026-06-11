@@ -46,7 +46,7 @@ pub async fn get_integrations_page(
     let query = GetWebhookTokensQuery {
         user_id: user_id.value(),
     };
-    let tokens = get_webhook_tokens::execute(&state.app_ctx, query)
+    let tokens = get_webhook_tokens::execute(state.app_ctx.repos.webhook_token.clone(), query)
         .await
         .unwrap_or_default();
 
@@ -86,7 +86,7 @@ pub async fn post_generate_token(
         label: form.label.filter(|l| !l.trim().is_empty()),
     };
 
-    match generate_webhook_token::execute(&state.app_ctx, cmd).await {
+    match generate_webhook_token::execute(state.app_ctx.repos.webhook_token.clone(), cmd).await {
         Ok(result) => {
             let encoded = percent_encoding::utf8_percent_encode(
                 &result.token_plaintext,
@@ -116,7 +116,7 @@ pub async fn post_revoke_token(
         user_id: user_id.value(),
         token_id,
     };
-    if let Err(e) = revoke_webhook_token::execute(&state.app_ctx, cmd).await {
+    if let Err(e) = revoke_webhook_token::execute(state.app_ctx.repos.webhook_token.clone(), cmd).await {
         tracing::error!("revoke token failed: {:?}", e);
     }
 
@@ -138,7 +138,7 @@ pub async fn get_watch_queue_page(
     let query = GetWatchQueueQuery {
         user_id: user_id.value(),
     };
-    let events = get_watch_queue::execute(&state.app_ctx, query)
+    let events = get_watch_queue::execute(state.app_ctx.repos.watch_event.clone(), query)
         .await
         .unwrap_or_default();
 
@@ -175,7 +175,13 @@ pub async fn post_confirm_single(
         }],
     };
 
-    match confirm_watch_events::execute(&state.app_ctx, cmd).await {
+    match confirm_watch_events::execute(
+        state.app_ctx.repos.watch_event.clone(),
+        state.app_ctx.services.review_logger.clone(),
+        cmd,
+    )
+    .await
+    {
         Ok(_) => Redirect::to("/watch-queue").into_response(),
         Err(e) => {
             let msg = encode_error(&e.to_string());
@@ -200,7 +206,7 @@ pub async fn post_dismiss_single(
         event_ids: vec![event_id],
     };
 
-    match dismiss_watch_events::execute(&state.app_ctx, cmd).await {
+    match dismiss_watch_events::execute(state.app_ctx.repos.watch_event.clone(), cmd).await {
         Ok(_) => Redirect::to("/watch-queue").into_response(),
         Err(e) => {
             let msg = encode_error(&e.to_string());

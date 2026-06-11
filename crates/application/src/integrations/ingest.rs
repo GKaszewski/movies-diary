@@ -3,23 +3,21 @@ use domain::{
     errors::DomainError, events::DomainEvent, models::WatchEvent, ports::MediaServerParser,
 };
 
-use crate::{context::AppContext, integrations::commands::IngestWatchEventCommand};
+use crate::integrations::{commands::IngestWatchEventCommand, deps::IngestWatchEventDeps};
 
 pub async fn execute(
-    ctx: &AppContext,
+    deps: &IngestWatchEventDeps,
     cmd: IngestWatchEventCommand,
     parser: &dyn MediaServerParser,
 ) -> Result<(), DomainError> {
     let token_hash = super::generate_token::hash_token(&cmd.token);
-    let webhook_token = ctx
-        .repos
+    let webhook_token = deps
         .webhook_token
         .find_by_token_hash(&token_hash)
         .await?
         .ok_or_else(|| DomainError::Unauthorized("invalid webhook token".into()))?;
 
-    let _ = ctx
-        .repos
+    let _ = deps
         .webhook_token
         .touch_last_used(webhook_token.id())
         .await;
@@ -34,8 +32,7 @@ pub async fn execute(
 
     if let Some(ref ext_id) = external_metadata_id {
         let one_hour_ago = chrono::Utc::now().naive_utc() - Duration::hours(1);
-        if ctx
-            .repos
+        if deps
             .watch_event
             .find_duplicate(&user_id, ext_id, one_hour_ago)
             .await?
@@ -55,10 +52,9 @@ pub async fn execute(
         None,
     );
 
-    ctx.repos.watch_event.save(&event).await?;
+    deps.watch_event.save(&event).await?;
 
-    let _ = ctx
-        .services
+    let _ = deps
         .event_publisher
         .publish(&DomainEvent::WatchEventIngested {
             user_id: event.user_id().clone(),

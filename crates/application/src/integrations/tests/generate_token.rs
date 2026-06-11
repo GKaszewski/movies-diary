@@ -1,22 +1,19 @@
 use std::sync::Arc;
 
 use domain::models::WatchEventSource;
+use domain::ports::WebhookTokenRepository;
 use domain::testing::InMemoryWebhookTokenRepository;
 use uuid::Uuid;
 
 use crate::integrations::{commands::GenerateWebhookTokenCommand, generate_token};
-use crate::test_helpers::TestContextBuilder;
 
 #[tokio::test]
 async fn generates_token_and_saves() {
-    let tokens = InMemoryWebhookTokenRepository::new();
-    let ctx = TestContextBuilder::new()
-        .with_webhook_tokens(Arc::clone(&tokens) as _)
-        .build();
+    let tokens: Arc<dyn WebhookTokenRepository> = InMemoryWebhookTokenRepository::new();
 
     let user_id = Uuid::new_v4();
     let result = generate_token::execute(
-        &ctx,
+        Arc::clone(&tokens),
         GenerateWebhookTokenCommand {
             user_id,
             provider: WatchEventSource::Jellyfin,
@@ -28,9 +25,7 @@ async fn generates_token_and_saves() {
 
     assert!(!result.token_plaintext.is_empty());
 
-    let saved = ctx
-        .repos
-        .webhook_token
+    let saved = tokens
         .list_by_user(&domain::value_objects::UserId::from_uuid(user_id))
         .await
         .unwrap();

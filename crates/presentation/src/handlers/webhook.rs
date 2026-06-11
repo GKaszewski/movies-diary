@@ -15,10 +15,10 @@ use application::integrations::{
         ConfirmWatchEventsCommand, DismissWatchEventsCommand, GenerateWebhookTokenCommand,
         IngestWatchEventCommand, RevokeWebhookTokenCommand, WatchEventConfirmation,
     },
-    confirm as confirm_watch_events, dismiss as dismiss_watch_events,
-    generate_token as generate_webhook_token, get_queue as get_watch_queue,
-    get_tokens as get_webhook_tokens, ingest as ingest_watch_event,
-    queries::{GetWatchQueueQuery, GetWebhookTokensQuery},
+    confirm as confirm_watch_events, deps::IngestWatchEventDeps,
+    dismiss as dismiss_watch_events, generate_token as generate_webhook_token,
+    get_queue as get_watch_queue, get_tokens as get_webhook_tokens,
+    ingest as ingest_watch_event, queries::{GetWatchQueueQuery, GetWebhookTokensQuery},
     revoke_token as revoke_webhook_token,
 };
 use domain::models::WatchEventSource;
@@ -126,7 +126,12 @@ async fn run_ingest(
     cmd: IngestWatchEventCommand,
     parser: &dyn domain::ports::MediaServerParser,
 ) -> StatusCode {
-    match ingest_watch_event::execute(&state.app_ctx, cmd, parser).await {
+    let deps = IngestWatchEventDeps {
+        webhook_token: state.app_ctx.repos.webhook_token.clone(),
+        watch_event: state.app_ctx.repos.watch_event.clone(),
+        event_publisher: state.app_ctx.services.event_publisher.clone(),
+    };
+    match ingest_watch_event::execute(&deps, cmd, parser).await {
         Ok(()) => StatusCode::OK,
         Err(e) => crate::errors::domain_error_status(&e),
     }
@@ -159,7 +164,7 @@ pub async fn post_generate_webhook_token(
         label: req.label,
     };
 
-    let result = generate_webhook_token::execute(&state.app_ctx, cmd).await?;
+    let result = generate_webhook_token::execute(state.app_ctx.repos.webhook_token.clone(), cmd).await?;
 
     let base_url = &state.app_ctx.config.base_url;
     let webhook_url = format!("{base_url}/api/v1/webhooks/{provider}");
@@ -186,7 +191,7 @@ pub async fn get_webhook_tokens(
     let query = GetWebhookTokensQuery {
         user_id: user.0.value(),
     };
-    let tokens = get_webhook_tokens::execute(&state.app_ctx, query).await?;
+    let tokens = get_webhook_tokens::execute(state.app_ctx.repos.webhook_token.clone(), query).await?;
 
     let dtos = tokens
         .into_iter()
@@ -221,7 +226,7 @@ pub async fn delete_webhook_token(
         user_id: user.0.value(),
         token_id: id,
     };
-    revoke_webhook_token::execute(&state.app_ctx, cmd).await?;
+    revoke_webhook_token::execute(state.app_ctx.repos.webhook_token.clone(), cmd).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -242,7 +247,7 @@ pub async fn get_watch_queue(
     let query = GetWatchQueueQuery {
         user_id: user.0.value(),
     };
-    let events = get_watch_queue::execute(&state.app_ctx, query).await?;
+    let events = get_watch_queue::execute(state.app_ctx.repos.watch_event.clone(), query).await?;
 
     let dtos = events
         .into_iter()
@@ -287,7 +292,12 @@ pub async fn post_confirm_watch_events(
             .collect(),
     };
 
-    let confirmed = confirm_watch_events::execute(&state.app_ctx, cmd).await?;
+    let confirmed = confirm_watch_events::execute(
+        state.app_ctx.repos.watch_event.clone(),
+        state.app_ctx.services.review_logger.clone(),
+        cmd,
+    )
+    .await?;
     Ok(Json(ConfirmWatchResponse { confirmed }))
 }
 
@@ -311,6 +321,6 @@ pub async fn post_dismiss_watch_events(
         event_ids: req.event_ids,
     };
 
-    let dismissed = dismiss_watch_events::execute(&state.app_ctx, cmd).await?;
+    let dismissed = dismiss_watch_events::execute(state.app_ctx.repos.watch_event.clone(), cmd).await?;
     Ok(Json(DismissWatchResponse { dismissed }))
 }

@@ -1,6 +1,7 @@
 pub mod cleanup;
 pub mod commands;
 pub mod confirm;
+pub mod deps;
 pub mod dismiss;
 pub mod generate_token;
 pub mod get_queue;

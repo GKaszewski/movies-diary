@@ -1,12 +1,13 @@
 use std::sync::Arc;
 
 use domain::models::WatchEventSource;
-use domain::testing::InMemoryWebhookTokenRepository;
+use domain::ports::{EventPublisher, WatchEventRepository, WebhookTokenRepository};
+use domain::testing::{InMemoryWebhookTokenRepository, InMemoryWatchEventRepository, NoopEventPublisher};
 use uuid::Uuid;
 
-use crate::integrations::commands::GenerateWebhookTokenCommand;
-use crate::integrations::{commands::IngestWatchEventCommand, generate_token, ingest};
-use crate::test_helpers::TestContextBuilder;
+use crate::integrations::commands::{GenerateWebhookTokenCommand, IngestWatchEventCommand};
+use crate::integrations::deps::IngestWatchEventDeps;
+use crate::integrations::{generate_token, ingest};
 
 struct FakeParser;
 
@@ -26,14 +27,13 @@ impl domain::ports::MediaServerParser for FakeParser {
 
 #[tokio::test]
 async fn ingests_watch_event() {
-    let tokens = InMemoryWebhookTokenRepository::new();
-    let ctx = TestContextBuilder::new()
-        .with_webhook_tokens(Arc::clone(&tokens) as _)
-        .build();
+    let tokens: Arc<dyn WebhookTokenRepository> = InMemoryWebhookTokenRepository::new();
+    let watch_events: Arc<dyn WatchEventRepository> = InMemoryWatchEventRepository::new();
+    let event_publisher: Arc<dyn EventPublisher> = NoopEventPublisher::new();
 
     let user_id = Uuid::new_v4();
     let generated = generate_token::execute(
-        &ctx,
+        Arc::clone(&tokens),
         GenerateWebhookTokenCommand {
             user_id,
             provider: WatchEventSource::Jellyfin,
@@ -43,8 +43,14 @@ async fn ingests_watch_event() {
     .await
     .unwrap();
 
+    let deps = IngestWatchEventDeps {
+        webhook_token: Arc::clone(&tokens),
+        watch_event: Arc::clone(&watch_events),
+        event_publisher: Arc::clone(&event_publisher),
+    };
+
     let result = ingest::execute(
-        &ctx,
+        &deps,
         IngestWatchEventCommand {
             token: generated.token_plaintext,
             raw_payload: vec![],
@@ -59,10 +65,18 @@ async fn ingests_watch_event() {
 
 #[tokio::test]
 async fn rejects_invalid_token() {
-    let ctx = TestContextBuilder::new().build();
+    let tokens: Arc<dyn WebhookTokenRepository> = InMemoryWebhookTokenRepository::new();
+    let watch_events: Arc<dyn WatchEventRepository> = InMemoryWatchEventRepository::new();
+    let event_publisher: Arc<dyn EventPublisher> = NoopEventPublisher::new();
+
+    let deps = IngestWatchEventDeps {
+        webhook_token: Arc::clone(&tokens),
+        watch_event: Arc::clone(&watch_events),
+        event_publisher: Arc::clone(&event_publisher),
+    };
 
     let result = ingest::execute(
-        &ctx,
+        &deps,
         IngestWatchEventCommand {
             token: "bad-token".into(),
             raw_payload: vec![],

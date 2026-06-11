@@ -1,24 +1,29 @@
+use std::sync::Arc;
+
 use domain::{
     errors::DomainError,
     models::WatchEventStatus,
+    ports::WatchEventRepository,
     value_objects::{UserId, WatchEventId},
 };
 
 use crate::{
-    context::AppContext,
     diary::commands::{LogReviewCommand, MovieInput},
     integrations::commands::ConfirmWatchEventsCommand,
+    ports::ReviewLogger,
 };
 
-pub async fn execute(ctx: &AppContext, cmd: ConfirmWatchEventsCommand) -> Result<u32, DomainError> {
+pub async fn execute(
+    watch_event: Arc<dyn WatchEventRepository>,
+    review_logger: Arc<dyn ReviewLogger>,
+    cmd: ConfirmWatchEventsCommand,
+) -> Result<u32, DomainError> {
     let user_id = UserId::from_uuid(cmd.user_id);
     let mut confirmed = 0u32;
 
     for c in cmd.confirmations {
         let event_id = WatchEventId::from_uuid(c.watch_event_id);
-        let event = ctx
-            .repos
-            .watch_event
+        let event = watch_event
             .get_by_id(&event_id)
             .await?
             .ok_or_else(|| DomainError::NotFound(format!("WatchEvent {}", c.watch_event_id)))?;
@@ -53,10 +58,9 @@ pub async fn execute(ctx: &AppContext, cmd: ConfirmWatchEventsCommand) -> Result
             watched_at: *event.watched_at(),
         };
 
-        ctx.services.review_logger.log_review(review_cmd).await?;
+        review_logger.log_review(review_cmd).await?;
 
-        ctx.repos
-            .watch_event
+        watch_event
             .update_status(&event_id, WatchEventStatus::Confirmed)
             .await?;
 
