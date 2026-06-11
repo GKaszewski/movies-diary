@@ -8,18 +8,10 @@ use crate::users::deps::GetProfileDeps;
 use crate::users::get_profile;
 use crate::users::queries::{GetUserProfileQuery, ProfileView};
 
-fn default_deps() -> GetProfileDeps {
-    let b = TestContextBuilder::new();
-    GetProfileDeps {
-        stats: b.stats_repo.clone(),
-        diary: b.diary_repo.clone(),
-        social_query: b.social_query.clone(),
-    }
-}
-
 #[tokio::test]
 async fn returns_profile_with_empty_stats() {
     let b = TestContextBuilder::new();
+    let user_repo = b.user_repo.clone();
     let deps = GetProfileDeps {
         stats: b.stats_repo.clone(),
         diary: b.diary_repo.clone(),
@@ -40,7 +32,7 @@ async fn returns_profile_with_empty_stats() {
     .unwrap();
 
     let email = Email::new("profile@test.com".into()).unwrap();
-    let user = ctx.repos.user.find_by_email(&email).await.unwrap().unwrap();
+    let user = user_repo.find_by_email(&email).await.unwrap().unwrap();
     let uid = user.id().value();
 
     let result = get_profile::execute(
@@ -64,6 +56,7 @@ async fn returns_profile_with_empty_stats() {
 #[tokio::test]
 async fn returns_history_view() {
     let b = TestContextBuilder::new();
+    let user_repo = b.user_repo.clone();
     let deps = GetProfileDeps {
         stats: b.stats_repo.clone(),
         diary: b.diary_repo.clone(),
@@ -84,7 +77,7 @@ async fn returns_history_view() {
     .unwrap();
 
     let email = Email::new("hist@test.com".into()).unwrap();
-    let user = ctx.repos.user.find_by_email(&email).await.unwrap().unwrap();
+    let user = user_repo.find_by_email(&email).await.unwrap().unwrap();
     let uid = user.id().value();
 
     let result = get_profile::execute(
@@ -110,6 +103,7 @@ async fn returns_history_view() {
 #[tokio::test]
 async fn returns_trends_view() {
     let b = TestContextBuilder::new();
+    let user_repo = b.user_repo.clone();
     let deps = GetProfileDeps {
         stats: b.stats_repo.clone(),
         diary: b.diary_repo.clone(),
@@ -130,7 +124,7 @@ async fn returns_trends_view() {
     .unwrap();
 
     let email = Email::new("trends@test.com".into()).unwrap();
-    let user = ctx.repos.user.find_by_email(&email).await.unwrap().unwrap();
+    let user = user_repo.find_by_email(&email).await.unwrap().unwrap();
     let uid = user.id().value();
 
     let result = get_profile::execute(
@@ -156,6 +150,7 @@ async fn returns_trends_view() {
 #[tokio::test]
 async fn returns_ratings_view() {
     let b = TestContextBuilder::new();
+    let user_repo = b.user_repo.clone();
     let deps = GetProfileDeps {
         stats: b.stats_repo.clone(),
         diary: b.diary_repo.clone(),
@@ -176,7 +171,7 @@ async fn returns_ratings_view() {
     .unwrap();
 
     let email = Email::new("ratings@test.com".into()).unwrap();
-    let user = ctx.repos.user.find_by_email(&email).await.unwrap().unwrap();
+    let user = user_repo.find_by_email(&email).await.unwrap().unwrap();
     let uid = user.id().value();
 
     let result = get_profile::execute(
@@ -200,6 +195,7 @@ async fn returns_ratings_view() {
 #[tokio::test]
 async fn returns_recent_with_search() {
     let b = TestContextBuilder::new();
+    let user_repo = b.user_repo.clone();
     let deps = GetProfileDeps {
         stats: b.stats_repo.clone(),
         diary: b.diary_repo.clone(),
@@ -220,7 +216,7 @@ async fn returns_recent_with_search() {
     .unwrap();
 
     let email = Email::new("search@test.com".into()).unwrap();
-    let user = ctx.repos.user.find_by_email(&email).await.unwrap().unwrap();
+    let user = user_repo.find_by_email(&email).await.unwrap().unwrap();
     let uid = user.id().value();
 
     let result = get_profile::execute(
@@ -244,6 +240,7 @@ async fn returns_recent_with_search() {
 #[tokio::test]
 async fn non_own_profile_skips_pending_followers() {
     let b = TestContextBuilder::new();
+    let user_repo = b.user_repo.clone();
     let deps = GetProfileDeps {
         stats: b.stats_repo.clone(),
         diary: b.diary_repo.clone(),
@@ -264,7 +261,7 @@ async fn non_own_profile_skips_pending_followers() {
     .unwrap();
 
     let email = Email::new("other@test.com".into()).unwrap();
-    let user = ctx.repos.user.find_by_email(&email).await.unwrap().unwrap();
+    let user = user_repo.find_by_email(&email).await.unwrap().unwrap();
     let uid = user.id().value();
 
     let result = get_profile::execute(

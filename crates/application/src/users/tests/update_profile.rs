@@ -205,7 +205,6 @@ async fn fails_for_nonexistent_user() {
         object_storage: b.object_storage.clone(),
         event_publisher: b.event_publisher.clone(),
     };
-    let _ctx = b.build();
 
     let result = update_profile::execute(
         &deps,
