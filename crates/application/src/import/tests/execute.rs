@@ -9,7 +9,7 @@ use uuid::Uuid;
 
 use crate::import::commands::ExecuteImportCommand;
 use crate::import::execute;
-use crate::test_helpers::TestContextBuilder;
+use crate::test_helpers::NoopReviewLogger;
 
 fn make_session_with_rows(user_id: UserId, session_id: ImportSessionId) -> ImportSession {
     let now = Utc::now().naive_utc();
@@ -52,12 +52,9 @@ async fn imports_confirmed_rows() {
     let session = make_session_with_rows(UserId::from_uuid(uid), sid.clone());
     sessions.create(&session).await.unwrap();
 
-    let ctx = TestContextBuilder::new()
-        .with_import_sessions(Arc::clone(&sessions) as _)
-        .build();
-
     let result = execute::execute(
-        &ctx,
+        Arc::clone(&sessions) as _,
+        Arc::new(NoopReviewLogger),
         ExecuteImportCommand {
             user_id: uid,
             session_id: sid.value(),
@@ -81,12 +78,9 @@ async fn skips_unconfirmed_rows() {
     let session = make_session_with_rows(UserId::from_uuid(uid), sid.clone());
     sessions.create(&session).await.unwrap();
 
-    let ctx = TestContextBuilder::new()
-        .with_import_sessions(Arc::clone(&sessions) as _)
-        .build();
-
     let result = execute::execute(
-        &ctx,
+        Arc::clone(&sessions) as _,
+        Arc::new(NoopReviewLogger),
         ExecuteImportCommand {
             user_id: uid,
             session_id: sid.value(),
@@ -102,9 +96,11 @@ async fn skips_unconfirmed_rows() {
 
 #[tokio::test]
 async fn fails_when_session_not_found() {
-    let ctx = TestContextBuilder::new().build();
+    let sessions = InMemoryImportSessionRepository::new();
+
     let result = execute::execute(
-        &ctx,
+        Arc::clone(&sessions) as _,
+        Arc::new(NoopReviewLogger),
         ExecuteImportCommand {
             user_id: Uuid::new_v4(),
             session_id: Uuid::new_v4(),
@@ -138,12 +134,9 @@ async fn handles_datetime_format() {
     }]);
     sessions.create(&session).await.unwrap();
 
-    let ctx = TestContextBuilder::new()
-        .with_import_sessions(Arc::clone(&sessions) as _)
-        .build();
-
     let result = execute::execute(
-        &ctx,
+        Arc::clone(&sessions) as _,
+        Arc::new(NoopReviewLogger),
         ExecuteImportCommand {
             user_id: uid,
             session_id: sid.value(),
@@ -179,12 +172,9 @@ async fn fails_on_invalid_rating() {
     }]);
     sessions.create(&session).await.unwrap();
 
-    let ctx = TestContextBuilder::new()
-        .with_import_sessions(Arc::clone(&sessions) as _)
-        .build();
-
     let result = execute::execute(
-        &ctx,
+        Arc::clone(&sessions) as _,
+        Arc::new(NoopReviewLogger),
         ExecuteImportCommand {
             user_id: uid,
             session_id: sid.value(),
@@ -220,12 +210,9 @@ async fn fails_on_missing_watched_at() {
     }]);
     sessions.create(&session).await.unwrap();
 
-    let ctx = TestContextBuilder::new()
-        .with_import_sessions(Arc::clone(&sessions) as _)
-        .build();
-
     let result = execute::execute(
-        &ctx,
+        Arc::clone(&sessions) as _,
+        Arc::new(NoopReviewLogger),
         ExecuteImportCommand {
             user_id: uid,
             session_id: sid.value(),
@@ -261,12 +248,9 @@ async fn imports_row_with_external_metadata_id() {
     }]);
     sessions.create(&session).await.unwrap();
 
-    let ctx = TestContextBuilder::new()
-        .with_import_sessions(Arc::clone(&sessions) as _)
-        .build();
-
     let result = execute::execute(
-        &ctx,
+        Arc::clone(&sessions) as _,
+        Arc::new(NoopReviewLogger),
         ExecuteImportCommand {
             user_id: uid,
             session_id: sid.value(),
@@ -302,12 +286,9 @@ async fn imports_row_with_director_and_comment() {
     }]);
     sessions.create(&session).await.unwrap();
 
-    let ctx = TestContextBuilder::new()
-        .with_import_sessions(Arc::clone(&sessions) as _)
-        .build();
-
     let result = execute::execute(
-        &ctx,
+        Arc::clone(&sessions) as _,
+        Arc::new(NoopReviewLogger),
         ExecuteImportCommand {
             user_id: uid,
             session_id: sid.value(),
@@ -343,12 +324,9 @@ async fn handles_space_separated_datetime_format() {
     }]);
     sessions.create(&session).await.unwrap();
 
-    let ctx = TestContextBuilder::new()
-        .with_import_sessions(Arc::clone(&sessions) as _)
-        .build();
-
     let result = execute::execute(
-        &ctx,
+        Arc::clone(&sessions) as _,
+        Arc::new(NoopReviewLogger),
         ExecuteImportCommand {
             user_id: uid,
             session_id: sid.value(),
@@ -379,12 +357,9 @@ async fn reports_invalid_row_result_errors() {
     }]);
     sessions.create(&session).await.unwrap();
 
-    let ctx = TestContextBuilder::new()
-        .with_import_sessions(Arc::clone(&sessions) as _)
-        .build();
-
     let result = execute::execute(
-        &ctx,
+        Arc::clone(&sessions) as _,
+        Arc::new(NoopReviewLogger),
         ExecuteImportCommand {
             user_id: uid,
             session_id: sid.value(),
@@ -422,12 +397,9 @@ async fn fails_on_missing_rating() {
     }]);
     sessions.create(&session).await.unwrap();
 
-    let ctx = TestContextBuilder::new()
-        .with_import_sessions(Arc::clone(&sessions) as _)
-        .build();
-
     let result = execute::execute(
-        &ctx,
+        Arc::clone(&sessions) as _,
+        Arc::new(NoopReviewLogger),
         ExecuteImportCommand {
             user_id: uid,
             session_id: sid.value(),
@@ -464,12 +436,9 @@ async fn fails_on_unparseable_date() {
     }]);
     sessions.create(&session).await.unwrap();
 
-    let ctx = TestContextBuilder::new()
-        .with_import_sessions(Arc::clone(&sessions) as _)
-        .build();
-
     let result = execute::execute(
-        &ctx,
+        Arc::clone(&sessions) as _,
+        Arc::new(NoopReviewLogger),
         ExecuteImportCommand {
             user_id: uid,
             session_id: sid.value(),
@@ -506,12 +475,9 @@ async fn imports_row_without_release_year() {
     }]);
     sessions.create(&session).await.unwrap();
 
-    let ctx = TestContextBuilder::new()
-        .with_import_sessions(Arc::clone(&sessions) as _)
-        .build();
-
     let result = execute::execute(
-        &ctx,
+        Arc::clone(&sessions) as _,
+        Arc::new(NoopReviewLogger),
         ExecuteImportCommand {
             user_id: uid,
             session_id: sid.value(),
@@ -535,12 +501,9 @@ async fn deletes_session_after_import() {
     sessions.create(&session).await.unwrap();
     assert_eq!(sessions.count(), 1);
 
-    let ctx = TestContextBuilder::new()
-        .with_import_sessions(Arc::clone(&sessions) as _)
-        .build();
-
     execute::execute(
-        &ctx,
+        Arc::clone(&sessions) as _,
+        Arc::new(NoopReviewLogger),
         ExecuteImportCommand {
             user_id: uid,
             session_id: sid.value(),

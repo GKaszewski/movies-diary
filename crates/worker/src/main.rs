@@ -174,7 +174,7 @@ async fn main() -> anyhow::Result<()> {
     // ── Periodic jobs ─────────────────────────────────────────────────────────
 
     let mut periodic_jobs: Vec<Arc<dyn PeriodicJob>> = vec![
-        Arc::new(application::jobs::ImportSessionCleanupJob::new(ctx.clone())),
+        Arc::new(application::jobs::ImportSessionCleanupJob::new(ctx.repos.import_session.clone())),
         Arc::new(application::jobs::WatchEventCleanupJob::new(ctx.clone())),
         Arc::new(application::jobs::WrapUpAutoGenerateJob::new(ctx.clone())),
         Arc::new(application::jobs::WrapUpCleanupJob::new(ctx.clone())),

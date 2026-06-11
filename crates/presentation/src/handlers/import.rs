@@ -109,9 +109,12 @@ pub async fn get_import_page(
     Extension(csrf): Extension<CsrfToken>,
 ) -> impl IntoResponse {
     let ctx = super::helpers::build_page_context(&state, Some(user_id.clone()), csrf.0).await;
-    let profiles = list_import_profiles::execute(&state.app_ctx, &user_id)
-        .await
-        .unwrap_or_default()
+    let profiles = list_import_profiles::execute(
+        state.app_ctx.repos.import_profile.clone(),
+        &user_id,
+    )
+    .await
+    .unwrap_or_default()
         .into_iter()
         .map(|p| ImportProfileView {
             id: p.id.value().to_string(),
@@ -161,7 +164,8 @@ pub async fn post_upload(
     };
 
     match create_import_session::execute(
-        &state.app_ctx,
+        state.app_ctx.repos.import_session.clone(),
+        state.app_ctx.services.document_parser.clone(),
         CreateImportSessionCommand {
             user_id: user_id.value(),
             bytes,
@@ -250,7 +254,9 @@ pub async fn post_mapping(
         .into_response();
     }
     match apply_import_mapping::execute(
-        &state.app_ctx,
+        state.app_ctx.repos.import_session.clone(),
+        state.app_ctx.services.document_parser.clone(),
+        state.app_ctx.repos.movie.clone(),
         ApplyImportMappingCommand {
             user_id: user_id.value(),
             session_id: session_id.value(),
@@ -344,7 +350,8 @@ pub async fn post_confirm(
         .filter(|n| !n.trim().is_empty());
     if let Some(name) = profile_name {
         let _ = save_import_profile::execute(
-            &state.app_ctx,
+            state.app_ctx.repos.import_session.clone(),
+            state.app_ctx.repos.import_profile.clone(),
             SaveImportProfileCommand {
                 user_id: user_id.value(),
                 session_id: session_id.value(),
@@ -362,7 +369,8 @@ pub async fn post_confirm(
         .collect();
 
     match execute_import::execute(
-        &state.app_ctx,
+        state.app_ctx.repos.import_session.clone(),
+        state.app_ctx.services.review_logger.clone(),
         ExecuteImportCommand {
             user_id: user_id.value(),
             session_id: session_id.value(),
@@ -397,7 +405,7 @@ pub async fn post_delete_profile(
     }
     if let Ok(profile_id) = profile_id_str.parse::<uuid::Uuid>() {
         let _ = delete_import_profile::execute(
-            &state.app_ctx,
+            state.app_ctx.repos.import_profile.clone(),
             DeleteImportProfileCommand {
                 user_id: user_id.value(),
                 profile_id,
@@ -489,7 +497,8 @@ pub async fn api_post_session(
         _ => FileFormat::Csv,
     };
     match create_import_session::execute(
-        &state.app_ctx,
+        state.app_ctx.repos.import_session.clone(),
+        state.app_ctx.services.document_parser.clone(),
         CreateImportSessionCommand {
             user_id: user_id.value(),
             bytes,
@@ -618,7 +627,9 @@ pub async fn api_put_mapping(
         .collect();
 
     match apply_import_mapping::execute(
-        &state.app_ctx,
+        state.app_ctx.repos.import_session.clone(),
+        state.app_ctx.services.document_parser.clone(),
+        state.app_ctx.repos.movie.clone(),
         ApplyImportMappingCommand {
             user_id: user_id.value(),
             session_id: session_id.value(),
@@ -725,7 +736,7 @@ pub async fn api_post_confirm(
         )
             .into_response();
     };
-    match execute_import::execute(&state.app_ctx, ExecuteImportCommand { user_id: user_id.value(), session_id: session_id.value(), confirmed_indices: body.confirmed_indices }).await {
+    match execute_import::execute(state.app_ctx.repos.import_session.clone(), state.app_ctx.services.review_logger.clone(), ExecuteImportCommand { user_id: user_id.value(), session_id: session_id.value(), confirmed_indices: body.confirmed_indices }).await {
         Ok(s) => axum::Json(serde_json::json!({
             "imported": s.imported,
             "skipped_duplicates": s.skipped_duplicates,
@@ -754,7 +765,7 @@ pub async fn api_get_profiles(
     State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
 ) -> impl IntoResponse {
-    match list_import_profiles::execute(&state.app_ctx, &user_id).await {
+    match list_import_profiles::execute(state.app_ctx.repos.import_profile.clone(), &user_id).await {
         Ok(profiles) => axum::Json(
             profiles
                 .into_iter()
@@ -803,7 +814,8 @@ pub async fn api_post_profile(
             .into_response();
     };
     match save_import_profile::execute(
-        &state.app_ctx,
+        state.app_ctx.repos.import_session.clone(),
+        state.app_ctx.repos.import_profile.clone(),
         SaveImportProfileCommand {
             user_id: user_id.value(),
             session_id: session_id.value(),
@@ -840,7 +852,7 @@ pub async fn api_delete_profile(
         return StatusCode::BAD_REQUEST.into_response();
     };
     match delete_import_profile::execute(
-        &state.app_ctx,
+        state.app_ctx.repos.import_profile.clone(),
         DeleteImportProfileCommand {
             user_id: user_id.value(),
             profile_id,
@@ -896,7 +908,8 @@ pub async fn api_apply_profile(
     };
 
     if let Err(e) = apply_import_profile::execute(
-        &state.app_ctx,
+        state.app_ctx.repos.import_profile.clone(),
+        state.app_ctx.repos.import_session.clone(),
         ApplyImportProfileCommand {
             user_id: user_id.value(),
             session_id,
@@ -936,7 +949,9 @@ pub async fn api_apply_profile(
 
     let mappings = session.field_mappings.unwrap_or_default();
     match apply_import_mapping::execute(
-        &state.app_ctx,
+        state.app_ctx.repos.import_session.clone(),
+        state.app_ctx.services.document_parser.clone(),
+        state.app_ctx.repos.movie.clone(),
         ApplyImportMappingCommand {
             user_id: user_id.value(),
             session_id,

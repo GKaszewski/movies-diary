@@ -1,11 +1,12 @@
-use crate::context::AppContext;
-use domain::{errors::DomainError, models::ImportProfile, value_objects::UserId};
+use std::sync::Arc;
+
+use domain::{errors::DomainError, models::ImportProfile, ports::ImportProfileRepository, value_objects::UserId};
 
 pub async fn execute(
-    ctx: &AppContext,
+    import_profile: Arc<dyn ImportProfileRepository>,
     user_id: &UserId,
 ) -> Result<Vec<ImportProfile>, DomainError> {
-    ctx.repos.import_profile.list_for_user(user_id).await
+    import_profile.list_for_user(user_id).await
 }
 
 #[cfg(test)]

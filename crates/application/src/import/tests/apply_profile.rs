@@ -3,19 +3,20 @@ use std::sync::Arc;
 use chrono::Utc;
 use domain::models::ImportProfile;
 use domain::ports::{ImportProfileRepository, ImportSessionRepository};
-use domain::testing::InMemoryImportProfileRepository;
+use domain::testing::{InMemoryImportProfileRepository, InMemoryImportSessionRepository};
 use domain::value_objects::{ImportProfileId, UserId};
 use uuid::Uuid;
 
 use crate::import::{apply_profile, commands::ApplyImportProfileCommand};
-use crate::test_helpers::TestContextBuilder;
 
 #[tokio::test]
 async fn fails_when_profile_not_found() {
-    let ctx = TestContextBuilder::new().build();
+    let profiles = InMemoryImportProfileRepository::new();
+    let sessions = InMemoryImportSessionRepository::new();
 
     let result = apply_profile::execute(
-        &ctx,
+        Arc::clone(&profiles) as _,
+        Arc::clone(&sessions) as _,
         ApplyImportProfileCommand {
             user_id: Uuid::new_v4(),
             session_id: Uuid::new_v4(),
@@ -30,6 +31,7 @@ async fn fails_when_profile_not_found() {
 #[tokio::test]
 async fn fails_when_session_not_found() {
     let profiles = InMemoryImportProfileRepository::new();
+    let sessions = InMemoryImportSessionRepository::new();
     let user_id = Uuid::new_v4();
 
     let profile = ImportProfile::new(
@@ -42,12 +44,9 @@ async fn fails_when_session_not_found() {
     let profile_id = profile.id.clone();
     profiles.save(&profile).await.unwrap();
 
-    let ctx = TestContextBuilder::new()
-        .with_import_profiles(Arc::clone(&profiles) as _)
-        .build();
-
     let result = apply_profile::execute(
-        &ctx,
+        Arc::clone(&profiles) as _,
+        Arc::clone(&sessions) as _,
         ApplyImportProfileCommand {
             user_id,
             session_id: Uuid::new_v4(),
@@ -87,13 +86,9 @@ async fn applies_profile_mappings_to_session() {
     let session_id = session.id.clone();
     sessions.create(&session).await.unwrap();
 
-    let ctx = TestContextBuilder::new()
-        .with_import_profiles(Arc::clone(&profiles) as _)
-        .with_import_sessions(Arc::clone(&sessions) as _)
-        .build();
-
     apply_profile::execute(
-        &ctx,
+        Arc::clone(&profiles) as _,
+        Arc::clone(&sessions) as _,
         ApplyImportProfileCommand {
             user_id,
             session_id: session_id.value(),

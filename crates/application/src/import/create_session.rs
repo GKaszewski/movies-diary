@@ -1,11 +1,14 @@
+use std::sync::Arc;
+
 use chrono::Utc;
 use domain::{
     errors::DomainError,
     models::ImportSession,
+    ports::{DocumentParser, ImportSessionRepository},
     value_objects::{ImportSessionId, UserId},
 };
 
-use crate::{context::AppContext, import::commands::CreateImportSessionCommand};
+use crate::import::commands::CreateImportSessionCommand;
 
 pub struct CreateSessionResult {
     pub session_id: ImportSessionId,
@@ -14,18 +17,16 @@ pub struct CreateSessionResult {
 }
 
 pub async fn execute(
-    ctx: &AppContext,
+    import_session: Arc<dyn ImportSessionRepository>,
+    document_parser: Arc<dyn DocumentParser>,
     cmd: CreateImportSessionCommand,
 ) -> Result<CreateSessionResult, DomainError> {
     let user_id = UserId::from_uuid(cmd.user_id);
-    ctx.repos
-        .import_session
+    import_session
         .delete_expired_for_user(&user_id)
         .await?;
 
-    let parsed = ctx
-        .services
-        .document_parser
+    let parsed = document_parser
         .parse(&cmd.bytes, cmd.format)
         .map_err(|e| DomainError::ValidationError(e.to_string()))?;
 
@@ -37,7 +38,7 @@ pub async fn execute(
     let session_id = session.id.clone();
     session.parsed_file = Some(parsed);
 
-    ctx.repos.import_session.create(&session).await?;
+    import_session.create(&session).await?;
 
     Ok(CreateSessionResult {
         session_id,

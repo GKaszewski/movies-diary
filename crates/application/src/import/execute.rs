@@ -1,15 +1,18 @@
+use std::sync::Arc;
+
 use chrono::NaiveDateTime;
 use domain::{
     errors::DomainError,
     models::{ImportRow, import::RowResult},
+    ports::ImportSessionRepository,
     value_objects::{ImportSessionId, UserId},
 };
 use uuid::Uuid;
 
 use crate::{
-    context::AppContext,
     diary::commands::{LogReviewCommand, MovieInput},
     import::commands::ExecuteImportCommand,
+    ports::ReviewLogger,
 };
 
 pub struct ImportSummary {
@@ -19,15 +22,14 @@ pub struct ImportSummary {
 }
 
 pub async fn execute(
-    ctx: &AppContext,
+    import_session: Arc<dyn ImportSessionRepository>,
+    review_logger: Arc<dyn ReviewLogger>,
     cmd: ExecuteImportCommand,
 ) -> Result<ImportSummary, DomainError> {
     let user_id = UserId::from_uuid(cmd.user_id);
     let session_id = ImportSessionId::from_uuid(cmd.session_id);
     let confirmed_indices = cmd.confirmed_indices;
-    let session = ctx
-        .repos
-        .import_session
+    let session = import_session
         .get(&session_id, &user_id)
         .await?
         .ok_or_else(|| DomainError::NotFound("import session".into()))?;
@@ -46,7 +48,7 @@ pub async fn execute(
         }
         match annotated.result {
             RowResult::Valid(row) => match row_to_command(&row, user_id.value()) {
-                Ok(cmd) => match ctx.services.review_logger.log_review(cmd).await {
+                Ok(cmd) => match review_logger.log_review(cmd).await {
                     Ok(_) => imported += 1,
                     Err(e) => failed.push((idx, e.to_string())),
                 },
@@ -58,7 +60,7 @@ pub async fn execute(
         }
     }
 
-    ctx.repos.import_session.delete(&session_id).await?;
+    import_session.delete(&session_id).await?;
 
     Ok(ImportSummary {
         imported,

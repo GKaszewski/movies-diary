@@ -1,8 +1,9 @@
-use crate::context::AppContext;
-use domain::errors::DomainError;
+use std::sync::Arc;
 
-pub async fn execute(ctx: &AppContext) -> Result<u64, DomainError> {
-    ctx.repos.import_session.delete_expired().await
+use domain::{errors::DomainError, ports::ImportSessionRepository};
+
+pub async fn execute(import_session: Arc<dyn ImportSessionRepository>) -> Result<u64, DomainError> {
+    import_session.delete_expired().await
 }
 
 #[cfg(test)]

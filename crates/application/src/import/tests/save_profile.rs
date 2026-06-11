@@ -3,22 +3,20 @@ use std::sync::Arc;
 use chrono::Utc;
 use domain::models::ImportSession;
 use domain::ports::ImportSessionRepository;
-use domain::testing::InMemoryImportSessionRepository;
+use domain::testing::{InMemoryImportProfileRepository, InMemoryImportSessionRepository};
 use domain::value_objects::{ImportSessionId, UserId};
 use uuid::Uuid;
 
 use crate::import::{commands::SaveImportProfileCommand, save_profile};
-use crate::test_helpers::TestContextBuilder;
 
 #[tokio::test]
 async fn fails_when_session_not_found() {
     let sessions = InMemoryImportSessionRepository::new();
-    let ctx = TestContextBuilder::new()
-        .with_import_sessions(Arc::clone(&sessions) as _)
-        .build();
+    let profiles = InMemoryImportProfileRepository::new();
 
     let result = save_profile::execute(
-        &ctx,
+        Arc::clone(&sessions) as _,
+        Arc::clone(&profiles) as _,
         SaveImportProfileCommand {
             user_id: Uuid::new_v4(),
             session_id: Uuid::new_v4(),
@@ -33,6 +31,7 @@ async fn fails_when_session_not_found() {
 #[tokio::test]
 async fn saves_profile_from_session() {
     let sessions = InMemoryImportSessionRepository::new();
+    let profiles = InMemoryImportProfileRepository::new();
     let user_id = Uuid::new_v4();
     let sid = ImportSessionId::generate();
 
@@ -44,12 +43,9 @@ async fn saves_profile_from_session() {
     session.field_mappings = Some(vec![]);
     sessions.create(&session).await.unwrap();
 
-    let ctx = TestContextBuilder::new()
-        .with_import_sessions(Arc::clone(&sessions) as _)
-        .build();
-
     let result = save_profile::execute(
-        &ctx,
+        Arc::clone(&sessions) as _,
+        Arc::clone(&profiles) as _,
         SaveImportProfileCommand {
             user_id,
             session_id: sid.value(),

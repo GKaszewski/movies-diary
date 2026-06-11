@@ -1,21 +1,24 @@
+use std::sync::Arc;
+
 use domain::{
     errors::DomainError,
     models::{AnnotatedRow, import::RowResult},
+    ports::{DocumentParser, ImportSessionRepository, MovieRepository},
     value_objects::{ExternalMetadataId, ImportSessionId, MovieTitle, ReleaseYear, UserId},
 };
 
-use crate::{context::AppContext, import::commands::ApplyImportMappingCommand};
+use crate::import::commands::ApplyImportMappingCommand;
 
 pub async fn execute(
-    ctx: &AppContext,
+    import_session: Arc<dyn ImportSessionRepository>,
+    document_parser: Arc<dyn DocumentParser>,
+    movie: Arc<dyn MovieRepository>,
     cmd: ApplyImportMappingCommand,
 ) -> Result<Vec<AnnotatedRow>, DomainError> {
     let user_id = UserId::from_uuid(cmd.user_id);
     let session_id = ImportSessionId::from_uuid(cmd.session_id);
     let mappings = cmd.mappings;
-    let mut session = ctx
-        .repos
-        .import_session
+    let mut session = import_session
         .get(&session_id, &user_id)
         .await?
         .ok_or_else(|| DomainError::NotFound("import session".into()))?;
@@ -25,22 +28,22 @@ pub async fn execute(
         .clone()
         .ok_or_else(|| DomainError::ValidationError("session has no parsed file".into()))?;
 
-    let mut annotated = ctx
-        .services
-        .document_parser
-        .apply_mapping(&parsed, &mappings);
+    let mut annotated = document_parser.apply_mapping(&parsed, &mappings);
 
-    mark_duplicates(ctx, &mut annotated).await?;
+    mark_duplicates(movie, &mut annotated).await?;
 
     session.field_mappings = Some(mappings);
     session.row_results = Some(annotated.clone());
 
-    ctx.repos.import_session.update(&session).await?;
+    import_session.update(&session).await?;
 
     Ok(annotated)
 }
 
-async fn mark_duplicates(ctx: &AppContext, rows: &mut [AnnotatedRow]) -> Result<(), DomainError> {
+async fn mark_duplicates(
+    movie: Arc<dyn MovieRepository>,
+    rows: &mut [AnnotatedRow],
+) -> Result<(), DomainError> {
     let mut ext_ids = Vec::new();
     let mut title_year_pairs = Vec::new();
 
@@ -63,12 +66,8 @@ async fn mark_duplicates(ctx: &AppContext, rows: &mut [AnnotatedRow]) -> Result<
         }
     }
 
-    let known_ext = ctx.repos.movie.existing_external_ids(&ext_ids).await?;
-    let known_ty = ctx
-        .repos
-        .movie
-        .existing_title_year_pairs(&title_year_pairs)
-        .await?;
+    let known_ext = movie.existing_external_ids(&ext_ids).await?;
+    let known_ty = movie.existing_title_year_pairs(&title_year_pairs).await?;
 
     for row in rows.iter_mut() {
         if let RowResult::Valid(ref r) = row.result {
