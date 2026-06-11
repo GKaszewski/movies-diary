@@ -1,15 +1,16 @@
-use crate::context::AppContext;
 use chrono::Utc;
 use domain::{errors::DomainError, models::PersonId};
+
+use super::deps::EnrichPersonDeps;
 
 const STALENESS_DAYS: i64 = 90;
 
 pub async fn execute(
-    ctx: &AppContext,
+    deps: &EnrichPersonDeps,
     person_id: PersonId,
     external_id: &str,
 ) -> Result<(), DomainError> {
-    if let Some(person) = ctx.repos.person_query.get_by_id(&person_id).await?
+    if let Some(person) = deps.person_query.get_by_id(&person_id).await?
         && let Some(at) = person.enriched_at()
         && (Utc::now() - at).num_days() < STALENESS_DAYS
     {
@@ -17,7 +18,7 @@ pub async fn execute(
         return Ok(());
     }
 
-    let client = ctx.services.person_enrichment.as_ref().ok_or_else(|| {
+    let client = deps.person_enrichment.as_ref().ok_or_else(|| {
         DomainError::InfrastructureError("person enrichment client not configured".into())
     })?;
 
@@ -30,8 +31,7 @@ pub async fn execute(
         Err(e) => return Err(e),
     };
 
-    ctx.repos
-        .person_command
+    deps.person_command
         .update_enrichment(&person_id, &data)
         .await?;
     tracing::info!(person_id = %person_id.value(), "person enriched");

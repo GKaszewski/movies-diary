@@ -1,15 +1,31 @@
-use async_trait::async_trait;
-use domain::{errors::DomainError, events::DomainEvent, ports::EventHandler};
+use std::sync::Arc;
 
-use application::context::AppContext;
+use async_trait::async_trait;
+use domain::{
+    errors::DomainError,
+    events::DomainEvent,
+    ports::{EventHandler, PersonCommand, PersonEnrichmentClient, PersonQuery},
+};
+
+use application::person::deps::EnrichPersonDeps;
 
 pub struct PersonEnrichmentHandler {
-    ctx: AppContext,
+    deps: EnrichPersonDeps,
 }
 
 impl PersonEnrichmentHandler {
-    pub fn new(ctx: AppContext) -> Self {
-        Self { ctx }
+    pub fn new(
+        person_query: Arc<dyn PersonQuery>,
+        person_enrichment: Option<Arc<dyn PersonEnrichmentClient>>,
+        person_command: Arc<dyn PersonCommand>,
+    ) -> Self {
+        Self {
+            deps: EnrichPersonDeps {
+                person_query,
+                person_enrichment,
+                person_command,
+            },
+        }
     }
 }
 
@@ -24,6 +40,6 @@ impl EventHandler for PersonEnrichmentHandler {
             _ => return Ok(()),
         };
 
-        application::person::enrich::execute(&self.ctx, person_id, &external_person_id).await
+        application::person::enrich::execute(&self.deps, person_id, &external_person_id).await
     }
 }

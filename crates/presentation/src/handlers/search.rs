@@ -5,7 +5,7 @@ use axum::{
 };
 
 use application::{
-    person::{get as get_person, get_credits as get_person_credits},
+    person::{deps::GetPersonDeps, get as get_person, get_credits as get_person_credits},
     search::execute as search_uc,
 };
 use domain::models::{PersonId, collections::PageParams};
@@ -101,7 +101,11 @@ pub async fn get_person_handler(
     State(state): State<AppState>,
     Path(id): Path<uuid::Uuid>,
 ) -> impl IntoResponse {
-    match get_person::execute(&state.app_ctx, PersonId::from_uuid(id)).await {
+    let deps = GetPersonDeps {
+        person_query: state.app_ctx.repos.person_query.clone(),
+        event_publisher: state.app_ctx.services.event_publisher.clone(),
+    };
+    match get_person::execute(&deps, PersonId::from_uuid(id)).await {
         Ok(Some(person)) => axum::Json(PersonDto {
             id: person.id().value(),
             external_id: person.external_id().value().to_string(),
@@ -138,7 +142,11 @@ pub async fn get_person_credits_handler(
     State(state): State<AppState>,
     Path(id): Path<uuid::Uuid>,
 ) -> impl IntoResponse {
-    match get_person_credits::execute(&state.app_ctx, PersonId::from_uuid(id)).await {
+    let deps = GetPersonDeps {
+        person_query: state.app_ctx.repos.person_query.clone(),
+        event_publisher: state.app_ctx.services.event_publisher.clone(),
+    };
+    match get_person_credits::execute(&deps, PersonId::from_uuid(id)).await {
         Ok(credits) => axum::Json(PersonCreditsDto {
             person: PersonDto {
                 id: credits.person.id().value(),

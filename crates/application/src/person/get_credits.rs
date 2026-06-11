@@ -1,4 +1,3 @@
-use crate::context::AppContext;
 use chrono::Utc;
 use domain::{
     errors::DomainError,
@@ -6,13 +5,14 @@ use domain::{
     models::{Person, PersonCredits, PersonId},
 };
 
+use super::deps::GetPersonDeps;
+
 const ENRICHMENT_TTL_DAYS: i64 = 90;
 
-pub async fn execute(ctx: &AppContext, id: PersonId) -> Result<PersonCredits, DomainError> {
-    let credits = ctx.repos.person_query.get_credits(&id).await?;
+pub async fn execute(deps: &GetPersonDeps, id: PersonId) -> Result<PersonCredits, DomainError> {
+    let credits = deps.person_query.get_credits(&id).await?;
     if should_enrich(&credits.person) {
-        let _ = ctx
-            .services
+        let _ = deps
             .event_publisher
             .publish(&DomainEvent::PersonEnrichmentRequested {
                 person_id: id,
