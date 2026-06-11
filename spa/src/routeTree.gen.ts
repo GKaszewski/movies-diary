@@ -23,6 +23,7 @@ import { Route as AppUsersIdRouteImport } from './routes/_app/users.$id'
 import { Route as AppSettingsWrapupRouteImport } from './routes/_app/settings/wrapup'
 import { Route as AppSettingsWebhooksRouteImport } from './routes/_app/settings/webhooks'
 import { Route as AppSettingsImportRouteImport } from './routes/_app/settings/import'
+import { Route as AppSettingsExportRouteImport } from './routes/_app/settings/export'
 import { Route as AppSettingsEditProfileRouteImport } from './routes/_app/settings/edit-profile'
 import { Route as AppSettingsBlockedRouteImport } from './routes/_app/settings/blocked'
 import { Route as AppPeopleIdRouteImport } from './routes/_app/people.$id'
@@ -97,6 +98,11 @@ const AppSettingsImportRoute = AppSettingsImportRouteImport.update({
   path: '/settings/import',
   getParentRoute: () => AppRoute,
 } as any)
+const AppSettingsExportRoute = AppSettingsExportRouteImport.update({
+  id: '/settings/export',
+  path: '/settings/export',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppSettingsEditProfileRoute = AppSettingsEditProfileRouteImport.update({
   id: '/settings/edit-profile',
   path: '/settings/edit-profile',
@@ -130,6 +136,7 @@ export interface FileRoutesByFullPath {
   '/people/$id': typeof AppPeopleIdRoute
   '/settings/blocked': typeof AppSettingsBlockedRoute
   '/settings/edit-profile': typeof AppSettingsEditProfileRoute
+  '/settings/export': typeof AppSettingsExportRoute
   '/settings/import': typeof AppSettingsImportRoute
   '/settings/webhooks': typeof AppSettingsWebhooksRoute
   '/settings/wrapup': typeof AppSettingsWrapupRoute
@@ -149,6 +156,7 @@ export interface FileRoutesByTo {
   '/people/$id': typeof AppPeopleIdRoute
   '/settings/blocked': typeof AppSettingsBlockedRoute
   '/settings/edit-profile': typeof AppSettingsEditProfileRoute
+  '/settings/export': typeof AppSettingsExportRoute
   '/settings/import': typeof AppSettingsImportRoute
   '/settings/webhooks': typeof AppSettingsWebhooksRoute
   '/settings/wrapup': typeof AppSettingsWrapupRoute
@@ -170,6 +178,7 @@ export interface FileRoutesById {
   '/_app/people/$id': typeof AppPeopleIdRoute
   '/_app/settings/blocked': typeof AppSettingsBlockedRoute
   '/_app/settings/edit-profile': typeof AppSettingsEditProfileRoute
+  '/_app/settings/export': typeof AppSettingsExportRoute
   '/_app/settings/import': typeof AppSettingsImportRoute
   '/_app/settings/webhooks': typeof AppSettingsWebhooksRoute
   '/_app/settings/wrapup': typeof AppSettingsWrapupRoute
@@ -191,6 +200,7 @@ export interface FileRouteTypes {
     | '/people/$id'
     | '/settings/blocked'
     | '/settings/edit-profile'
+    | '/settings/export'
     | '/settings/import'
     | '/settings/webhooks'
     | '/settings/wrapup'
@@ -210,6 +220,7 @@ export interface FileRouteTypes {
     | '/people/$id'
     | '/settings/blocked'
     | '/settings/edit-profile'
+    | '/settings/export'
     | '/settings/import'
     | '/settings/webhooks'
     | '/settings/wrapup'
@@ -230,6 +241,7 @@ export interface FileRouteTypes {
     | '/_app/people/$id'
     | '/_app/settings/blocked'
     | '/_app/settings/edit-profile'
+    | '/_app/settings/export'
     | '/_app/settings/import'
     | '/_app/settings/webhooks'
     | '/_app/settings/wrapup'
@@ -344,6 +356,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsImportRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/settings/export': {
+      id: '/_app/settings/export'
+      path: '/settings/export'
+      fullPath: '/settings/export'
+      preLoaderRoute: typeof AppSettingsExportRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/settings/edit-profile': {
       id: '/_app/settings/edit-profile'
       path: '/settings/edit-profile'
@@ -385,6 +404,7 @@ interface AppRouteChildren {
   AppPeopleIdRoute: typeof AppPeopleIdRoute
   AppSettingsBlockedRoute: typeof AppSettingsBlockedRoute
   AppSettingsEditProfileRoute: typeof AppSettingsEditProfileRoute
+  AppSettingsExportRoute: typeof AppSettingsExportRoute
   AppSettingsImportRoute: typeof AppSettingsImportRoute
   AppSettingsWebhooksRoute: typeof AppSettingsWebhooksRoute
   AppSettingsWrapupRoute: typeof AppSettingsWrapupRoute
@@ -403,6 +423,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppPeopleIdRoute: AppPeopleIdRoute,
   AppSettingsBlockedRoute: AppSettingsBlockedRoute,
   AppSettingsEditProfileRoute: AppSettingsEditProfileRoute,
+  AppSettingsExportRoute: AppSettingsExportRoute,
   AppSettingsImportRoute: AppSettingsImportRoute,
   AppSettingsWebhooksRoute: AppSettingsWebhooksRoute,
   AppSettingsWrapupRoute: AppSettingsWrapupRoute,
