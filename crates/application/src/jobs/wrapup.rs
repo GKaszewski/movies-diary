@@ -2,90 +2,9 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use chrono::Datelike;
-use domain::{errors::DomainError, events::DomainEvent, ports::PeriodicJob};
+use domain::{errors::DomainError, ports::PeriodicJob};
 
 use crate::context::AppContext;
-
-pub struct ImportSessionCleanupJob {
-    ctx: AppContext,
-}
-
-impl ImportSessionCleanupJob {
-    pub fn new(ctx: AppContext) -> Self {
-        Self { ctx }
-    }
-}
-
-#[async_trait]
-impl PeriodicJob for ImportSessionCleanupJob {
-    fn interval(&self) -> Duration {
-        Duration::from_secs(3600)
-    }
-
-    async fn run(&self) -> Result<(), DomainError> {
-        let n = crate::import::cleanup::execute(&self.ctx).await?;
-        tracing::info!("import session cleanup: removed {} expired sessions", n);
-        Ok(())
-    }
-}
-
-pub struct WatchEventCleanupJob {
-    ctx: AppContext,
-}
-
-impl WatchEventCleanupJob {
-    pub fn new(ctx: AppContext) -> Self {
-        Self { ctx }
-    }
-}
-
-#[async_trait]
-impl PeriodicJob for WatchEventCleanupJob {
-    fn interval(&self) -> Duration {
-        Duration::from_secs(86400)
-    }
-
-    async fn run(&self) -> Result<(), DomainError> {
-        let n = crate::integrations::cleanup::execute(&self.ctx).await?;
-        if n > 0 {
-            tracing::info!("watch event cleanup: removed {n} old entries");
-        }
-        Ok(())
-    }
-}
-
-pub struct EnrichmentStalenessJob {
-    ctx: AppContext,
-}
-
-impl EnrichmentStalenessJob {
-    pub fn new(ctx: AppContext) -> Self {
-        Self { ctx }
-    }
-}
-
-#[async_trait]
-impl PeriodicJob for EnrichmentStalenessJob {
-    fn interval(&self) -> Duration {
-        Duration::from_secs(3600)
-    }
-
-    async fn run(&self) -> Result<(), DomainError> {
-        let stale = self.ctx.repos.movie_profile.list_stale().await?;
-        if stale.is_empty() {
-            return Ok(());
-        }
-        tracing::info!("enrichment scan: {} stale movies", stale.len());
-        for (movie_id, external_metadata_id) in stale {
-            let event = DomainEvent::MovieEnrichmentRequested {
-                movie_id,
-                external_metadata_id,
-            };
-            self.ctx.services.event_publisher.publish(&event).await?;
-        }
-        Ok(())
-    }
-}
 
 pub struct WrapUpAutoGenerateJob {
     ctx: AppContext,
@@ -105,7 +24,6 @@ impl PeriodicJob for WrapUpAutoGenerateJob {
 
     async fn run(&self) -> Result<(), DomainError> {
         let now = chrono::Utc::now().naive_utc();
-        // Only run in January
         if now.month() != 1 {
             return Ok(());
         }
@@ -140,7 +58,6 @@ impl PeriodicJob for WrapUpAutoGenerateJob {
             }
         }
 
-        // Global wrap-up
         let existing = self
             .ctx
             .repos
@@ -158,31 +75,6 @@ impl PeriodicJob for WrapUpAutoGenerateJob {
             }
         }
 
-        Ok(())
-    }
-}
-
-pub struct RefreshSessionCleanupJob {
-    ctx: AppContext,
-}
-
-impl RefreshSessionCleanupJob {
-    pub fn new(ctx: AppContext) -> Self {
-        Self { ctx }
-    }
-}
-
-#[async_trait]
-impl PeriodicJob for RefreshSessionCleanupJob {
-    fn interval(&self) -> Duration {
-        Duration::from_secs(86400)
-    }
-
-    async fn run(&self) -> Result<(), DomainError> {
-        let n = self.ctx.repos.refresh_session.delete_expired().await?;
-        if n > 0 {
-            tracing::info!("refresh session cleanup: removed {n} expired sessions");
-        }
         Ok(())
     }
 }

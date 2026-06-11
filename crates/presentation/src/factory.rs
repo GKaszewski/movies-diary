@@ -79,7 +79,9 @@ pub async fn build_database_adapters(backend: &str, url: &str) -> anyhow::Result
                 goal: w.goal,
                 user_settings: w.user_settings,
                 remote_goal: w.remote_goal,
-                refresh_session: Arc::new(postgres::PostgresRefreshSessionAdapter::new(w.pool.clone())) as _,
+                refresh_session: Arc::new(postgres::PostgresRefreshSessionAdapter::new(
+                    w.pool.clone(),
+                )) as _,
                 db_pool: DbPool::Postgres(w.pool),
             })
         }
@@ -118,7 +120,8 @@ pub async fn build_database_adapters(backend: &str, url: &str) -> anyhow::Result
                 goal: w.goal,
                 user_settings: w.user_settings,
                 remote_goal: w.remote_goal,
-                refresh_session: Arc::new(sqlite::SqliteRefreshSessionAdapter::new(w.pool.clone())) as _,
+                refresh_session: Arc::new(sqlite::SqliteRefreshSessionAdapter::new(w.pool.clone()))
+                    as _,
                 db_pool: DbPool::Sqlite(w.pool),
             })
         }

@@ -1,9 +1,7 @@
 use async_trait::async_trait;
 use chrono::DateTime;
 use domain::{
-    errors::DomainError,
-    models::RefreshSession,
-    ports::RefreshSessionRepository,
+    errors::DomainError, models::RefreshSession, ports::RefreshSessionRepository,
     value_objects::UserId,
 };
 use sqlx::PgPool;

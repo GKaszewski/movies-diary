@@ -11,8 +11,8 @@ use domain::{
         MovieProfileRepository, MovieRepository, ObjectStorage, PasswordHasher, PersonCommand,
         PersonQuery, PosterFetcherClient, RefreshSessionRepository, ReviewRepository,
         SearchCommand, SearchPort, StatsRepository, UserProfileFieldsRepository, UserRepository,
-        UserSettingsRepository, WatchEventRepository, WatchlistRepository,
-        WebhookTokenRepository, WrapUpRepository, WrapUpStatsQuery,
+        UserSettingsRepository, WatchEventRepository, WatchlistRepository, WebhookTokenRepository,
+        WrapUpRepository, WrapUpStatsQuery,
     },
     testing::{
         FakeAuthService, FakeDiaryRepository, FakeDocumentParser, FakeMetadataClient,
@@ -21,8 +21,8 @@ use domain::{
         InMemoryMovieProfileRepository, InMemoryMovieRepository, InMemoryProfileFieldsRepo,
         InMemoryRefreshSessionRepository, InMemoryReviewRepository, InMemoryUserRepository,
         InMemoryUserSettingsRepository, InMemoryWatchEventRepository, InMemoryWatchlistRepository,
-        InMemoryWebhookTokenRepository, NoopEventPublisher, NoopObjectStorage,
-        PanicDiaryExporter, PanicPersonCommand,
+        InMemoryWebhookTokenRepository, NoopEventPublisher, NoopObjectStorage, PanicDiaryExporter,
+        PanicPersonCommand,
     },
 };
 

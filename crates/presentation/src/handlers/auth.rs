@@ -17,7 +17,9 @@ use crate::{
     render::render_page,
     state::AppState,
 };
-use api_types::{LoginRequest, LoginResponse, LogoutRequest, RefreshRequest, RefreshResponse, RegisterRequest};
+use api_types::{
+    LoginRequest, LoginResponse, LogoutRequest, RefreshRequest, RefreshResponse, RegisterRequest,
+};
 use application::ports::HtmlPageContext;
 use template_askama::{LoginTemplate, RegisterTemplate};
 

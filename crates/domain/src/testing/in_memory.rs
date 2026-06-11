@@ -818,10 +818,7 @@ impl RefreshSessionRepository for InMemoryRefreshSessionRepository {
     }
 
     async fn revoke_all_for_user(&self, user_id: &UserId) -> Result<(), DomainError> {
-        self.store
-            .lock()
-            .unwrap()
-            .retain(|s| s.user_id != *user_id);
+        self.store.lock().unwrap().retain(|s| s.user_id != *user_id);
         Ok(())
     }
 

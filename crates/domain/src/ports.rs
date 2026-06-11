@@ -8,9 +8,9 @@ use crate::{
     models::wrapup::WrapUpReport,
     models::{
         AnnotatedRow, DiaryEntry, DiaryFilter, EntityType, ExportFormat, ExternalPersonId,
-        FeedEntry, FieldMapping, FileFormat, Goal, ImportError, ImportProfile, ImportSession, RefreshSession,
+        FeedEntry, FieldMapping, FileFormat, Goal, ImportError, ImportProfile, ImportSession,
         IndexableDocument, Movie, MovieFilter, MovieProfile, MovieStats, MovieSummary, ParsedFile,
-        ParsedPlaybackEvent, Person, PersonCredits, PersonEnrichmentData, PersonId,
+        ParsedPlaybackEvent, Person, PersonCredits, PersonEnrichmentData, PersonId, RefreshSession,
         RemoteGoalEntry, RemoteWatchlistEntry, Review, ReviewHistory, SearchQuery, SearchResults,
         User, UserSettings, UserStats, UserSummary, UserTrends, WatchEvent, WatchEventStatus,
         WatchlistEntry, WatchlistWithMovie, WebhookToken,

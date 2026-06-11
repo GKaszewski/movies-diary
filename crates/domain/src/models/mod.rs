@@ -44,10 +44,10 @@ pub use import::{
 };
 pub use import_profile::ImportProfile;
 pub use import_session::ImportSession;
-pub use refresh_session::RefreshSession;
 pub use person::{
     CastCredit, CrewCredit, ExternalPersonId, Person, PersonCredits, PersonEnrichmentData, PersonId,
 };
+pub use refresh_session::RefreshSession;
 pub use search::{
     EntityType, IndexableDocument, MovieSearchHit, PersonSearchHit, SearchFilters, SearchQuery,
     SearchResults,
