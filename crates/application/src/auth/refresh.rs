@@ -23,18 +23,12 @@ pub async fn execute(
         .ok_or_else(|| DomainError::Unauthorized("Invalid refresh token".into()))?;
 
     if session.expires_at < Utc::now() {
-        ctx.repos
-            .refresh_session
-            .revoke(old_refresh_token)
-            .await?;
+        ctx.repos.refresh_session.revoke(old_refresh_token).await?;
         return Err(DomainError::Unauthorized("Refresh token expired".into()));
     }
 
     // Revoke old token (rotation)
-    ctx.repos
-        .refresh_session
-        .revoke(old_refresh_token)
-        .await?;
+    ctx.repos.refresh_session.revoke(old_refresh_token).await?;
 
     // Generate new access token
     let generated = ctx.services.auth.generate_token(&session.user_id).await?;
@@ -57,3 +51,7 @@ pub async fn execute(
         expires_at: generated.expires_at,
     })
 }
+
+#[cfg(test)]
+#[path = "tests/refresh.rs"]
+mod tests;

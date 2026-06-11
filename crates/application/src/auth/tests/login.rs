@@ -44,6 +44,7 @@ async fn test_login_valid_credentials_returns_token() {
     .unwrap();
 
     assert!(!result.token.is_empty());
+    assert!(!result.refresh_token.is_empty());
     assert_eq!(result.email, "carol@example.com");
 }
 
