@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/empty-state"
 import { SwipeTabs } from "@/components/swipe-tabs"
 import { VirtualList } from "@/components/virtual-list"
 import { useInfiniteDiary } from "@/hooks/use-diary"
+import { timeAgo } from "@/lib/date"
 import type { UserProfileResponse } from "@/lib/api/users"
 
 type ProfileViewProps = {
@@ -153,7 +154,7 @@ function DiaryTab({ sortBy, search }: { sortBy: string; userId?: string; search?
           movie={e.movie}
           rating={e.review.rating}
           comment={e.review.comment}
-          subtitle={e.review.watched_at.slice(0, 10)}
+          subtitle={t("profile.watchedAgo", { when: timeAgo(e.review.watched_at) })}
           variant="compact"
         />
       )}

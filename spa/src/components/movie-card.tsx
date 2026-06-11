@@ -23,6 +23,7 @@ export function MovieCard({ movie, rating, comment, subtitle, variant = "full", 
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold">{movie.title}</p>
           {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
+          {comment && <p className="truncate text-xs text-muted-foreground/70">{comment}</p>}
         </div>
         {rating != null && <StarDisplay rating={rating} size="xs" />}
       </Link>
