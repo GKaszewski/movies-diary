@@ -1,11 +1,15 @@
-use crate::context::AppContext;
+use std::sync::Arc;
 use domain::{
     errors::DomainError,
     models::{SearchQuery, SearchResults},
+    ports::SearchPort,
 };
 
-pub async fn execute(ctx: &AppContext, query: SearchQuery) -> Result<SearchResults, DomainError> {
-    ctx.repos.search_port.search(&query).await
+pub async fn execute(
+    search_port: Arc<dyn SearchPort>,
+    query: SearchQuery,
+) -> Result<SearchResults, DomainError> {
+    search_port.search(&query).await
 }
 
 #[cfg(test)]

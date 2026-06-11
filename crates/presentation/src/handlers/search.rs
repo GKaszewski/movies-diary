@@ -45,7 +45,7 @@ pub async fn get_search(
         },
     };
 
-    match search_uc::execute(&state.app_ctx, query).await {
+    match search_uc::execute(state.app_ctx.repos.search_port.clone(), query).await {
         Ok(results) => axum::Json(SearchResponse {
             movies: PaginatedMovieHits {
                 items: results

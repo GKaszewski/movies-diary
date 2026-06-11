@@ -7,7 +7,7 @@ use crate::test_helpers::TestContextBuilder;
 async fn returns_empty_results() {
     let ctx = TestContextBuilder::new().build();
 
-    let result = execute::execute(&ctx, SearchQuery::default())
+    let result = execute::execute(ctx.repos.search_port.clone(), SearchQuery::default())
         .await
         .unwrap();
 
