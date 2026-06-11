@@ -117,10 +117,28 @@ impl PersonCommand for SqlitePersonAdapter {
 
     async fn update_enrichment(
         &self,
-        _id: &PersonId,
-        _data: &PersonEnrichmentData,
+        id: &PersonId,
+        data: &PersonEnrichmentData,
     ) -> Result<(), DomainError> {
-        todo!("person enrichment persistence")
+        let also_known_as_json =
+            serde_json::to_string(&data.also_known_as).unwrap_or_else(|_| "[]".into());
+        let now = chrono::Utc::now().to_rfc3339();
+        sqlx::query(
+            "UPDATE persons SET biography = ?, birthday = ?, deathday = ?, place_of_birth = ?, also_known_as = ?, homepage = ?, imdb_id = ?, enriched_at = ? WHERE id = ?",
+        )
+        .bind(&data.biography)
+        .bind(data.birthday.map(|d| d.to_string()))
+        .bind(data.deathday.map(|d| d.to_string()))
+        .bind(&data.place_of_birth)
+        .bind(&also_known_as_json)
+        .bind(&data.homepage)
+        .bind(&data.imdb_id)
+        .bind(&now)
+        .bind(id.value().to_string())
+        .execute(&self.pool)
+        .await
+        .map_err(map_err)?;
+        Ok(())
     }
 }
 
@@ -128,7 +146,7 @@ impl PersonCommand for SqlitePersonAdapter {
 impl PersonQuery for SqlitePersonAdapter {
     async fn get_by_id(&self, id: &PersonId) -> Result<Option<Person>, DomainError> {
         let row = sqlx::query_as::<_, PersonRow>(
-            "SELECT id, external_id, name, known_for_department, profile_path FROM persons WHERE id = ?",
+            "SELECT id, external_id, name, known_for_department, profile_path, biography, birthday, deathday, place_of_birth, also_known_as, homepage, imdb_id, enriched_at FROM persons WHERE id = ?",
         )
         .bind(id.value().to_string())
         .fetch_optional(&self.pool)
@@ -143,7 +161,7 @@ impl PersonQuery for SqlitePersonAdapter {
         id: &ExternalPersonId,
     ) -> Result<Option<Person>, DomainError> {
         let row = sqlx::query_as::<_, PersonRow>(
-            "SELECT id, external_id, name, known_for_department, profile_path FROM persons WHERE external_id = ?",
+            "SELECT id, external_id, name, known_for_department, profile_path, biography, birthday, deathday, place_of_birth, also_known_as, homepage, imdb_id, enriched_at FROM persons WHERE external_id = ?",
         )
         .bind(id.value())
         .fetch_optional(&self.pool)
@@ -223,7 +241,7 @@ impl PersonQuery for SqlitePersonAdapter {
 
     async fn list_page(&self, limit: u32, offset: u32) -> Result<Vec<Person>, DomainError> {
         let rows = sqlx::query_as::<_, PersonRow>(
-            "SELECT id, external_id, name, known_for_department, profile_path FROM persons ORDER BY id LIMIT ? OFFSET ?",
+            "SELECT id, external_id, name, known_for_department, profile_path, biography, birthday, deathday, place_of_birth, also_known_as, homepage, imdb_id, enriched_at FROM persons ORDER BY id LIMIT ? OFFSET ?",
         )
         .bind(limit)
         .bind(offset)
@@ -265,17 +283,47 @@ struct PersonRow {
     name: String,
     known_for_department: Option<String>,
     profile_path: Option<String>,
+    biography: Option<String>,
+    birthday: Option<String>,
+    deathday: Option<String>,
+    place_of_birth: Option<String>,
+    also_known_as: Option<String>,
+    homepage: Option<String>,
+    imdb_id: Option<String>,
+    enriched_at: Option<String>,
 }
 
 impl PersonRow {
     fn into_person(self) -> Person {
         let ext = ExternalPersonId::new(self.external_id);
-        Person::basic(
+        let also_known_as = self
+            .also_known_as
+            .and_then(|s| serde_json::from_str::<Vec<String>>(&s).ok())
+            .unwrap_or_default();
+        let birthday = self
+            .birthday
+            .and_then(|s| chrono::NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok());
+        let deathday = self
+            .deathday
+            .and_then(|s| chrono::NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok());
+        let enriched_at = self
+            .enriched_at
+            .and_then(|s| chrono::DateTime::parse_from_rfc3339(&s).ok())
+            .map(|d| d.with_timezone(&chrono::Utc));
+        Person::new(
             PersonId::from_uuid(uuid::Uuid::parse_str(&self.id).unwrap_or_default()),
             ext,
             self.name,
             self.known_for_department,
             self.profile_path,
+            self.biography,
+            birthday,
+            deathday,
+            self.place_of_birth,
+            also_known_as,
+            self.homepage,
+            self.imdb_id,
+            enriched_at,
         )
     }
 }

@@ -117,76 +117,58 @@ impl PersonCommand for PostgresPersonAdapter {
 
     async fn update_enrichment(
         &self,
-        _id: &PersonId,
-        _data: &PersonEnrichmentData,
+        id: &PersonId,
+        data: &PersonEnrichmentData,
     ) -> Result<(), DomainError> {
-        todo!("person enrichment persistence")
+        let also_known_as_json =
+            serde_json::to_string(&data.also_known_as).unwrap_or_else(|_| "[]".into());
+        let now = chrono::Utc::now();
+        sqlx::query(
+            "UPDATE persons SET biography = $1, birthday = $2, deathday = $3, place_of_birth = $4, also_known_as = $5, homepage = $6, imdb_id = $7, enriched_at = $8 WHERE id = $9",
+        )
+        .bind(&data.biography)
+        .bind(data.birthday.map(|d| d.to_string()))
+        .bind(data.deathday.map(|d| d.to_string()))
+        .bind(&data.place_of_birth)
+        .bind(&also_known_as_json)
+        .bind(&data.homepage)
+        .bind(&data.imdb_id)
+        .bind(now)
+        .bind(id.value().to_string())
+        .execute(&self.pool)
+        .await
+        .map_err(map_err)?;
+        Ok(())
     }
 }
 
 #[async_trait]
 impl PersonQuery for PostgresPersonAdapter {
     async fn get_by_id(&self, id: &PersonId) -> Result<Option<Person>, DomainError> {
-        #[derive(sqlx::FromRow)]
-        struct Row {
-            id: String,
-            external_id: String,
-            name: String,
-            known_for_department: Option<String>,
-            profile_path: Option<String>,
-        }
-
-        let row = sqlx::query_as::<_, Row>(
-            "SELECT id, external_id, name, known_for_department, profile_path FROM persons WHERE id = $1",
+        let row = sqlx::query_as::<_, PersonRow>(
+            "SELECT id, external_id, name, known_for_department, profile_path, biography, birthday, deathday, place_of_birth, also_known_as, homepage, imdb_id, enriched_at FROM persons WHERE id = $1",
         )
         .bind(id.value().to_string())
         .fetch_optional(&self.pool)
         .await
         .map_err(map_err)?;
 
-        Ok(row.map(|r| {
-            let ext = ExternalPersonId::new(r.external_id);
-            Person::basic(
-                PersonId::from_uuid(uuid::Uuid::parse_str(&r.id).unwrap_or_default()),
-                ext,
-                r.name,
-                r.known_for_department,
-                r.profile_path,
-            )
-        }))
+        Ok(row.map(PersonRow::into_person))
     }
 
     async fn get_by_external_id(
         &self,
         id: &ExternalPersonId,
     ) -> Result<Option<Person>, DomainError> {
-        #[derive(sqlx::FromRow)]
-        struct Row {
-            id: String,
-            external_id: String,
-            name: String,
-            known_for_department: Option<String>,
-            profile_path: Option<String>,
-        }
-
-        let row = sqlx::query_as::<_, Row>(
-            "SELECT id, external_id, name, known_for_department, profile_path FROM persons WHERE external_id = $1",
+        let row = sqlx::query_as::<_, PersonRow>(
+            "SELECT id, external_id, name, known_for_department, profile_path, biography, birthday, deathday, place_of_birth, also_known_as, homepage, imdb_id, enriched_at FROM persons WHERE external_id = $1",
         )
         .bind(id.value())
         .fetch_optional(&self.pool)
         .await
         .map_err(map_err)?;
 
-        Ok(row.map(|r| {
-            let ext = ExternalPersonId::new(r.external_id);
-            Person::basic(
-                PersonId::from_uuid(uuid::Uuid::parse_str(&r.id).unwrap_or_default()),
-                ext,
-                r.name,
-                r.known_for_department,
-                r.profile_path,
-            )
-        }))
+        Ok(row.map(PersonRow::into_person))
     }
 
     async fn get_credits(&self, id: &PersonId) -> Result<PersonCredits, DomainError> {
@@ -272,17 +254,8 @@ impl PersonQuery for PostgresPersonAdapter {
     }
 
     async fn list_page(&self, limit: u32, offset: u32) -> Result<Vec<Person>, DomainError> {
-        #[derive(sqlx::FromRow)]
-        struct Row {
-            id: String,
-            external_id: String,
-            name: String,
-            known_for_department: Option<String>,
-            profile_path: Option<String>,
-        }
-
-        let rows = sqlx::query_as::<_, Row>(
-            "SELECT id, external_id, name, known_for_department, profile_path FROM persons ORDER BY id LIMIT $1 OFFSET $2",
+        let rows = sqlx::query_as::<_, PersonRow>(
+            "SELECT id, external_id, name, known_for_department, profile_path, biography, birthday, deathday, place_of_birth, also_known_as, homepage, imdb_id, enriched_at FROM persons ORDER BY id LIMIT $1 OFFSET $2",
         )
         .bind(limit as i64)
         .bind(offset as i64)
@@ -290,19 +263,7 @@ impl PersonQuery for PostgresPersonAdapter {
         .await
         .map_err(map_err)?;
 
-        Ok(rows
-            .into_iter()
-            .map(|r| {
-                let ext = ExternalPersonId::new(r.external_id);
-                Person::basic(
-                    PersonId::from_uuid(uuid::Uuid::parse_str(&r.id).unwrap_or_default()),
-                    ext,
-                    r.name,
-                    r.known_for_department,
-                    r.profile_path,
-                )
-            })
-            .collect())
+        Ok(rows.into_iter().map(PersonRow::into_person).collect())
     }
 
     async fn list_orphaned_persons(&self) -> Result<Vec<PersonId>, DomainError> {
@@ -324,5 +285,59 @@ impl PersonQuery for PostgresPersonAdapter {
             .into_iter()
             .filter_map(|(id,)| uuid::Uuid::parse_str(&id).ok().map(PersonId::from_uuid))
             .collect())
+    }
+}
+
+// ── Row types ────────────────────────────────────────────────────────────────
+
+#[derive(sqlx::FromRow)]
+struct PersonRow {
+    id: String,
+    external_id: String,
+    name: String,
+    known_for_department: Option<String>,
+    profile_path: Option<String>,
+    biography: Option<String>,
+    birthday: Option<String>,
+    deathday: Option<String>,
+    place_of_birth: Option<String>,
+    also_known_as: Option<String>,
+    homepage: Option<String>,
+    imdb_id: Option<String>,
+    enriched_at: Option<String>,
+}
+
+impl PersonRow {
+    fn into_person(self) -> Person {
+        let ext = ExternalPersonId::new(self.external_id);
+        let also_known_as = self
+            .also_known_as
+            .and_then(|s| serde_json::from_str::<Vec<String>>(&s).ok())
+            .unwrap_or_default();
+        let birthday = self
+            .birthday
+            .and_then(|s| chrono::NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok());
+        let deathday = self
+            .deathday
+            .and_then(|s| chrono::NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok());
+        let enriched_at = self
+            .enriched_at
+            .and_then(|s| chrono::DateTime::parse_from_rfc3339(&s).ok())
+            .map(|d| d.with_timezone(&chrono::Utc));
+        Person::new(
+            PersonId::from_uuid(uuid::Uuid::parse_str(&self.id).unwrap_or_default()),
+            ext,
+            self.name,
+            self.known_for_department,
+            self.profile_path,
+            self.biography,
+            birthday,
+            deathday,
+            self.place_of_birth,
+            also_known_as,
+            self.homepage,
+            self.imdb_id,
+            enriched_at,
+        )
     }
 }
