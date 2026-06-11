@@ -2,6 +2,7 @@ const AUTH_KEY = "auth_state"
 
 export type AuthState = {
   token: string
+  refresh_token: string
   user_id: string
   email: string
   role: string
@@ -28,6 +29,10 @@ export function clearAuth() {
 
 export function getToken(): string | null {
   return getAuth()?.token ?? null
+}
+
+export function getRefreshToken(): string | null {
+  return getAuth()?.refresh_token ?? null
 }
 
 export function isAdmin(): boolean {

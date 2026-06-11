@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useAuth } from "@/components/auth-provider"
-import { login, register } from "@/lib/api/auth"
+import { apiLogout, login, register } from "@/lib/api/auth"
 import type { LoginRequest, RegisterRequest } from "@/lib/api/auth"
+import { getRefreshToken } from "@/lib/auth"
 
 export function useLogin() {
   const { login: setAuth } = useAuth()
@@ -11,6 +12,7 @@ export function useLogin() {
     onSuccess: (res) => {
       setAuth({
         token: res.token,
+        refresh_token: res.refresh_token,
         user_id: res.user_id,
         email: res.email,
         role: res.role,
@@ -32,6 +34,12 @@ export function useLogout() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async () => {
+      const rt = getRefreshToken()
+      if (rt) {
+        try {
+          await apiLogout(rt)
+        } catch {}
+      }
       logout()
       qc.clear()
     },

@@ -1,4 +1,4 @@
-import { clearAuth, getToken } from "@/lib/auth"
+import { clearAuth, getAuth, getToken, setAuth } from "@/lib/auth"
 
 export const API_URL = import.meta.env.VITE_API_URL ?? ""
 
@@ -42,6 +42,31 @@ function buildUrl(
   return qs ? `${base}?${qs}` : base
 }
 
+let refreshPromise: Promise<boolean> | null = null
+
+async function tryRefresh(): Promise<boolean> {
+  const auth = getAuth()
+  if (!auth?.refresh_token) return false
+  try {
+    const res = await fetch(buildUrl("/auth/refresh"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: auth.refresh_token }),
+    })
+    if (!res.ok) return false
+    const data = await res.json()
+    setAuth({
+      ...auth,
+      token: data.token,
+      refresh_token: data.refresh_token,
+      expires_at: data.expires_at,
+    })
+    return true
+  } catch {
+    return false
+  }
+}
+
 async function request<T = void>(
   url: string,
   options?: RequestInit,
@@ -55,8 +80,36 @@ async function request<T = void>(
   })
   if (!res.ok) {
     if (res.status === 401) {
-      clearAuth()
-      window.location.href = "/app/login"
+      if (url.includes("/auth/refresh") || url.includes("/auth/login")) {
+        clearAuth()
+        window.location.href = "/app/login"
+        throw new ApiError(res.status, await res.text())
+      }
+
+      if (!refreshPromise) {
+        refreshPromise = tryRefresh().finally(() => {
+          refreshPromise = null
+        })
+      }
+      const ok = await refreshPromise
+      if (!ok) {
+        clearAuth()
+        window.location.href = "/app/login"
+        throw new ApiError(res.status, await res.text())
+      }
+
+      const retryRes = await fetch(url, {
+        ...options,
+        headers: {
+          ...authHeaders(),
+          ...options?.headers,
+        },
+      })
+      if (!retryRes.ok) {
+        throw new ApiError(retryRes.status, await retryRes.text())
+      }
+      const retryText = await retryRes.text()
+      return retryText ? JSON.parse(retryText) : (undefined as T)
     }
     throw new ApiError(res.status, await res.text())
   }
