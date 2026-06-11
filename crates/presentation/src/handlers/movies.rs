@@ -13,7 +13,7 @@ use application::{
         queries::{GetMovieSocialPageQuery, GetReviewHistoryQuery},
     },
     movies::{
-        deps::{GetMovieProfileDeps, GetMoviesDeps, SyncPosterDeps},
+        deps::SyncPosterDeps,
         get_movies,
         queries::GetMoviesQuery,
         sync_poster,
@@ -52,9 +52,7 @@ pub async fn list_movies(
     Query(params): Query<MoviesQueryParams>,
 ) -> Result<Json<MoviesResponse>, ApiError> {
     let page = get_movies::execute(
-        &GetMoviesDeps {
-            movie: state.app_ctx.repos.movie.clone(),
-        },
+        state.app_ctx.repos.movie.clone(),
         GetMoviesQuery {
             limit: params.limit,
             offset: params.offset,
@@ -208,9 +206,7 @@ pub async fn get_movie_profile(
     use application::movies::get_movie_profile;
     let query = get_movie_profile::GetMovieProfileQuery { movie_id };
     match get_movie_profile::execute(
-        &GetMovieProfileDeps {
-            movie_profile: state.app_ctx.repos.movie_profile.clone(),
-        },
+        state.app_ctx.repos.movie_profile.clone(),
         query,
     )
     .await

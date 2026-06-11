@@ -1,13 +1,16 @@
+use std::sync::Arc;
+
 use domain::{
     errors::DomainError,
     models::collections::{PageParams, Paginated},
     models::{MovieFilter, MovieSummary},
+    ports::MovieRepository,
 };
 
-use crate::movies::{deps::GetMoviesDeps, queries::GetMoviesQuery};
+use crate::movies::queries::GetMoviesQuery;
 
 pub async fn execute(
-    deps: &GetMoviesDeps,
+    movie: Arc<dyn MovieRepository>,
     query: GetMoviesQuery,
 ) -> Result<Paginated<MovieSummary>, DomainError> {
     let page = PageParams::new(query.limit, query.offset)?;
@@ -16,7 +19,7 @@ pub async fn execute(
         genre: query.genre,
         language: query.language,
     };
-    deps.movie.list_movies(&page, &filter).await
+    movie.list_movies(&page, &filter).await
 }
 
 #[cfg(test)]

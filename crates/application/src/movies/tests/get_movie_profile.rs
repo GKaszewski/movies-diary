@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use chrono::Utc;
 use uuid::Uuid;
 
@@ -10,19 +8,14 @@ use domain::{
     value_objects::MovieId,
 };
 
-use crate::movies::{
-    deps::GetMovieProfileDeps,
-    get_movie_profile::{self, GetMovieProfileQuery},
-};
+use crate::movies::get_movie_profile::{self, GetMovieProfileQuery};
 
 #[tokio::test]
 async fn returns_none_when_no_profile() {
-    let deps = GetMovieProfileDeps {
-        movie_profile: InMemoryMovieProfileRepository::new(),
-    };
+    let movie_profile = InMemoryMovieProfileRepository::new();
 
     let result = get_movie_profile::execute(
-        &deps,
+        movie_profile,
         GetMovieProfileQuery {
             movie_id: Uuid::new_v4(),
         },
@@ -71,12 +64,8 @@ async fn returns_profile_with_cast_and_crew() {
     };
     profile_repo.upsert(&profile).await.unwrap();
 
-    let deps = GetMovieProfileDeps {
-        movie_profile: Arc::clone(&profile_repo) as _,
-    };
-
     let result = get_movie_profile::execute(
-        &deps,
+        profile_repo.clone(),
         GetMovieProfileQuery {
             movie_id: movie_id.value(),
         },

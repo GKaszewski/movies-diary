@@ -5,14 +5,6 @@ use domain::ports::{
     PersonCommand, PersonQuery, PosterFetcherClient, SearchCommand,
 };
 
-pub struct GetMoviesDeps {
-    pub movie: Arc<dyn MovieRepository>,
-}
-
-pub struct GetMovieProfileDeps {
-    pub movie_profile: Arc<dyn MovieProfileRepository>,
-}
-
 pub struct SyncPosterDeps {
     pub movie: Arc<dyn MovieRepository>,
     pub movie_profile: Arc<dyn MovieProfileRepository>,
