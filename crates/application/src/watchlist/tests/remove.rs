@@ -24,13 +24,9 @@ async fn removes_entry_and_emits_event() {
         .await
         .unwrap();
 
-    let ctx = TestContextBuilder::new()
-        .with_watchlist(Arc::clone(&watchlist) as _)
-        .with_event_publisher(Arc::clone(&events) as _)
-        .build();
-
     remove::execute(
-        &ctx,
+        Arc::clone(&watchlist) as _,
+        Arc::clone(&events) as _,
         RemoveFromWatchlistCommand {
             user_id: uid,
             movie_id: mid,
@@ -50,9 +46,10 @@ async fn removes_entry_and_emits_event() {
 
 #[tokio::test]
 async fn fails_when_not_on_watchlist() {
-    let ctx = TestContextBuilder::new().build();
+    let b = TestContextBuilder::new();
     let result = remove::execute(
-        &ctx,
+        b.watchlist_repo.clone(),
+        b.event_publisher.clone(),
         RemoveFromWatchlistCommand {
             user_id: Uuid::new_v4(),
             movie_id: Uuid::new_v4(),

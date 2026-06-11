@@ -22,12 +22,8 @@ async fn returns_true_when_present() {
         .await
         .unwrap();
 
-    let ctx = TestContextBuilder::new()
-        .with_watchlist(Arc::clone(&watchlist) as _)
-        .build();
-
     let result = is_on::execute(
-        &ctx,
+        Arc::clone(&watchlist) as _,
         IsOnWatchlistQuery {
             user_id: uid,
             movie_id: mid,
@@ -41,9 +37,9 @@ async fn returns_true_when_present() {
 
 #[tokio::test]
 async fn returns_false_when_absent() {
-    let ctx = TestContextBuilder::new().build();
+    let b = TestContextBuilder::new();
     let result = is_on::execute(
-        &ctx,
+        b.watchlist_repo.clone(),
         IsOnWatchlistQuery {
             user_id: Uuid::new_v4(),
             movie_id: Uuid::new_v4(),

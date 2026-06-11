@@ -1,21 +1,24 @@
+use std::sync::Arc;
+
 use domain::{
     errors::DomainError,
     models::{
         WatchlistWithMovie,
         collections::{PageParams, Paginated},
     },
+    ports::WatchlistRepository,
     value_objects::UserId,
 };
 
-use crate::{context::AppContext, watchlist::queries::GetWatchlistQuery};
+use crate::watchlist::queries::GetWatchlistQuery;
 
 pub async fn execute(
-    ctx: &AppContext,
+    watchlist: Arc<dyn WatchlistRepository>,
     query: GetWatchlistQuery,
 ) -> Result<Paginated<WatchlistWithMovie>, DomainError> {
     let user_id = UserId::from_uuid(query.user_id);
     let page = PageParams::new(query.limit, query.offset)?;
-    ctx.repos.watchlist.get_for_user(&user_id, &page).await
+    watchlist.get_for_user(&user_id, &page).await
 }
 
 #[cfg(test)]

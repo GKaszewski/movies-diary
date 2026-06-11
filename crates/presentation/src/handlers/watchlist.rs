@@ -11,6 +11,7 @@ use application::{
     watchlist::{
         add as add_to_watchlist,
         commands::{AddToWatchlistCommand, RemoveFromWatchlistCommand},
+        deps::WatchlistAddDeps,
         get as get_watchlist, is_on as is_on_watchlist,
         queries::{GetWatchlistQuery, IsOnWatchlistQuery},
         remove as remove_from_watchlist,
@@ -58,7 +59,7 @@ pub async fn get_watchlist_handler(
     Query(params): Query<PaginationQueryParams>,
 ) -> Result<Json<WatchlistResponse>, ApiError> {
     let page = get_watchlist::execute(
-        &state.app_ctx,
+        state.app_ctx.repos.watchlist.clone(),
         GetWatchlistQuery {
             user_id: user.0.value(),
             limit: params.limit,
@@ -98,8 +99,14 @@ pub async fn post_watchlist_add(
     user: AuthenticatedUser,
     Json(req): Json<AddToWatchlistRequest>,
 ) -> Result<impl IntoResponse, ApiError> {
+    let deps = WatchlistAddDeps {
+        movie: state.app_ctx.repos.movie.clone(),
+        metadata: state.app_ctx.services.metadata.clone(),
+        watchlist: state.app_ctx.repos.watchlist.clone(),
+        event_publisher: state.app_ctx.services.event_publisher.clone(),
+    };
     add_to_watchlist::execute(
-        &state.app_ctx,
+        &deps,
         AddToWatchlistCommand {
             user_id: user.0.value(),
             input: MovieInput {
@@ -131,7 +138,8 @@ pub async fn delete_watchlist_entry(
     Path(movie_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, ApiError> {
     remove_from_watchlist::execute(
-        &state.app_ctx,
+        state.app_ctx.repos.watchlist.clone(),
+        state.app_ctx.services.event_publisher.clone(),
         RemoveFromWatchlistCommand {
             user_id: user.0.value(),
             movie_id,
@@ -156,7 +164,7 @@ pub async fn get_watchlist_status(
     Path(movie_id): Path<Uuid>,
 ) -> Result<Json<WatchlistStatusResponse>, ApiError> {
     let on_watchlist = is_on_watchlist::execute(
-        &state.app_ctx,
+        state.app_ctx.repos.watchlist.clone(),
         IsOnWatchlistQuery {
             user_id: user.0.value(),
             movie_id,
@@ -190,7 +198,7 @@ pub async fn get_watchlist_page(
 
     let result = if is_local {
         match get_watchlist::execute(
-            &state.app_ctx,
+            state.app_ctx.repos.watchlist.clone(),
             application::watchlist::queries::GetWatchlistQuery {
                 user_id: owner_id,
                 limit: params.limit.or(Some(20)),
@@ -276,8 +284,15 @@ pub async fn post_watchlist_add_html(
         }
     };
 
+    let deps = WatchlistAddDeps {
+        movie: state.app_ctx.repos.movie.clone(),
+        metadata: state.app_ctx.services.metadata.clone(),
+        watchlist: state.app_ctx.repos.watchlist.clone(),
+        event_publisher: state.app_ctx.services.event_publisher.clone(),
+    };
+
     match add_to_watchlist::execute(
-        &state.app_ctx,
+        &deps,
         AddToWatchlistCommand {
             user_id: user_id.value(),
             input,
@@ -311,7 +326,8 @@ pub async fn post_watchlist_remove_html(
         return StatusCode::FORBIDDEN.into_response();
     }
     match remove_from_watchlist::execute(
-        &state.app_ctx,
+        state.app_ctx.repos.watchlist.clone(),
+        state.app_ctx.services.event_publisher.clone(),
         RemoveFromWatchlistCommand {
             user_id: user_id.value(),
             movie_id,

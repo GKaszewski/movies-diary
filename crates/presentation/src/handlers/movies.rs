@@ -288,7 +288,7 @@ pub async fn get_movie_detail_html(
                 result.reviews.offset + result.reviews.limit < result.reviews.total_count as u32;
             let on_watchlist = match &user_id {
                 Some(uid) => is_on_watchlist::execute(
-                    &state.app_ctx,
+                    state.app_ctx.repos.watchlist.clone(),
                     IsOnWatchlistQuery {
                         user_id: uid.value(),
                         movie_id,

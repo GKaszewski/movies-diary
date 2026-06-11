@@ -5,9 +5,9 @@ use crate::watchlist::{get, queries::GetWatchlistQuery};
 
 #[tokio::test]
 async fn returns_empty_page_for_new_user() {
-    let ctx = TestContextBuilder::new().build();
+    let b = TestContextBuilder::new();
     let result = get::execute(
-        &ctx,
+        b.watchlist_repo.clone(),
         GetWatchlistQuery {
             user_id: Uuid::new_v4(),
             limit: None,

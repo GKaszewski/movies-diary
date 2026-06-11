@@ -3,14 +3,26 @@ use std::sync::Arc;
 use domain::{
     models::Movie,
     ports::MovieRepository,
-    testing::{InMemoryMovieRepository, InMemoryWatchlistRepository},
+    testing::{InMemoryMovieRepository, InMemoryWatchlistRepository, NoopEventPublisher},
     value_objects::{MovieTitle, ReleaseYear},
 };
 
 use crate::{
-    diary::commands::MovieInput, test_helpers::TestContextBuilder, watchlist::add,
-    watchlist::commands::AddToWatchlistCommand,
+    diary::commands::MovieInput,
+    watchlist::{add, commands::AddToWatchlistCommand, deps::WatchlistAddDeps},
 };
+
+fn make_deps(
+    movies: Arc<InMemoryMovieRepository>,
+    watchlist: Arc<InMemoryWatchlistRepository>,
+) -> WatchlistAddDeps {
+    WatchlistAddDeps {
+        movie: movies,
+        metadata: Arc::new(domain::testing::FakeMetadataClient),
+        watchlist,
+        event_publisher: NoopEventPublisher::new(),
+    }
+}
 
 #[tokio::test]
 async fn test_add_to_watchlist_resolves_and_saves() {
@@ -27,10 +39,7 @@ async fn test_add_to_watchlist_resolves_and_saves() {
     let movie_uuid = movie.id().value();
     movies.upsert_movie(&movie).await.unwrap();
 
-    let ctx = TestContextBuilder::new()
-        .with_movies(Arc::clone(&movies) as _)
-        .with_watchlist(Arc::clone(&watchlist) as _)
-        .build();
+    let deps = make_deps(Arc::clone(&movies), Arc::clone(&watchlist));
 
     let cmd = AddToWatchlistCommand {
         user_id: uuid::Uuid::new_v4(),
@@ -43,7 +52,7 @@ async fn test_add_to_watchlist_resolves_and_saves() {
         },
     };
 
-    add::execute(&ctx, cmd).await.unwrap();
+    add::execute(&deps, cmd).await.unwrap();
 
     assert_eq!(watchlist.count(), 1);
 }
@@ -64,10 +73,7 @@ async fn test_add_to_watchlist_already_present_is_idempotent() {
     let user_id = uuid::Uuid::new_v4();
     movies.upsert_movie(&movie).await.unwrap();
 
-    let ctx = TestContextBuilder::new()
-        .with_movies(Arc::clone(&movies) as _)
-        .with_watchlist(Arc::clone(&watchlist) as _)
-        .build();
+    let deps = make_deps(Arc::clone(&movies), Arc::clone(&watchlist));
 
     let make_cmd = || AddToWatchlistCommand {
         user_id,
@@ -80,8 +86,8 @@ async fn test_add_to_watchlist_already_present_is_idempotent() {
         },
     };
 
-    add::execute(&ctx, make_cmd()).await.unwrap();
-    add::execute(&ctx, make_cmd()).await.unwrap();
+    add::execute(&deps, make_cmd()).await.unwrap();
+    add::execute(&deps, make_cmd()).await.unwrap();
 
     assert_eq!(watchlist.count(), 1, "idempotent add should not duplicate");
 }
@@ -91,10 +97,7 @@ async fn test_add_to_watchlist_with_manual_movie() {
     let movies = InMemoryMovieRepository::new();
     let watchlist = InMemoryWatchlistRepository::new();
 
-    let ctx = TestContextBuilder::new()
-        .with_movies(Arc::clone(&movies) as _)
-        .with_watchlist(Arc::clone(&watchlist) as _)
-        .build();
+    let deps = make_deps(Arc::clone(&movies), Arc::clone(&watchlist));
 
     let cmd = AddToWatchlistCommand {
         user_id: uuid::Uuid::new_v4(),
@@ -107,7 +110,7 @@ async fn test_add_to_watchlist_with_manual_movie() {
         },
     };
 
-    add::execute(&ctx, cmd).await.unwrap();
+    add::execute(&deps, cmd).await.unwrap();
 
     assert_eq!(watchlist.count(), 1);
     assert_eq!(movies.count(), 1);
@@ -118,10 +121,7 @@ async fn test_add_to_watchlist_movie_not_found_by_id() {
     let movies = InMemoryMovieRepository::new();
     let watchlist = InMemoryWatchlistRepository::new();
 
-    let ctx = TestContextBuilder::new()
-        .with_movies(Arc::clone(&movies) as _)
-        .with_watchlist(Arc::clone(&watchlist) as _)
-        .build();
+    let deps = make_deps(Arc::clone(&movies), Arc::clone(&watchlist));
 
     let cmd = AddToWatchlistCommand {
         user_id: uuid::Uuid::new_v4(),
@@ -134,5 +134,5 @@ async fn test_add_to_watchlist_movie_not_found_by_id() {
         },
     };
 
-    assert!(add::execute(&ctx, cmd).await.is_err());
+    assert!(add::execute(&deps, cmd).await.is_err());
 }
