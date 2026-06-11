@@ -53,13 +53,13 @@ function SettingsPage() {
       label: t("settings.import"),
       description: t("settings.importDesc"),
       to: "/settings/import",
-      icon: <Download className="size-4" />,
+      icon: <Upload className="size-4" />,
     },
     {
       label: t("settings.export"),
       description: t("settings.exportDesc"),
       to: "/settings/export",
-      icon: <Upload className="size-4" />,
+      icon: <Download className="size-4" />,
     },
     {
       label: t("settings.yearWrapUp"),
