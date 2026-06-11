@@ -10,6 +10,7 @@ import { tmdbProfileUrl } from "@/lib/api/client"
 import { usePersonCredits } from "@/hooks/use-search"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { shortDate } from "@/lib/date"
+import { differenceInYears, parseISO } from "date-fns"
 
 export const Route = createFileRoute("/_app/people/$id")({
   component: PersonDetailPage,
@@ -51,6 +52,7 @@ function PersonDetailPage() {
               <Calendar className="size-3" />
               {shortDate(person.birthday)}
               {person.deathday && ` — ${shortDate(person.deathday)}`}
+              {` (${differenceInYears(person.deathday ? parseISO(person.deathday) : new Date(), parseISO(person.birthday))})`}
             </p>
           )}
           {person.place_of_birth && (
