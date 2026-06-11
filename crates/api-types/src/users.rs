@@ -26,6 +26,7 @@ pub struct UserProfileQueryParams {
     pub view: Option<String>,
     pub limit: Option<u32>,
     pub offset: Option<u32>,
+    pub search: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
