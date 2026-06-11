@@ -122,7 +122,8 @@
     "noEntries": "No entries",
     "noTrends": "No trends yet",
     "topDirectors": "Top Directors",
-    "monthlyActivity": "Monthly Activity"
+    "monthlyActivity": "Monthly Activity",
+    "searchPlaceholder": "Search entries..."
   },
   "social": {
     "title": "Social",
@@ -163,7 +164,12 @@
     "rebuildSearchDone": "Reindex queued",
     "privacy": "Privacy",
     "federateGoals": "Share goals on Fediverse",
-    "federateGoalsDesc": "Broadcast goal progress to followers"
+    "federateGoalsDesc": "Broadcast goal progress to followers",
+    "export": "Export",
+    "exportDesc": "Download your diary",
+    "exportCsv": "CSV",
+    "exportJson": "JSON",
+    "exporting": "Exporting..."
   },
   "goals": {
     "yearGoal": "{{year}} Goal",
