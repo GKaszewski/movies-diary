@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use futures::stream::BoxStream;
 use domain::{
     errors::DomainError,
     models::{
@@ -425,6 +426,35 @@ impl DiaryRepository for PostgresDiaryRepository {
         .map_err(Self::map_err)?;
 
         rows.into_iter().map(DiaryRow::into_domain).collect()
+    }
+
+    fn stream_user_history(
+        &self,
+        user_id: UserId,
+    ) -> BoxStream<'static, Result<DiaryEntry, DomainError>> {
+        let pool = self.pool.clone();
+        let uid = user_id.value().to_string();
+        Box::pin(async_stream::stream! {
+            let mut rows = sqlx::query_as::<_, DiaryRow>(
+                "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
+                        r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment,
+                        to_char(r.watched_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS watched_at,
+                        to_char(r.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS created_at,
+                        r.remote_actor_url
+                 FROM reviews r
+                 INNER JOIN movies m ON m.id = r.movie_id
+                 WHERE r.user_id = $1
+                 ORDER BY r.watched_at DESC",
+            )
+            .bind(&uid)
+            .fetch(&pool);
+            while let Some(row) = futures::StreamExt::next(&mut rows).await {
+                yield match row {
+                    Ok(r) => r.into_domain(),
+                    Err(e) => Err(Self::map_err(e)),
+                };
+            }
+        })
     }
 
     async fn get_movie_stats(&self, movie_id: &MovieId) -> Result<MovieStats, DomainError> {
