@@ -42,6 +42,7 @@ dotenvy = { workspace = true }
 uuid = { workspace = true }
 chrono = { workspace = true }
 async-trait = { workspace = true }
+futures = { workspace = true }
 
 api-types = { workspace = true }
 domain = { workspace = true, features = ["test-helpers"] }

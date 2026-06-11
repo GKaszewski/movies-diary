@@ -5,6 +5,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Redirect},
 };
+use futures::StreamExt;
 use uuid::Uuid;
 
 use application::diary::{
@@ -153,6 +154,12 @@ pub async fn export_diary(
         &state.app_ctx.services.diary_exporter,
         query,
     );
+    let stream = stream.map(|r| {
+        if let Err(ref e) = r {
+            tracing::error!("diary export stream error: {e}");
+        }
+        r
+    });
     (
         StatusCode::OK,
         [
@@ -313,6 +320,12 @@ pub async fn get_export_html(
         &state.app_ctx.services.diary_exporter,
         query,
     );
+    let stream = stream.map(|r| {
+        if let Err(ref e) = r {
+            tracing::error!("diary export stream error: {e}");
+        }
+        r
+    });
     (
         StatusCode::OK,
         [
