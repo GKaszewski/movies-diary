@@ -15,8 +15,7 @@ use domain::{
     models::{
         DiaryEntry, DiaryFilter, EntityType, FeedEntry, IndexableDocument, Movie, Person,
         PersonCredits, PersonEnrichmentData, PersonId, Review, ReviewHistory, SearchQuery,
-        SearchResults, UserStats,
-        UserTrends,
+        SearchResults, UserStats, UserTrends,
         collections::{PageParams, Paginated},
     },
     ports::{

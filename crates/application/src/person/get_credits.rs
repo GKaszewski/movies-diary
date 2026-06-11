@@ -11,12 +11,14 @@ const ENRICHMENT_TTL_DAYS: i64 = 90;
 pub async fn execute(ctx: &AppContext, id: PersonId) -> Result<PersonCredits, DomainError> {
     let credits = ctx.repos.person_query.get_credits(&id).await?;
     if should_enrich(&credits.person) {
-        let _ = ctx.services.event_publisher.publish(
-            &DomainEvent::PersonEnrichmentRequested {
+        let _ = ctx
+            .services
+            .event_publisher
+            .publish(&DomainEvent::PersonEnrichmentRequested {
                 person_id: id,
                 external_person_id: credits.person.external_id().value().to_string(),
-            },
-        ).await;
+            })
+            .await;
     }
     Ok(credits)
 }

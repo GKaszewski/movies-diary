@@ -158,16 +158,47 @@ impl MovieEnrichmentClient for TmdbEnrichmentClient {
             vote_count: d.vote_count,
             original_language: d.original_language,
             collection_name: d.belongs_to_collection.map(|c| c.name),
-            genres: d.genres.into_iter().map(|g| Genre { tmdb_id: g.id, name: g.name }).collect(),
-            keywords: d.keywords.keywords.into_iter().map(|k| Keyword { tmdb_id: k.id, name: k.name }).collect(),
-            cast: d.credits.cast.into_iter().map(|c| CastMember {
-                tmdb_person_id: c.id, name: c.name, character: c.character,
-                billing_order: c.order, profile_path: c.profile_path,
-            }).collect(),
-            crew: d.credits.crew.into_iter().map(|c| CrewMember {
-                tmdb_person_id: c.id, name: c.name, job: c.job,
-                department: c.department, profile_path: c.profile_path,
-            }).collect(),
+            genres: d
+                .genres
+                .into_iter()
+                .map(|g| Genre {
+                    tmdb_id: g.id,
+                    name: g.name,
+                })
+                .collect(),
+            keywords: d
+                .keywords
+                .keywords
+                .into_iter()
+                .map(|k| Keyword {
+                    tmdb_id: k.id,
+                    name: k.name,
+                })
+                .collect(),
+            cast: d
+                .credits
+                .cast
+                .into_iter()
+                .map(|c| CastMember {
+                    tmdb_person_id: c.id,
+                    name: c.name,
+                    character: c.character,
+                    billing_order: c.order,
+                    profile_path: c.profile_path,
+                })
+                .collect(),
+            crew: d
+                .credits
+                .crew
+                .into_iter()
+                .map(|c| CrewMember {
+                    tmdb_person_id: c.id,
+                    name: c.name,
+                    job: c.job,
+                    department: c.department,
+                    profile_path: c.profile_path,
+                })
+                .collect(),
             enriched_at: Utc::now(),
         })
     }
@@ -201,8 +232,12 @@ impl PersonEnrichmentClient for TmdbEnrichmentClient {
 
         Ok(PersonEnrichmentData {
             biography: d.biography.filter(|s| !s.is_empty()),
-            birthday: d.birthday.and_then(|s| chrono::NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok()),
-            deathday: d.deathday.and_then(|s| chrono::NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok()),
+            birthday: d
+                .birthday
+                .and_then(|s| chrono::NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok()),
+            deathday: d
+                .deathday
+                .and_then(|s| chrono::NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok()),
             place_of_birth: d.place_of_birth.filter(|s| !s.is_empty()),
             also_known_as: d.also_known_as.unwrap_or_default(),
             homepage: d.homepage.filter(|s| !s.is_empty()),

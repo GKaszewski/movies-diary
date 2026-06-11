@@ -13,8 +13,7 @@ use std::collections::HashMap;
 
 use crate::render::render_page;
 use application::import::{
-    apply_mapping as apply_import_mapping,
-    apply_profile as apply_import_profile,
+    apply_mapping as apply_import_mapping, apply_profile as apply_import_profile,
     commands::{
         ApplyImportMappingCommand, ApplyImportProfileCommand, CreateImportSessionCommand,
         DeleteImportProfileCommand, ExecuteImportCommand, SaveImportProfileCommand,
@@ -911,17 +910,18 @@ pub async fn api_apply_profile(
         } else {
             StatusCode::UNPROCESSABLE_ENTITY
         };
-        return (status, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
+        return (
+            status,
+            axum::Json(serde_json::json!({"error": e.to_string()})),
+        )
+            .into_response();
     }
 
     let session = match state
         .app_ctx
         .repos
         .import_session
-        .get(
-            &ImportSessionId::from_uuid(session_id),
-            &user_id,
-        )
+        .get(&ImportSessionId::from_uuid(session_id), &user_id)
         .await
     {
         Ok(Some(s)) => s,

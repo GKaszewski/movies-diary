@@ -15,8 +15,7 @@ use domain::{
     events::DomainEvent,
     models::{
         EntityType, ExternalPersonId, IndexableDocument, Movie, Person, PersonCredits,
-        PersonEnrichmentData, PersonId,
-        SearchQuery, SearchResults, User,
+        PersonEnrichmentData, PersonId, SearchQuery, SearchResults, User,
     },
     ports::{
         AuthService, EventPublisher, GeneratedToken, MetadataClient, MetadataSearchCriteria,

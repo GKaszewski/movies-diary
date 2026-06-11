@@ -294,10 +294,7 @@ pub trait MovieEnrichmentClient: Send + Sync {
 
 #[async_trait]
 pub trait PersonEnrichmentClient: Send + Sync {
-    async fn fetch_details(
-        &self,
-        external_id: &str,
-    ) -> Result<PersonEnrichmentData, DomainError>;
+    async fn fetch_details(&self, external_id: &str) -> Result<PersonEnrichmentData, DomainError>;
 }
 
 #[async_trait]

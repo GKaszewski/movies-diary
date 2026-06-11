@@ -114,7 +114,9 @@ pub async fn get_person_handler(
             place_of_birth: person.place_of_birth().map(str::to_string),
             also_known_as: person.also_known_as().to_vec(),
             homepage: person.homepage().map(str::to_string),
-            imdb_url: person.imdb_id().map(|id| format!("https://www.imdb.com/name/{id}")),
+            imdb_url: person
+                .imdb_id()
+                .map(|id| format!("https://www.imdb.com/name/{id}")),
             enriched: person.enriched_at().is_some(),
         })
         .into_response(),
@@ -150,7 +152,10 @@ pub async fn get_person_credits_handler(
                 place_of_birth: credits.person.place_of_birth().map(str::to_string),
                 also_known_as: credits.person.also_known_as().to_vec(),
                 homepage: credits.person.homepage().map(str::to_string),
-                imdb_url: credits.person.imdb_id().map(|id| format!("https://www.imdb.com/name/{id}")),
+                imdb_url: credits
+                    .person
+                    .imdb_id()
+                    .map(|id| format!("https://www.imdb.com/name/{id}")),
                 enriched: credits.person.enriched_at().is_some(),
             },
             cast: credits

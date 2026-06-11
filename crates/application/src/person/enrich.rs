@@ -9,5 +9,8 @@ pub async fn execute(
     person_id: PersonId,
     data: PersonEnrichmentData,
 ) -> Result<(), DomainError> {
-    ctx.repos.person_command.update_enrichment(&person_id, &data).await
+    ctx.repos
+        .person_command
+        .update_enrichment(&person_id, &data)
+        .await
 }
