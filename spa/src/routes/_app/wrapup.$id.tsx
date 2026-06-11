@@ -17,6 +17,7 @@ import { RankCard } from "@/components/wrapup-rank-card"
 import { posterUrl } from "@/lib/api/client"
 import { fmtUsd } from "@/lib/format"
 import { useWrapUpReport } from "@/hooks/use-wrapup"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 import type { MovieRef } from "@/lib/api/wrapup"
 
 const WrapUpShareCard = lazy(() => import("@/components/wrapup-share-card").then((m) => ({ default: m.WrapUpShareCard })))
@@ -39,6 +40,7 @@ function WrapUpReportPage() {
   const { data: report, isPending } = useWrapUpReport(id)
   const [showShare, setShowShare] = useState(false)
 
+  useDocumentTitle(report ? `${report.date_range.start.slice(0, 4)} Wrap-Up` : undefined)
   if (isPending) return <ReportSkeleton />
   if (!report) return null
 

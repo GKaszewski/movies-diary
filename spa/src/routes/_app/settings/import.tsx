@@ -28,6 +28,7 @@ import {
   useConfirmImport,
   useImportPreview,
 } from "@/hooks/use-imports"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 import type { SessionCreatedResponse } from "@/lib/api/imports"
 
 export const Route = createFileRoute("/_app/settings/import")({
@@ -36,6 +37,7 @@ export const Route = createFileRoute("/_app/settings/import")({
 
 function ImportPage() {
   const { t } = useTranslation()
+  useDocumentTitle(t("import.title"))
 
   const DOMAIN_FIELDS = [
     { value: "title", label: t("import.fieldTitle") },

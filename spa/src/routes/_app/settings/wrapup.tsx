@@ -23,6 +23,7 @@ import {
   useDeleteWrapUp,
 } from "@/hooks/use-wrapup"
 import { useUsers } from "@/hooks/use-users"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 export const Route = createFileRoute("/_app/settings/wrapup")({
   component: WrapupPage,
@@ -30,6 +31,7 @@ export const Route = createFileRoute("/_app/settings/wrapup")({
 
 function WrapupPage() {
   const { t } = useTranslation()
+  useDocumentTitle(t("wrapup.title"))
   const { auth } = useAuth()
   const isAdmin = useIsAdmin()
   const { data, isPending } = useWrapUps()

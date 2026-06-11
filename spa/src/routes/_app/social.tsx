@@ -23,6 +23,7 @@ import {
   useUserFollowing,
   useUserFollowers,
 } from "@/hooks/use-social"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 import type { RemoteActorDto } from "@/lib/api/social"
 
 type SearchParams = { user?: string }
@@ -36,6 +37,7 @@ export const Route = createFileRoute("/_app/social")({
 
 function SocialPage() {
   const { t } = useTranslation()
+  useDocumentTitle(t("social.title"))
   const { user: viewUserId } = Route.useSearch()
   const { auth } = useAuth()
   const isSelf = !viewUserId || viewUserId === auth?.user_id

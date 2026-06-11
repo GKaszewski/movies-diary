@@ -9,6 +9,7 @@ import { GoalCard } from "@/components/goal-card"
 import { useAuth } from "@/components/auth-provider"
 import { useUserProfile } from "@/hooks/use-users"
 import { useFollow, useUnfollow, useFollowing } from "@/hooks/use-social"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 export const Route = createFileRoute("/_app/users/$id")({
   component: UserProfilePage,
@@ -28,6 +29,7 @@ function UserProfilePage() {
   if (isPending) return <ProfileSkeleton />
   if (!data) return null
 
+  useDocumentTitle(data?.username)
   const isSelf = auth?.user_id === id
   const isFollowing = followingData?.actors.some((a) => a.handle === data.username) ?? false
 

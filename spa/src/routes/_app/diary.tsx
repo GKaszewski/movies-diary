@@ -10,6 +10,7 @@ import { VirtualList } from "@/components/virtual-list"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useInfiniteDiary, useDeleteReview } from "@/hooks/use-diary"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 import type { DiaryEntryDto } from "@/lib/api/common"
 
 export const Route = createFileRoute("/_app/diary")({
@@ -27,6 +28,7 @@ function groupByDate(items: DiaryEntryDto[]) {
 
 function DiaryPage() {
   const { t } = useTranslation()
+  useDocumentTitle(t("diary.title"))
   const [month, setMonth] = useState(() => startOfMonth(new Date()))
   const { data, isPending, hasNextPage, isFetchingNextPage, fetchNextPage } =
     useInfiniteDiary({ sort_by: "desc" })

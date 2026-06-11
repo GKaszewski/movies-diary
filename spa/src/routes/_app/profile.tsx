@@ -11,6 +11,7 @@ import { useDeleteGoal } from "@/hooks/use-goals"
 import { GoalCard } from "@/components/goal-card"
 import { GoalSheet } from "@/components/goal-sheet"
 import { toast } from "sonner"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 import type { GoalDto } from "@/lib/api/users"
 
 export const Route = createFileRoute("/_app/profile")({
@@ -20,6 +21,7 @@ export const Route = createFileRoute("/_app/profile")({
 function ProfilePage() {
   const { t } = useTranslation()
   const { auth } = useAuth()
+  useDocumentTitle(t("profile.title"))
   const { data, isPending } = useUserProfile(auth?.user_id ?? "", {
     view: "trends",
   })

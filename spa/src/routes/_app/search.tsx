@@ -11,6 +11,7 @@ import { InfiniteScroll } from "@/components/infinite-scroll"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useInfiniteSearch } from "@/hooks/use-search"
 import { useDebounce } from "@/hooks/use-debounce"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useAddToWatchlist } from "@/hooks/use-watchlist"
 import { toast } from "sonner"
 
@@ -20,6 +21,7 @@ export const Route = createFileRoute("/_app/search")({
 
 function SearchPage() {
   const { t } = useTranslation()
+  useDocumentTitle(t("search.placeholder"))
   const addToWatchlist = useAddToWatchlist()
   const [query, setQuery] = useState("")
   const debouncedQuery = useDebounce(query, 300)

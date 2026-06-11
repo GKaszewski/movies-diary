@@ -22,6 +22,7 @@ import { API_URL } from "@/lib/api/client"
 import { getToken } from "@/lib/auth"
 import { reindexSearch } from "@/lib/api/users"
 import { useSettings, useUpdateSettings } from "@/hooks/use-goals"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 export const Route = createFileRoute("/_app/settings/")({
   component: SettingsPage,
@@ -36,6 +37,7 @@ type SettingsItem = {
 
 function SettingsPage() {
   const { t } = useTranslation()
+  useDocumentTitle(t("settings.title"))
   const { logout } = useAuth()
   const isAdmin = useIsAdmin()
   const navigate = useNavigate()

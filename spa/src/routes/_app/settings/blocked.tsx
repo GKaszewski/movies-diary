@@ -15,6 +15,7 @@ import {
   useAddBlockedDomain,
   useRemoveBlockedDomain,
 } from "@/hooks/use-social"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 export const Route = createFileRoute("/_app/settings/blocked")({
   component: BlockedPage,
@@ -22,6 +23,7 @@ export const Route = createFileRoute("/_app/settings/blocked")({
 
 function BlockedPage() {
   const { t } = useTranslation()
+  useDocumentTitle(t("blocked.title"))
   const isAdmin = useIsAdmin()
 
   return (

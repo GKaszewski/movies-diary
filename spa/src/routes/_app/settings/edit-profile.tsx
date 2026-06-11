@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useProfile, useUpdateProfile, useUpdateProfileFields } from "@/hooks/use-users"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 export const Route = createFileRoute("/_app/settings/edit-profile")({
   component: EditProfilePage,
@@ -17,6 +18,7 @@ export const Route = createFileRoute("/_app/settings/edit-profile")({
 
 function EditProfilePage() {
   const { t } = useTranslation()
+  useDocumentTitle(t("editProfile.title"))
   const { data, isPending } = useProfile()
   const update = useUpdateProfile()
   const updateFields = useUpdateProfileFields()

@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/empty-state"
 import { Skeleton } from "@/components/ui/skeleton"
 import { tmdbProfileUrl } from "@/lib/api/client"
 import { usePersonCredits } from "@/hooks/use-search"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 export const Route = createFileRoute("/_app/people/$id")({
   component: PersonDetailPage,
@@ -21,6 +22,7 @@ function PersonDetailPage() {
   if (!data) return null
 
   const { person, cast, crew } = data
+  useDocumentTitle(person.name)
 
   return (
     <div className="space-y-4 p-4">

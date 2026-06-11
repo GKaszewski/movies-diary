@@ -28,6 +28,7 @@ import {
   useDeleteToken,
 } from "@/hooks/use-webhooks"
 import { API_URL } from "@/lib/api/client"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 export const Route = createFileRoute("/_app/settings/webhooks")({
   component: WebhooksPage,
@@ -35,6 +36,7 @@ export const Route = createFileRoute("/_app/settings/webhooks")({
 
 function WebhooksPage() {
   const { t } = useTranslation()
+  useDocumentTitle(t("webhooks.title"))
   const { data: tokens, isPending } = useWebhookTokens()
   const generate = useGenerateToken()
   const remove = useDeleteToken()

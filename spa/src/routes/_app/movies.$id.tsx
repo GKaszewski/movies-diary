@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { posterUrl, tmdbProfileUrl } from "@/lib/api/client"
 import { timeAgo, shortDate } from "@/lib/date"
 import { useMovie, useMovieHistory, useMovieProfile } from "@/hooks/use-movies"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 import {
   useWatchlistStatus,
   useAddToWatchlist,
@@ -34,6 +35,7 @@ function MovieDetailPage() {
   if (!data) return null
 
   const { movie, stats, reviews } = data
+  useDocumentTitle(movie.title)
   const hasStats = profile && (profile.budget_usd != null || profile.revenue_usd != null || profile.vote_average != null)
 
   return (
