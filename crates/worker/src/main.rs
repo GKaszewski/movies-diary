@@ -116,6 +116,7 @@ async fn main() -> anyhow::Result<()> {
             diary_exporter: Arc::new(ExportAdapter) as Arc<dyn DiaryExporter>,
             document_parser: Arc::new(ImporterDocumentParser) as Arc<dyn DocumentParser>,
             review_logger,
+            person_enrichment: None,
         },
         config: app_config,
     };

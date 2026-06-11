@@ -3,11 +3,11 @@ use std::sync::Arc;
 use domain::ports::{
     AuthService, DiaryExporter, DiaryRepository, DocumentParser, EventPublisher, GoalRepository,
     ImportProfileRepository, ImportSessionRepository, MetadataClient, MovieProfileRepository,
-    MovieRepository, ObjectStorage, PasswordHasher, PersonCommand, PersonQuery,
-    PosterFetcherClient, RemoteGoalRepository, RemoteWatchlistRepository, ReviewRepository,
-    SearchCommand, SearchPort, SocialQueryPort, StatsRepository, UserProfileFieldsRepository,
-    UserRepository, UserSettingsRepository, WatchEventRepository, WatchlistRepository,
-    WebhookTokenRepository, WrapUpRepository, WrapUpStatsQuery,
+    MovieRepository, ObjectStorage, PasswordHasher, PersonCommand, PersonEnrichmentClient,
+    PersonQuery, PosterFetcherClient, RemoteGoalRepository, RemoteWatchlistRepository,
+    ReviewRepository, SearchCommand, SearchPort, SocialQueryPort, StatsRepository,
+    UserProfileFieldsRepository, UserRepository, UserSettingsRepository, WatchEventRepository,
+    WatchlistRepository, WebhookTokenRepository, WrapUpRepository, WrapUpStatsQuery,
 };
 
 use crate::config::AppConfig;
@@ -51,6 +51,7 @@ pub struct Services {
     pub diary_exporter: Arc<dyn DiaryExporter>,
     pub document_parser: Arc<dyn DocumentParser>,
     pub review_logger: Arc<dyn ReviewLogger>,
+    pub person_enrichment: Option<Arc<dyn PersonEnrichmentClient>>,
 }
 
 #[derive(Clone)]

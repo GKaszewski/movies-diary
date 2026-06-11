@@ -470,6 +470,7 @@ async fn test_app() -> Router {
                 diary_exporter: Arc::new(PanicExporter),
                 document_parser: Arc::new(PanicDocumentParser),
                 review_logger: Arc::new(PanicReviewLogger),
+                person_enrichment: None,
             },
             config: AppConfig {
                 allow_registration: false,

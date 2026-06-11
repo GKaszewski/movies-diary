@@ -297,6 +297,7 @@ impl TestContextBuilder {
                 diary_exporter: self.diary_exporter,
                 document_parser: self.document_parser,
                 review_logger: self.review_logger,
+                person_enrichment: None,
             },
             config: self.config,
         }
