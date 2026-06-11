@@ -12,7 +12,12 @@ use application::{
         get_movie_social_page, get_review_history,
         queries::{GetMovieSocialPageQuery, GetReviewHistoryQuery},
     },
-    movies::{get_movies, queries::GetMoviesQuery, sync_poster},
+    movies::{
+        deps::{GetMovieProfileDeps, GetMoviesDeps, SyncPosterDeps},
+        get_movies,
+        queries::GetMoviesQuery,
+        sync_poster,
+    },
     watchlist::{is_on as is_on_watchlist, queries::IsOnWatchlistQuery},
 };
 use domain::services::review_history::Trend;
@@ -47,7 +52,9 @@ pub async fn list_movies(
     Query(params): Query<MoviesQueryParams>,
 ) -> Result<Json<MoviesResponse>, ApiError> {
     let page = get_movies::execute(
-        &state.app_ctx,
+        &GetMoviesDeps {
+            movie: state.app_ctx.repos.movie.clone(),
+        },
         GetMoviesQuery {
             limit: params.limit,
             offset: params.offset,
@@ -116,7 +123,19 @@ pub async fn sync_poster(
     _user: AuthenticatedUser,
     Path(movie_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, ApiError> {
-    sync_poster::execute(&state.app_ctx, SyncPosterCommand { movie_id }).await?;
+    sync_poster::execute(
+        &SyncPosterDeps {
+            movie: state.app_ctx.repos.movie.clone(),
+            movie_profile: state.app_ctx.repos.movie_profile.clone(),
+            metadata: state.app_ctx.services.metadata.clone(),
+            poster_fetcher: state.app_ctx.services.poster_fetcher.clone(),
+            object_storage: state.app_ctx.services.object_storage.clone(),
+            event_publisher: state.app_ctx.services.event_publisher.clone(),
+            search_command: state.app_ctx.repos.search_command.clone(),
+        },
+        SyncPosterCommand { movie_id },
+    )
+    .await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -188,7 +207,14 @@ pub async fn get_movie_profile(
 ) -> impl IntoResponse {
     use application::movies::get_movie_profile;
     let query = get_movie_profile::GetMovieProfileQuery { movie_id };
-    match get_movie_profile::execute(&state.app_ctx, query).await {
+    match get_movie_profile::execute(
+        &GetMovieProfileDeps {
+            movie_profile: state.app_ctx.repos.movie_profile.clone(),
+        },
+        query,
+    )
+    .await
+    {
         Ok(Some(result)) => {
             let p = result.profile;
             Json(MovieProfileResponse {

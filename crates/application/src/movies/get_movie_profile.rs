@@ -5,7 +5,7 @@ use domain::{
 };
 use uuid::Uuid;
 
-use crate::context::AppContext;
+use crate::movies::deps::GetMovieProfileDeps;
 
 pub struct GetMovieProfileQuery {
     pub movie_id: Uuid,
@@ -60,11 +60,11 @@ fn resolve_crew(member: &CrewMember) -> CrewMemberWithId {
 }
 
 pub async fn execute(
-    ctx: &AppContext,
+    deps: &GetMovieProfileDeps,
     query: GetMovieProfileQuery,
 ) -> Result<Option<MovieProfileResult>, DomainError> {
     let movie_id = MovieId::from_uuid(query.movie_id);
-    let profile = ctx.repos.movie_profile.get_by_movie_id(&movie_id).await?;
+    let profile = deps.movie_profile.get_by_movie_id(&movie_id).await?;
 
     Ok(profile.map(|p| {
         let cast = p.cast.iter().map(resolve_cast).collect();

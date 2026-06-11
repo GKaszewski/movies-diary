@@ -1,17 +1,27 @@
+use std::sync::Arc;
 use std::time::Duration;
 
 use async_trait::async_trait;
-use domain::{errors::DomainError, events::DomainEvent, ports::PeriodicJob};
-
-use crate::context::AppContext;
+use domain::{
+    errors::DomainError,
+    events::DomainEvent,
+    ports::{EventPublisher, MovieProfileRepository, PeriodicJob},
+};
 
 pub struct EnrichmentStalenessJob {
-    ctx: AppContext,
+    movie_profile: Arc<dyn MovieProfileRepository>,
+    event_publisher: Arc<dyn EventPublisher>,
 }
 
 impl EnrichmentStalenessJob {
-    pub fn new(ctx: AppContext) -> Self {
-        Self { ctx }
+    pub fn new(
+        movie_profile: Arc<dyn MovieProfileRepository>,
+        event_publisher: Arc<dyn EventPublisher>,
+    ) -> Self {
+        Self {
+            movie_profile,
+            event_publisher,
+        }
     }
 }
 
@@ -22,7 +32,7 @@ impl PeriodicJob for EnrichmentStalenessJob {
     }
 
     async fn run(&self) -> Result<(), DomainError> {
-        let stale = self.ctx.repos.movie_profile.list_stale().await?;
+        let stale = self.movie_profile.list_stale().await?;
         if stale.is_empty() {
             return Ok(());
         }
@@ -32,7 +42,7 @@ impl PeriodicJob for EnrichmentStalenessJob {
                 movie_id,
                 external_metadata_id,
             };
-            self.ctx.services.event_publisher.publish(&event).await?;
+            self.event_publisher.publish(&event).await?;
         }
         Ok(())
     }

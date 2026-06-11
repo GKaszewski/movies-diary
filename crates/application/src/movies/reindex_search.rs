@@ -7,7 +7,7 @@ use domain::{
 };
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use crate::context::AppContext;
+use crate::movies::deps::ReindexSearchDeps;
 
 const BATCH_SIZE: u32 = 500;
 
@@ -17,10 +17,10 @@ pub struct ReindexResult {
     pub persons_backfilled: u64,
 }
 
-pub async fn execute(ctx: &AppContext) -> Result<ReindexResult, DomainError> {
-    let movies_indexed = reindex_movies(ctx).await?;
-    let persons_backfilled = backfill_persons(ctx).await?;
-    let persons_indexed = reindex_persons(ctx).await?;
+pub async fn execute(deps: &ReindexSearchDeps) -> Result<ReindexResult, DomainError> {
+    let movies_indexed = reindex_movies(deps).await?;
+    let persons_backfilled = backfill_persons(deps).await?;
+    let persons_indexed = reindex_persons(deps).await?;
 
     Ok(ReindexResult {
         movies_indexed,
@@ -29,12 +29,11 @@ pub async fn execute(ctx: &AppContext) -> Result<ReindexResult, DomainError> {
     })
 }
 
-async fn reindex_movies(ctx: &AppContext) -> Result<u64, DomainError> {
+async fn reindex_movies(deps: &ReindexSearchDeps) -> Result<u64, DomainError> {
     let mut count: u64 = 0;
     let mut offset: u32 = 0;
     loop {
-        let page = ctx
-            .repos
+        let page = deps
             .movie
             .list_movies(
                 &PageParams {
@@ -47,10 +46,9 @@ async fn reindex_movies(ctx: &AppContext) -> Result<u64, DomainError> {
 
         for summary in &page.items {
             let movie_id = summary.movie.id().clone();
-            let profile = ctx.repos.movie_profile.get_by_movie_id(&movie_id).await?;
+            let profile = deps.movie_profile.get_by_movie_id(&movie_id).await?;
 
-            if let Err(e) = ctx
-                .repos
+            if let Err(e) = deps
                 .search_command
                 .index(IndexableDocument::Movie {
                     id: movie_id.clone(),
@@ -73,11 +71,10 @@ async fn reindex_movies(ctx: &AppContext) -> Result<u64, DomainError> {
     Ok(count)
 }
 
-async fn backfill_persons(ctx: &AppContext) -> Result<u64, DomainError> {
+async fn backfill_persons(deps: &ReindexSearchDeps) -> Result<u64, DomainError> {
     let mut total = 0u64;
     loop {
-        let (count, has_more) = ctx
-            .repos
+        let (count, has_more) = deps
             .person_command
             .backfill_from_credits_batch(BATCH_SIZE)
             .await?;
@@ -90,15 +87,14 @@ async fn backfill_persons(ctx: &AppContext) -> Result<u64, DomainError> {
     Ok(total)
 }
 
-async fn reindex_persons(ctx: &AppContext) -> Result<u64, DomainError> {
+async fn reindex_persons(deps: &ReindexSearchDeps) -> Result<u64, DomainError> {
     let mut count: u64 = 0;
     let mut offset: u32 = 0;
     loop {
-        let persons = ctx.repos.person_query.list_page(BATCH_SIZE, offset).await?;
+        let persons = deps.person_query.list_page(BATCH_SIZE, offset).await?;
 
         for person in &persons {
-            if let Err(e) = ctx
-                .repos
+            if let Err(e) = deps
                 .search_command
                 .index(IndexableDocument::Person {
                     id: person.id().clone(),
@@ -121,14 +117,14 @@ async fn reindex_persons(ctx: &AppContext) -> Result<u64, DomainError> {
 }
 
 pub struct SearchReindexHandler {
-    ctx: AppContext,
+    deps: ReindexSearchDeps,
     running: AtomicBool,
 }
 
 impl SearchReindexHandler {
-    pub fn new(ctx: AppContext) -> Self {
+    pub fn new(deps: ReindexSearchDeps) -> Self {
         Self {
-            ctx,
+            deps,
             running: AtomicBool::new(false),
         }
     }
@@ -147,7 +143,7 @@ impl EventHandler for SearchReindexHandler {
         }
 
         tracing::info!("search reindex started");
-        let result = execute(&self.ctx).await;
+        let result = execute(&self.deps).await;
         self.running.store(false, Ordering::SeqCst);
 
         let r = result?;

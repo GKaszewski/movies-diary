@@ -1,4 +1,5 @@
 pub mod commands;
+pub mod deps;
 pub mod discovery_indexer;
 pub mod enrich_movie;
 pub mod get_movie_profile;

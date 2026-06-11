@@ -10,17 +10,19 @@ use domain::{
     value_objects::MovieId,
 };
 
-use crate::{
-    movies::get_movie_profile::{self, GetMovieProfileQuery},
-    test_helpers::TestContextBuilder,
+use crate::movies::{
+    deps::GetMovieProfileDeps,
+    get_movie_profile::{self, GetMovieProfileQuery},
 };
 
 #[tokio::test]
 async fn returns_none_when_no_profile() {
-    let ctx = TestContextBuilder::new().build();
+    let deps = GetMovieProfileDeps {
+        movie_profile: InMemoryMovieProfileRepository::new(),
+    };
 
     let result = get_movie_profile::execute(
-        &ctx,
+        &deps,
         GetMovieProfileQuery {
             movie_id: Uuid::new_v4(),
         },
@@ -69,12 +71,12 @@ async fn returns_profile_with_cast_and_crew() {
     };
     profile_repo.upsert(&profile).await.unwrap();
 
-    let ctx = TestContextBuilder::new()
-        .with_movie_profiles(Arc::clone(&profile_repo) as _)
-        .build();
+    let deps = GetMovieProfileDeps {
+        movie_profile: Arc::clone(&profile_repo) as _,
+    };
 
     let result = get_movie_profile::execute(
-        &ctx,
+        &deps,
         GetMovieProfileQuery {
             movie_id: movie_id.value(),
         },

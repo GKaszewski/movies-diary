@@ -11,15 +11,13 @@ use domain::{
     value_objects::{MovieId, MovieTitle, ReleaseYear},
 };
 
-use crate::movies::{commands::EnrichMovieCommand, enrich_movie};
+use crate::movies::{commands::EnrichMovieCommand, deps::EnrichMovieDeps, enrich_movie};
 
 #[tokio::test]
 async fn stores_profile_and_indexes() {
     let movie_repo = InMemoryMovieRepository::new();
     let profile_repo = InMemoryMovieProfileRepository::new();
-    let search_cmd: Arc<dyn domain::ports::SearchCommand> = Arc::new(FakeSearchCommand);
     // PanicPersonCommand is safe here — empty cast/crew means upsert_batch is never called
-    let person_cmd: Arc<dyn domain::ports::PersonCommand> = Arc::new(PanicPersonCommand);
 
     let movie = Movie::new(
         None,
@@ -51,11 +49,15 @@ async fn stores_profile_and_indexes() {
         enriched_at: Utc::now(),
     };
 
+    let deps = EnrichMovieDeps {
+        movie: movie_repo as Arc<_>,
+        movie_profile: Arc::clone(&profile_repo) as Arc<_>,
+        person_command: Arc::new(PanicPersonCommand),
+        search_command: Arc::new(FakeSearchCommand),
+    };
+
     enrich_movie::execute(
-        &(movie_repo as Arc<_>),
-        &(profile_repo.clone() as Arc<_>),
-        &person_cmd,
-        &search_cmd,
+        &deps,
         EnrichMovieCommand {
             movie_id: movie_id.clone(),
             profile,
@@ -96,8 +98,6 @@ impl domain::ports::PersonCommand for NoopPersonCommand {
 async fn extracts_and_indexes_persons() {
     let movie_repo = InMemoryMovieRepository::new();
     let profile_repo = InMemoryMovieProfileRepository::new();
-    let search_cmd: Arc<dyn domain::ports::SearchCommand> = Arc::new(FakeSearchCommand);
-    let person_cmd: Arc<dyn domain::ports::PersonCommand> = Arc::new(NoopPersonCommand);
 
     let movie = Movie::new(
         None,
@@ -141,11 +141,15 @@ async fn extracts_and_indexes_persons() {
         enriched_at: Utc::now(),
     };
 
+    let deps = EnrichMovieDeps {
+        movie: movie_repo as Arc<_>,
+        movie_profile: Arc::clone(&profile_repo) as Arc<_>,
+        person_command: Arc::new(NoopPersonCommand),
+        search_command: Arc::new(FakeSearchCommand),
+    };
+
     enrich_movie::execute(
-        &(movie_repo as Arc<_>),
-        &(profile_repo.clone() as Arc<_>),
-        &person_cmd,
-        &search_cmd,
+        &deps,
         EnrichMovieCommand {
             movie_id: movie_id.clone(),
             profile,

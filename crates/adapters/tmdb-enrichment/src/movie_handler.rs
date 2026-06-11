@@ -1,6 +1,11 @@
 use std::sync::Arc;
 
-use application::movies::{commands::EnrichMovieCommand, enrich_movie, request_enrichment};
+use application::movies::{
+    commands::EnrichMovieCommand,
+    deps::EnrichMovieDeps,
+    enrich_movie,
+    request_enrichment,
+};
 use async_trait::async_trait;
 use domain::{
     errors::DomainError,
@@ -89,13 +94,12 @@ impl EventHandler for MovieEnrichmentHandler {
         };
 
         self.download_cast_photos(&profile).await;
-        enrich_movie::execute(
-            &self.movie_repository,
-            &self.profile_repo,
-            &self.person_command,
-            &self.search_command,
-            EnrichMovieCommand { movie_id, profile },
-        )
-        .await
+        let enrich_deps = EnrichMovieDeps {
+            movie: self.movie_repository.clone(),
+            movie_profile: self.profile_repo.clone(),
+            person_command: self.person_command.clone(),
+            search_command: self.search_command.clone(),
+        };
+        enrich_movie::execute(&enrich_deps, EnrichMovieCommand { movie_id, profile }).await
     }
 }

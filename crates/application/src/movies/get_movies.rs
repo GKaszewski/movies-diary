@@ -4,10 +4,10 @@ use domain::{
     models::{MovieFilter, MovieSummary},
 };
 
-use crate::{context::AppContext, movies::queries::GetMoviesQuery};
+use crate::movies::{deps::GetMoviesDeps, queries::GetMoviesQuery};
 
 pub async fn execute(
-    ctx: &AppContext,
+    deps: &GetMoviesDeps,
     query: GetMoviesQuery,
 ) -> Result<Paginated<MovieSummary>, DomainError> {
     let page = PageParams::new(query.limit, query.offset)?;
@@ -16,7 +16,7 @@ pub async fn execute(
         genre: query.genre,
         language: query.language,
     };
-    ctx.repos.movie.list_movies(&page, &filter).await
+    deps.movie.list_movies(&page, &filter).await
 }
 
 #[cfg(test)]

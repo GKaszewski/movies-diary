@@ -5,12 +5,12 @@ use domain::{
     value_objects::{MovieId, PosterPath},
 };
 
-use crate::{context::AppContext, diary::commands::SyncPosterCommand};
+use crate::{diary::commands::SyncPosterCommand, movies::deps::SyncPosterDeps};
 
-pub async fn execute(ctx: &AppContext, cmd: SyncPosterCommand) -> Result<(), DomainError> {
+pub async fn execute(deps: &SyncPosterDeps, cmd: SyncPosterCommand) -> Result<(), DomainError> {
     let movie_id = MovieId::from_uuid(cmd.movie_id);
 
-    let mut movie = match ctx.repos.movie.get_movie_by_id(&movie_id).await? {
+    let mut movie = match deps.movie.get_movie_by_id(&movie_id).await? {
         Some(m) => m,
         None => {
             tracing::warn!(
@@ -30,8 +30,7 @@ pub async fn execute(ctx: &AppContext, cmd: SyncPosterCommand) -> Result<(), Dom
         })?
         .clone();
 
-    let poster_url = match ctx
-        .services
+    let poster_url = match deps
         .metadata
         .get_poster_url(&external_metadata_id)
         .await
@@ -44,20 +43,17 @@ pub async fn execute(ctx: &AppContext, cmd: SyncPosterCommand) -> Result<(), Dom
         }
     };
 
-    let image_bytes = ctx
-        .services
+    let image_bytes = deps
         .poster_fetcher
         .fetch_poster_bytes(&poster_url)
         .await?;
 
-    let stored_path = ctx
-        .services
+    let stored_path = deps
         .object_storage
         .store(&movie_id.value().to_string(), &image_bytes)
         .await?;
 
-    if let Err(e) = ctx
-        .services
+    if let Err(e) = deps
         .event_publisher
         .publish(&DomainEvent::ImageStored {
             key: stored_path.clone(),
@@ -70,19 +66,17 @@ pub async fn execute(ctx: &AppContext, cmd: SyncPosterCommand) -> Result<(), Dom
     let poster_path = PosterPath::new(stored_path)?;
 
     movie.update_poster(poster_path);
-    ctx.repos.movie.upsert_movie(&movie).await?;
+    deps.movie.upsert_movie(&movie).await?;
 
     // Refresh search index so the new poster_path is reflected immediately.
     // Fetch existing profile if available for a complete index document.
-    let profile = ctx
-        .repos
+    let profile = deps
         .movie_profile
         .get_by_movie_id(&movie_id)
         .await
         .ok()
         .flatten();
-    if let Err(e) = ctx
-        .repos
+    if let Err(e) = deps
         .search_command
         .index(IndexableDocument::Movie {
             id: movie_id.clone(),

@@ -9,6 +9,7 @@ use application::{
     MovieDiscoveryIndexer, SearchCleanupHandler, SearchReindexHandler,
     config::AppConfig,
     context::{AppContext, Repositories, Services},
+    movies::deps::ReindexSearchDeps,
     worker::WorkerService,
 };
 use export::ExportAdapter;
@@ -155,8 +156,10 @@ async fn main() -> anyhow::Result<()> {
                     Some(person_enrichment_arc),
                     Arc::clone(&ctx.repos.person_command),
                 )) as Arc<dyn EventHandler>;
-                let job = Arc::new(application::jobs::EnrichmentStalenessJob::new(ctx.clone()))
-                    as Arc<dyn PeriodicJob>;
+                let job = Arc::new(application::jobs::EnrichmentStalenessJob::new(
+                    Arc::clone(&ctx.repos.movie_profile),
+                    Arc::clone(&ctx.services.event_publisher),
+                )) as Arc<dyn PeriodicJob>;
                 (Some(handler), Some(person_handler), Some(job))
             }
             Err(e) => {
@@ -234,7 +237,13 @@ async fn main() -> anyhow::Result<()> {
                 application::wrapup::event_handler::WrapUpEventHandler::new(ctx.clone()),
             ) as Arc<dyn EventHandler>;
             let reindex_handler =
-                Arc::new(SearchReindexHandler::new(ctx.clone())) as Arc<dyn EventHandler>;
+                Arc::new(SearchReindexHandler::new(ReindexSearchDeps {
+                movie: Arc::clone(&ctx.repos.movie),
+                movie_profile: Arc::clone(&ctx.repos.movie_profile),
+                search_command: Arc::clone(&ctx.repos.search_command),
+                person_command: Arc::clone(&ctx.repos.person_command),
+                person_query: Arc::clone(&ctx.repos.person_query),
+            })) as Arc<dyn EventHandler>;
             let mut h = vec![
                 poster,
                 cleanup,
@@ -291,7 +300,13 @@ async fn main() -> anyhow::Result<()> {
                 application::wrapup::event_handler::WrapUpEventHandler::new(ctx.clone()),
             ) as Arc<dyn EventHandler>;
             let reindex_handler =
-                Arc::new(SearchReindexHandler::new(ctx.clone())) as Arc<dyn EventHandler>;
+                Arc::new(SearchReindexHandler::new(ReindexSearchDeps {
+                movie: Arc::clone(&ctx.repos.movie),
+                movie_profile: Arc::clone(&ctx.repos.movie_profile),
+                search_command: Arc::clone(&ctx.repos.search_command),
+                person_command: Arc::clone(&ctx.repos.person_command),
+                person_query: Arc::clone(&ctx.repos.person_query),
+            })) as Arc<dyn EventHandler>;
             let mut h = vec![
                 poster,
                 cleanup,

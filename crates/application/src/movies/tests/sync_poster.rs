@@ -6,20 +6,33 @@ use domain::{
     errors::DomainError,
     models::Movie,
     ports::{MetadataClient, MovieRepository},
-    testing::InMemoryMovieRepository,
+    testing::{InMemoryMovieProfileRepository, InMemoryMovieRepository, NoopEventPublisher, NoopObjectStorage, FakeSearchCommand},
     value_objects::{ExternalMetadataId, MovieTitle, PosterUrl, ReleaseYear},
 };
 
 use crate::{
-    diary::commands::SyncPosterCommand, movies::sync_poster, test_helpers::TestContextBuilder,
+    diary::commands::SyncPosterCommand,
+    movies::{deps::SyncPosterDeps, sync_poster},
 };
+
+fn default_deps() -> SyncPosterDeps {
+    SyncPosterDeps {
+        movie: InMemoryMovieRepository::new(),
+        movie_profile: InMemoryMovieProfileRepository::new(),
+        metadata: Arc::new(domain::testing::FakeMetadataClient),
+        poster_fetcher: Arc::new(domain::testing::FakePosterFetcher),
+        object_storage: Arc::new(NoopObjectStorage),
+        event_publisher: NoopEventPublisher::new(),
+        search_command: Arc::new(FakeSearchCommand),
+    }
+}
 
 #[tokio::test]
 async fn fails_when_movie_not_found() {
-    let ctx = TestContextBuilder::new().build();
+    let deps = default_deps();
 
     let result = sync_poster::execute(
-        &ctx,
+        &deps,
         SyncPosterCommand {
             movie_id: Uuid::new_v4(),
         },
@@ -42,11 +55,12 @@ async fn fails_when_no_external_id() {
     let movie_id = movie.id().value();
     movies.upsert_movie(&movie).await.unwrap();
 
-    let ctx = TestContextBuilder::new()
-        .with_movies(Arc::clone(&movies) as _)
-        .build();
+    let deps = SyncPosterDeps {
+        movie: Arc::clone(&movies) as _,
+        ..default_deps()
+    };
 
-    let result = sync_poster::execute(&ctx, SyncPosterCommand { movie_id }).await;
+    let result = sync_poster::execute(&deps, SyncPosterCommand { movie_id }).await;
 
     assert!(result.is_err());
 }
@@ -85,12 +99,13 @@ async fn syncs_poster_for_movie_with_external_id() {
     let movie_id = movie.id().value();
     movies.upsert_movie(&movie).await.unwrap();
 
-    let ctx = TestContextBuilder::new()
-        .with_movies(Arc::clone(&movies) as _)
-        .with_metadata_client(Arc::new(FakeMetaWithPoster) as _)
-        .build();
+    let deps = SyncPosterDeps {
+        movie: Arc::clone(&movies) as _,
+        metadata: Arc::new(FakeMetaWithPoster) as _,
+        ..default_deps()
+    };
 
-    sync_poster::execute(&ctx, SyncPosterCommand { movie_id })
+    sync_poster::execute(&deps, SyncPosterCommand { movie_id })
         .await
         .unwrap();
 
