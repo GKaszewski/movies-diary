@@ -120,6 +120,12 @@ impl DiaryRepository for Panic {
     async fn get_user_history(&self, _: &UserId) -> Result<Vec<DiaryEntry>, DomainError> {
         panic!()
     }
+    fn stream_user_history(
+        &self,
+        _: UserId,
+    ) -> futures::stream::BoxStream<'static, Result<DiaryEntry, DomainError>> {
+        panic!()
+    }
     async fn get_movie_stats(
         &self,
         _: &MovieId,
@@ -379,14 +385,17 @@ impl domain::ports::MovieProfileRepository for Panic {
         Ok(vec![])
     }
 }
-#[async_trait::async_trait]
 impl domain::ports::DiaryExporter for Panic {
-    async fn serialize_entries(
+    fn stream_entries(
         &self,
-        _: &[domain::models::DiaryEntry],
-        _: domain::models::ExportFormat,
-    ) -> Result<Vec<u8>, domain::errors::DomainError> {
-        panic!()
+        _stream: futures::stream::BoxStream<
+            'static,
+            Result<domain::models::DiaryEntry, domain::errors::DomainError>,
+        >,
+        _format: domain::models::ExportFormat,
+    ) -> futures::stream::BoxStream<'static, Result<bytes::Bytes, domain::errors::DomainError>>
+    {
+        panic!("Panic DiaryExporter called")
     }
 }
 

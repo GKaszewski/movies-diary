@@ -165,14 +165,16 @@ impl domain::ports::UserProfileFieldsRepository for PanicProfileFields {
 }
 
 struct PanicExporter;
-#[async_trait]
 impl domain::ports::DiaryExporter for PanicExporter {
-    async fn serialize_entries(
+    fn stream_entries(
         &self,
-        _: &[domain::models::DiaryEntry],
-        _: domain::models::ExportFormat,
-    ) -> Result<Vec<u8>, DomainError> {
-        panic!()
+        _stream: futures::stream::BoxStream<
+            'static,
+            Result<domain::models::DiaryEntry, DomainError>,
+        >,
+        _format: domain::models::ExportFormat,
+    ) -> futures::stream::BoxStream<'static, Result<bytes::Bytes, DomainError>> {
+        panic!("PanicExporter::stream_entries")
     }
 }
 

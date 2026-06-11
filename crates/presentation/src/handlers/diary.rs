@@ -1,5 +1,6 @@
 use axum::{
     Form, Json,
+    body::Body,
     extract::{Extension, Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Redirect},
@@ -147,30 +148,23 @@ pub async fn export_diary(
         user_id: user.0.value(),
         format,
     };
-    match export_diary_uc::execute(
+    let stream = export_diary_uc::execute(
         &state.app_ctx.repos.diary,
         &state.app_ctx.services.diary_exporter,
         query,
+    );
+    (
+        StatusCode::OK,
+        [
+            (axum::http::header::CONTENT_TYPE, content_type.to_string()),
+            (
+                axum::http::header::CONTENT_DISPOSITION,
+                format!("attachment; filename=\"{}\"", filename),
+            ),
+        ],
+        Body::from_stream(stream),
     )
-    .await
-    {
-        Ok(bytes) => (
-            StatusCode::OK,
-            [
-                (axum::http::header::CONTENT_TYPE, content_type.to_string()),
-                (
-                    axum::http::header::CONTENT_DISPOSITION,
-                    format!("attachment; filename=\"{}\"", filename),
-                ),
-            ],
-            bytes,
-        )
-            .into_response(),
-        Err(e) => {
-            tracing::error!("export error: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR.into_response()
-        }
-    }
+        .into_response()
 }
 
 #[utoipa::path(
@@ -314,27 +308,23 @@ pub async fn get_export_html(
         user_id: user_id.value(),
         format,
     };
-    match export_diary_uc::execute(
+    let stream = export_diary_uc::execute(
         &state.app_ctx.repos.diary,
         &state.app_ctx.services.diary_exporter,
         query,
+    );
+    (
+        StatusCode::OK,
+        [
+            (axum::http::header::CONTENT_TYPE, content_type.to_string()),
+            (
+                axum::http::header::CONTENT_DISPOSITION,
+                format!("attachment; filename=\"{}\"", filename),
+            ),
+        ],
+        Body::from_stream(stream),
     )
-    .await
-    {
-        Ok(bytes) => (
-            StatusCode::OK,
-            [
-                (axum::http::header::CONTENT_TYPE, content_type.to_string()),
-                (
-                    axum::http::header::CONTENT_DISPOSITION,
-                    format!("attachment; filename=\"{}\"", filename),
-                ),
-            ],
-            bytes,
-        )
-            .into_response(),
-        Err(e) => crate::errors::domain_error_response(e),
-    }
+        .into_response()
 }
 
 pub async fn get_activity_feed_html(
