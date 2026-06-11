@@ -90,7 +90,7 @@ function PersonDetailPage() {
       )}
 
       {/* Also known as */}
-      {person.also_known_as.length > 0 && (
+      {person.also_known_as?.length > 0 && (
         <div>
           <p className="mb-1 text-xs font-medium text-muted-foreground">{t("person.alsoKnownAs")}</p>
           <div className="flex flex-wrap gap-1">
