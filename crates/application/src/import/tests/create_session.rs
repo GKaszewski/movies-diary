@@ -10,11 +10,11 @@ use crate::test_helpers::TestContextBuilder;
 #[tokio::test]
 async fn creates_session_with_parsed_file() {
     let sessions = InMemoryImportSessionRepository::new();
-    let ctx = TestContextBuilder::new().build();
+    let b = TestContextBuilder::new();
 
     let result = create_session::execute(
         Arc::clone(&sessions) as _,
-        ctx.services.document_parser.clone(),
+        b.document_parser.clone(),
         CreateImportSessionCommand {
             user_id: Uuid::new_v4(),
             bytes: b"col1\nval1".to_vec(),

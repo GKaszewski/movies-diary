@@ -22,12 +22,12 @@ use crate::test_helpers::TestContextBuilder;
 #[tokio::test]
 async fn applies_mapping_to_session() {
     let sessions = InMemoryImportSessionRepository::new();
-    let ctx = TestContextBuilder::new().build();
+    let b = TestContextBuilder::new();
     let user_id = Uuid::new_v4();
 
     let session = create_session::execute(
         Arc::clone(&sessions) as _,
-        ctx.services.document_parser.clone(),
+        b.document_parser.clone(),
         CreateImportSessionCommand {
             user_id,
             bytes: b"title\nTest".to_vec(),
@@ -39,8 +39,8 @@ async fn applies_mapping_to_session() {
 
     let rows = apply_mapping::execute(
         Arc::clone(&sessions) as _,
-        ctx.services.document_parser.clone(),
-        ctx.repos.movie.clone(),
+        b.document_parser.clone(),
+        b.movie_repo.clone(),
         ApplyImportMappingCommand {
             user_id,
             session_id: session.session_id.value(),
@@ -56,12 +56,12 @@ async fn applies_mapping_to_session() {
 #[tokio::test]
 async fn fails_when_session_not_found() {
     let sessions = InMemoryImportSessionRepository::new();
-    let ctx = TestContextBuilder::new().build();
+    let b = TestContextBuilder::new();
 
     let result = apply_mapping::execute(
         Arc::clone(&sessions) as _,
-        ctx.services.document_parser.clone(),
-        ctx.repos.movie.clone(),
+        b.document_parser.clone(),
+        b.movie_repo.clone(),
         ApplyImportMappingCommand {
             user_id: Uuid::new_v4(),
             session_id: Uuid::new_v4(),
