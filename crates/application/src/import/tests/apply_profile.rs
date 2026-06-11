@@ -78,11 +78,7 @@ async fn applies_profile_mappings_to_session() {
     let profile_id = profile.id.clone();
     profiles.save(&profile).await.unwrap();
 
-    let session = domain::models::ImportSession::new(
-        domain::value_objects::ImportSessionId::generate(),
-        UserId::from_uuid(user_id),
-        Utc::now().naive_utc(),
-    );
+    let session = domain::models::ImportSession::new(UserId::from_uuid(user_id));
     let session_id = session.id.clone();
     sessions.create(&session).await.unwrap();
 

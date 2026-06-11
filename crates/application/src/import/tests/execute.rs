@@ -1,19 +1,17 @@
 use std::sync::Arc;
 
-use chrono::Utc;
 use domain::models::{AnnotatedRow, ImportSession, import::RowResult};
 use domain::ports::ImportSessionRepository;
 use domain::testing::InMemoryImportSessionRepository;
-use domain::value_objects::{ImportSessionId, UserId};
+use domain::value_objects::UserId;
 use uuid::Uuid;
 
 use crate::import::commands::ExecuteImportCommand;
 use crate::import::execute;
 use crate::test_helpers::NoopReviewLogger;
 
-fn make_session_with_rows(user_id: UserId, session_id: ImportSessionId) -> ImportSession {
-    let now = Utc::now().naive_utc();
-    let mut session = ImportSession::new(session_id, user_id, now);
+fn make_session_with_rows(user_id: UserId) -> ImportSession {
+    let mut session = ImportSession::new(user_id);
     session.row_results = Some(vec![
         AnnotatedRow {
             result: RowResult::Valid(domain::models::ImportRow {
@@ -47,9 +45,9 @@ fn make_session_with_rows(user_id: UserId, session_id: ImportSessionId) -> Impor
 async fn imports_confirmed_rows() {
     let sessions = InMemoryImportSessionRepository::new();
     let uid = Uuid::new_v4();
-    let sid = ImportSessionId::generate();
 
-    let session = make_session_with_rows(UserId::from_uuid(uid), sid.clone());
+    let session = make_session_with_rows(UserId::from_uuid(uid));
+    let sid = session.id.clone();
     sessions.create(&session).await.unwrap();
 
     let result = execute::execute(
@@ -73,9 +71,9 @@ async fn imports_confirmed_rows() {
 async fn skips_unconfirmed_rows() {
     let sessions = InMemoryImportSessionRepository::new();
     let uid = Uuid::new_v4();
-    let sid = ImportSessionId::generate();
 
-    let session = make_session_with_rows(UserId::from_uuid(uid), sid.clone());
+    let session = make_session_with_rows(UserId::from_uuid(uid));
+    let sid = session.id.clone();
     sessions.create(&session).await.unwrap();
 
     let result = execute::execute(
@@ -116,10 +114,9 @@ async fn fails_when_session_not_found() {
 async fn handles_datetime_format() {
     let sessions = InMemoryImportSessionRepository::new();
     let uid = Uuid::new_v4();
-    let sid = ImportSessionId::generate();
 
-    let now = Utc::now().naive_utc();
-    let mut session = ImportSession::new(sid.clone(), UserId::from_uuid(uid), now);
+    let mut session = ImportSession::new(UserId::from_uuid(uid));
+    let sid = session.id.clone();
     session.row_results = Some(vec![AnnotatedRow {
         result: RowResult::Valid(domain::models::ImportRow {
             title: Some("DateTime Movie".into()),
@@ -154,10 +151,9 @@ async fn handles_datetime_format() {
 async fn fails_on_invalid_rating() {
     let sessions = InMemoryImportSessionRepository::new();
     let uid = Uuid::new_v4();
-    let sid = ImportSessionId::generate();
 
-    let now = Utc::now().naive_utc();
-    let mut session = ImportSession::new(sid.clone(), UserId::from_uuid(uid), now);
+    let mut session = ImportSession::new(UserId::from_uuid(uid));
+    let sid = session.id.clone();
     session.row_results = Some(vec![AnnotatedRow {
         result: RowResult::Valid(domain::models::ImportRow {
             title: Some("Bad Rating Movie".into()),
@@ -192,10 +188,9 @@ async fn fails_on_invalid_rating() {
 async fn fails_on_missing_watched_at() {
     let sessions = InMemoryImportSessionRepository::new();
     let uid = Uuid::new_v4();
-    let sid = ImportSessionId::generate();
 
-    let now = Utc::now().naive_utc();
-    let mut session = ImportSession::new(sid.clone(), UserId::from_uuid(uid), now);
+    let mut session = ImportSession::new(UserId::from_uuid(uid));
+    let sid = session.id.clone();
     session.row_results = Some(vec![AnnotatedRow {
         result: RowResult::Valid(domain::models::ImportRow {
             title: Some("No Date Movie".into()),
@@ -230,10 +225,9 @@ async fn fails_on_missing_watched_at() {
 async fn imports_row_with_external_metadata_id() {
     let sessions = InMemoryImportSessionRepository::new();
     let uid = Uuid::new_v4();
-    let sid = ImportSessionId::generate();
 
-    let now = Utc::now().naive_utc();
-    let mut session = ImportSession::new(sid.clone(), UserId::from_uuid(uid), now);
+    let mut session = ImportSession::new(UserId::from_uuid(uid));
+    let sid = session.id.clone();
     session.row_results = Some(vec![AnnotatedRow {
         result: RowResult::Valid(domain::models::ImportRow {
             title: Some("TMDB Movie".into()),
@@ -268,10 +262,9 @@ async fn imports_row_with_external_metadata_id() {
 async fn imports_row_with_director_and_comment() {
     let sessions = InMemoryImportSessionRepository::new();
     let uid = Uuid::new_v4();
-    let sid = ImportSessionId::generate();
 
-    let now = Utc::now().naive_utc();
-    let mut session = ImportSession::new(sid.clone(), UserId::from_uuid(uid), now);
+    let mut session = ImportSession::new(UserId::from_uuid(uid));
+    let sid = session.id.clone();
     session.row_results = Some(vec![AnnotatedRow {
         result: RowResult::Valid(domain::models::ImportRow {
             title: Some("Directed Movie".into()),
@@ -306,10 +299,9 @@ async fn imports_row_with_director_and_comment() {
 async fn handles_space_separated_datetime_format() {
     let sessions = InMemoryImportSessionRepository::new();
     let uid = Uuid::new_v4();
-    let sid = ImportSessionId::generate();
 
-    let now = Utc::now().naive_utc();
-    let mut session = ImportSession::new(sid.clone(), UserId::from_uuid(uid), now);
+    let mut session = ImportSession::new(UserId::from_uuid(uid));
+    let sid = session.id.clone();
     session.row_results = Some(vec![AnnotatedRow {
         result: RowResult::Valid(domain::models::ImportRow {
             title: Some("Space DateTime".into()),
@@ -344,10 +336,9 @@ async fn handles_space_separated_datetime_format() {
 async fn reports_invalid_row_result_errors() {
     let sessions = InMemoryImportSessionRepository::new();
     let uid = Uuid::new_v4();
-    let sid = ImportSessionId::generate();
 
-    let now = Utc::now().naive_utc();
-    let mut session = ImportSession::new(sid.clone(), UserId::from_uuid(uid), now);
+    let mut session = ImportSession::new(UserId::from_uuid(uid));
+    let sid = session.id.clone();
     session.row_results = Some(vec![AnnotatedRow {
         result: RowResult::Invalid {
             errors: vec!["missing title".into(), "bad year".into()],
@@ -379,10 +370,9 @@ async fn reports_invalid_row_result_errors() {
 async fn fails_on_missing_rating() {
     let sessions = InMemoryImportSessionRepository::new();
     let uid = Uuid::new_v4();
-    let sid = ImportSessionId::generate();
 
-    let now = Utc::now().naive_utc();
-    let mut session = ImportSession::new(sid.clone(), UserId::from_uuid(uid), now);
+    let mut session = ImportSession::new(UserId::from_uuid(uid));
+    let sid = session.id.clone();
     session.row_results = Some(vec![AnnotatedRow {
         result: RowResult::Valid(domain::models::ImportRow {
             title: Some("No Rating Movie".into()),
@@ -418,10 +408,9 @@ async fn fails_on_missing_rating() {
 async fn fails_on_unparseable_date() {
     let sessions = InMemoryImportSessionRepository::new();
     let uid = Uuid::new_v4();
-    let sid = ImportSessionId::generate();
 
-    let now = Utc::now().naive_utc();
-    let mut session = ImportSession::new(sid.clone(), UserId::from_uuid(uid), now);
+    let mut session = ImportSession::new(UserId::from_uuid(uid));
+    let sid = session.id.clone();
     session.row_results = Some(vec![AnnotatedRow {
         result: RowResult::Valid(domain::models::ImportRow {
             title: Some("Bad Date Movie".into()),
@@ -457,10 +446,9 @@ async fn fails_on_unparseable_date() {
 async fn imports_row_without_release_year() {
     let sessions = InMemoryImportSessionRepository::new();
     let uid = Uuid::new_v4();
-    let sid = ImportSessionId::generate();
 
-    let now = Utc::now().naive_utc();
-    let mut session = ImportSession::new(sid.clone(), UserId::from_uuid(uid), now);
+    let mut session = ImportSession::new(UserId::from_uuid(uid));
+    let sid = session.id.clone();
     session.row_results = Some(vec![AnnotatedRow {
         result: RowResult::Valid(domain::models::ImportRow {
             title: Some("No Year Movie".into()),
@@ -495,9 +483,9 @@ async fn imports_row_without_release_year() {
 async fn deletes_session_after_import() {
     let sessions = InMemoryImportSessionRepository::new();
     let uid = Uuid::new_v4();
-    let sid = ImportSessionId::generate();
 
-    let session = make_session_with_rows(UserId::from_uuid(uid), sid.clone());
+    let session = make_session_with_rows(UserId::from_uuid(uid));
+    let sid = session.id.clone();
     sessions.create(&session).await.unwrap();
     assert_eq!(sessions.count(), 1);
 
@@ -524,9 +512,7 @@ async fn deletes_session_after_import() {
 async fn imports_more_rows_than_concurrency_limit() {
     let sessions = InMemoryImportSessionRepository::new();
     let uid = Uuid::new_v4();
-    let sid = ImportSessionId::generate();
 
-    let now = Utc::now().naive_utc();
     let rows: Vec<_> = (0..15)
         .map(|i| AnnotatedRow {
             result: RowResult::Valid(domain::models::ImportRow {
@@ -542,7 +528,8 @@ async fn imports_more_rows_than_concurrency_limit() {
         })
         .collect();
 
-    let mut session = ImportSession::new(sid.clone(), UserId::from_uuid(uid), now);
+    let mut session = ImportSession::new(UserId::from_uuid(uid));
+    let sid = session.id.clone();
     session.row_results = Some(rows);
     sessions.create(&session).await.unwrap();
 

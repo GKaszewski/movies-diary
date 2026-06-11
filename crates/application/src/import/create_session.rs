@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use chrono::Utc;
 use domain::{
     errors::DomainError,
     models::ImportSession,
@@ -31,8 +30,7 @@ pub async fn execute(
     let sample_rows = parsed.rows.iter().take(5).cloned().collect();
     let columns = parsed.columns.clone();
 
-    let now = Utc::now().naive_utc();
-    let mut session = ImportSession::new(ImportSessionId::generate(), user_id, now);
+    let mut session = ImportSession::new(user_id);
     let session_id = session.id.clone();
     session.parsed_file = Some(parsed);
 

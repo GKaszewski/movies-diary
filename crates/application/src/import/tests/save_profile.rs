@@ -1,10 +1,9 @@
 use std::sync::Arc;
 
-use chrono::Utc;
 use domain::models::ImportSession;
 use domain::ports::ImportSessionRepository;
 use domain::testing::{InMemoryImportProfileRepository, InMemoryImportSessionRepository};
-use domain::value_objects::{ImportSessionId, UserId};
+use domain::value_objects::UserId;
 use uuid::Uuid;
 
 use crate::import::{commands::SaveImportProfileCommand, save_profile};
@@ -33,13 +32,9 @@ async fn saves_profile_from_session() {
     let sessions = InMemoryImportSessionRepository::new();
     let profiles = InMemoryImportProfileRepository::new();
     let user_id = Uuid::new_v4();
-    let sid = ImportSessionId::generate();
 
-    let mut session = ImportSession::new(
-        sid.clone(),
-        UserId::from_uuid(user_id),
-        Utc::now().naive_utc(),
-    );
+    let mut session = ImportSession::new(UserId::from_uuid(user_id));
+    let sid = session.id.clone();
     session.field_mappings = Some(vec![]);
     sessions.create(&session).await.unwrap();
 
