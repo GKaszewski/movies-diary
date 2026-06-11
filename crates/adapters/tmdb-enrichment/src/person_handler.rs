@@ -1,9 +1,5 @@
 use async_trait::async_trait;
-use domain::{
-    errors::DomainError,
-    events::DomainEvent,
-    ports::EventHandler,
-};
+use domain::{errors::DomainError, events::DomainEvent, ports::EventHandler};
 
 use application::context::AppContext;
 

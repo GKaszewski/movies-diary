@@ -1,13 +1,14 @@
 use crate::context::AppContext;
 use chrono::Utc;
-use domain::{
-    errors::DomainError,
-    models::PersonId,
-};
+use domain::{errors::DomainError, models::PersonId};
 
 const STALENESS_DAYS: i64 = 90;
 
-pub async fn execute(ctx: &AppContext, person_id: PersonId, external_id: &str) -> Result<(), DomainError> {
+pub async fn execute(
+    ctx: &AppContext,
+    person_id: PersonId,
+    external_id: &str,
+) -> Result<(), DomainError> {
     if let Some(person) = ctx.repos.person_query.get_by_id(&person_id).await?
         && let Some(at) = person.enriched_at()
         && (Utc::now() - at).num_days() < STALENESS_DAYS
@@ -29,7 +30,10 @@ pub async fn execute(ctx: &AppContext, person_id: PersonId, external_id: &str) -
         Err(e) => return Err(e),
     };
 
-    ctx.repos.person_command.update_enrichment(&person_id, &data).await?;
+    ctx.repos
+        .person_command
+        .update_enrichment(&person_id, &data)
+        .await?;
     tracing::info!(person_id = %person_id.value(), "person enriched");
     Ok(())
 }

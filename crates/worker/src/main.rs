@@ -148,9 +148,9 @@ async fn main() -> anyhow::Result<()> {
                 )) as Arc<dyn EventHandler>;
                 ctx.services.person_enrichment =
                     Some(Arc::clone(&client) as Arc<dyn PersonEnrichmentClient>);
-                let person_handler = Arc::new(tmdb_enrichment::PersonEnrichmentHandler::new(
-                    ctx.clone(),
-                )) as Arc<dyn EventHandler>;
+                let person_handler =
+                    Arc::new(tmdb_enrichment::PersonEnrichmentHandler::new(ctx.clone()))
+                        as Arc<dyn EventHandler>;
                 let job = Arc::new(application::jobs::EnrichmentStalenessJob::new(ctx.clone()))
                     as Arc<dyn PeriodicJob>;
                 (Some(handler), Some(person_handler), Some(job))
