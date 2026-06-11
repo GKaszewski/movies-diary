@@ -6,10 +6,10 @@ use chrono::Utc;
 use domain::{
     errors::DomainError,
     events::DomainEvent,
-    models::{CastMember, CrewMember, Genre, Keyword, MovieProfile},
+    models::{CastMember, CrewMember, Genre, Keyword, MovieProfile, PersonEnrichmentData},
     ports::{
         EventHandler, MovieEnrichmentClient, MovieProfileRepository, MovieRepository,
-        ObjectStorage, PersonCommand, SearchCommand,
+        ObjectStorage, PersonCommand, PersonEnrichmentClient, PersonQuery, SearchCommand,
     },
     value_objects::MovieId,
 };
@@ -221,7 +221,51 @@ impl MovieEnrichmentClient for TmdbEnrichmentClient {
     }
 }
 
-// ── Enrichment event handler ─────────────────────────────────────────────────
+// ── Person enrichment client ────────────────────────────────────────────────
+
+#[async_trait]
+impl PersonEnrichmentClient for TmdbEnrichmentClient {
+    async fn fetch_details(&self, external_id: &str) -> Result<PersonEnrichmentData, DomainError> {
+        let tmdb_id = external_id
+            .strip_prefix("tmdb:")
+            .and_then(|s| s.parse::<u64>().ok())
+            .ok_or_else(|| {
+                DomainError::InfrastructureError(format!(
+                    "Cannot parse person external_id: {external_id}"
+                ))
+            })?;
+
+        #[derive(Deserialize)]
+        struct PersonDetails {
+            biography: Option<String>,
+            birthday: Option<String>,
+            deathday: Option<String>,
+            place_of_birth: Option<String>,
+            also_known_as: Option<Vec<String>>,
+            homepage: Option<String>,
+            imdb_id: Option<String>,
+        }
+
+        let url = self.base(&format!("/person/{tmdb_id}"));
+        let d: PersonDetails = self.get(&url, &[]).await?;
+
+        Ok(PersonEnrichmentData {
+            biography: d.biography.filter(|s| !s.is_empty()),
+            birthday: d
+                .birthday
+                .and_then(|s| chrono::NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok()),
+            deathday: d
+                .deathday
+                .and_then(|s| chrono::NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok()),
+            place_of_birth: d.place_of_birth.filter(|s| !s.is_empty()),
+            also_known_as: d.also_known_as.unwrap_or_default(),
+            homepage: d.homepage.filter(|s| !s.is_empty()),
+            imdb_id: d.imdb_id.filter(|s| !s.is_empty()),
+        })
+    }
+}
+
+// ── Movie enrichment event handler ──────────────────────────────────────────
 
 pub struct EnrichmentHandler {
     pub enrichment_client: Arc<dyn MovieEnrichmentClient>,
@@ -308,5 +352,60 @@ impl EventHandler for EnrichmentHandler {
             EnrichMovieCommand { movie_id, profile },
         )
         .await
+    }
+}
+
+// ── Person enrichment event handler ─────────────────────────────────────────
+
+pub struct PersonEnrichmentHandler {
+    enrichment_client: Arc<dyn PersonEnrichmentClient>,
+    person_query: Arc<dyn PersonQuery>,
+    person_command: Arc<dyn PersonCommand>,
+}
+
+impl PersonEnrichmentHandler {
+    pub fn new(
+        enrichment_client: Arc<dyn PersonEnrichmentClient>,
+        person_query: Arc<dyn PersonQuery>,
+        person_command: Arc<dyn PersonCommand>,
+    ) -> Self {
+        Self {
+            enrichment_client,
+            person_query,
+            person_command,
+        }
+    }
+}
+
+const PERSON_STALENESS_DAYS: i64 = 90;
+
+#[async_trait]
+impl EventHandler for PersonEnrichmentHandler {
+    async fn handle(&self, event: &DomainEvent) -> Result<(), DomainError> {
+        let (person_id, external_person_id) = match event {
+            DomainEvent::PersonEnrichmentRequested {
+                person_id,
+                external_person_id,
+            } => (person_id.clone(), external_person_id.clone()),
+            _ => return Ok(()),
+        };
+
+        if let Some(person) = self.person_query.get_by_id(&person_id).await? {
+            if let Some(at) = person.enriched_at() {
+                if (Utc::now() - at).num_days() < PERSON_STALENESS_DAYS {
+                    tracing::debug!(person_id = %person_id.value(), "person enrichment still fresh");
+                    return Ok(());
+                }
+            }
+        }
+
+        tracing::info!(person_id = %person_id.value(), "enriching person from TMDb");
+        let data = self
+            .enrichment_client
+            .fetch_details(&external_person_id)
+            .await?;
+        self.person_command
+            .update_enrichment(&person_id, &data)
+            .await
     }
 }
