@@ -154,6 +154,13 @@ impl DiaryRepository for FakeDiaryRepository {
         Ok(vec![])
     }
 
+    fn stream_user_history(
+        &self,
+        _user_id: UserId,
+    ) -> futures::stream::BoxStream<'static, Result<DiaryEntry, DomainError>> {
+        Box::pin(futures::stream::empty())
+    }
+
     async fn get_movie_stats(&self, _movie_id: &MovieId) -> Result<MovieStats, DomainError> {
         Ok(MovieStats {
             total_count: 0,

@@ -144,6 +144,10 @@ pub trait DiaryRepository: Send + Sync {
     ) -> Result<Paginated<FeedEntry>, DomainError>;
     async fn get_review_history(&self, movie_id: &MovieId) -> Result<ReviewHistory, DomainError>;
     async fn get_user_history(&self, user_id: &UserId) -> Result<Vec<DiaryEntry>, DomainError>;
+    fn stream_user_history(
+        &self,
+        user_id: UserId,
+    ) -> futures::stream::BoxStream<'static, Result<DiaryEntry, DomainError>>;
     async fn get_movie_stats(&self, movie_id: &MovieId) -> Result<MovieStats, DomainError>;
     async fn get_movie_social_feed(
         &self,
@@ -253,13 +257,12 @@ pub trait PasswordHasher: Send + Sync {
     async fn verify(&self, plain_password: &str, hash: &PasswordHash) -> Result<bool, DomainError>;
 }
 
-#[async_trait]
 pub trait DiaryExporter: Send + Sync {
-    async fn serialize_entries(
+    fn stream_entries(
         &self,
-        entries: &[DiaryEntry],
+        stream: futures::stream::BoxStream<'static, Result<DiaryEntry, DomainError>>,
         format: ExportFormat,
-    ) -> Result<Vec<u8>, DomainError>;
+    ) -> futures::stream::BoxStream<'static, Result<bytes::Bytes, DomainError>>;
 }
 
 #[async_trait]

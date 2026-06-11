@@ -49,6 +49,12 @@ impl DiaryRepository for PanicDiaryRepository {
     async fn get_user_history(&self, _: &UserId) -> Result<Vec<DiaryEntry>, DomainError> {
         panic!("PanicDiaryRepository called")
     }
+    fn stream_user_history(
+        &self,
+        _: UserId,
+    ) -> futures::stream::BoxStream<'static, Result<DiaryEntry, DomainError>> {
+        panic!("PanicDiaryRepository called")
+    }
     async fn get_movie_stats(&self, _: &MovieId) -> Result<MovieStats, DomainError> {
         panic!("PanicDiaryRepository called")
     }
@@ -250,13 +256,12 @@ impl PosterFetcherClient for PanicPosterFetcher {
 
 pub struct PanicDiaryExporter;
 
-#[async_trait]
 impl DiaryExporter for PanicDiaryExporter {
-    async fn serialize_entries(
+    fn stream_entries(
         &self,
-        _: &[DiaryEntry],
-        _: ExportFormat,
-    ) -> Result<Vec<u8>, DomainError> {
+        _stream: futures::stream::BoxStream<'static, Result<DiaryEntry, DomainError>>,
+        _format: ExportFormat,
+    ) -> futures::stream::BoxStream<'static, Result<bytes::Bytes, DomainError>> {
         panic!("PanicDiaryExporter called")
     }
 }
