@@ -5,9 +5,10 @@ use crate::test_helpers::TestContextBuilder;
 
 #[tokio::test]
 async fn returns_goal_when_exists() {
-    let ctx = TestContextBuilder::new().build();
+    let b = TestContextBuilder::new();
     create::execute(
-        &ctx,
+        b.goal_repo.clone(),
+        b.event_publisher.clone(),
         CreateGoalCommand {
             user_id: Uuid::nil(),
             year: 2025,
@@ -18,7 +19,7 @@ async fn returns_goal_when_exists() {
     .unwrap();
 
     let result = get::execute(
-        &ctx,
+        b.goal_repo.clone(),
         GetGoalQuery {
             user_id: Uuid::nil(),
             year: 2025,
@@ -33,9 +34,9 @@ async fn returns_goal_when_exists() {
 
 #[tokio::test]
 async fn returns_none_when_missing() {
-    let ctx = TestContextBuilder::new().build();
+    let b = TestContextBuilder::new();
     let result = get::execute(
-        &ctx,
+        b.goal_repo.clone(),
         GetGoalQuery {
             user_id: Uuid::nil(),
             year: 2025,

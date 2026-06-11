@@ -5,9 +5,9 @@ use crate::test_helpers::TestContextBuilder;
 
 #[tokio::test]
 async fn returns_empty_when_no_goals() {
-    let ctx = TestContextBuilder::new().build();
+    let b = TestContextBuilder::new();
     let result = list::execute(
-        &ctx,
+        b.goal_repo.clone(),
         ListGoalsQuery {
             user_id: Uuid::nil(),
         },
@@ -20,10 +20,11 @@ async fn returns_empty_when_no_goals() {
 
 #[tokio::test]
 async fn returns_all_goals_for_user() {
-    let ctx = TestContextBuilder::new().build();
+    let b = TestContextBuilder::new();
     for year in [2023, 2024, 2025] {
         create::execute(
-            &ctx,
+            b.goal_repo.clone(),
+            b.event_publisher.clone(),
             CreateGoalCommand {
                 user_id: Uuid::nil(),
                 year,
@@ -35,7 +36,7 @@ async fn returns_all_goals_for_user() {
     }
 
     let result = list::execute(
-        &ctx,
+        b.goal_repo.clone(),
         ListGoalsQuery {
             user_id: Uuid::nil(),
         },

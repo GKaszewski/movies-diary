@@ -10,15 +10,11 @@ use crate::test_helpers::TestContextBuilder;
 #[tokio::test]
 async fn creates_goal_and_returns_progress() {
     let goals = InMemoryGoalRepository::new();
-    goals.set_review_count(Uuid::nil(), 2025, 5);
     let events = NoopEventPublisher::new();
-    let ctx = TestContextBuilder::new()
-        .with_goal(Arc::clone(&goals) as _)
-        .with_event_publisher(Arc::clone(&events) as _)
-        .build();
 
     let result = create::execute(
-        &ctx,
+        Arc::clone(&goals) as _,
+        Arc::clone(&events) as _,
         CreateGoalCommand {
             user_id: Uuid::nil(),
             year: 2025,
@@ -30,19 +26,40 @@ async fn creates_goal_and_returns_progress() {
 
     assert_eq!(result.goal.year(), 2025);
     assert_eq!(result.goal.target_count(), 50);
+    assert_eq!(result.current_count, 0);
+    assert_eq!(goals.count(), 1);
+}
+
+#[tokio::test]
+async fn creates_goal_with_review_count() {
+    let goals = InMemoryGoalRepository::new();
+    goals.set_review_count(Uuid::nil(), 2025, 5);
+    let events = NoopEventPublisher::new();
+
+    let result = create::execute(
+        Arc::clone(&goals) as _,
+        Arc::clone(&events) as _,
+        CreateGoalCommand {
+            user_id: Uuid::nil(),
+            year: 2025,
+            target_count: 50,
+        },
+    )
+    .await
+    .unwrap();
+
     assert_eq!(result.current_count, 5);
     assert_eq!(goals.count(), 1);
 }
 
 #[tokio::test]
 async fn emits_goal_created_event() {
+    let b = TestContextBuilder::new();
     let events = NoopEventPublisher::new();
-    let ctx = TestContextBuilder::new()
-        .with_event_publisher(Arc::clone(&events) as _)
-        .build();
 
     create::execute(
-        &ctx,
+        b.goal_repo.clone(),
+        Arc::clone(&events) as _,
         CreateGoalCommand {
             user_id: Uuid::nil(),
             year: 2025,
@@ -62,17 +79,20 @@ async fn emits_goal_created_event() {
 
 #[tokio::test]
 async fn rejects_duplicate_year() {
-    let ctx = TestContextBuilder::new().build();
+    let b = TestContextBuilder::new();
     let cmd = CreateGoalCommand {
         user_id: Uuid::nil(),
         year: 2025,
         target_count: 10,
     };
 
-    create::execute(&ctx, cmd).await.unwrap();
+    create::execute(b.goal_repo.clone(), b.event_publisher.clone(), cmd)
+        .await
+        .unwrap();
 
     let result = create::execute(
-        &ctx,
+        b.goal_repo.clone(),
+        b.event_publisher.clone(),
         CreateGoalCommand {
             user_id: Uuid::nil(),
             year: 2025,
@@ -86,9 +106,10 @@ async fn rejects_duplicate_year() {
 
 #[tokio::test]
 async fn rejects_year_before_2020() {
-    let ctx = TestContextBuilder::new().build();
+    let b = TestContextBuilder::new();
     let result = create::execute(
-        &ctx,
+        b.goal_repo.clone(),
+        b.event_publisher.clone(),
         CreateGoalCommand {
             user_id: Uuid::nil(),
             year: 2019,
@@ -102,9 +123,10 @@ async fn rejects_year_before_2020() {
 
 #[tokio::test]
 async fn rejects_zero_target() {
-    let ctx = TestContextBuilder::new().build();
+    let b = TestContextBuilder::new();
     let result = create::execute(
-        &ctx,
+        b.goal_repo.clone(),
+        b.event_publisher.clone(),
         CreateGoalCommand {
             user_id: Uuid::nil(),
             year: 2025,

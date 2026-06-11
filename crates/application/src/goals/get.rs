@@ -1,30 +1,27 @@
-use domain::{errors::DomainError, models::GoalWithProgress, value_objects::UserId};
+use std::sync::Arc;
+
+use domain::{errors::DomainError, models::GoalWithProgress, ports::GoalRepository, value_objects::UserId};
 
 use super::queries::GetGoalQuery;
-use crate::context::AppContext;
 
 pub async fn execute(
-    ctx: &AppContext,
+    goal: Arc<dyn GoalRepository>,
     query: GetGoalQuery,
 ) -> Result<Option<GoalWithProgress>, DomainError> {
     let user_id = UserId::from_uuid(query.user_id);
 
-    let goal = ctx
-        .repos
-        .goal
+    let found = goal
         .find_by_user_and_year(&user_id, query.year)
         .await?;
 
-    let Some(goal) = goal else { return Ok(None) };
+    let Some(g) = found else { return Ok(None) };
 
-    let current_count = ctx
-        .repos
-        .goal
+    let current_count = goal
         .count_reviews_in_year(&user_id, query.year)
         .await?;
 
     Ok(Some(GoalWithProgress {
-        goal,
+        goal: g,
         current_count,
     }))
 }

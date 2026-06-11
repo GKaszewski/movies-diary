@@ -8,9 +8,10 @@ use crate::test_helpers::TestContextBuilder;
 
 #[tokio::test]
 async fn updates_target_count() {
-    let ctx = TestContextBuilder::new().build();
+    let b = TestContextBuilder::new();
     create::execute(
-        &ctx,
+        b.goal_repo.clone(),
+        b.event_publisher.clone(),
         CreateGoalCommand {
             user_id: Uuid::nil(),
             year: 2025,
@@ -21,7 +22,8 @@ async fn updates_target_count() {
     .unwrap();
 
     let result = update::execute(
-        &ctx,
+        b.goal_repo.clone(),
+        b.event_publisher.clone(),
         UpdateGoalCommand {
             user_id: Uuid::nil(),
             year: 2025,
@@ -36,9 +38,10 @@ async fn updates_target_count() {
 
 #[tokio::test]
 async fn fails_when_goal_not_found() {
-    let ctx = TestContextBuilder::new().build();
+    let b = TestContextBuilder::new();
     let result = update::execute(
-        &ctx,
+        b.goal_repo.clone(),
+        b.event_publisher.clone(),
         UpdateGoalCommand {
             user_id: Uuid::nil(),
             year: 2025,
@@ -52,9 +55,10 @@ async fn fails_when_goal_not_found() {
 
 #[tokio::test]
 async fn rejects_zero_target() {
-    let ctx = TestContextBuilder::new().build();
+    let b = TestContextBuilder::new();
     create::execute(
-        &ctx,
+        b.goal_repo.clone(),
+        b.event_publisher.clone(),
         CreateGoalCommand {
             user_id: Uuid::nil(),
             year: 2025,
@@ -65,7 +69,8 @@ async fn rejects_zero_target() {
     .unwrap();
 
     let result = update::execute(
-        &ctx,
+        b.goal_repo.clone(),
+        b.event_publisher.clone(),
         UpdateGoalCommand {
             user_id: Uuid::nil(),
             year: 2025,

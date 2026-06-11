@@ -351,7 +351,7 @@ pub async fn get_user_profile(
         trends,
         goals: {
             let goals_list = application::goals::list::execute(
-                &state.app_ctx,
+                state.app_ctx.repos.goal.clone(),
                 application::goals::queries::ListGoalsQuery { user_id },
             )
             .await
@@ -634,7 +634,7 @@ pub async fn get_user_profile_html(
                     search: params.search.clone(),
                     goals: {
                         let goals_list = application::goals::list::execute(
-                            &state.app_ctx,
+                            state.app_ctx.repos.goal.clone(),
                             application::goals::queries::ListGoalsQuery {
                                 user_id: profile_user_uuid,
                             },

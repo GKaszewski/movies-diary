@@ -1,24 +1,23 @@
-use domain::{errors::DomainError, models::GoalWithProgress, value_objects::UserId};
+use std::sync::Arc;
+
+use domain::{errors::DomainError, models::GoalWithProgress, ports::GoalRepository, value_objects::UserId};
 
 use super::queries::ListGoalsQuery;
-use crate::context::AppContext;
 
 pub async fn execute(
-    ctx: &AppContext,
+    goal: Arc<dyn GoalRepository>,
     query: ListGoalsQuery,
 ) -> Result<Vec<GoalWithProgress>, DomainError> {
     let user_id = UserId::from_uuid(query.user_id);
-    let goals = ctx.repos.goal.list_for_user(&user_id).await?;
+    let goals = goal.list_for_user(&user_id).await?;
 
     let mut result = Vec::with_capacity(goals.len());
-    for goal in goals {
-        let current_count = ctx
-            .repos
-            .goal
-            .count_reviews_in_year(&user_id, goal.year())
+    for g in goals {
+        let current_count = goal
+            .count_reviews_in_year(&user_id, g.year())
             .await?;
         result.push(GoalWithProgress {
-            goal,
+            goal: g,
             current_count,
         });
     }

@@ -1,22 +1,23 @@
+use std::sync::Arc;
+
 use domain::{
     errors::DomainError,
     events::DomainEvent,
     models::{Goal, GoalType, GoalWithProgress},
+    ports::{EventPublisher, GoalRepository},
     value_objects::UserId,
 };
 
 use super::commands::CreateGoalCommand;
-use crate::context::AppContext;
 
 pub async fn execute(
-    ctx: &AppContext,
+    goal: Arc<dyn GoalRepository>,
+    event_publisher: Arc<dyn EventPublisher>,
     cmd: CreateGoalCommand,
 ) -> Result<GoalWithProgress, DomainError> {
     let user_id = UserId::from_uuid(cmd.user_id);
 
-    let existing = ctx
-        .repos
-        .goal
+    let existing = goal
         .find_by_user_and_year(&user_id, cmd.year)
         .await?;
     if existing.is_some() {
@@ -25,24 +26,21 @@ pub async fn execute(
         ));
     }
 
-    let goal = Goal::new(
+    let g = Goal::new(
         user_id.clone(),
         cmd.year,
         cmd.target_count,
         GoalType::Movies,
     )?;
-    ctx.repos.goal.save(&goal).await?;
+    goal.save(&g).await?;
 
-    let current_count = ctx
-        .repos
-        .goal
+    let current_count = goal
         .count_reviews_in_year(&user_id, cmd.year)
         .await?;
 
-    ctx.services
-        .event_publisher
+    event_publisher
         .publish(&DomainEvent::GoalCreated {
-            goal_id: goal.id().clone(),
+            goal_id: g.id().clone(),
             user_id,
             year: cmd.year,
             target_count: cmd.target_count,
@@ -50,7 +48,7 @@ pub async fn execute(
         .await?;
 
     Ok(GoalWithProgress {
-        goal,
+        goal: g,
         current_count,
     })
 }

@@ -39,7 +39,7 @@ pub async fn list_goals(
     user: AuthenticatedUser,
 ) -> Result<Json<GoalsResponse>, ApiError> {
     let goals = application::goals::list::execute(
-        &state.app_ctx,
+        state.app_ctx.repos.goal.clone(),
         application::goals::queries::ListGoalsQuery {
             user_id: user.0.value(),
         },
@@ -65,7 +65,8 @@ pub async fn create_goal(
     Json(req): Json<CreateGoalRequest>,
 ) -> Result<Json<GoalDto>, ApiError> {
     let g = application::goals::create::execute(
-        &state.app_ctx,
+        state.app_ctx.repos.goal.clone(),
+        state.app_ctx.services.event_publisher.clone(),
         application::goals::commands::CreateGoalCommand {
             user_id: user.0.value(),
             year: req.year,
@@ -93,7 +94,8 @@ pub async fn update_goal(
     Json(req): Json<UpdateGoalRequest>,
 ) -> Result<Json<GoalDto>, ApiError> {
     let g = application::goals::update::execute(
-        &state.app_ctx,
+        state.app_ctx.repos.goal.clone(),
+        state.app_ctx.services.event_publisher.clone(),
         application::goals::commands::UpdateGoalCommand {
             user_id: user.0.value(),
             year,
@@ -119,7 +121,8 @@ pub async fn delete_goal(
     Path(year): Path<u16>,
 ) -> Result<StatusCode, ApiError> {
     application::goals::delete::execute(
-        &state.app_ctx,
+        state.app_ctx.repos.goal.clone(),
+        state.app_ctx.services.event_publisher.clone(),
         application::goals::commands::DeleteGoalCommand {
             user_id: user.0.value(),
             year,
@@ -143,7 +146,7 @@ pub async fn get_user_goals(
     Path(user_id): Path<Uuid>,
 ) -> Result<Json<GoalsResponse>, ApiError> {
     let goals = application::goals::list::execute(
-        &state.app_ctx,
+        state.app_ctx.repos.goal.clone(),
         application::goals::queries::ListGoalsQuery { user_id },
     )
     .await?;
