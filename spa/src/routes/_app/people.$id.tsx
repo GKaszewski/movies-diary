@@ -2,8 +2,8 @@ import { createFileRoute } from "@tanstack/react-router"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Calendar, ChevronDown, ExternalLink, Film, Globe, MapPin, User } from "lucide-react"
+import { Link } from "@tanstack/react-router"
 import { BackButton } from "@/components/back-button"
-import { MovieCard } from "@/components/movie-card"
 import { EmptyState } from "@/components/empty-state"
 import { SwipeTabs } from "@/components/swipe-tabs"
 import { Badge } from "@/components/ui/badge"
@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
-import { tmdbProfileUrl } from "@/lib/api/client"
+import { posterUrl, tmdbProfileUrl } from "@/lib/api/client"
 import { usePersonCredits } from "@/hooks/use-search"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { shortDate } from "@/lib/date"
@@ -140,53 +140,50 @@ function PersonDetailPage() {
 
       <Separator />
 
-      {/* Credits */}
+      {/* Filmography */}
       {creditTabs.length > 0 ? (
         <SwipeTabs tabs={creditTabs} defaultValue={creditTabs[0].value} tabsListClassName="w-full">
           {(tab) => (
             <>
-              {tab === "cast" && (
-                <div className="space-y-1">
-                  {cast.map((c) => (
-                    <MovieCard
-                      key={`${c.movie_id}-${c.character}`}
-                      movie={{
-                        id: c.movie_id,
-                        title: c.title,
-                        release_year: c.release_year ?? 0,
-                        poster_path: c.poster_path,
-                        genres: [],
-                      }}
-                      subtitle={c.character}
-                      variant="compact"
-                    />
-                  ))}
-                </div>
-              )}
-              {tab === "crew" && (
-                <div className="space-y-1">
-                  {crew.map((c) => (
-                    <MovieCard
-                      key={`${c.movie_id}-${c.job}`}
-                      movie={{
-                        id: c.movie_id,
-                        title: c.title,
-                        release_year: c.release_year ?? 0,
-                        poster_path: c.poster_path,
-                        genres: [],
-                      }}
-                      subtitle={`${c.job} (${c.department})`}
-                      variant="compact"
-                    />
-                  ))}
-                </div>
-              )}
+              {tab === "cast" && <FilmStrip items={cast.map((c) => ({ movieId: c.movie_id, title: c.title, year: c.release_year, posterPath: c.poster_path, subtitle: c.character }))} />}
+              {tab === "crew" && <FilmStrip items={crew.map((c) => ({ movieId: c.movie_id, title: c.title, year: c.release_year, posterPath: c.poster_path, subtitle: `${c.job}` }))} />}
             </>
           )}
         </SwipeTabs>
       ) : (
         <EmptyState icon={Film} title={t("movie.noCredits")} />
       )}
+    </div>
+  )
+}
+
+type FilmStripItem = {
+  movieId: string
+  title: string
+  year?: number
+  posterPath?: string
+  subtitle: string
+}
+
+function FilmStrip({ items }: { items: FilmStripItem[] }) {
+  return (
+    <div className="-mx-4 flex gap-3 overflow-x-auto overscroll-x-contain px-4 pb-2" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(255,255,255,0.15) transparent" }}>
+      {items.map((item, i) => (
+        <Link key={`${item.movieId}-${i}`} to="/movies/$id" params={{ id: item.movieId }} className="w-28 flex-shrink-0">
+          <div className="aspect-[2/3] overflow-hidden rounded-xl bg-muted">
+            {item.posterPath ? (
+              <img src={posterUrl(item.posterPath)} alt="" className="size-full object-cover" loading="lazy" />
+            ) : (
+              <div className="flex size-full items-center justify-center">
+                <Film className="size-6 text-muted-foreground/40" />
+              </div>
+            )}
+          </div>
+          <p className="mt-1.5 truncate text-xs font-semibold">{item.title}</p>
+          {item.year && <p className="text-[10px] text-muted-foreground">{item.year}</p>}
+          <p className="truncate text-[10px] italic text-muted-foreground">{item.subtitle}</p>
+        </Link>
+      ))}
     </div>
   )
 }
