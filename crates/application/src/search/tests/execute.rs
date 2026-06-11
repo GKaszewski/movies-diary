@@ -5,9 +5,9 @@ use crate::test_helpers::TestContextBuilder;
 
 #[tokio::test]
 async fn returns_empty_results() {
-    let ctx = TestContextBuilder::new().build();
+    let b = TestContextBuilder::new();
 
-    let result = execute::execute(ctx.repos.search_port.clone(), SearchQuery::default())
+    let result = execute::execute(b.search_port.clone(), SearchQuery::default())
         .await
         .unwrap();
 
