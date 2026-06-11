@@ -182,8 +182,14 @@ async fn main() -> anyhow::Result<()> {
     let mut periodic_jobs: Vec<Arc<dyn PeriodicJob>> = vec![
         Arc::new(application::jobs::ImportSessionCleanupJob::new(ctx.repos.import_session.clone())),
         Arc::new(application::jobs::WatchEventCleanupJob::new(ctx.repos.watch_event.clone())),
-        Arc::new(application::jobs::WrapUpAutoGenerateJob::new(ctx.clone())),
-        Arc::new(application::jobs::WrapUpCleanupJob::new(ctx.clone())),
+        Arc::new(application::jobs::WrapUpAutoGenerateJob::new(
+            Arc::clone(&ctx.repos.user),
+            Arc::clone(&ctx.repos.wrapup_repo),
+            Arc::clone(&ctx.services.event_publisher),
+        )),
+        Arc::new(application::jobs::WrapUpCleanupJob::new(
+            Arc::clone(&ctx.repos.wrapup_repo),
+        )),
         Arc::new(application::jobs::RefreshSessionCleanupJob::new(
             ctx.clone(),
         )),
@@ -234,7 +240,11 @@ async fn main() -> anyhow::Result<()> {
                 Arc::clone(&ctx.repos.search_command),
             )) as Arc<dyn EventHandler>;
             let wrapup_handler = Arc::new(
-                application::wrapup::event_handler::WrapUpEventHandler::new(ctx.clone()),
+                application::wrapup::event_handler::WrapUpEventHandler::new(
+                    Arc::clone(&ctx.repos.wrapup_repo),
+                    Arc::clone(&ctx.services.event_publisher),
+                    Arc::clone(&ctx.repos.wrapup_stats),
+                ),
             ) as Arc<dyn EventHandler>;
             let reindex_handler =
                 Arc::new(SearchReindexHandler::new(ReindexSearchDeps {
@@ -297,7 +307,11 @@ async fn main() -> anyhow::Result<()> {
             )) as Arc<dyn EventHandler>;
             tracing::info!("federation event handler registered");
             let wrapup_handler = Arc::new(
-                application::wrapup::event_handler::WrapUpEventHandler::new(ctx.clone()),
+                application::wrapup::event_handler::WrapUpEventHandler::new(
+                    Arc::clone(&ctx.repos.wrapup_repo),
+                    Arc::clone(&ctx.services.event_publisher),
+                    Arc::clone(&ctx.repos.wrapup_stats),
+                ),
             ) as Arc<dyn EventHandler>;
             let reindex_handler =
                 Arc::new(SearchReindexHandler::new(ReindexSearchDeps {

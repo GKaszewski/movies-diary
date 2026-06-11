@@ -1,12 +1,9 @@
-use std::sync::Arc;
-
 use chrono::NaiveDate;
 use domain::models::wrapup::{WrapUpRecord, WrapUpStatus};
 use domain::testing::InMemoryWrapUpRepository;
 use domain::value_objects::WrapUpId;
 use uuid::Uuid;
 
-use crate::test_helpers::TestContextBuilder;
 use crate::wrapup::list_wrapups::{self, ListWrapUpsQuery};
 
 fn make_record(user_id: Option<Uuid>) -> WrapUpRecord {
@@ -34,16 +31,7 @@ async fn filters_by_user() {
         store.push(make_record(None));
     }
 
-    let ctx = TestContextBuilder::new().build();
-    let ctx = crate::context::AppContext {
-        repos: crate::context::Repositories {
-            wrapup_repo: Arc::clone(&repo) as _,
-            ..ctx.repos
-        },
-        ..ctx
-    };
-
-    let result = list_wrapups::execute(&ctx, ListWrapUpsQuery { user_id: Some(uid) })
+    let result = list_wrapups::execute(repo.clone(), ListWrapUpsQuery { user_id: Some(uid) })
         .await
         .unwrap();
     assert_eq!(result.len(), 1);
@@ -60,16 +48,7 @@ async fn returns_global_when_no_user() {
         store.push(make_record(Some(Uuid::new_v4())));
     }
 
-    let ctx = TestContextBuilder::new().build();
-    let ctx = crate::context::AppContext {
-        repos: crate::context::Repositories {
-            wrapup_repo: Arc::clone(&repo) as _,
-            ..ctx.repos
-        },
-        ..ctx
-    };
-
-    let result = list_wrapups::execute(&ctx, ListWrapUpsQuery { user_id: None })
+    let result = list_wrapups::execute(repo.clone(), ListWrapUpsQuery { user_id: None })
         .await
         .unwrap();
     assert_eq!(result.len(), 2);

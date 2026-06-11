@@ -1,11 +1,8 @@
-use std::sync::Arc;
-
 use chrono::NaiveDate;
 use domain::models::wrapup::{WrapUpRecord, WrapUpStatus};
 use domain::testing::InMemoryWrapUpRepository;
 use domain::value_objects::WrapUpId;
 
-use crate::test_helpers::TestContextBuilder;
 use crate::wrapup::get_wrapup;
 
 #[tokio::test]
@@ -24,24 +21,15 @@ async fn returns_record_when_exists() {
         completed_at: None,
     });
 
-    let ctx = TestContextBuilder::new().build();
-    let ctx = crate::context::AppContext {
-        repos: crate::context::Repositories {
-            wrapup_repo: Arc::clone(&repo) as _,
-            ..ctx.repos
-        },
-        ..ctx
-    };
-
-    let result = get_wrapup::execute(&ctx, id).await.unwrap();
+    let result = get_wrapup::execute(repo.clone(), id).await.unwrap();
     assert!(result.is_some());
     assert_eq!(result.unwrap().status, WrapUpStatus::Pending);
 }
 
 #[tokio::test]
 async fn returns_none_when_missing() {
-    let ctx = TestContextBuilder::new().build();
-    let result = get_wrapup::execute(&ctx, WrapUpId::generate())
+    let repo = InMemoryWrapUpRepository::new();
+    let result = get_wrapup::execute(repo.clone(), WrapUpId::generate())
         .await
         .unwrap();
     assert!(result.is_none());

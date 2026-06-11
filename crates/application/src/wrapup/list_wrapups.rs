@@ -1,21 +1,22 @@
+use std::sync::Arc;
+
 use uuid::Uuid;
 
 use domain::errors::DomainError;
 use domain::models::wrapup::WrapUpRecord;
-
-use crate::context::AppContext;
+use domain::ports::WrapUpRepository;
 
 pub struct ListWrapUpsQuery {
     pub user_id: Option<Uuid>,
 }
 
 pub async fn execute(
-    ctx: &AppContext,
+    wrapup_repo: Arc<dyn WrapUpRepository>,
     query: ListWrapUpsQuery,
 ) -> Result<Vec<WrapUpRecord>, DomainError> {
     match query.user_id {
-        Some(uid) => ctx.repos.wrapup_repo.list_for_user(uid).await,
-        None => ctx.repos.wrapup_repo.list_global().await,
+        Some(uid) => wrapup_repo.list_for_user(uid).await,
+        None => wrapup_repo.list_global().await,
     }
 }
 

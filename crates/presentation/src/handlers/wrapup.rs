@@ -66,7 +66,12 @@ pub async fn post_generate(
         start_date: start,
         end_date: end,
     };
-    let id = generate::execute(&state.app_ctx, cmd).await?;
+    let id = generate::execute(
+        state.app_ctx.repos.wrapup_repo.clone(),
+        state.app_ctx.services.event_publisher.clone(),
+        cmd,
+    )
+    .await?;
     Ok(Json(WrapUpGeneratedResponse {
         id: id.value().to_string(),
     }))
@@ -85,7 +90,7 @@ pub async fn get_list(
     user: AuthenticatedUser,
 ) -> Result<Json<WrapUpListResponse>, ApiError> {
     let records = list_wrapups::execute(
-        &state.app_ctx,
+        state.app_ctx.repos.wrapup_repo.clone(),
         ListWrapUpsQuery {
             user_id: Some(user.0.value()),
         },
@@ -111,7 +116,7 @@ pub async fn get_status(
     _user: AuthenticatedUser,
     Path(id): Path<Uuid>,
 ) -> Result<Json<WrapUpStatusResponse>, ApiError> {
-    let record = get_wrapup::execute(&state.app_ctx, WrapUpId::from_uuid(id))
+    let record = get_wrapup::execute(state.app_ctx.repos.wrapup_repo.clone(), WrapUpId::from_uuid(id))
         .await?
         .ok_or_else(|| DomainError::NotFound("wrap-up not found".into()))?;
     Ok(Json(record_to_dto(&record)))
@@ -133,7 +138,7 @@ pub async fn get_report(
     _user: AuthenticatedUser,
     Path(id): Path<Uuid>,
 ) -> impl IntoResponse {
-    match get_wrapup::execute(&state.app_ctx, WrapUpId::from_uuid(id)).await {
+    match get_wrapup::execute(state.app_ctx.repos.wrapup_repo.clone(), WrapUpId::from_uuid(id)).await {
         Ok(Some(record)) if record.status == WrapUpStatus::Ready => match record.report {
             Some(ref report) => {
                 let json = serde_json::to_string(report).unwrap_or_default();
@@ -163,7 +168,7 @@ pub async fn delete_wrapup_handler(
     _admin: AdminApiUser,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, ApiError> {
-    delete_wrapup::execute(&state.app_ctx, WrapUpId::from_uuid(id)).await?;
+    delete_wrapup::execute(state.app_ctx.repos.wrapup_repo.clone(), WrapUpId::from_uuid(id)).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 

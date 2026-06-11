@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use chrono::NaiveDate;
 use domain::events::DomainEvent;
 use domain::models::wrapup::{WrapUpRecord, WrapUpStatus};
@@ -7,7 +5,6 @@ use domain::testing::{InMemoryWrapUpRepository, NoopEventPublisher};
 use domain::value_objects::WrapUpId;
 use uuid::Uuid;
 
-use crate::test_helpers::TestContextBuilder;
 use crate::wrapup::{commands::RequestWrapUpCommand, generate};
 
 fn past_cmd() -> RequestWrapUpCommand {
@@ -22,22 +19,10 @@ fn past_cmd() -> RequestWrapUpCommand {
 async fn creates_pending_record_and_emits_event() {
     let repo = InMemoryWrapUpRepository::new();
     let events = NoopEventPublisher::new();
-    let ctx = TestContextBuilder::new()
-        .wrapup_stats(domain::testing::InMemoryWrapUpStatsQuery::new())
-        .build();
-    let ctx = crate::context::AppContext {
-        repos: crate::context::Repositories {
-            wrapup_repo: Arc::clone(&repo) as _,
-            ..ctx.repos
-        },
-        services: crate::context::Services {
-            event_publisher: Arc::clone(&events) as _,
-            ..ctx.services
-        },
-        config: ctx.config,
-    };
 
-    let id = generate::execute(&ctx, past_cmd()).await.unwrap();
+    let id = generate::execute(repo.clone(), events.clone(), past_cmd())
+        .await
+        .unwrap();
 
     let stored = repo.store.lock().unwrap();
     assert_eq!(stored.len(), 1);
@@ -67,17 +52,11 @@ async fn reuses_existing_ready_wrapup() {
         created_at: chrono::Utc::now().naive_utc(),
         completed_at: None,
     });
+    let events = NoopEventPublisher::new();
 
-    let ctx = TestContextBuilder::new().build();
-    let ctx = crate::context::AppContext {
-        repos: crate::context::Repositories {
-            wrapup_repo: Arc::clone(&repo) as _,
-            ..ctx.repos
-        },
-        ..ctx
-    };
-
-    let id = generate::execute(&ctx, past_cmd()).await.unwrap();
+    let id = generate::execute(repo.clone(), events.clone(), past_cmd())
+        .await
+        .unwrap();
     assert_eq!(id, existing_id);
     assert_eq!(repo.store.lock().unwrap().len(), 1);
 }
@@ -98,20 +77,10 @@ async fn replaces_failed_wrapup() {
     });
 
     let events = NoopEventPublisher::new();
-    let ctx = TestContextBuilder::new().build();
-    let ctx = crate::context::AppContext {
-        repos: crate::context::Repositories {
-            wrapup_repo: Arc::clone(&repo) as _,
-            ..ctx.repos
-        },
-        services: crate::context::Services {
-            event_publisher: Arc::clone(&events) as _,
-            ..ctx.services
-        },
-        config: ctx.config,
-    };
 
-    let id = generate::execute(&ctx, past_cmd()).await.unwrap();
+    let id = generate::execute(repo.clone(), events.clone(), past_cmd())
+        .await
+        .unwrap();
 
     let stored = repo.store.lock().unwrap();
     assert_eq!(stored.len(), 1);
@@ -121,9 +90,11 @@ async fn replaces_failed_wrapup() {
 
 #[tokio::test]
 async fn rejects_future_end_date() {
-    let ctx = TestContextBuilder::new().build();
+    let repo = InMemoryWrapUpRepository::new();
+    let events = NoopEventPublisher::new();
     let err = generate::execute(
-        &ctx,
+        repo.clone(),
+        events.clone(),
         RequestWrapUpCommand {
             user_id: None,
             start_date: NaiveDate::from_ymd_opt(2030, 1, 1).unwrap(),

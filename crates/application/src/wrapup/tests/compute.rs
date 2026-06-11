@@ -4,7 +4,6 @@ use domain::ports::WrapUpMovieRow;
 use domain::testing::InMemoryWrapUpStatsQuery;
 use uuid::Uuid;
 
-use crate::test_helpers::TestContextBuilder;
 use crate::wrapup::queries::ComputeWrapUpQuery;
 
 fn make_row(title: &str, rating: u8, watched_at: &str) -> WrapUpMovieRow {
@@ -42,11 +41,10 @@ fn year_2024_range() -> DateRange {
 #[tokio::test]
 async fn empty_report() {
     let stats = InMemoryWrapUpStatsQuery::new();
-    let ctx = TestContextBuilder::new().wrapup_stats(stats).build();
     let user_id = Uuid::new_v4();
 
     let report = super::execute(
-        &ctx,
+        stats,
         ComputeWrapUpQuery {
             scope: WrapUpScope::User(user_id),
             date_range: year_2024_range(),
@@ -74,10 +72,9 @@ async fn basic_stats() {
     r2.genres = vec!["Comedy".to_string()];
 
     let stats = InMemoryWrapUpStatsQuery::with_rows(vec![r1, r2]);
-    let ctx = TestContextBuilder::new().wrapup_stats(stats).build();
 
     let report = super::execute(
-        &ctx,
+        stats,
         ComputeWrapUpQuery {
             scope: WrapUpScope::User(user_id),
             date_range: year_2024_range(),
@@ -109,10 +106,9 @@ async fn rewatch_detection() {
     r2.movie_id = movie_id;
 
     let stats = InMemoryWrapUpStatsQuery::with_rows(vec![r1, r2]);
-    let ctx = TestContextBuilder::new().wrapup_stats(stats).build();
 
     let report = super::execute(
-        &ctx,
+        stats,
         ComputeWrapUpQuery {
             scope: WrapUpScope::User(user_id),
             date_range: year_2024_range(),
@@ -141,10 +137,9 @@ async fn global_scope() {
     r2.user_id = user_b;
 
     let stats = InMemoryWrapUpStatsQuery::with_rows(vec![r1, r2]);
-    let ctx = TestContextBuilder::new().wrapup_stats(stats).build();
 
     let report = super::execute(
-        &ctx,
+        stats,
         ComputeWrapUpQuery {
             scope: WrapUpScope::Global,
             date_range: year_2024_range(),

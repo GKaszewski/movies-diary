@@ -1,11 +1,8 @@
-use std::sync::Arc;
-
 use chrono::NaiveDate;
 use domain::models::wrapup::{WrapUpRecord, WrapUpStatus};
 use domain::testing::InMemoryWrapUpRepository;
 use domain::value_objects::WrapUpId;
 
-use crate::test_helpers::TestContextBuilder;
 use crate::wrapup::delete;
 
 #[tokio::test]
@@ -24,22 +21,13 @@ async fn deletes_existing_wrapup() {
         completed_at: None,
     });
 
-    let ctx = TestContextBuilder::new().build();
-    let ctx = crate::context::AppContext {
-        repos: crate::context::Repositories {
-            wrapup_repo: Arc::clone(&repo) as _,
-            ..ctx.repos
-        },
-        ..ctx
-    };
-
-    delete::execute(&ctx, id).await.unwrap();
+    delete::execute(repo.clone(), id).await.unwrap();
     assert_eq!(repo.store.lock().unwrap().len(), 0);
 }
 
 #[tokio::test]
 async fn fails_when_not_found() {
-    let ctx = TestContextBuilder::new().build();
-    let result = delete::execute(&ctx, WrapUpId::generate()).await;
+    let repo = InMemoryWrapUpRepository::new();
+    let result = delete::execute(repo.clone(), WrapUpId::generate()).await;
     assert!(result.is_err());
 }

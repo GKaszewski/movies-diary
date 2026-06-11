@@ -1,13 +1,19 @@
+use std::sync::Arc;
+
 use chrono::Utc;
 use domain::errors::DomainError;
 use domain::events::DomainEvent;
 use domain::models::wrapup::{DateRange, WrapUpStatus};
+use domain::ports::{EventPublisher, WrapUpRepository};
 use domain::value_objects::{UserId, WrapUpId};
 
-use crate::context::AppContext;
 use crate::wrapup::commands::RequestWrapUpCommand;
 
-pub async fn execute(ctx: &AppContext, cmd: RequestWrapUpCommand) -> Result<WrapUpId, DomainError> {
+pub async fn execute(
+    wrapup_repo: Arc<dyn WrapUpRepository>,
+    event_publisher: Arc<dyn EventPublisher>,
+    cmd: RequestWrapUpCommand,
+) -> Result<WrapUpId, DomainError> {
     let date_range = DateRange::new(cmd.start_date, cmd.end_date)?;
 
     if cmd.end_date > Utc::now().date_naive() {
@@ -16,9 +22,7 @@ pub async fn execute(ctx: &AppContext, cmd: RequestWrapUpCommand) -> Result<Wrap
         ));
     }
 
-    let existing = ctx
-        .repos
-        .wrapup_repo
+    let existing = wrapup_repo
         .find_existing(cmd.user_id, date_range.start(), date_range.end())
         .await?;
 
@@ -26,7 +30,7 @@ pub async fn execute(ctx: &AppContext, cmd: RequestWrapUpCommand) -> Result<Wrap
         match rec.status {
             WrapUpStatus::Ready | WrapUpStatus::Generating => return Ok(rec.id.clone()),
             WrapUpStatus::Failed => {
-                ctx.repos.wrapup_repo.delete(&rec.id).await?;
+                wrapup_repo.delete(&rec.id).await?;
             }
             WrapUpStatus::Pending => return Ok(rec.id.clone()),
         }
@@ -44,10 +48,9 @@ pub async fn execute(ctx: &AppContext, cmd: RequestWrapUpCommand) -> Result<Wrap
         created_at: Utc::now().naive_utc(),
         completed_at: None,
     };
-    ctx.repos.wrapup_repo.create(&record).await?;
+    wrapup_repo.create(&record).await?;
 
-    ctx.services
-        .event_publisher
+    event_publisher
         .publish(&DomainEvent::WrapUpRequested {
             wrapup_id: id.clone(),
             user_id: cmd.user_id.map(UserId::from_uuid),

@@ -1,13 +1,10 @@
-use std::sync::Arc;
-
 use chrono::{NaiveDate, Utc};
 use domain::models::wrapup::{WrapUpRecord, WrapUpStatus};
 use domain::ports::WrapUpRepository;
-use domain::testing::InMemoryWrapUpRepository;
+use domain::testing::{InMemoryWrapUpRepository, InMemoryWrapUpStatsQuery, NoopEventPublisher};
 use domain::value_objects::WrapUpId;
 
-use crate::test_helpers::TestContextBuilder;
-use crate::wrapup::handle_requested;
+use crate::wrapup::{deps::HandleWrapUpRequestedDeps, handle_requested};
 
 #[tokio::test]
 async fn skips_if_already_ready() {
@@ -27,12 +24,14 @@ async fn skips_if_already_ready() {
     };
     repo.create(&record).await.unwrap();
 
-    let ctx = TestContextBuilder::new()
-        .with_wrapup_repo(Arc::clone(&repo) as _)
-        .build();
+    let deps = HandleWrapUpRequestedDeps {
+        wrapup_repo: repo.clone(),
+        event_publisher: NoopEventPublisher::new(),
+        wrapup_stats: InMemoryWrapUpStatsQuery::new(),
+    };
 
     let result = handle_requested::execute(
-        &ctx,
+        &deps,
         wrapup_id,
         None,
         NaiveDate::from_ymd_opt(2024, 1, 1).unwrap(),
@@ -46,8 +45,8 @@ async fn skips_if_already_ready() {
 #[tokio::test]
 async fn generates_wrapup_and_marks_complete() {
     let repo = InMemoryWrapUpRepository::new();
-    let stats = domain::testing::InMemoryWrapUpStatsQuery::new();
-    let events = domain::testing::NoopEventPublisher::new();
+    let stats = InMemoryWrapUpStatsQuery::new();
+    let events = NoopEventPublisher::new();
     let wrapup_id = WrapUpId::generate();
     let uid = uuid::Uuid::new_v4();
 
@@ -64,14 +63,14 @@ async fn generates_wrapup_and_marks_complete() {
     };
     repo.create(&record).await.unwrap();
 
-    let ctx = TestContextBuilder::new()
-        .with_wrapup_repo(Arc::clone(&repo) as _)
-        .wrapup_stats(Arc::clone(&stats) as _)
-        .with_event_publisher(Arc::clone(&events) as _)
-        .build();
+    let deps = HandleWrapUpRequestedDeps {
+        wrapup_repo: repo.clone(),
+        event_publisher: events.clone(),
+        wrapup_stats: stats.clone(),
+    };
 
     let result = handle_requested::execute(
-        &ctx,
+        &deps,
         wrapup_id.clone(),
         Some(uid),
         NaiveDate::from_ymd_opt(2024, 1, 1).unwrap(),
@@ -113,12 +112,14 @@ async fn skips_if_already_generating() {
     };
     repo.create(&record).await.unwrap();
 
-    let ctx = TestContextBuilder::new()
-        .with_wrapup_repo(Arc::clone(&repo) as _)
-        .build();
+    let deps = HandleWrapUpRequestedDeps {
+        wrapup_repo: repo.clone(),
+        event_publisher: NoopEventPublisher::new(),
+        wrapup_stats: InMemoryWrapUpStatsQuery::new(),
+    };
 
     let result = handle_requested::execute(
-        &ctx,
+        &deps,
         wrapup_id.clone(),
         None,
         NaiveDate::from_ymd_opt(2024, 1, 1).unwrap(),

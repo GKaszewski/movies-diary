@@ -3,20 +3,28 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use domain::errors::DomainError;
 use domain::events::DomainEvent;
-use domain::ports::EventHandler;
+use domain::ports::{EventHandler, EventPublisher, WrapUpRepository, WrapUpStatsQuery};
 use tokio::sync::Semaphore;
 
-use crate::context::AppContext;
+use super::deps::HandleWrapUpRequestedDeps;
 
 pub struct WrapUpEventHandler {
-    ctx: AppContext,
+    deps: HandleWrapUpRequestedDeps,
     semaphore: Arc<Semaphore>,
 }
 
 impl WrapUpEventHandler {
-    pub fn new(ctx: AppContext) -> Self {
+    pub fn new(
+        wrapup_repo: Arc<dyn WrapUpRepository>,
+        event_publisher: Arc<dyn EventPublisher>,
+        wrapup_stats: Arc<dyn WrapUpStatsQuery>,
+    ) -> Self {
         Self {
-            ctx,
+            deps: HandleWrapUpRequestedDeps {
+                wrapup_repo,
+                event_publisher,
+                wrapup_stats,
+            },
             semaphore: Arc::new(Semaphore::new(2)),
         }
     }
@@ -36,7 +44,7 @@ impl EventHandler for WrapUpEventHandler {
                     DomainError::InfrastructureError("render semaphore closed".into())
                 })?;
                 super::handle_requested::execute(
-                    &self.ctx,
+                    &self.deps,
                     wrapup_id.clone(),
                     user_id.as_ref().map(|u| u.value()),
                     *start_date,
