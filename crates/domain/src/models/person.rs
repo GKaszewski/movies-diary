@@ -46,10 +46,51 @@ pub struct Person {
     name: String,
     known_for_department: Option<String>,
     profile_path: Option<String>,
+    biography: Option<String>,
+    birthday: Option<chrono::NaiveDate>,
+    deathday: Option<chrono::NaiveDate>,
+    place_of_birth: Option<String>,
+    also_known_as: Vec<String>,
+    homepage: Option<String>,
+    imdb_id: Option<String>,
+    enriched_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 impl Person {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
+        id: PersonId,
+        external_id: ExternalPersonId,
+        name: String,
+        known_for_department: Option<String>,
+        profile_path: Option<String>,
+        biography: Option<String>,
+        birthday: Option<chrono::NaiveDate>,
+        deathday: Option<chrono::NaiveDate>,
+        place_of_birth: Option<String>,
+        also_known_as: Vec<String>,
+        homepage: Option<String>,
+        imdb_id: Option<String>,
+        enriched_at: Option<chrono::DateTime<chrono::Utc>>,
+    ) -> Self {
+        Self {
+            id,
+            external_id,
+            name,
+            known_for_department,
+            profile_path,
+            biography,
+            birthday,
+            deathday,
+            place_of_birth,
+            also_known_as,
+            homepage,
+            imdb_id,
+            enriched_at,
+        }
+    }
+
+    pub fn basic(
         id: PersonId,
         external_id: ExternalPersonId,
         name: String,
@@ -62,6 +103,14 @@ impl Person {
             name,
             known_for_department,
             profile_path,
+            biography: None,
+            birthday: None,
+            deathday: None,
+            place_of_birth: None,
+            also_known_as: vec![],
+            homepage: None,
+            imdb_id: None,
+            enriched_at: None,
         }
     }
 
@@ -84,6 +133,49 @@ impl Person {
     pub fn profile_path(&self) -> Option<&str> {
         self.profile_path.as_deref()
     }
+
+    pub fn biography(&self) -> Option<&str> {
+        self.biography.as_deref()
+    }
+
+    pub fn birthday(&self) -> Option<chrono::NaiveDate> {
+        self.birthday
+    }
+
+    pub fn deathday(&self) -> Option<chrono::NaiveDate> {
+        self.deathday
+    }
+
+    pub fn place_of_birth(&self) -> Option<&str> {
+        self.place_of_birth.as_deref()
+    }
+
+    pub fn also_known_as(&self) -> &[String] {
+        &self.also_known_as
+    }
+
+    pub fn homepage(&self) -> Option<&str> {
+        self.homepage.as_deref()
+    }
+
+    pub fn imdb_id(&self) -> Option<&str> {
+        self.imdb_id.as_deref()
+    }
+
+    pub fn enriched_at(&self) -> Option<chrono::DateTime<chrono::Utc>> {
+        self.enriched_at
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct PersonEnrichmentData {
+    pub biography: Option<String>,
+    pub birthday: Option<chrono::NaiveDate>,
+    pub deathday: Option<chrono::NaiveDate>,
+    pub place_of_birth: Option<String>,
+    pub also_known_as: Vec<String>,
+    pub homepage: Option<String>,
+    pub imdb_id: Option<String>,
 }
 
 #[derive(Clone, Debug)]

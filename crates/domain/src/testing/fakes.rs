@@ -223,7 +223,7 @@ impl PersonQuery for FakePersonQuery {
     }
 
     async fn get_credits(&self, id: &PersonId) -> Result<PersonCredits, DomainError> {
-        let dummy = Person::new(
+        let dummy = Person::basic(
             id.clone(),
             ExternalPersonId::new("tmdb:0"),
             "Unknown".into(),

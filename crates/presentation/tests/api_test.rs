@@ -14,7 +14,8 @@ use domain::{
     errors::DomainError,
     events::DomainEvent,
     models::{
-        EntityType, ExternalPersonId, IndexableDocument, Movie, Person, PersonCredits, PersonId,
+        EntityType, ExternalPersonId, IndexableDocument, Movie, Person, PersonCredits,
+        PersonEnrichmentData, PersonId,
         SearchQuery, SearchResults, User,
     },
     ports::{
@@ -312,6 +313,13 @@ impl PersonCommand for PanicPersonCommand {
         &self,
         _batch_size: u32,
     ) -> Result<(u64, bool), DomainError> {
+        panic!()
+    }
+    async fn update_enrichment(
+        &self,
+        _: &PersonId,
+        _: &PersonEnrichmentData,
+    ) -> Result<(), DomainError> {
         panic!()
     }
 }

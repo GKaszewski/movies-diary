@@ -1,7 +1,10 @@
 use async_trait::async_trait;
 use domain::{
     errors::DomainError,
-    models::{CastCredit, CrewCredit, ExternalPersonId, Person, PersonCredits, PersonId},
+    models::{
+        CastCredit, CrewCredit, ExternalPersonId, Person, PersonCredits, PersonEnrichmentData,
+        PersonId,
+    },
     ports::{PersonCommand, PersonQuery},
     value_objects::MovieId,
 };
@@ -110,6 +113,14 @@ impl PersonCommand for SqlitePersonAdapter {
             count += 1;
         }
         Ok((count, has_more))
+    }
+
+    async fn update_enrichment(
+        &self,
+        _id: &PersonId,
+        _data: &PersonEnrichmentData,
+    ) -> Result<(), DomainError> {
+        todo!("person enrichment persistence")
     }
 }
 
@@ -259,7 +270,7 @@ struct PersonRow {
 impl PersonRow {
     fn into_person(self) -> Person {
         let ext = ExternalPersonId::new(self.external_id);
-        Person::new(
+        Person::basic(
             PersonId::from_uuid(uuid::Uuid::parse_str(&self.id).unwrap_or_default()),
             ext,
             self.name,

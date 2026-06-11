@@ -5,7 +5,8 @@ use crate::{
     models::{
         AnnotatedRow, DiaryEntry, DiaryFilter, EntityType, ExportFormat, ExternalPersonId,
         FeedEntry, FieldMapping, FileFormat, ImportError, ImportProfile, ImportSession,
-        IndexableDocument, MovieProfile, MovieStats, ParsedFile, Person, PersonCredits, PersonId,
+        IndexableDocument, MovieProfile, MovieStats, ParsedFile, Person, PersonCredits,
+        PersonEnrichmentData, PersonId,
         ReviewHistory, SearchQuery, SearchResults, UserStats, UserTrends,
         collections::{PageParams, Paginated},
     },
@@ -148,6 +149,13 @@ impl PersonCommand for PanicPersonCommand {
         panic!("PanicPersonCommand called")
     }
     async fn backfill_from_credits_batch(&self, _: u32) -> Result<(u64, bool), DomainError> {
+        panic!("PanicPersonCommand called")
+    }
+    async fn update_enrichment(
+        &self,
+        _: &PersonId,
+        _: &PersonEnrichmentData,
+    ) -> Result<(), DomainError> {
         panic!("PanicPersonCommand called")
     }
 }

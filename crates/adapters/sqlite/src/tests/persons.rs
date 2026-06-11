@@ -46,7 +46,7 @@ async fn pool_with_schema() -> SqlitePool {
 
 fn make_person(tmdb_id: i64, name: &str, dept: Option<&str>) -> Person {
     let ext = ExternalPersonId::new(format!("tmdb:{tmdb_id}"));
-    Person::new(
+    Person::basic(
         PersonId::from_external(&ext),
         ext,
         name.to_string(),

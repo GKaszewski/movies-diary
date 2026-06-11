@@ -2,6 +2,7 @@ use chrono::NaiveDateTime;
 use domain::{
     errors::DomainError,
     events::DomainEvent,
+    models::PersonId,
     value_objects::{
         ExternalMetadataId, GoalId, MovieId, PosterPath, Rating, ReviewId, UserId, WrapUpId,
     },
@@ -109,6 +110,10 @@ pub enum EventPayload {
         user_id: String,
         year: u16,
     },
+    PersonEnrichmentRequested {
+        person_id: String,
+        external_person_id: String,
+    },
 }
 
 impl EventPayload {
@@ -135,6 +140,7 @@ impl EventPayload {
             EventPayload::GoalCreated { .. } => "GoalCreated",
             EventPayload::GoalUpdated { .. } => "GoalUpdated",
             EventPayload::GoalDeleted { .. } => "GoalDeleted",
+            EventPayload::PersonEnrichmentRequested { .. } => "PersonEnrichmentRequested",
         }
     }
 }
@@ -310,6 +316,13 @@ impl From<&DomainEvent> for EventPayload {
                 goal_id: goal_id.value().to_string(),
                 user_id: user_id.value().to_string(),
                 year: *year,
+            },
+            DomainEvent::PersonEnrichmentRequested {
+                person_id,
+                external_person_id,
+            } => EventPayload::PersonEnrichmentRequested {
+                person_id: person_id.value().to_string(),
+                external_person_id: external_person_id.clone(),
             },
         }
     }
@@ -495,6 +508,13 @@ impl TryFrom<EventPayload> for DomainEvent {
                 goal_id: GoalId::from_uuid(parse_uuid(&goal_id, "goal_id")?),
                 user_id: UserId::from_uuid(parse_uuid(&user_id, "user_id")?),
                 year,
+            }),
+            EventPayload::PersonEnrichmentRequested {
+                person_id,
+                external_person_id,
+            } => Ok(DomainEvent::PersonEnrichmentRequested {
+                person_id: PersonId::from_uuid(parse_uuid(&person_id, "person_id")?),
+                external_person_id,
             }),
         }
     }

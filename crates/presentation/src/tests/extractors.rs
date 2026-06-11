@@ -14,7 +14,8 @@ use domain::{
     events::DomainEvent,
     models::{
         DiaryEntry, DiaryFilter, EntityType, FeedEntry, IndexableDocument, Movie, Person,
-        PersonCredits, PersonId, Review, ReviewHistory, SearchQuery, SearchResults, UserStats,
+        PersonCredits, PersonEnrichmentData, PersonId, Review, ReviewHistory, SearchQuery,
+        SearchResults, UserStats,
         UserTrends,
         collections::{PageParams, Paginated},
     },
@@ -435,6 +436,13 @@ impl PersonCommand for Panic {
         &self,
         _batch_size: u32,
     ) -> Result<(u64, bool), DomainError> {
+        panic!()
+    }
+    async fn update_enrichment(
+        &self,
+        _: &PersonId,
+        _: &PersonEnrichmentData,
+    ) -> Result<(), DomainError> {
         panic!()
     }
 }

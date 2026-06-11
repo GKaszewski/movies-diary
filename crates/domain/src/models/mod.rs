@@ -43,7 +43,9 @@ pub use import::{
 };
 pub use import_profile::ImportProfile;
 pub use import_session::ImportSession;
-pub use person::{CastCredit, CrewCredit, ExternalPersonId, Person, PersonCredits, PersonId};
+pub use person::{
+    CastCredit, CrewCredit, ExternalPersonId, Person, PersonCredits, PersonEnrichmentData, PersonId,
+};
 pub use search::{
     EntityType, IndexableDocument, MovieSearchHit, PersonSearchHit, SearchFilters, SearchQuery,
     SearchResults,

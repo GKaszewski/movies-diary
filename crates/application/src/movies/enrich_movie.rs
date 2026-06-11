@@ -67,7 +67,7 @@ fn extract_persons(cast: &[CastMember], crew: &[CrewMember]) -> Vec<Person> {
     for member in cast {
         seen.entry(member.tmdb_person_id).or_insert_with(|| {
             let ext = ExternalPersonId::new(format!("tmdb:{}", member.tmdb_person_id));
-            Person::new(
+            Person::basic(
                 PersonId::from_external(&ext),
                 ext,
                 member.name.clone(),
@@ -80,7 +80,7 @@ fn extract_persons(cast: &[CastMember], crew: &[CrewMember]) -> Vec<Person> {
     for member in crew {
         seen.entry(member.tmdb_person_id).or_insert_with(|| {
             let ext = ExternalPersonId::new(format!("tmdb:{}", member.tmdb_person_id));
-            Person::new(
+            Person::basic(
                 PersonId::from_external(&ext),
                 ext,
                 member.name.clone(),

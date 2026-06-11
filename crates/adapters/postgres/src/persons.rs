@@ -1,7 +1,10 @@
 use async_trait::async_trait;
 use domain::{
     errors::DomainError,
-    models::{CastCredit, CrewCredit, ExternalPersonId, Person, PersonCredits, PersonId},
+    models::{
+        CastCredit, CrewCredit, ExternalPersonId, Person, PersonCredits, PersonEnrichmentData,
+        PersonId,
+    },
     ports::{PersonCommand, PersonQuery},
     value_objects::MovieId,
 };
@@ -111,6 +114,14 @@ impl PersonCommand for PostgresPersonAdapter {
         }
         Ok((count, has_more))
     }
+
+    async fn update_enrichment(
+        &self,
+        _id: &PersonId,
+        _data: &PersonEnrichmentData,
+    ) -> Result<(), DomainError> {
+        todo!("person enrichment persistence")
+    }
 }
 
 #[async_trait]
@@ -135,7 +146,7 @@ impl PersonQuery for PostgresPersonAdapter {
 
         Ok(row.map(|r| {
             let ext = ExternalPersonId::new(r.external_id);
-            Person::new(
+            Person::basic(
                 PersonId::from_uuid(uuid::Uuid::parse_str(&r.id).unwrap_or_default()),
                 ext,
                 r.name,
@@ -168,7 +179,7 @@ impl PersonQuery for PostgresPersonAdapter {
 
         Ok(row.map(|r| {
             let ext = ExternalPersonId::new(r.external_id);
-            Person::new(
+            Person::basic(
                 PersonId::from_uuid(uuid::Uuid::parse_str(&r.id).unwrap_or_default()),
                 ext,
                 r.name,
@@ -283,7 +294,7 @@ impl PersonQuery for PostgresPersonAdapter {
             .into_iter()
             .map(|r| {
                 let ext = ExternalPersonId::new(r.external_id);
-                Person::new(
+                Person::basic(
                     PersonId::from_uuid(uuid::Uuid::parse_str(&r.id).unwrap_or_default()),
                     ext,
                     r.name,

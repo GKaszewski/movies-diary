@@ -10,9 +10,9 @@ use crate::{
         AnnotatedRow, DiaryEntry, DiaryFilter, EntityType, ExportFormat, ExternalPersonId,
         FeedEntry, FieldMapping, FileFormat, Goal, ImportError, ImportProfile, ImportSession,
         IndexableDocument, Movie, MovieFilter, MovieProfile, MovieStats, MovieSummary, ParsedFile,
-        ParsedPlaybackEvent, Person, PersonCredits, PersonId, RemoteGoalEntry,
-        RemoteWatchlistEntry, Review, ReviewHistory, SearchQuery, SearchResults, User,
-        UserSettings, UserStats, UserSummary, UserTrends, WatchEvent, WatchEventStatus,
+        ParsedPlaybackEvent, Person, PersonCredits, PersonEnrichmentData, PersonId,
+        RemoteGoalEntry, RemoteWatchlistEntry, Review, ReviewHistory, SearchQuery, SearchResults,
+        User, UserSettings, UserStats, UserSummary, UserTrends, WatchEvent, WatchEventStatus,
         WatchlistEntry, WatchlistWithMovie, WebhookToken,
         collections::{self, PageParams, Paginated},
         wrapup::{DateRange, WrapUpRecord, WrapUpScope, WrapUpStatus},
@@ -293,6 +293,14 @@ pub trait MovieEnrichmentClient: Send + Sync {
 }
 
 #[async_trait]
+pub trait PersonEnrichmentClient: Send + Sync {
+    async fn fetch_details(
+        &self,
+        external_id: &str,
+    ) -> Result<PersonEnrichmentData, DomainError>;
+}
+
+#[async_trait]
 pub trait ImportSessionRepository: Send + Sync {
     async fn create(&self, session: &ImportSession) -> Result<(), DomainError>;
     async fn get(
@@ -339,6 +347,11 @@ pub trait PersonCommand: Send + Sync {
         &self,
         batch_size: u32,
     ) -> Result<(u64, bool), DomainError>;
+    async fn update_enrichment(
+        &self,
+        id: &PersonId,
+        data: &PersonEnrichmentData,
+    ) -> Result<(), DomainError>;
 }
 
 /// Read port — queries persons and credits. No mutations.

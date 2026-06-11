@@ -4,7 +4,7 @@ use super::*;
 fn person_new() {
     let ext = ExternalPersonId::new("tmdb:12345");
     let pid = PersonId::from_external(&ext);
-    let p = Person::new(
+    let p = Person::basic(
         pid,
         ext,
         "Keanu Reeves".into(),
@@ -38,7 +38,7 @@ fn person_id_deterministic() {
 fn person_credits_default_empty() {
     let ext = ExternalPersonId::new("tmdb:1");
     let pid = PersonId::from_external(&ext);
-    let p = Person::new(pid, ext, "Test".into(), None, None);
+    let p = Person::basic(pid, ext, "Test".into(), None, None);
     let credits = PersonCredits {
         person: p,
         cast: vec![],
