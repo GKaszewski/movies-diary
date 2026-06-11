@@ -144,7 +144,7 @@
     "editProfile": "Edit Profile",
     "editProfileDesc": "Username, bio",
     "import": "Import",
-    "importDesc": "Import from CSV",
+    "importDesc": "Import from CSV or JSON",
     "yearWrapUp": "Year Wrap-Up",
     "yearWrapUpDesc": "Annual summaries",
     "webhookTokens": "Webhook Tokens",
@@ -337,7 +337,7 @@
     "scale1to10": "1–10 → 1–5 (×0.5)",
     "scale1to100": "1–100 → 1–5 (×0.05)",
     "scaleLetterboxd": "0–4 Letterboxd → 1–5 (×1.25)",
-    "dropCsv": "Drop a CSV file or tap to browse",
+    "dropCsv": "Drop a CSV or JSON file, or tap to browse",
     "uploading": "Uploading...",
     "preview": "Preview",
     "rowsCols": "{{rows}} rows · {{cols}} columns",
@@ -357,6 +357,14 @@
     "importing": "Importing...",
     "importRows": "Import {{count}} rows",
     "importComplete": "Import complete!",
-    "viewDiary": "View your diary"
+    "viewDiary": "View your diary",
+    "presets": "Presets",
+    "loadPreset": "Load preset",
+    "savePreset": "Save as preset",
+    "presetName": "Preset name",
+    "presetNamePlaceholder": "e.g. Letterboxd",
+    "presetSaved": "Preset saved",
+    "presetDeleted": "Preset deleted",
+    "noPresets": "No saved presets"
   }
 }

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
+  applyImportProfile,
   applyMapping,
   confirmImport,
   createImportSession,
@@ -91,5 +92,12 @@ export function useDeleteImportProfile() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: importKeys.profiles })
     },
+  })
+}
+
+export function useApplyImportProfile() {
+  return useMutation({
+    mutationFn: ({ sessionId, profileId }: { sessionId: string; profileId: string }) =>
+      applyImportProfile(sessionId, profileId),
   })
 }

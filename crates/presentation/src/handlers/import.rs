@@ -14,9 +14,10 @@ use std::collections::HashMap;
 use crate::render::render_page;
 use application::import::{
     apply_mapping as apply_import_mapping,
+    apply_profile as apply_import_profile,
     commands::{
-        ApplyImportMappingCommand, CreateImportSessionCommand, DeleteImportProfileCommand,
-        ExecuteImportCommand, SaveImportProfileCommand,
+        ApplyImportMappingCommand, ApplyImportProfileCommand, CreateImportSessionCommand,
+        DeleteImportProfileCommand, ExecuteImportCommand, SaveImportProfileCommand,
     },
     create_session as create_import_session, delete_profile as delete_import_profile,
     execute as execute_import, list_profiles as list_import_profiles,
@@ -857,5 +858,98 @@ pub async fn api_delete_profile(
             };
             status.into_response()
         }
+    }
+}
+
+#[utoipa::path(
+    put, path = "/api/v1/import/sessions/{id}/profile/{profile_id}",
+    params(
+        ("id" = String, Path, description = "Import session UUID"),
+        ("profile_id" = String, Path, description = "Import profile UUID"),
+    ),
+    responses(
+        (status = 200, description = "Profile applied and mapping regenerated", body = inline(serde_json::Value)),
+        (status = 400, description = "Invalid ID"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Session or profile not found"),
+        (status = 422, description = "Mapping error"),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn api_apply_profile(
+    State(state): State<AppState>,
+    AuthenticatedUser(user_id): AuthenticatedUser,
+    Path((session_id_str, profile_id_str)): Path<(String, String)>,
+) -> impl IntoResponse {
+    let Ok(session_id) = session_id_str.parse::<uuid::Uuid>() else {
+        return (
+            StatusCode::BAD_REQUEST,
+            axum::Json(serde_json::json!({"error": "invalid session id"})),
+        )
+            .into_response();
+    };
+    let Ok(profile_id) = profile_id_str.parse::<uuid::Uuid>() else {
+        return (
+            StatusCode::BAD_REQUEST,
+            axum::Json(serde_json::json!({"error": "invalid profile id"})),
+        )
+            .into_response();
+    };
+
+    if let Err(e) = apply_import_profile::execute(
+        &state.app_ctx,
+        ApplyImportProfileCommand {
+            user_id: user_id.value(),
+            session_id,
+            profile_id,
+        },
+    )
+    .await
+    {
+        let status = if matches!(e, domain::errors::DomainError::NotFound(_)) {
+            StatusCode::NOT_FOUND
+        } else {
+            StatusCode::UNPROCESSABLE_ENTITY
+        };
+        return (status, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
+    }
+
+    let session = match state
+        .app_ctx
+        .repos
+        .import_session
+        .get(
+            &ImportSessionId::from_uuid(session_id),
+            &user_id,
+        )
+        .await
+    {
+        Ok(Some(s)) => s,
+        _ => {
+            return (
+                StatusCode::NOT_FOUND,
+                axum::Json(serde_json::json!({"error": "session not found after profile apply"})),
+            )
+                .into_response();
+        }
+    };
+
+    let mappings = session.field_mappings.unwrap_or_default();
+    match apply_import_mapping::execute(
+        &state.app_ctx,
+        ApplyImportMappingCommand {
+            user_id: user_id.value(),
+            session_id,
+            mappings,
+        },
+    )
+    .await
+    {
+        Ok(rows) => axum::Json(serde_json::json!({"row_count": rows.len()})).into_response(),
+        Err(e) => (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            axum::Json(serde_json::json!({"error": e.to_string()})),
+        )
+            .into_response(),
     }
 }

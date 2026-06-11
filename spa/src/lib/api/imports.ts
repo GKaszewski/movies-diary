@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { del, get, post, put, upload } from "./client"
+import { del, get, post, put, uploadWithFields } from "./client"
 
 export const sessionCreatedResponseSchema = z.object({
   session_id: z.string(),
@@ -41,7 +41,9 @@ export const saveProfileRequestSchema = z.object({
 export type SaveProfileRequest = z.infer<typeof saveProfileRequestSchema>
 
 export function createImportSession(file: File) {
-  return upload<SessionCreatedResponse>("/import/sessions", file)
+  const ext = file.name.split(".").pop()?.toLowerCase()
+  const format = ext === "json" ? "json" : "csv"
+  return uploadWithFields<SessionCreatedResponse>("/import/sessions", file, { format })
 }
 
 export function getImportSession(id: string) {
@@ -76,14 +78,24 @@ export function confirmImport(sessionId: string, data: ConfirmRequest) {
   return post(`/import/sessions/${sessionId}/confirm`, data)
 }
 
+export type ImportProfile = {
+  id: string
+  name: string
+  created_at: string
+}
+
 export function getImportProfiles() {
-  return get<unknown[]>("/import/profiles")
+  return get<ImportProfile[]>("/import/profiles")
 }
 
 export function saveImportProfile(data: SaveProfileRequest) {
-  return post("/import/profiles", data)
+  return post<{ id: string }>("/import/profiles", data)
 }
 
 export function deleteImportProfile(id: string) {
   return del(`/import/profiles/${id}`)
+}
+
+export function applyImportProfile(sessionId: string, profileId: string) {
+  return put<{ row_count: number }>(`/import/sessions/${sessionId}/profile/${profileId}`)
 }

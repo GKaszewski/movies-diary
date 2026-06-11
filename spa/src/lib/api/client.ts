@@ -118,3 +118,17 @@ export async function upload<T>(
     body: form,
   })
 }
+
+export async function uploadWithFields<T>(
+  path: string,
+  file: File,
+  fields: Record<string, string>,
+): Promise<T> {
+  const form = new FormData()
+  form.append("file", file)
+  for (const [k, v] of Object.entries(fields)) form.append(k, v)
+  return request<T>(buildUrl(path), {
+    method: "POST",
+    body: form,
+  })
+}

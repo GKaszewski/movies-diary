@@ -366,6 +366,10 @@ fn api_routes(rate_limit: u64) -> Router<AppState> {
             routing::delete(handlers::import::api_delete_profile),
         )
         .route(
+            "/import/sessions/{id}/profile/{profile_id}",
+            routing::put(handlers::import::api_apply_profile),
+        )
+        .route(
             "/profile",
             routing::get(handlers::users::get_profile).put(handlers::users::update_profile_handler),
         )

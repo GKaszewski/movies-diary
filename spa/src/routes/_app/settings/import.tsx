@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
-import { ArrowLeft, CheckCircle, Upload } from "lucide-react"
+import { ArrowLeft, CheckCircle, Trash2, Upload } from "lucide-react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -25,8 +26,12 @@ import { Skeleton } from "@/components/ui/skeleton"
 import {
   useCreateImportSession,
   useApplyMapping,
+  useApplyImportProfile,
   useConfirmImport,
   useImportPreview,
+  useImportProfiles,
+  useSaveImportProfile,
+  useDeleteImportProfile,
 } from "@/hooks/use-imports"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import type { SessionCreatedResponse } from "@/lib/api/imports"
@@ -65,7 +70,10 @@ function ImportPage() {
 
   const createSession = useCreateImportSession()
   const applyMapping = useApplyMapping()
+  const applyProfile = useApplyImportProfile()
   const confirmImport = useConfirmImport()
+  const { data: profiles } = useImportProfiles()
+  const deleteProfile = useDeleteImportProfile()
 
   const handleFile = (file: File) => {
     createSession.mutate(file, {
@@ -112,6 +120,14 @@ function ImportPage() {
     confirmImport.mutate(
       { sessionId: session.session_id, data: { confirmed_indices: indices } },
       { onSuccess: () => setStep(3) },
+    )
+  }
+
+  const handleApplyProfile = (profileId: string) => {
+    if (!session) return
+    applyProfile.mutate(
+      { sessionId: session.session_id, profileId },
+      { onSuccess: () => setStep(2) },
     )
   }
 
@@ -162,7 +178,7 @@ function ImportPage() {
               <input
                 ref={fileRef}
                 type="file"
-                accept=".csv"
+                accept=".csv,.json"
                 className="hidden"
                 onChange={(e) => {
                   const file = e.target.files?.[0]
@@ -213,6 +229,40 @@ function ImportPage() {
               </Table>
             </CardContent>
           </Card>
+
+          {/* Presets */}
+          {profiles && profiles.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">{t("import.presets")}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {profiles.map((p) => (
+                  <div key={p.id} className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 justify-start"
+                      onClick={() => handleApplyProfile(p.id)}
+                      disabled={applyProfile.isPending}
+                    >
+                      {p.name}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-8 text-muted-foreground"
+                      onClick={() => deleteProfile.mutate(p.id, {
+                        onSuccess: () => toast.success(t("import.presetDeleted")),
+                      })}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Column mapping */}
           <Card>
@@ -332,6 +382,8 @@ function ConfirmStep({
 }) {
   const { t } = useTranslation()
   const { data, isPending: previewLoading } = useImportPreview(sessionId)
+  const saveProfile = useSaveImportProfile()
+  const [presetName, setPresetName] = useState("")
 
   if (previewLoading) return <Skeleton className="h-40 w-full rounded-xl" />
 
@@ -384,6 +436,33 @@ function ConfirmStep({
               ))}
             </TableBody>
           </Table>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">{t("import.savePreset")}</CardTitle>
+        </CardHeader>
+        <CardContent className="flex gap-2">
+          <Input
+            value={presetName}
+            onChange={(e) => setPresetName(e.target.value)}
+            placeholder={t("import.presetNamePlaceholder")}
+            className="flex-1"
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!presetName.trim() || saveProfile.isPending || saveProfile.isSuccess}
+            onClick={() =>
+              saveProfile.mutate(
+                { session_id: sessionId, name: presetName.trim() },
+                { onSuccess: () => toast.success(t("import.presetSaved")) },
+              )
+            }
+          >
+            {saveProfile.isSuccess ? t("import.presetSaved") : t("common.save")}
+          </Button>
         </CardContent>
       </Card>
 
