@@ -5,6 +5,25 @@ use domain::{
     value_objects::{ExternalMetadataId, MovieTitle, Rating, ReleaseYear},
 };
 
+async fn collect_stream(
+    stream: futures::stream::BoxStream<'static, Result<bytes::Bytes, domain::errors::DomainError>>,
+) -> Vec<u8> {
+    use futures::StreamExt;
+    let mut out = Vec::new();
+    futures::pin_mut!(stream);
+    while let Some(chunk) = stream.next().await {
+        out.extend_from_slice(&chunk.unwrap());
+    }
+    out
+}
+
+fn entry_stream(
+    entries: Vec<domain::models::DiaryEntry>,
+) -> futures::stream::BoxStream<'static, Result<domain::models::DiaryEntry, domain::errors::DomainError>>
+{
+    Box::pin(futures::stream::iter(entries.into_iter().map(Ok)))
+}
+
 fn make_entry(
     title: &str,
     year: u16,
@@ -55,10 +74,8 @@ async fn csv_has_header_and_one_row() {
         5,
         Some("great"),
     );
-    let bytes = adapter
-        .serialize_entries(&[entry], ExportFormat::Csv)
-        .await
-        .unwrap();
+    let bytes =
+        collect_stream(adapter.stream_entries(entry_stream(vec![entry]), ExportFormat::Csv)).await;
     let text = String::from_utf8(bytes).unwrap();
     assert!(
         text.starts_with("title,year,director,rating,comment,watched_at,external_metadata_id\n")
@@ -75,10 +92,8 @@ async fn csv_has_header_and_one_row() {
 async fn csv_escapes_commas_in_title() {
     let adapter = ExportAdapter;
     let entry = make_entry("Tár, A Film", 2022, None, 4, None);
-    let bytes = adapter
-        .serialize_entries(&[entry], ExportFormat::Csv)
-        .await
-        .unwrap();
+    let bytes =
+        collect_stream(adapter.stream_entries(entry_stream(vec![entry]), ExportFormat::Csv)).await;
     let text = String::from_utf8(bytes).unwrap();
     assert!(text.contains("\"Tár, A Film\""));
 }
@@ -87,10 +102,8 @@ async fn csv_escapes_commas_in_title() {
 async fn json_is_valid_array() {
     let adapter = ExportAdapter;
     let entry = make_entry("Dune", 2021, Some("Denis Villeneuve"), 5, None);
-    let bytes = adapter
-        .serialize_entries(&[entry], ExportFormat::Json)
-        .await
-        .unwrap();
+    let bytes =
+        collect_stream(adapter.stream_entries(entry_stream(vec![entry]), ExportFormat::Json)).await;
     let arr: Vec<serde_json::Value> = serde_json::from_slice(&bytes).unwrap();
     assert_eq!(arr.len(), 1);
     assert_eq!(arr[0]["title"], "Dune");
@@ -104,27 +117,18 @@ async fn json_is_valid_array() {
 async fn external_metadata_id_included_when_present() {
     let adapter = ExportAdapter;
     let entry = make_entry_full("Alien", 1979, None, 5, None, Some("tt0078748"));
-    let bytes = adapter
-        .serialize_entries(&[entry], ExportFormat::Json)
-        .await
-        .unwrap();
+    let bytes =
+        collect_stream(adapter.stream_entries(entry_stream(vec![entry]), ExportFormat::Json)).await;
     let arr: Vec<serde_json::Value> = serde_json::from_slice(&bytes).unwrap();
     assert_eq!(arr[0]["external_metadata_id"], "tt0078748");
 
-    let bytes = adapter
-        .serialize_entries(
-            &[make_entry_full(
-                "Alien",
-                1979,
-                None,
-                5,
-                None,
-                Some("tt0078748"),
-            )],
+    let bytes = collect_stream(
+        adapter.stream_entries(
+            entry_stream(vec![make_entry_full("Alien", 1979, None, 5, None, Some("tt0078748"))]),
             ExportFormat::Csv,
-        )
-        .await
-        .unwrap();
+        ),
+    )
+    .await;
     let text = String::from_utf8(bytes).unwrap();
     assert!(text.contains("tt0078748"));
 }
@@ -132,13 +136,20 @@ async fn external_metadata_id_included_when_present() {
 #[tokio::test]
 async fn empty_entries_returns_csv_header_only() {
     let adapter = ExportAdapter;
-    let bytes = adapter
-        .serialize_entries(&[], ExportFormat::Csv)
-        .await
-        .unwrap();
+    let bytes =
+        collect_stream(adapter.stream_entries(entry_stream(vec![]), ExportFormat::Csv)).await;
     let text = String::from_utf8(bytes).unwrap();
     assert_eq!(
         text,
         "title,year,director,rating,comment,watched_at,external_metadata_id\n"
     );
+}
+
+#[tokio::test]
+async fn empty_json_is_valid_empty_array() {
+    let adapter = ExportAdapter;
+    let bytes =
+        collect_stream(adapter.stream_entries(entry_stream(vec![]), ExportFormat::Json)).await;
+    let arr: Vec<serde_json::Value> = serde_json::from_slice(&bytes).unwrap();
+    assert!(arr.is_empty());
 }
