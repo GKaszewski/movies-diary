@@ -7,7 +7,7 @@ use domain::{
 use futures::StreamExt;
 use tokio::sync::Semaphore;
 
-const DEFAULT_CONCURRENCY: usize = 8;
+const DEFAULT_CONCURRENCY: usize = 4;
 
 pub struct WorkerService {
     consumer: Arc<dyn EventConsumer>,
