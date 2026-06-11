@@ -16,7 +16,7 @@ pub async fn execute(deps: &GetPersonDeps, id: PersonId) -> Result<PersonCredits
             .event_publisher
             .publish(&DomainEvent::PersonEnrichmentRequested {
                 person_id: id,
-                external_person_id: credits.person.external_id().value().to_string(),
+                external_person_id: credits.person.external_id().clone(),
             })
             .await;
     }

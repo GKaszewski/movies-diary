@@ -123,7 +123,7 @@ impl EventHandler for PosterSyncHandler {
                 if already_has_poster {
                     return Ok(());
                 }
-                (movie_id.value(), external_metadata_id.clone())
+                (movie_id.value(), external_metadata_id.value().to_owned())
             }
             _ => return Ok(()),
         };

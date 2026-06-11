@@ -40,6 +40,6 @@ impl EventHandler for PersonEnrichmentHandler {
             _ => return Ok(()),
         };
 
-        application::person::enrich::execute(&self.deps, person_id, &external_person_id).await
+        application::person::enrich::execute(&self.deps, person_id, external_person_id.value()).await
     }
 }

@@ -112,7 +112,7 @@ async fn publish_events(
         publisher
             .publish(&DomainEvent::MovieEnrichmentRequested {
                 movie_id: movie.id().clone(),
-                external_metadata_id: ext_id.value().to_string(),
+                external_metadata_id: ext_id.clone(),
             })
             .await?;
     }

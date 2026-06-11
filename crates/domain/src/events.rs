@@ -3,7 +3,7 @@ use chrono::NaiveDateTime;
 
 use crate::{
     errors::DomainError,
-    models::PersonId,
+    models::{ExternalPersonId, PersonId},
     value_objects::{
         ExternalMetadataId, GoalId, MovieId, PosterPath, Rating, ReviewId, UserId, WrapUpId,
     },
@@ -42,11 +42,11 @@ pub enum DomainEvent {
     },
     MovieEnrichmentRequested {
         movie_id: MovieId,
-        external_metadata_id: String,
+        external_metadata_id: ExternalMetadataId,
     },
     PersonEnrichmentRequested {
         person_id: PersonId,
-        external_person_id: String,
+        external_person_id: ExternalPersonId,
     },
     ImageStored {
         key: String,

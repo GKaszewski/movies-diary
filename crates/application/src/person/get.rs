@@ -18,7 +18,7 @@ pub async fn execute(deps: &GetPersonDeps, id: PersonId) -> Result<Option<Person
             .event_publisher
             .publish(&DomainEvent::PersonEnrichmentRequested {
                 person_id: id,
-                external_person_id: p.external_id().value().to_string(),
+                external_person_id: p.external_id().clone(),
             })
             .await;
     }

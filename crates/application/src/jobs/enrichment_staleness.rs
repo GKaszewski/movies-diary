@@ -6,6 +6,7 @@ use domain::{
     errors::DomainError,
     events::DomainEvent,
     ports::{EventPublisher, MovieProfileRepository, PeriodicJob},
+    value_objects::ExternalMetadataId,
 };
 
 pub struct EnrichmentStalenessJob {
@@ -38,9 +39,16 @@ impl PeriodicJob for EnrichmentStalenessJob {
         }
         tracing::info!("enrichment scan: {} stale movies", stale.len());
         for (movie_id, external_metadata_id) in stale {
+            let ext_id = match ExternalMetadataId::new(external_metadata_id) {
+                Ok(id) => id,
+                Err(e) => {
+                    tracing::warn!("skipping stale movie with malformed external_metadata_id: {e}");
+                    continue;
+                }
+            };
             let event = DomainEvent::MovieEnrichmentRequested {
                 movie_id,
-                external_metadata_id,
+                external_metadata_id: ext_id,
             };
             self.event_publisher.publish(&event).await?;
         }

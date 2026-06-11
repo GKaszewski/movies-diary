@@ -83,7 +83,7 @@ impl EventHandler for MovieEnrichmentHandler {
             self.enrichment_client.as_ref(),
             &self.profile_repo,
             movie_id.clone(),
-            &external_metadata_id,
+            external_metadata_id.value(),
         )
         .await?
         else {

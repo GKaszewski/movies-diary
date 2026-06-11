@@ -2,7 +2,7 @@ use chrono::NaiveDateTime;
 use domain::{
     errors::DomainError,
     events::DomainEvent,
-    models::PersonId,
+    models::{ExternalPersonId, PersonId},
     value_objects::{
         ExternalMetadataId, GoalId, MovieId, PosterPath, Rating, ReviewId, UserId, WrapUpId,
     },
@@ -210,7 +210,7 @@ impl From<&DomainEvent> for EventPayload {
                 external_metadata_id,
             } => EventPayload::MovieEnrichmentRequested {
                 movie_id: movie_id.value().to_string(),
-                external_metadata_id: external_metadata_id.clone(),
+                external_metadata_id: external_metadata_id.value().to_string(),
             },
             DomainEvent::ImageStored { key } => EventPayload::ImageStored { key: key.clone() },
             DomainEvent::WatchlistEntryAdded {
@@ -322,7 +322,7 @@ impl From<&DomainEvent> for EventPayload {
                 external_person_id,
             } => EventPayload::PersonEnrichmentRequested {
                 person_id: person_id.value().to_string(),
-                external_person_id: external_person_id.clone(),
+                external_person_id: external_person_id.value().to_string(),
             },
         }
     }
@@ -391,7 +391,8 @@ impl TryFrom<EventPayload> for DomainEvent {
                 external_metadata_id,
             } => Ok(DomainEvent::MovieEnrichmentRequested {
                 movie_id: MovieId::from_uuid(parse_uuid(&movie_id, "movie_id")?),
-                external_metadata_id,
+                external_metadata_id: ExternalMetadataId::new(external_metadata_id)
+                    .map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
             }),
             EventPayload::ImageStored { key } => Ok(DomainEvent::ImageStored { key }),
             EventPayload::WatchlistEntryAdded {
@@ -514,7 +515,7 @@ impl TryFrom<EventPayload> for DomainEvent {
                 external_person_id,
             } => Ok(DomainEvent::PersonEnrichmentRequested {
                 person_id: PersonId::from_uuid(parse_uuid(&person_id, "person_id")?),
-                external_person_id,
+                external_person_id: ExternalPersonId::new(external_person_id),
             }),
         }
     }
