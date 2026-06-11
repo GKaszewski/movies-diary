@@ -41,6 +41,7 @@ pub struct WorkerDbOutput {
     pub goal: Arc<dyn domain::ports::GoalRepository>,
     pub user_settings: Arc<dyn domain::ports::UserSettingsRepository>,
     pub remote_goal: Arc<dyn domain::ports::RemoteGoalRepository>,
+    pub refresh_session: Arc<dyn domain::ports::RefreshSessionRepository>,
     pub db_pool: DbPool,
 }
 
@@ -86,6 +87,7 @@ pub async fn connect(database_url: &str, backend: &str) -> anyhow::Result<Worker
                 goal: w.goal,
                 user_settings: w.user_settings,
                 remote_goal: w.remote_goal,
+                refresh_session: Arc::new(domain::testing::PanicRefreshSessionRepository) as _,
                 db_pool: DbPool::Postgres(w.pool),
             })
         }
@@ -128,6 +130,7 @@ pub async fn connect(database_url: &str, backend: &str) -> anyhow::Result<Worker
                 goal: w.goal,
                 user_settings: w.user_settings,
                 remote_goal: w.remote_goal,
+                refresh_session: Arc::new(domain::testing::PanicRefreshSessionRepository) as _,
                 db_pool: DbPool::Sqlite(w.pool),
             })
         }

@@ -6,15 +6,15 @@ use crate::{
         AnnotatedRow, DiaryEntry, DiaryFilter, EntityType, ExportFormat, ExternalPersonId,
         FeedEntry, FieldMapping, FileFormat, ImportError, ImportProfile, ImportSession,
         IndexableDocument, MovieProfile, MovieStats, ParsedFile, Person, PersonCredits,
-        PersonEnrichmentData, PersonId, ReviewHistory, SearchQuery, SearchResults, UserStats,
-        UserTrends,
+        PersonEnrichmentData, PersonId, RefreshSession, ReviewHistory, SearchQuery, SearchResults,
+        UserStats, UserTrends,
         collections::{PageParams, Paginated},
     },
     ports::{
         DiaryExporter, DiaryRepository, DocumentParser, FeedSortBy, FollowingFilter,
         ImportProfileRepository, ImportSessionRepository, MovieProfileRepository, PersonCommand,
-        PersonQuery, PosterFetcherClient, SearchCommand, SearchPort, StatsRepository,
-        UserProfileFieldsRepository,
+        PersonQuery, PosterFetcherClient, RefreshSessionRepository, SearchCommand, SearchPort,
+        StatsRepository, UserProfileFieldsRepository,
     },
     value_objects::{ImportProfileId, ImportSessionId, MovieId, PosterUrl, UserId},
 };
@@ -101,6 +101,27 @@ impl ImportSessionRepository for PanicImportSessionRepository {
     }
     async fn delete_expired_for_user(&self, _: &UserId) -> Result<(), DomainError> {
         panic!("PanicImportSessionRepository called")
+    }
+}
+
+pub struct PanicRefreshSessionRepository;
+
+#[async_trait]
+impl RefreshSessionRepository for PanicRefreshSessionRepository {
+    async fn create(&self, _: &RefreshSession) -> Result<(), DomainError> {
+        panic!("PanicRefreshSessionRepository called")
+    }
+    async fn get_by_token(&self, _: &str) -> Result<Option<RefreshSession>, DomainError> {
+        panic!("PanicRefreshSessionRepository called")
+    }
+    async fn revoke(&self, _: &str) -> Result<(), DomainError> {
+        panic!("PanicRefreshSessionRepository called")
+    }
+    async fn revoke_all_for_user(&self, _: &UserId) -> Result<(), DomainError> {
+        panic!("PanicRefreshSessionRepository called")
+    }
+    async fn delete_expired(&self) -> Result<u64, DomainError> {
+        panic!("PanicRefreshSessionRepository called")
     }
 }
 

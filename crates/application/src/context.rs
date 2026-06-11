@@ -4,10 +4,11 @@ use domain::ports::{
     AuthService, DiaryExporter, DiaryRepository, DocumentParser, EventPublisher, GoalRepository,
     ImportProfileRepository, ImportSessionRepository, MetadataClient, MovieProfileRepository,
     MovieRepository, ObjectStorage, PasswordHasher, PersonCommand, PersonEnrichmentClient,
-    PersonQuery, PosterFetcherClient, RemoteGoalRepository, RemoteWatchlistRepository,
-    ReviewRepository, SearchCommand, SearchPort, SocialQueryPort, StatsRepository,
-    UserProfileFieldsRepository, UserRepository, UserSettingsRepository, WatchEventRepository,
-    WatchlistRepository, WebhookTokenRepository, WrapUpRepository, WrapUpStatsQuery,
+    PersonQuery, PosterFetcherClient, RefreshSessionRepository, RemoteGoalRepository,
+    RemoteWatchlistRepository, ReviewRepository, SearchCommand, SearchPort, SocialQueryPort,
+    StatsRepository, UserProfileFieldsRepository, UserRepository, UserSettingsRepository,
+    WatchEventRepository, WatchlistRepository, WebhookTokenRepository, WrapUpRepository,
+    WrapUpStatsQuery,
 };
 
 use crate::config::AppConfig;
@@ -38,6 +39,7 @@ pub struct Repositories {
     pub goal: Arc<dyn GoalRepository>,
     pub user_settings: Arc<dyn UserSettingsRepository>,
     pub remote_goal: Arc<dyn RemoteGoalRepository>,
+    pub refresh_session: Arc<dyn RefreshSessionRepository>,
 }
 
 #[derive(Clone)]

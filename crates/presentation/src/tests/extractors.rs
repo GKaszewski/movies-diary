@@ -730,6 +730,31 @@ impl domain::ports::RemoteGoalRepository for Panic {
 }
 
 #[async_trait::async_trait]
+impl domain::ports::RefreshSessionRepository for Panic {
+    async fn create(&self, _: &domain::models::RefreshSession) -> Result<(), DomainError> {
+        panic!()
+    }
+    async fn get_by_token(
+        &self,
+        _: &str,
+    ) -> Result<Option<domain::models::RefreshSession>, DomainError> {
+        panic!()
+    }
+    async fn revoke(&self, _: &str) -> Result<(), DomainError> {
+        panic!()
+    }
+    async fn revoke_all_for_user(
+        &self,
+        _: &domain::value_objects::UserId,
+    ) -> Result<(), DomainError> {
+        panic!()
+    }
+    async fn delete_expired(&self) -> Result<u64, DomainError> {
+        panic!()
+    }
+}
+
+#[async_trait::async_trait]
 impl application::ports::ReviewLogger for Panic {
     async fn log_review(
         &self,
@@ -769,6 +794,7 @@ pub fn make_test_state(auth_service: Arc<dyn AuthService>) -> crate::state::AppS
                 goal: Arc::clone(&repo) as _,
                 user_settings: Arc::clone(&repo) as _,
                 remote_goal: Arc::clone(&repo) as _,
+                refresh_session: Arc::clone(&repo) as _,
             },
             services: Services {
                 auth: auth_service,

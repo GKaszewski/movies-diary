@@ -458,6 +458,7 @@ async fn test_app() -> Router {
                 goal: Arc::new(domain::testing::NoopGoalRepository),
                 user_settings: Arc::new(domain::testing::NoopUserSettingsRepository),
                 remote_goal: Arc::new(domain::testing::NoopRemoteGoalRepository),
+                refresh_session: Arc::new(domain::testing::PanicRefreshSessionRepository),
             },
             services: Services {
                 auth: Arc::new(PanicAuth),

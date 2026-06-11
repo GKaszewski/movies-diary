@@ -9,10 +9,10 @@ use domain::{
         AuthService, DiaryExporter, DiaryRepository, DocumentParser, EventPublisher,
         GoalRepository, ImportProfileRepository, ImportSessionRepository, MetadataClient,
         MovieProfileRepository, MovieRepository, ObjectStorage, PasswordHasher, PersonCommand,
-        PersonQuery, PosterFetcherClient, ReviewRepository, SearchCommand, SearchPort,
-        StatsRepository, UserProfileFieldsRepository, UserRepository, UserSettingsRepository,
-        WatchEventRepository, WatchlistRepository, WebhookTokenRepository, WrapUpRepository,
-        WrapUpStatsQuery,
+        PersonQuery, PosterFetcherClient, RefreshSessionRepository, ReviewRepository,
+        SearchCommand, SearchPort, StatsRepository, UserProfileFieldsRepository, UserRepository,
+        UserSettingsRepository, WatchEventRepository, WatchlistRepository,
+        WebhookTokenRepository, WrapUpRepository, WrapUpStatsQuery,
     },
     testing::{
         FakeAuthService, FakeDiaryRepository, FakeDocumentParser, FakeMetadataClient,
@@ -22,6 +22,7 @@ use domain::{
         InMemoryReviewRepository, InMemoryUserRepository, InMemoryUserSettingsRepository,
         InMemoryWatchEventRepository, InMemoryWatchlistRepository, InMemoryWebhookTokenRepository,
         NoopEventPublisher, NoopObjectStorage, PanicDiaryExporter, PanicPersonCommand,
+        PanicRefreshSessionRepository,
     },
 };
 
@@ -75,6 +76,7 @@ pub struct TestContextBuilder {
     pub user_settings_repo: Arc<dyn UserSettingsRepository>,
     pub review_logger: Arc<dyn ReviewLogger>,
     pub social_query: Arc<dyn domain::ports::SocialQueryPort>,
+    pub refresh_session_repo: Arc<dyn RefreshSessionRepository>,
     pub config: AppConfig,
 }
 
@@ -117,6 +119,7 @@ impl TestContextBuilder {
             user_settings_repo: InMemoryUserSettingsRepository::new(),
             review_logger: Arc::new(NoopReviewLogger),
             social_query: Arc::new(NoopSocialQueryPort),
+            refresh_session_repo: Arc::new(PanicRefreshSessionRepository),
             config: AppConfig {
                 allow_registration: true,
                 base_url: "http://localhost:3000".into(),
@@ -286,6 +289,7 @@ impl TestContextBuilder {
                 goal: self.goal_repo,
                 user_settings: self.user_settings_repo,
                 remote_goal: Arc::new(domain::testing::NoopRemoteGoalRepository),
+                refresh_session: self.refresh_session_repo,
             },
             services: Services {
                 auth: self.auth_service,

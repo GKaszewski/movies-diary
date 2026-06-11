@@ -1,6 +1,7 @@
 mod enrichment;
 mod feed;
 mod movie;
+mod refresh_session;
 mod review;
 mod stats;
 mod user;
@@ -43,6 +44,7 @@ pub use import::{
 };
 pub use import_profile::ImportProfile;
 pub use import_session::ImportSession;
+pub use refresh_session::RefreshSession;
 pub use person::{
     CastCredit, CrewCredit, ExternalPersonId, Person, PersonCredits, PersonEnrichmentData, PersonId,
 };

@@ -8,7 +8,7 @@ use crate::{
     models::wrapup::WrapUpReport,
     models::{
         AnnotatedRow, DiaryEntry, DiaryFilter, EntityType, ExportFormat, ExternalPersonId,
-        FeedEntry, FieldMapping, FileFormat, Goal, ImportError, ImportProfile, ImportSession,
+        FeedEntry, FieldMapping, FileFormat, Goal, ImportError, ImportProfile, ImportSession, RefreshSession,
         IndexableDocument, Movie, MovieFilter, MovieProfile, MovieStats, MovieSummary, ParsedFile,
         ParsedPlaybackEvent, Person, PersonCredits, PersonEnrichmentData, PersonId,
         RemoteGoalEntry, RemoteWatchlistEntry, Review, ReviewHistory, SearchQuery, SearchResults,
@@ -309,6 +309,15 @@ pub trait ImportSessionRepository: Send + Sync {
     async fn delete(&self, id: &ImportSessionId) -> Result<(), DomainError>;
     async fn delete_expired(&self) -> Result<u64, DomainError>;
     async fn delete_expired_for_user(&self, user_id: &UserId) -> Result<(), DomainError>;
+}
+
+#[async_trait]
+pub trait RefreshSessionRepository: Send + Sync {
+    async fn create(&self, session: &RefreshSession) -> Result<(), DomainError>;
+    async fn get_by_token(&self, token: &str) -> Result<Option<RefreshSession>, DomainError>;
+    async fn revoke(&self, token: &str) -> Result<(), DomainError>;
+    async fn revoke_all_for_user(&self, user_id: &UserId) -> Result<(), DomainError>;
+    async fn delete_expired(&self) -> Result<u64, DomainError>;
 }
 
 #[async_trait]

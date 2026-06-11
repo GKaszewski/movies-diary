@@ -108,6 +108,7 @@ async fn main() -> anyhow::Result<()> {
             goal: db.goal,
             user_settings: db.user_settings,
             remote_goal: db.remote_goal,
+            refresh_session: db.refresh_session,
         },
         services: Services {
             auth: auth_service,

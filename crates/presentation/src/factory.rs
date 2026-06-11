@@ -3,7 +3,8 @@ use std::sync::Arc;
 use anyhow::Context;
 use domain::ports::{
     AuthService, LocalApContentQuery, MetadataClient, ObjectStorage, PasswordHasher,
-    PosterFetcherClient, UserProfileFieldsRepository, WatchEventRepository, WebhookTokenRepository,
+    PosterFetcherClient, RefreshSessionRepository, UserProfileFieldsRepository,
+    WatchEventRepository, WebhookTokenRepository,
 };
 
 pub enum DbPool {
@@ -36,6 +37,7 @@ pub struct DatabaseOutput {
     pub goal: Arc<dyn domain::ports::GoalRepository>,
     pub user_settings: Arc<dyn domain::ports::UserSettingsRepository>,
     pub remote_goal: Arc<dyn domain::ports::RemoteGoalRepository>,
+    pub refresh_session: Arc<dyn RefreshSessionRepository>,
     pub db_pool: DbPool,
 }
 
@@ -77,6 +79,7 @@ pub async fn build_database_adapters(backend: &str, url: &str) -> anyhow::Result
                 goal: w.goal,
                 user_settings: w.user_settings,
                 remote_goal: w.remote_goal,
+                refresh_session: Arc::new(domain::testing::PanicRefreshSessionRepository) as _,
                 db_pool: DbPool::Postgres(w.pool),
             })
         }
@@ -115,6 +118,7 @@ pub async fn build_database_adapters(backend: &str, url: &str) -> anyhow::Result
                 goal: w.goal,
                 user_settings: w.user_settings,
                 remote_goal: w.remote_goal,
+                refresh_session: Arc::new(domain::testing::PanicRefreshSessionRepository) as _,
                 db_pool: DbPool::Sqlite(w.pool),
             })
         }
