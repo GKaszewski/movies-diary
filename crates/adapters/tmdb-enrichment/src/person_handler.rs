@@ -1,32 +1,19 @@
-use std::sync::Arc;
-
 use async_trait::async_trait;
-use chrono::Utc;
 use domain::{
     errors::DomainError,
     events::DomainEvent,
-    ports::{EventHandler, PersonCommand, PersonEnrichmentClient, PersonQuery},
+    ports::EventHandler,
 };
 
-const STALENESS_DAYS: i64 = 90;
+use application::context::AppContext;
 
 pub struct PersonEnrichmentHandler {
-    enrichment_client: Arc<dyn PersonEnrichmentClient>,
-    person_query: Arc<dyn PersonQuery>,
-    person_command: Arc<dyn PersonCommand>,
+    ctx: AppContext,
 }
 
 impl PersonEnrichmentHandler {
-    pub fn new(
-        enrichment_client: Arc<dyn PersonEnrichmentClient>,
-        person_query: Arc<dyn PersonQuery>,
-        person_command: Arc<dyn PersonCommand>,
-    ) -> Self {
-        Self {
-            enrichment_client,
-            person_query,
-            person_command,
-        }
+    pub fn new(ctx: AppContext) -> Self {
+        Self { ctx }
     }
 }
 
@@ -41,21 +28,6 @@ impl EventHandler for PersonEnrichmentHandler {
             _ => return Ok(()),
         };
 
-        if let Some(person) = self.person_query.get_by_id(&person_id).await?
-            && let Some(at) = person.enriched_at()
-            && (Utc::now() - at).num_days() < STALENESS_DAYS
-        {
-            tracing::debug!(person_id = %person_id.value(), "person enrichment still fresh");
-            return Ok(());
-        }
-
-        tracing::info!(person_id = %person_id.value(), "enriching person from TMDb");
-        let data = self
-            .enrichment_client
-            .fetch_details(&external_person_id)
-            .await?;
-        self.person_command
-            .update_enrichment(&person_id, &data)
-            .await
+        application::person::enrich::execute(&self.ctx, person_id, &external_person_id).await
     }
 }
