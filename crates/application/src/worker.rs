@@ -65,12 +65,22 @@ impl WorkerService {
 }
 
 async fn dispatch(handlers: Arc<Vec<Arc<dyn EventHandler>>>, envelope: EventEnvelope) {
+    let mut any_transient = false;
     for handler in handlers.iter() {
         if let Err(e) = handler.handle(&envelope.event).await {
-            tracing::warn!("event handler error (non-fatal): {e}");
+            if e.is_transient() {
+                tracing::warn!("transient handler error, will retry: {e}");
+                any_transient = true;
+            } else {
+                tracing::warn!("permanent handler error (not retrying): {e}");
+            }
         }
     }
-    if let Err(e) = envelope.ack().await {
+    if any_transient {
+        if let Err(e) = envelope.nack().await {
+            tracing::error!("nack failed: {e}");
+        }
+    } else if let Err(e) = envelope.ack().await {
         tracing::error!("ack failed: {e}");
     }
 }
