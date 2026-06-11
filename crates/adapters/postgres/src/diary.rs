@@ -1,5 +1,4 @@
 use async_trait::async_trait;
-use futures::stream::BoxStream;
 use domain::{
     errors::DomainError,
     models::{
@@ -9,6 +8,7 @@ use domain::{
     ports::DiaryRepository,
     value_objects::{MovieId, UserId},
 };
+use futures::stream::BoxStream;
 use sqlx::PgPool;
 
 use crate::models::{DiaryRow, FeedRow, MovieRow, MovieStatsRow, ReviewRow};

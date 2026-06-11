@@ -19,8 +19,10 @@ async fn collect_stream(
 
 fn entry_stream(
     entries: Vec<domain::models::DiaryEntry>,
-) -> futures::stream::BoxStream<'static, Result<domain::models::DiaryEntry, domain::errors::DomainError>>
-{
+) -> futures::stream::BoxStream<
+    'static,
+    Result<domain::models::DiaryEntry, domain::errors::DomainError>,
+> {
     Box::pin(futures::stream::iter(entries.into_iter().map(Ok)))
 }
 
@@ -122,12 +124,17 @@ async fn external_metadata_id_included_when_present() {
     let arr: Vec<serde_json::Value> = serde_json::from_slice(&bytes).unwrap();
     assert_eq!(arr[0]["external_metadata_id"], "tt0078748");
 
-    let bytes = collect_stream(
-        adapter.stream_entries(
-            entry_stream(vec![make_entry_full("Alien", 1979, None, 5, None, Some("tt0078748"))]),
-            ExportFormat::Csv,
-        ),
-    )
+    let bytes = collect_stream(adapter.stream_entries(
+        entry_stream(vec![make_entry_full(
+            "Alien",
+            1979,
+            None,
+            5,
+            None,
+            Some("tt0078748"),
+        )]),
+        ExportFormat::Csv,
+    ))
     .await;
     let text = String::from_utf8(bytes).unwrap();
     assert!(text.contains("tt0078748"));
