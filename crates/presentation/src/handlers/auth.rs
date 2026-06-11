@@ -17,7 +17,7 @@ use crate::{
     render::render_page,
     state::AppState,
 };
-use api_types::{LoginRequest, LoginResponse, RegisterRequest};
+use api_types::{LoginRequest, LoginResponse, LogoutRequest, RefreshRequest, RefreshResponse, RegisterRequest};
 use application::ports::HtmlPageContext;
 use template_askama::{LoginTemplate, RegisterTemplate};
 
@@ -68,6 +68,7 @@ pub async fn login(
     .await?;
     Ok(Json(LoginResponse {
         token: result.token,
+        refresh_token: result.refresh_token,
         user_id: result.user_id,
         email: result.email,
         expires_at: result.expires_at.to_rfc3339(),
@@ -98,6 +99,41 @@ pub async fn register(
     )
     .await?;
     Ok(StatusCode::CREATED)
+}
+
+#[utoipa::path(
+    post, path = "/api/v1/auth/refresh",
+    request_body = RefreshRequest,
+    responses(
+        (status = 200, body = RefreshResponse),
+        (status = 401, description = "Invalid or expired refresh token"),
+    )
+)]
+pub async fn refresh(
+    State(state): State<AppState>,
+    Json(req): Json<RefreshRequest>,
+) -> Result<Json<RefreshResponse>, ApiError> {
+    let result = application::auth::refresh::execute(&state.app_ctx, &req.refresh_token).await?;
+    Ok(Json(RefreshResponse {
+        token: result.token,
+        refresh_token: result.refresh_token,
+        expires_at: result.expires_at.to_rfc3339(),
+    }))
+}
+
+#[utoipa::path(
+    post, path = "/api/v1/auth/logout",
+    request_body = LogoutRequest,
+    responses(
+        (status = 204, description = "Logged out"),
+    )
+)]
+pub async fn api_logout(
+    State(state): State<AppState>,
+    Json(req): Json<LogoutRequest>,
+) -> StatusCode {
+    let _ = application::auth::logout::execute(&state.app_ctx, &req.refresh_token).await;
+    StatusCode::NO_CONTENT
 }
 
 // ── HTML ─────────────────────────────────────────────────────────────────────

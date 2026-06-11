@@ -326,6 +326,8 @@ fn api_routes(rate_limit: u64) -> Router<AppState> {
         )
         .route("/auth/login", routing::post(handlers::auth::login))
         .route("/auth/register", routing::post(handlers::auth::register))
+        .route("/auth/refresh", routing::post(handlers::auth::refresh))
+        .route("/auth/logout", routing::post(handlers::auth::api_logout))
         .route("/diary/export", routing::get(handlers::diary::export_diary))
         .route(
             "/activity-feed",
