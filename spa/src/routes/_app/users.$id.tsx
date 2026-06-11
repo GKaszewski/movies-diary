@@ -25,11 +25,10 @@ function UserProfilePage() {
   const unfollowMutation = useUnfollow()
 
   const [search, setSearch] = useState("")
+  useDocumentTitle(data?.username)
 
   if (isPending) return <ProfileSkeleton />
   if (!data) return null
-
-  useDocumentTitle(data?.username)
   const isSelf = auth?.user_id === id
   const isFollowing = followingData?.actors.some((a) => a.handle === data.username) ?? false
 

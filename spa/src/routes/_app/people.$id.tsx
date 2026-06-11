@@ -17,12 +17,12 @@ function PersonDetailPage() {
   const { t } = useTranslation()
   const { id } = Route.useParams()
   const { data, isPending } = usePersonCredits(id)
+  useDocumentTitle(data?.person.name)
 
   if (isPending) return <PersonSkeleton />
   if (!data) return null
 
   const { person, cast, crew } = data
-  useDocumentTitle(person.name)
 
   return (
     <div className="space-y-4 p-4">

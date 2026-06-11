@@ -30,12 +30,12 @@ function MovieDetailPage() {
   const { data, isPending } = useMovie(id)
   const { data: profile } = useMovieProfile(id)
   const { data: history } = useMovieHistory(id)
+  useDocumentTitle(data?.movie.title)
 
   if (isPending) return <DetailSkeleton />
   if (!data) return null
 
   const { movie, stats, reviews } = data
-  useDocumentTitle(movie.title)
   const hasStats = profile && (profile.budget_usd != null || profile.revenue_usd != null || profile.vote_average != null)
 
   return (
