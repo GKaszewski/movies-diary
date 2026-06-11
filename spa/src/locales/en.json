@@ -126,6 +126,16 @@
     "searchPlaceholder": "Search entries...",
     "watchedAgo": "Watched {{when}}"
   },
+  "person": {
+    "biography": "Biography",
+    "birthday": "Born",
+    "deathday": "Died",
+    "placeOfBirth": "Birthplace",
+    "alsoKnownAs": "Also Known As",
+    "links": "Links",
+    "homepage": "Homepage",
+    "imdb": "IMDb"
+  },
   "social": {
     "title": "Social",
     "following": "Following",

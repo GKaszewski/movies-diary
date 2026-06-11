@@ -45,6 +45,14 @@ export const personDtoSchema = z.object({
   name: z.string(),
   known_for_department: z.string().optional(),
   profile_path: z.string().optional(),
+  biography: z.string().optional(),
+  birthday: z.string().optional(),
+  deathday: z.string().optional(),
+  place_of_birth: z.string().optional(),
+  also_known_as: z.array(z.string()).default([]),
+  homepage: z.string().optional(),
+  imdb_url: z.string().optional(),
+  enriched: z.boolean().default(false),
 })
 export type PersonDto = z.infer<typeof personDtoSchema>
 

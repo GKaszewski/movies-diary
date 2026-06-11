@@ -1,13 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { useTranslation } from "react-i18next"
-import { Film, User } from "lucide-react"
+import { Calendar, ExternalLink, Film, Globe, MapPin, User } from "lucide-react"
 import { BackButton } from "@/components/back-button"
 import { MovieCard } from "@/components/movie-card"
 import { EmptyState } from "@/components/empty-state"
+import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { tmdbProfileUrl } from "@/lib/api/client"
 import { usePersonCredits } from "@/hooks/use-search"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { shortDate } from "@/lib/date"
 
 export const Route = createFileRoute("/_app/people/$id")({
   component: PersonDetailPage,
@@ -28,24 +30,80 @@ function PersonDetailPage() {
     <div className="space-y-4 p-4">
       <BackButton />
 
-      <div className="flex items-center gap-4">
-        <div className="size-16 flex-shrink-0 overflow-hidden rounded-full bg-muted">
+      {/* Header */}
+      <div className="flex gap-4">
+        <div className="size-20 flex-shrink-0 overflow-hidden rounded-xl bg-muted">
           {person.profile_path ? (
             <img src={tmdbProfileUrl(person.profile_path)} alt="" className="size-full object-cover" />
           ) : (
             <div className="flex size-full items-center justify-center">
-              <User className="size-6 text-muted-foreground/40" />
+              <User className="size-8 text-muted-foreground/40" />
             </div>
           )}
         </div>
-        <div>
+        <div className="min-w-0 flex-1">
           <h1 className="text-xl font-bold">{person.name}</h1>
           {person.known_for_department && (
             <p className="text-sm text-muted-foreground">{person.known_for_department}</p>
           )}
+          {person.birthday && (
+            <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Calendar className="size-3" />
+              {shortDate(person.birthday)}
+              {person.deathday && ` — ${shortDate(person.deathday)}`}
+            </p>
+          )}
+          {person.place_of_birth && (
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <MapPin className="size-3" />
+              {person.place_of_birth}
+            </p>
+          )}
         </div>
       </div>
 
+      {/* Links */}
+      {(person.homepage || person.imdb_url) && (
+        <div className="flex gap-2">
+          {person.imdb_url && (
+            <a href={person.imdb_url} target="_blank" rel="noopener noreferrer">
+              <Badge variant="secondary" className="gap-1">
+                <ExternalLink className="size-3" />
+                {t("person.imdb")}
+              </Badge>
+            </a>
+          )}
+          {person.homepage && (
+            <a href={person.homepage} target="_blank" rel="noopener noreferrer">
+              <Badge variant="secondary" className="gap-1">
+                <Globe className="size-3" />
+                {t("person.homepage")}
+              </Badge>
+            </a>
+          )}
+        </div>
+      )}
+
+      {/* Biography */}
+      {person.biography && (
+        <p className="text-sm leading-relaxed text-muted-foreground">{person.biography}</p>
+      )}
+
+      {/* Also known as */}
+      {person.also_known_as.length > 0 && (
+        <div>
+          <p className="mb-1 text-xs font-medium text-muted-foreground">{t("person.alsoKnownAs")}</p>
+          <div className="flex flex-wrap gap-1">
+            {person.also_known_as.map((name) => (
+              <Badge key={name} variant="outline" className="text-xs font-normal">
+                {name}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Cast credits */}
       {cast.length > 0 && (
         <section>
           <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -70,6 +128,7 @@ function PersonDetailPage() {
         </section>
       )}
 
+      {/* Crew credits */}
       {crew.length > 0 && (
         <section>
           <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
