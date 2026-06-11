@@ -24,6 +24,8 @@ function ProfilePage() {
     view: "trends",
   })
 
+  const [search, setSearch] = useState("")
+
   if (!auth) return null
   if (isPending) return <ProfileSkeleton />
   if (!data) return null
@@ -39,6 +41,8 @@ function ProfilePage() {
 
       <ProfileView
         data={data}
+        search={search}
+        onSearchChange={setSearch}
         actions={
           <>
             <GoalSection goals={data.goals ?? []} />

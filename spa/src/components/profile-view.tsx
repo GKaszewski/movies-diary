@@ -2,11 +2,12 @@ import { Link } from "@tanstack/react-router"
 import { useCallback } from "react"
 import { useTranslation } from "react-i18next"
 import { Bar, BarChart, XAxis, YAxis } from "recharts"
-import { User } from "lucide-react"
+import { Search, User } from "lucide-react"
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Input } from "@/components/ui/input"
 import { MovieCard } from "@/components/movie-card"
 import { EmptyState } from "@/components/empty-state"
 import { SwipeTabs } from "@/components/swipe-tabs"
@@ -19,6 +20,8 @@ type ProfileViewProps = {
   actions?: React.ReactNode
   headerRight?: React.ReactNode
   userId?: string
+  search?: string
+  onSearchChange?: (value: string) => void
 }
 
 export function ProfileView({
@@ -26,6 +29,8 @@ export function ProfileView({
   actions,
   headerRight,
   userId,
+  search,
+  onSearchChange,
 }: ProfileViewProps) {
   const { t } = useTranslation()
   const initial = (data.username || "?")[0]?.toUpperCase() ?? "?"
@@ -72,6 +77,18 @@ export function ProfileView({
         </Link>
       </div>
 
+      {onSearchChange && (
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder={t("profile.searchPlaceholder")}
+            value={search ?? ""}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+      )}
+
       {actions}
 
       <SwipeTabs
@@ -82,13 +99,14 @@ export function ProfileView({
         {(tab) => (
           <>
             {tab === "recent" && (
-              <DiaryTab key="date_desc" sortBy="date_desc" userId={userId} />
+              <DiaryTab key="date_desc" sortBy="date_desc" userId={userId} search={search} />
             )}
             {tab === "top_rated" && (
               <DiaryTab
                 key="rating_desc"
                 sortBy="rating_desc"
                 userId={userId}
+                search={search}
               />
             )}
             {tab === "trends" && <TrendsView data={data} />}
@@ -108,19 +126,24 @@ function StatCell({ label, value }: { label: string; value: string | number }) {
   )
 }
 
-function DiaryTab({ sortBy }: { sortBy: string; userId?: string }) {
+function DiaryTab({ sortBy, search }: { sortBy: string; userId?: string; search?: string }) {
   const { t } = useTranslation()
   const { data, isPending, hasNextPage, isFetchingNextPage, fetchNextPage } =
     useInfiniteDiary({ sort_by: sortBy, movie_id: undefined })
   const items = data?.pages.flatMap((p) => p.items) ?? []
+  const filtered = search
+    ? items.filter((e) =>
+        e.movie.title.toLowerCase().includes(search.toLowerCase())
+      )
+    : items
   const loadMore = useCallback(() => fetchNextPage(), [fetchNextPage])
 
   if (isPending) return <Skeleton className="h-40 w-full rounded-xl" />
-  if (!items.length) return <EmptyState icon={User} title={t("profile.noEntries")} />
+  if (!filtered.length) return <EmptyState icon={User} title={t("profile.noEntries")} />
 
   return (
     <VirtualList
-      items={items}
+      items={filtered}
       estimateSize={52}
       hasMore={!!hasNextPage}
       isFetching={isFetchingNextPage}

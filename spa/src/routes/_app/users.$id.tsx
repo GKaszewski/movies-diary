@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router"
+import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { UserCheck, UserPlus } from "lucide-react"
 import { BackButton } from "@/components/back-button"
@@ -22,6 +23,8 @@ function UserProfilePage() {
   const followMutation = useFollow()
   const unfollowMutation = useUnfollow()
 
+  const [search, setSearch] = useState("")
+
   if (isPending) return <ProfileSkeleton />
   if (!data) return null
 
@@ -35,6 +38,8 @@ function UserProfilePage() {
       <ProfileView
         data={data}
         userId={id}
+        search={search}
+        onSearchChange={setSearch}
         actions={
           data.goals?.length ? (
             <div className="space-y-2">

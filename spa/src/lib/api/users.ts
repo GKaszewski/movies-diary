@@ -21,6 +21,7 @@ export const userProfileQueryParamsSchema = z.object({
   view: z.string().optional(),
   limit: z.number().optional(),
   offset: z.number().optional(),
+  search: z.string().optional(),
 })
 export type UserProfileQueryParams = z.infer<typeof userProfileQueryParamsSchema>
 
