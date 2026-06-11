@@ -11,7 +11,10 @@ async fn pool_with_schema() -> SqlitePool {
         "CREATE TABLE persons (
             id TEXT PRIMARY KEY, external_id TEXT NOT NULL UNIQUE,
             tmdb_person_id INTEGER UNIQUE, name TEXT NOT NULL,
-            known_for_department TEXT, profile_path TEXT
+            known_for_department TEXT, profile_path TEXT,
+            biography TEXT, birthday TEXT, deathday TEXT,
+            place_of_birth TEXT, also_known_as TEXT,
+            homepage TEXT, imdb_id TEXT, enriched_at TEXT
         )",
     )
     .execute(&pool)
