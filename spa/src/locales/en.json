@@ -23,7 +23,9 @@
     "run": "Run",
     "reviews": "{{count}} reviews",
     "films": "{{count}} films",
-    "filmsAvg": "{{count}} films, avg {{avg}}"
+    "filmsAvg": "{{count}} films, avg {{avg}}",
+    "more": "Show more",
+    "less": "Show less"
   },
   "nav": {
     "home": "Home",
