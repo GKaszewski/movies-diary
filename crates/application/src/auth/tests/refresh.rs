@@ -81,9 +81,7 @@ async fn refresh_with_new_token_works() {
         .await
         .unwrap();
 
-    let second = refresh::execute(&ctx, &first.refresh_token)
-        .await
-        .unwrap();
+    let second = refresh::execute(&ctx, &first.refresh_token).await.unwrap();
 
     assert!(!second.token.is_empty());
     assert_ne!(second.refresh_token, first.refresh_token);
