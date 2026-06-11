@@ -15,7 +15,10 @@ use export::ExportAdapter;
 use importer::ImporterDocumentParser;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use domain::ports::{DiaryExporter, DocumentParser, EventHandler, PeriodicJob};
+use domain::ports::{
+    DiaryExporter, DocumentParser, EventHandler, MovieEnrichmentClient, PeriodicJob,
+    PersonEnrichmentClient,
+};
 
 #[cfg(not(any(feature = "sqlite", feature = "postgres")))]
 compile_error!(
@@ -74,7 +77,7 @@ async fn main() -> anyhow::Result<()> {
         Arc::clone(&event_publisher_arc),
     ));
 
-    let ctx = AppContext {
+    let mut ctx = AppContext {
         repos: Repositories {
             movie: db.movie,
             review: db.review,
@@ -125,26 +128,38 @@ async fn main() -> anyhow::Result<()> {
     // Both the event handler and the staleness job are gated on TMDB_API_KEY.
     // Without a key, no MovieEnrichmentRequested events are produced or handled.
 
-    type OptionalPair = (Option<Arc<dyn EventHandler>>, Option<Arc<dyn PeriodicJob>>);
-    let (enrichment_handler, enrichment_job): OptionalPair =
+    type EnrichmentParts = (
+        Option<Arc<dyn EventHandler>>,
+        Option<Arc<dyn EventHandler>>,
+        Option<Arc<dyn PeriodicJob>>,
+    );
+    let (enrichment_handler, person_enrichment_handler, enrichment_job): EnrichmentParts =
         match tmdb_enrichment::TmdbEnrichmentClient::from_env() {
             Ok(client) => {
                 tracing::info!("TMDb enrichment enabled");
+                let client = Arc::new(client);
                 let handler = Arc::new(tmdb_enrichment::EnrichmentHandler::new(
-                    Arc::new(client),
+                    Arc::clone(&client) as Arc<dyn MovieEnrichmentClient>,
                     Arc::clone(&ctx.repos.movie),
                     Arc::clone(&ctx.repos.movie_profile),
                     Arc::clone(&ctx.repos.person_command),
                     Arc::clone(&ctx.repos.search_command),
                     Arc::clone(&ctx.services.object_storage),
                 )) as Arc<dyn EventHandler>;
+                let person_handler = Arc::new(tmdb_enrichment::PersonEnrichmentHandler::new(
+                    Arc::clone(&client) as Arc<dyn PersonEnrichmentClient>,
+                    Arc::clone(&ctx.repos.person_query),
+                    Arc::clone(&ctx.repos.person_command),
+                )) as Arc<dyn EventHandler>;
+                ctx.services.person_enrichment =
+                    Some(Arc::clone(&client) as Arc<dyn PersonEnrichmentClient>);
                 let job = Arc::new(application::jobs::EnrichmentStalenessJob::new(ctx.clone()))
                     as Arc<dyn PeriodicJob>;
-                (Some(handler), Some(job))
+                (Some(handler), Some(person_handler), Some(job))
             }
             Err(e) => {
                 tracing::warn!("TMDb enrichment disabled: {e}");
-                (None, None)
+                (None, None, None)
             }
         };
 
@@ -226,6 +241,9 @@ async fn main() -> anyhow::Result<()> {
             if let Some(e) = enrichment_handler {
                 h.push(e);
             }
+            if let Some(e) = person_enrichment_handler {
+                h.push(e);
+            }
             if let Some((ref conv_handler, _)) = conversion {
                 h.push(Arc::clone(conv_handler));
             }
@@ -280,6 +298,9 @@ async fn main() -> anyhow::Result<()> {
                 reindex_handler,
             ];
             if let Some(e) = enrichment_handler {
+                h.push(e);
+            }
+            if let Some(e) = person_enrichment_handler {
                 h.push(e);
             }
             if let Some((ref conv_handler, _)) = conversion {

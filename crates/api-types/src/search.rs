@@ -70,6 +70,21 @@ pub struct PersonDto {
     pub name: String,
     pub known_for_department: Option<String>,
     pub profile_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub biography: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub birthday: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub deathday: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub place_of_birth: Option<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub also_known_as: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub homepage: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub imdb_url: Option<String>,
+    pub enriched: bool,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
