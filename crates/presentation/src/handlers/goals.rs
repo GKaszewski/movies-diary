@@ -169,8 +169,11 @@ pub async fn get_settings(
     State(state): State<AppState>,
     user: AuthenticatedUser,
 ) -> Result<Json<UserSettingsDto>, ApiError> {
-    let settings =
-        application::users::get_settings::execute(&state.app_ctx, user.0.value()).await?;
+    let settings = application::users::get_settings::execute(
+        state.app_ctx.repos.user_settings.clone(),
+        user.0.value(),
+    )
+    .await?;
     Ok(Json(UserSettingsDto {
         federate_goals: settings.federate_goals(),
     }))
@@ -191,7 +194,7 @@ pub async fn update_settings(
     Json(req): Json<UpdateUserSettingsRequest>,
 ) -> Result<StatusCode, ApiError> {
     application::users::update_settings::execute(
-        &state.app_ctx,
+        state.app_ctx.repos.user_settings.clone(),
         application::users::update_settings::UpdateUserSettingsCommand {
             user_id: user.0.value(),
             federate_goals: req.federate_goals,

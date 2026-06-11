@@ -15,9 +15,9 @@ use crate::{
 #[tokio::test]
 async fn returns_profile_for_existing_user() {
     let users = InMemoryUserRepository::new();
-    let ctx = TestContextBuilder::new()
-        .with_users(Arc::clone(&users) as _)
-        .build();
+    let b = TestContextBuilder::new().with_users(Arc::clone(&users) as _);
+    let user_repo = b.user_repo.clone();
+    let ctx = b.build();
 
     register::execute(
         &ctx,
@@ -38,7 +38,7 @@ async fn returns_profile_for_existing_user() {
         .unwrap();
 
     let profile = get_current_profile::execute(
-        &ctx,
+        user_repo,
         GetCurrentProfileQuery {
             user_id: user.id().value(),
         },
@@ -51,10 +51,11 @@ async fn returns_profile_for_existing_user() {
 
 #[tokio::test]
 async fn fails_for_nonexistent_user() {
-    let ctx = TestContextBuilder::new().build();
+    let b = TestContextBuilder::new();
+    let user_repo = b.user_repo.clone();
 
     let result = get_current_profile::execute(
-        &ctx,
+        user_repo,
         GetCurrentProfileQuery {
             user_id: Uuid::new_v4(),
         },
@@ -89,12 +90,11 @@ async fn returns_profile_with_avatar_banner_and_fields() {
     );
     users.store.lock().unwrap().insert(uid.value(), user);
 
-    let ctx = TestContextBuilder::new()
-        .with_users(Arc::clone(&users) as _)
-        .build();
+    let b = TestContextBuilder::new().with_users(Arc::clone(&users) as _);
+    let user_repo = b.user_repo.clone();
 
     let profile = get_current_profile::execute(
-        &ctx,
+        user_repo,
         GetCurrentProfileQuery {
             user_id: uid.value(),
         },

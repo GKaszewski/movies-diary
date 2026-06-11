@@ -1,4 +1,5 @@
 pub mod commands;
+pub mod deps;
 pub mod get_current_profile;
 pub mod get_profile;
 pub mod get_settings;

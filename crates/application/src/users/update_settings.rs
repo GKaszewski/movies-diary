@@ -1,17 +1,20 @@
-use domain::{errors::DomainError, value_objects::UserId};
+use std::sync::Arc;
 
-use crate::context::AppContext;
+use domain::{errors::DomainError, ports::UserSettingsRepository, value_objects::UserId};
 
 pub struct UpdateUserSettingsCommand {
     pub user_id: uuid::Uuid,
     pub federate_goals: bool,
 }
 
-pub async fn execute(ctx: &AppContext, cmd: UpdateUserSettingsCommand) -> Result<(), DomainError> {
+pub async fn execute(
+    user_settings: Arc<dyn UserSettingsRepository>,
+    cmd: UpdateUserSettingsCommand,
+) -> Result<(), DomainError> {
     let uid = UserId::from_uuid(cmd.user_id);
-    let mut settings = ctx.repos.user_settings.get(&uid).await?;
+    let mut settings = user_settings.get(&uid).await?;
     settings.set_federate_goals(cmd.federate_goals);
-    ctx.repos.user_settings.save(&settings).await
+    user_settings.save(&settings).await
 }
 
 #[cfg(test)]

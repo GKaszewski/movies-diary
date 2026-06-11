@@ -1,18 +1,20 @@
+use std::sync::Arc;
+
 use domain::{
-    errors::DomainError, events::DomainEvent, models::UserProfile, value_objects::UserId,
+    errors::DomainError, events::DomainEvent, models::UserProfile, ports::{EventPublisher, UserProfileFieldsRepository}, value_objects::UserId,
 };
 
-use crate::{context::AppContext, users::commands::UpdateProfileFieldsCommand};
+use crate::users::commands::UpdateProfileFieldsCommand;
 
-pub async fn execute(ctx: &AppContext, cmd: UpdateProfileFieldsCommand) -> Result<(), DomainError> {
+pub async fn execute(
+    profile_fields: Arc<dyn UserProfileFieldsRepository>,
+    event_publisher: Arc<dyn EventPublisher>,
+    cmd: UpdateProfileFieldsCommand,
+) -> Result<(), DomainError> {
     UserProfile::validate_custom_fields(&cmd.fields)?;
     let user_id = UserId::from_uuid(cmd.user_id);
-    ctx.repos
-        .profile_fields
-        .set_fields(&user_id, cmd.fields)
-        .await?;
-    ctx.services
-        .event_publisher
+    profile_fields.set_fields(&user_id, cmd.fields).await?;
+    event_publisher
         .publish(&DomainEvent::UserUpdated { user_id })
         .await?;
     Ok(())

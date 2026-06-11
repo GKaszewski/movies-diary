@@ -4,12 +4,28 @@ use domain::value_objects::Email;
 use crate::auth::commands::RegisterCommand;
 use crate::auth::register;
 use crate::test_helpers::TestContextBuilder;
+use crate::users::deps::GetProfileDeps;
 use crate::users::get_profile;
 use crate::users::queries::{GetUserProfileQuery, ProfileView};
 
+fn default_deps() -> GetProfileDeps {
+    let b = TestContextBuilder::new();
+    GetProfileDeps {
+        stats: b.stats_repo.clone(),
+        diary: b.diary_repo.clone(),
+        social_query: b.social_query.clone(),
+    }
+}
+
 #[tokio::test]
 async fn returns_profile_with_empty_stats() {
-    let ctx = TestContextBuilder::new().build();
+    let b = TestContextBuilder::new();
+    let deps = GetProfileDeps {
+        stats: b.stats_repo.clone(),
+        diary: b.diary_repo.clone(),
+        social_query: b.social_query.clone(),
+    };
+    let ctx = b.build();
 
     register::execute(
         &ctx,
@@ -28,7 +44,7 @@ async fn returns_profile_with_empty_stats() {
     let uid = user.id().value();
 
     let result = get_profile::execute(
-        &ctx,
+        &deps,
         GetUserProfileQuery {
             user_id: uid,
             view: ProfileView::Recent,
@@ -47,7 +63,13 @@ async fn returns_profile_with_empty_stats() {
 
 #[tokio::test]
 async fn returns_history_view() {
-    let ctx = TestContextBuilder::new().build();
+    let b = TestContextBuilder::new();
+    let deps = GetProfileDeps {
+        stats: b.stats_repo.clone(),
+        diary: b.diary_repo.clone(),
+        social_query: b.social_query.clone(),
+    };
+    let ctx = b.build();
 
     register::execute(
         &ctx,
@@ -66,7 +88,7 @@ async fn returns_history_view() {
     let uid = user.id().value();
 
     let result = get_profile::execute(
-        &ctx,
+        &deps,
         GetUserProfileQuery {
             user_id: uid,
             view: ProfileView::History,
@@ -87,7 +109,13 @@ async fn returns_history_view() {
 
 #[tokio::test]
 async fn returns_trends_view() {
-    let ctx = TestContextBuilder::new().build();
+    let b = TestContextBuilder::new();
+    let deps = GetProfileDeps {
+        stats: b.stats_repo.clone(),
+        diary: b.diary_repo.clone(),
+        social_query: b.social_query.clone(),
+    };
+    let ctx = b.build();
 
     register::execute(
         &ctx,
@@ -106,7 +134,7 @@ async fn returns_trends_view() {
     let uid = user.id().value();
 
     let result = get_profile::execute(
-        &ctx,
+        &deps,
         GetUserProfileQuery {
             user_id: uid,
             view: ProfileView::Trends,
@@ -127,7 +155,13 @@ async fn returns_trends_view() {
 
 #[tokio::test]
 async fn returns_ratings_view() {
-    let ctx = TestContextBuilder::new().build();
+    let b = TestContextBuilder::new();
+    let deps = GetProfileDeps {
+        stats: b.stats_repo.clone(),
+        diary: b.diary_repo.clone(),
+        social_query: b.social_query.clone(),
+    };
+    let ctx = b.build();
 
     register::execute(
         &ctx,
@@ -146,7 +180,7 @@ async fn returns_ratings_view() {
     let uid = user.id().value();
 
     let result = get_profile::execute(
-        &ctx,
+        &deps,
         GetUserProfileQuery {
             user_id: uid,
             view: ProfileView::Ratings,
@@ -165,7 +199,13 @@ async fn returns_ratings_view() {
 
 #[tokio::test]
 async fn returns_recent_with_search() {
-    let ctx = TestContextBuilder::new().build();
+    let b = TestContextBuilder::new();
+    let deps = GetProfileDeps {
+        stats: b.stats_repo.clone(),
+        diary: b.diary_repo.clone(),
+        social_query: b.social_query.clone(),
+    };
+    let ctx = b.build();
 
     register::execute(
         &ctx,
@@ -184,7 +224,7 @@ async fn returns_recent_with_search() {
     let uid = user.id().value();
 
     let result = get_profile::execute(
-        &ctx,
+        &deps,
         GetUserProfileQuery {
             user_id: uid,
             view: ProfileView::Recent,
@@ -203,7 +243,13 @@ async fn returns_recent_with_search() {
 
 #[tokio::test]
 async fn non_own_profile_skips_pending_followers() {
-    let ctx = TestContextBuilder::new().build();
+    let b = TestContextBuilder::new();
+    let deps = GetProfileDeps {
+        stats: b.stats_repo.clone(),
+        diary: b.diary_repo.clone(),
+        social_query: b.social_query.clone(),
+    };
+    let ctx = b.build();
 
     register::execute(
         &ctx,
@@ -222,7 +268,7 @@ async fn non_own_profile_skips_pending_followers() {
     let uid = user.id().value();
 
     let result = get_profile::execute(
-        &ctx,
+        &deps,
         GetUserProfileQuery {
             user_id: uid,
             view: ProfileView::Recent,

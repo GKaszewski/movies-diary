@@ -9,7 +9,7 @@ use uuid::Uuid;
 use crate::{
     auth::{commands::RegisterCommand, register},
     test_helpers::TestContextBuilder,
-    users::{commands::UpdateProfileCommand, update_profile},
+    users::{commands::UpdateProfileCommand, deps::UpdateProfileDeps, update_profile},
 };
 
 async fn register_user(
@@ -40,15 +40,20 @@ async fn register_user(
 async fn updates_display_name() {
     let users = InMemoryUserRepository::new();
     let events = NoopEventPublisher::new();
-    let ctx = TestContextBuilder::new()
+    let b = TestContextBuilder::new()
         .with_users(Arc::clone(&users) as _)
-        .with_event_publisher(Arc::clone(&events) as _)
-        .build();
+        .with_event_publisher(Arc::clone(&events) as _);
+    let deps = UpdateProfileDeps {
+        user: b.user_repo.clone(),
+        object_storage: b.object_storage.clone(),
+        event_publisher: b.event_publisher.clone(),
+    };
+    let ctx = b.build();
 
     let uid = register_user(&ctx, &users).await;
 
     update_profile::execute(
-        &ctx,
+        &deps,
         UpdateProfileCommand {
             user_id: uid,
             display_name: Some("Alice W.".into()),
@@ -74,14 +79,18 @@ async fn updates_display_name() {
 #[tokio::test]
 async fn rejects_invalid_avatar_content_type() {
     let users = InMemoryUserRepository::new();
-    let ctx = TestContextBuilder::new()
-        .with_users(Arc::clone(&users) as _)
-        .build();
+    let b = TestContextBuilder::new().with_users(Arc::clone(&users) as _);
+    let deps = UpdateProfileDeps {
+        user: b.user_repo.clone(),
+        object_storage: b.object_storage.clone(),
+        event_publisher: b.event_publisher.clone(),
+    };
+    let ctx = b.build();
 
     let uid = register_user(&ctx, &users).await;
 
     let result = update_profile::execute(
-        &ctx,
+        &deps,
         UpdateProfileCommand {
             user_id: uid,
             display_name: None,
@@ -102,15 +111,20 @@ async fn rejects_invalid_avatar_content_type() {
 async fn uploads_avatar() {
     let users = InMemoryUserRepository::new();
     let events = NoopEventPublisher::new();
-    let ctx = TestContextBuilder::new()
+    let b = TestContextBuilder::new()
         .with_users(Arc::clone(&users) as _)
-        .with_event_publisher(Arc::clone(&events) as _)
-        .build();
+        .with_event_publisher(Arc::clone(&events) as _);
+    let deps = UpdateProfileDeps {
+        user: b.user_repo.clone(),
+        object_storage: b.object_storage.clone(),
+        event_publisher: b.event_publisher.clone(),
+    };
+    let ctx = b.build();
 
     let uid = register_user(&ctx, &users).await;
 
     update_profile::execute(
-        &ctx,
+        &deps,
         UpdateProfileCommand {
             user_id: uid,
             display_name: None,
@@ -142,15 +156,20 @@ async fn uploads_avatar() {
 async fn uploads_banner() {
     let users = InMemoryUserRepository::new();
     let events = NoopEventPublisher::new();
-    let ctx = TestContextBuilder::new()
+    let b = TestContextBuilder::new()
         .with_users(Arc::clone(&users) as _)
-        .with_event_publisher(Arc::clone(&events) as _)
-        .build();
+        .with_event_publisher(Arc::clone(&events) as _);
+    let deps = UpdateProfileDeps {
+        user: b.user_repo.clone(),
+        object_storage: b.object_storage.clone(),
+        event_publisher: b.event_publisher.clone(),
+    };
+    let ctx = b.build();
 
     let uid = register_user(&ctx, &users).await;
 
     update_profile::execute(
-        &ctx,
+        &deps,
         UpdateProfileCommand {
             user_id: uid,
             display_name: None,
@@ -180,10 +199,16 @@ async fn uploads_banner() {
 
 #[tokio::test]
 async fn fails_for_nonexistent_user() {
-    let ctx = TestContextBuilder::new().build();
+    let b = TestContextBuilder::new();
+    let deps = UpdateProfileDeps {
+        user: b.user_repo.clone(),
+        object_storage: b.object_storage.clone(),
+        event_publisher: b.event_publisher.clone(),
+    };
+    let _ctx = b.build();
 
     let result = update_profile::execute(
-        &ctx,
+        &deps,
         UpdateProfileCommand {
             user_id: Uuid::new_v4(),
             display_name: Some("Ghost".into()),
@@ -203,14 +228,18 @@ async fn fails_for_nonexistent_user() {
 #[tokio::test]
 async fn rejects_invalid_banner_content_type() {
     let users = InMemoryUserRepository::new();
-    let ctx = TestContextBuilder::new()
-        .with_users(Arc::clone(&users) as _)
-        .build();
+    let b = TestContextBuilder::new().with_users(Arc::clone(&users) as _);
+    let deps = UpdateProfileDeps {
+        user: b.user_repo.clone(),
+        object_storage: b.object_storage.clone(),
+        event_publisher: b.event_publisher.clone(),
+    };
+    let ctx = b.build();
 
     let uid = register_user(&ctx, &users).await;
 
     let result = update_profile::execute(
-        &ctx,
+        &deps,
         UpdateProfileCommand {
             user_id: uid,
             display_name: None,
@@ -231,15 +260,20 @@ async fn rejects_invalid_banner_content_type() {
 async fn text_only_update_emits_user_updated_no_image_stored() {
     let users = InMemoryUserRepository::new();
     let events = NoopEventPublisher::new();
-    let ctx = TestContextBuilder::new()
+    let b = TestContextBuilder::new()
         .with_users(Arc::clone(&users) as _)
-        .with_event_publisher(Arc::clone(&events) as _)
-        .build();
+        .with_event_publisher(Arc::clone(&events) as _);
+    let deps = UpdateProfileDeps {
+        user: b.user_repo.clone(),
+        object_storage: b.object_storage.clone(),
+        event_publisher: b.event_publisher.clone(),
+    };
+    let ctx = b.build();
 
     let uid = register_user(&ctx, &users).await;
 
     update_profile::execute(
-        &ctx,
+        &deps,
         UpdateProfileCommand {
             user_id: uid,
             display_name: Some("Alice Updated".into()),

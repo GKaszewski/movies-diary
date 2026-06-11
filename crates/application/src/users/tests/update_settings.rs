@@ -11,14 +11,14 @@ use crate::{
 #[tokio::test]
 async fn updates_federate_goals() {
     let settings_repo = InMemoryUserSettingsRepository::new();
-    let ctx = TestContextBuilder::new()
-        .with_user_settings(Arc::clone(&settings_repo) as _)
-        .build();
+    let b = TestContextBuilder::new()
+        .with_user_settings(Arc::clone(&settings_repo) as _);
+    let user_settings = b.user_settings_repo.clone();
 
     let uid = Uuid::nil();
 
     crate::users::update_settings::execute(
-        &ctx,
+        user_settings.clone(),
         UpdateUserSettingsCommand {
             user_id: uid,
             federate_goals: true,
@@ -27,6 +27,6 @@ async fn updates_federate_goals() {
     .await
     .unwrap();
 
-    let settings = get_settings::execute(&ctx, uid).await.unwrap();
+    let settings = get_settings::execute(user_settings, uid).await.unwrap();
     assert!(settings.federate_goals());
 }

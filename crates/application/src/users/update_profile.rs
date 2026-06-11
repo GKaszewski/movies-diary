@@ -1,12 +1,11 @@
 use domain::{errors::DomainError, events::DomainEvent, value_objects::UserId};
 
-use crate::{context::AppContext, users::commands::UpdateProfileCommand};
+use crate::users::{commands::UpdateProfileCommand, deps::UpdateProfileDeps};
 
-pub async fn execute(ctx: &AppContext, cmd: UpdateProfileCommand) -> Result<(), DomainError> {
+pub async fn execute(deps: &UpdateProfileDeps, cmd: UpdateProfileCommand) -> Result<(), DomainError> {
     let user_id = UserId::from_uuid(cmd.user_id);
 
-    let user = ctx
-        .repos
+    let user = deps
         .user
         .find_by_id(&user_id)
         .await?
@@ -21,12 +20,11 @@ pub async fn execute(ctx: &AppContext, cmd: UpdateProfileCommand) -> Result<(), 
             ));
         }
         if let Some(old_path) = user.avatar_path() {
-            let _ = ctx.services.object_storage.delete(old_path).await;
+            let _ = deps.object_storage.delete(old_path).await;
         }
         let key = format!("avatars/{}", user_id.value());
-        let stored = ctx.services.object_storage.store(&key, &bytes).await?;
-        if let Err(e) = ctx
-            .services
+        let stored = deps.object_storage.store(&key, &bytes).await?;
+        if let Err(e) = deps
             .event_publisher
             .publish(&DomainEvent::ImageStored {
                 key: stored.clone(),
@@ -49,12 +47,11 @@ pub async fn execute(ctx: &AppContext, cmd: UpdateProfileCommand) -> Result<(), 
             ));
         }
         if let Some(old_path) = user.banner_path() {
-            let _ = ctx.services.object_storage.delete(old_path).await;
+            let _ = deps.object_storage.delete(old_path).await;
         }
         let key = format!("banners/{}", user_id.value());
-        let stored = ctx.services.object_storage.store(&key, &bytes).await?;
-        if let Err(e) = ctx
-            .services
+        let stored = deps.object_storage.store(&key, &bytes).await?;
+        if let Err(e) = deps
             .event_publisher
             .publish(&DomainEvent::ImageStored {
                 key: stored.clone(),
@@ -68,8 +65,7 @@ pub async fn execute(ctx: &AppContext, cmd: UpdateProfileCommand) -> Result<(), 
         user.banner_path().map(|s| s.to_string())
     };
 
-    ctx.repos
-        .user
+    deps.user
         .update_profile(
             &user_id,
             &domain::models::UserProfile {
@@ -83,8 +79,7 @@ pub async fn execute(ctx: &AppContext, cmd: UpdateProfileCommand) -> Result<(), 
         )
         .await?;
 
-    ctx.services
-        .event_publisher
+    deps.event_publisher
         .publish(&DomainEvent::UserUpdated { user_id })
         .await?;
 

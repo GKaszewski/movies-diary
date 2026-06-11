@@ -1,10 +1,13 @@
-use domain::{errors::DomainError, models::UserSettings, value_objects::UserId};
+use std::sync::Arc;
 
-use crate::context::AppContext;
+use domain::{errors::DomainError, models::UserSettings, ports::UserSettingsRepository, value_objects::UserId};
 
-pub async fn execute(ctx: &AppContext, user_id: uuid::Uuid) -> Result<UserSettings, DomainError> {
+pub async fn execute(
+    user_settings: Arc<dyn UserSettingsRepository>,
+    user_id: uuid::Uuid,
+) -> Result<UserSettings, DomainError> {
     let uid = UserId::from_uuid(user_id);
-    ctx.repos.user_settings.get(&uid).await
+    user_settings.get(&uid).await
 }
 
 #[cfg(test)]

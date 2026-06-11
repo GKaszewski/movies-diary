@@ -9,6 +9,7 @@ use axum::{
 use uuid::Uuid;
 
 use application::users::{
+    deps::{GetProfileDeps, UpdateProfileDeps},
     get_profile as get_user_profile_uc, get_users,
     queries::{GetUserProfileQuery, GetUsersQuery},
     update_profile, update_profile_fields,
@@ -52,7 +53,7 @@ pub async fn get_profile(
     AuthenticatedUser(user_id): AuthenticatedUser,
 ) -> Result<Json<ProfileResponse>, ApiError> {
     let profile = application::users::get_current_profile::execute(
-        &state.app_ctx,
+        state.app_ctx.repos.user.clone(),
         application::users::queries::GetCurrentProfileQuery {
             user_id: user_id.value(),
         },
@@ -156,7 +157,12 @@ pub async fn update_profile_handler(
         also_known_as,
     };
 
-    match update_profile::execute(&state.app_ctx, cmd).await {
+    let deps = UpdateProfileDeps {
+        user: state.app_ctx.repos.user.clone(),
+        object_storage: state.app_ctx.services.object_storage.clone(),
+        event_publisher: state.app_ctx.services.event_publisher.clone(),
+    };
+    match update_profile::execute(&deps, cmd).await {
         Ok(()) => StatusCode::NO_CONTENT.into_response(),
         Err(e) => crate::errors::domain_error_response(e),
     }
@@ -197,7 +203,13 @@ pub async fn update_profile_fields_handler(
         fields,
     };
 
-    match update_profile_fields::execute(&state.app_ctx, cmd).await {
+    match update_profile_fields::execute(
+        state.app_ctx.repos.profile_fields.clone(),
+        state.app_ctx.services.event_publisher.clone(),
+        cmd,
+    )
+    .await
+    {
         Ok(()) => StatusCode::NO_CONTENT.into_response(),
         Err(e) => crate::errors::domain_error_response(e),
     }
@@ -208,7 +220,12 @@ pub async fn update_profile_fields_handler(
     responses((status = 200, body = UsersResponse)),
 )]
 pub async fn list_users(State(state): State<AppState>) -> Result<Json<UsersResponse>, ApiError> {
-    let result = get_users::execute(&state.app_ctx, GetUsersQuery).await?;
+    let result = get_users::execute(
+        state.app_ctx.repos.user.clone(),
+        state.app_ctx.repos.social_query.clone(),
+        GetUsersQuery,
+    )
+    .await?;
     Ok(Json(UsersResponse {
         users: result
             .users
@@ -262,8 +279,13 @@ pub async fn get_user_profile(
         }
     };
 
+    let get_profile_deps = GetProfileDeps {
+        stats: state.app_ctx.repos.stats.clone(),
+        diary: state.app_ctx.repos.diary.clone(),
+        social_query: state.app_ctx.repos.social_query.clone(),
+    };
     let profile = match get_user_profile_uc::execute(
-        &state.app_ctx,
+        &get_profile_deps,
         GetUserProfileQuery {
             user_id,
             view: profile_view,
@@ -378,7 +400,8 @@ pub async fn get_users_list(
     ctx.canonical_url = format!("{}/users", state.app_ctx.config.base_url);
 
     match application::users::get_users::execute(
-        &state.app_ctx,
+        state.app_ctx.repos.user.clone(),
+        state.app_ctx.repos.social_query.clone(),
         application::users::queries::GetUsersQuery,
     )
     .await
@@ -517,7 +540,12 @@ pub async fn get_user_profile_html(
         is_own_profile,
     };
 
-    match application::users::get_profile::execute(&state.app_ctx, query).await {
+    let html_profile_deps = GetProfileDeps {
+        stats: state.app_ctx.repos.stats.clone(),
+        diary: state.app_ctx.repos.diary.clone(),
+        social_query: state.app_ctx.repos.social_query.clone(),
+    };
+    match application::users::get_profile::execute(&html_profile_deps, query).await {
         Ok(profile) => {
             let (offset, has_more, limit) = profile
                 .entries
@@ -805,7 +833,12 @@ pub async fn post_profile_settings(
         banner_content_type,
         also_known_as,
     };
-    let _ = update_profile::execute(&state.app_ctx, cmd).await;
+    let update_deps = UpdateProfileDeps {
+        user: state.app_ctx.repos.user.clone(),
+        object_storage: state.app_ctx.services.object_storage.clone(),
+        event_publisher: state.app_ctx.services.event_publisher.clone(),
+    };
+    let _ = update_profile::execute(&update_deps, cmd).await;
 
     let fields: Vec<domain::models::ProfileField> = (0..4)
         .filter_map(|i| {
@@ -822,7 +855,12 @@ pub async fn post_profile_settings(
         user_id: user_id.value(),
         fields,
     };
-    let _ = update_profile_fields::execute(&state.app_ctx, fields_cmd).await;
+    let _ = update_profile_fields::execute(
+        state.app_ctx.repos.profile_fields.clone(),
+        state.app_ctx.services.event_publisher.clone(),
+        fields_cmd,
+    )
+    .await;
 
     axum::response::Redirect::to("/settings/profile?saved=1").into_response()
 }

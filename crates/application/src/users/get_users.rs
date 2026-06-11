@@ -1,5 +1,7 @@
-use crate::{context::AppContext, users::queries::GetUsersQuery};
-use domain::{errors::DomainError, models::UserSummary, ports::RemoteActorInfo};
+use std::sync::Arc;
+
+use crate::users::queries::GetUsersQuery;
+use domain::{errors::DomainError, models::UserSummary, ports::{RemoteActorInfo, SocialQueryPort, UserRepository}};
 
 pub struct UsersListData {
     pub users: Vec<UserSummary>,
@@ -7,12 +9,13 @@ pub struct UsersListData {
 }
 
 pub async fn execute(
-    ctx: &AppContext,
+    user: Arc<dyn UserRepository>,
+    social_query: Arc<dyn SocialQueryPort>,
     _query: GetUsersQuery,
 ) -> Result<UsersListData, DomainError> {
     let (users_result, actors_result) = tokio::join!(
-        ctx.repos.user.list_with_stats(),
-        ctx.repos.social_query.list_all_followed_remote_actors()
+        user.list_with_stats(),
+        social_query.list_all_followed_remote_actors()
     );
 
     Ok(UsersListData {

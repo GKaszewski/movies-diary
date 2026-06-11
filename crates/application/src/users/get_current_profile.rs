@@ -1,6 +1,8 @@
-use domain::errors::DomainError;
+use std::sync::Arc;
 
-use crate::{context::AppContext, users::queries::GetCurrentProfileQuery};
+use domain::{errors::DomainError, ports::UserRepository};
+
+use crate::users::queries::GetCurrentProfileQuery;
 
 pub struct ProfileFieldData {
     pub name: String,
@@ -19,18 +21,16 @@ pub struct CurrentProfileData {
 }
 
 pub async fn execute(
-    ctx: &AppContext,
+    user: Arc<dyn UserRepository>,
     query: GetCurrentProfileQuery,
 ) -> Result<CurrentProfileData, DomainError> {
     let user_id = domain::value_objects::UserId::from_uuid(query.user_id);
-    let user = ctx
-        .repos
-        .user
+    let found = user
         .find_by_id(&user_id)
         .await?
         .ok_or_else(|| DomainError::NotFound("User not found".into()))?;
 
-    let fields = user
+    let fields = found
         .profile_fields()
         .iter()
         .map(|f| ProfileFieldData {
@@ -40,14 +40,14 @@ pub async fn execute(
         .collect();
 
     Ok(CurrentProfileData {
-        username: user.username().value().to_string(),
-        display_name: user.display_name().map(|s| s.to_string()),
-        bio: user.bio().map(|s| s.to_string()),
-        avatar_path: user.avatar_path().map(|s| s.to_string()),
-        banner_path: user.banner_path().map(|s| s.to_string()),
-        also_known_as: user.also_known_as().map(|s| s.to_string()),
+        username: found.username().value().to_string(),
+        display_name: found.display_name().map(|s| s.to_string()),
+        bio: found.bio().map(|s| s.to_string()),
+        avatar_path: found.avatar_path().map(|s| s.to_string()),
+        banner_path: found.banner_path().map(|s| s.to_string()),
+        also_known_as: found.also_known_as().map(|s| s.to_string()),
         fields,
-        role: user.role().as_str().into(),
+        role: found.role().as_str().into(),
     })
 }
 

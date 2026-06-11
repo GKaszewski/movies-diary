@@ -1,6 +1,6 @@
-use crate::{
-    context::AppContext,
-    users::queries::{GetUserProfileQuery, ProfileView},
+use crate::users::{
+    deps::GetProfileDeps,
+    queries::{GetUserProfileQuery, ProfileView},
 };
 use domain::{
     errors::DomainError,
@@ -30,14 +30,14 @@ pub struct UserProfileData {
 }
 
 pub async fn execute(
-    ctx: &AppContext,
+    deps: &GetProfileDeps,
     query: GetUserProfileQuery,
 ) -> Result<UserProfileData, DomainError> {
     let user_id = UserId::from_uuid(query.user_id);
-    let stats = ctx.repos.stats.get_user_stats(&user_id).await?;
+    let stats = deps.stats.get_user_stats(&user_id).await?;
 
     let (following_count, followers_count, pending_followers) =
-        load_social_counts(ctx, query.user_id, query.is_own_profile).await;
+        load_social_counts(deps, query.user_id, query.is_own_profile).await;
 
     let base = |entries, history, trends| UserProfileData {
         stats,
@@ -51,11 +51,11 @@ pub async fn execute(
 
     match query.view {
         ProfileView::History => {
-            let all_entries = ctx.repos.diary.get_user_history(&user_id).await?;
+            let all_entries = deps.diary.get_user_history(&user_id).await?;
             Ok(base(None, Some(all_entries), None))
         }
         ProfileView::Trends => {
-            let trends = ctx.repos.stats.get_user_trends(&user_id).await?;
+            let trends = deps.stats.get_user_trends(&user_id).await?;
             Ok(base(None, None, Some(trends)))
         }
         ProfileView::Ratings | ProfileView::Recent => {
@@ -67,25 +67,23 @@ pub async fn execute(
                 query.offset,
                 query.search.clone(),
             )?;
-            let entries = ctx.repos.diary.query_diary(&filter).await?;
+            let entries = deps.diary.query_diary(&filter).await?;
             Ok(base(Some(entries), None, None))
         }
     }
 }
 
 async fn load_social_counts(
-    ctx: &AppContext,
+    deps: &GetProfileDeps,
     user_id: uuid::Uuid,
     is_own_profile: bool,
 ) -> (usize, usize, Vec<PendingFollowerView>) {
-    let following = ctx
-        .repos
+    let following = deps
         .social_query
         .count_following(user_id)
         .await
         .unwrap_or(0);
-    let followers = ctx
-        .repos
+    let followers = deps
         .social_query
         .count_accepted_followers(user_id)
         .await
@@ -93,8 +91,7 @@ async fn load_social_counts(
     if !is_own_profile {
         return (following, followers, vec![]);
     }
-    let pending = ctx
-        .repos
+    let pending = deps
         .social_query
         .get_pending_followers(user_id)
         .await
