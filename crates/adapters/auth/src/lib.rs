@@ -30,7 +30,7 @@ impl AuthConfig {
         let ttl_seconds = std::env::var("JWT_TTL_SECONDS")
             .ok()
             .and_then(|v| v.parse().ok())
-            .unwrap_or(86400u64);
+            .unwrap_or(900u64);
         Ok(Self {
             secret,
             ttl_seconds,

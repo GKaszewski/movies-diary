@@ -476,6 +476,7 @@ async fn test_app() -> Router {
                 allow_registration: false,
                 base_url: "http://localhost:3000".to_string(),
                 rate_limit: 20,
+                refresh_ttl_seconds: 2_592_000,
                 wrapup: application::config::WrapUpConfig {
                     font_path: None,
                     logo_path: None,

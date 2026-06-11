@@ -19,10 +19,10 @@ use domain::{
         FakePasswordHasher, FakePersonQuery, FakePosterFetcher, FakeSearchCommand, FakeSearchPort,
         FakeStatsRepository, InMemoryImportProfileRepository, InMemoryImportSessionRepository,
         InMemoryMovieProfileRepository, InMemoryMovieRepository, InMemoryProfileFieldsRepo,
-        InMemoryReviewRepository, InMemoryUserRepository, InMemoryUserSettingsRepository,
-        InMemoryWatchEventRepository, InMemoryWatchlistRepository, InMemoryWebhookTokenRepository,
-        NoopEventPublisher, NoopObjectStorage, PanicDiaryExporter, PanicPersonCommand,
-        PanicRefreshSessionRepository,
+        InMemoryRefreshSessionRepository, InMemoryReviewRepository, InMemoryUserRepository,
+        InMemoryUserSettingsRepository, InMemoryWatchEventRepository, InMemoryWatchlistRepository,
+        InMemoryWebhookTokenRepository, NoopEventPublisher, NoopObjectStorage,
+        PanicDiaryExporter, PanicPersonCommand,
     },
 };
 
@@ -119,11 +119,12 @@ impl TestContextBuilder {
             user_settings_repo: InMemoryUserSettingsRepository::new(),
             review_logger: Arc::new(NoopReviewLogger),
             social_query: Arc::new(NoopSocialQueryPort),
-            refresh_session_repo: Arc::new(PanicRefreshSessionRepository),
+            refresh_session_repo: InMemoryRefreshSessionRepository::new(),
             config: AppConfig {
                 allow_registration: true,
                 base_url: "http://localhost:3000".into(),
                 rate_limit: 20,
+                refresh_ttl_seconds: 2_592_000,
                 wrapup: crate::config::WrapUpConfig {
                     font_path: None,
                     logo_path: None,

@@ -6,19 +6,22 @@ use uuid::Uuid;
 
 use chrono::NaiveDateTime;
 
+use chrono::Utc;
+
 use crate::{
     errors::DomainError,
     events::DomainEvent,
     models::{
         Goal, ImportProfile, ImportSession, Movie, MovieFilter, MovieProfile, MovieSummary,
-        ProfileField, Review, User, UserSettings, UserSummary, WatchEvent, WatchEventStatus,
-        WatchlistEntry, WatchlistWithMovie, WebhookToken,
+        ProfileField, RefreshSession, Review, User, UserSettings, UserSummary, WatchEvent,
+        WatchEventStatus, WatchlistEntry, WatchlistWithMovie, WebhookToken,
         collections::{PageParams, Paginated},
     },
     ports::{
         GoalRepository, ImportProfileRepository, ImportSessionRepository, MovieProfileRepository,
-        MovieRepository, ReviewRepository, UserProfileFieldsRepository, UserRepository,
-        UserSettingsRepository, WatchEventRepository, WatchlistRepository, WebhookTokenRepository,
+        MovieRepository, RefreshSessionRepository, ReviewRepository, UserProfileFieldsRepository,
+        UserRepository, UserSettingsRepository, WatchEventRepository, WatchlistRepository,
+        WebhookTokenRepository,
     },
     value_objects::{
         Email, ExternalMetadataId, GoalId, ImportProfileId, ImportSessionId, MovieId, MovieTitle,
@@ -775,5 +778,58 @@ impl UserProfileFieldsRepository for InMemoryProfileFieldsRepo {
     ) -> Result<(), DomainError> {
         self.store.lock().unwrap().insert(user_id.value(), fields);
         Ok(())
+    }
+}
+
+// ── InMemoryRefreshSessionRepository ────────────────────────────────────────
+
+pub struct InMemoryRefreshSessionRepository {
+    pub store: Mutex<Vec<RefreshSession>>,
+}
+
+impl InMemoryRefreshSessionRepository {
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self {
+            store: Mutex::new(Vec::new()),
+        })
+    }
+}
+
+#[async_trait]
+impl RefreshSessionRepository for InMemoryRefreshSessionRepository {
+    async fn create(&self, session: &RefreshSession) -> Result<(), DomainError> {
+        self.store.lock().unwrap().push(session.clone());
+        Ok(())
+    }
+
+    async fn get_by_token(&self, token: &str) -> Result<Option<RefreshSession>, DomainError> {
+        Ok(self
+            .store
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|s| s.token == token)
+            .cloned())
+    }
+
+    async fn revoke(&self, token: &str) -> Result<(), DomainError> {
+        self.store.lock().unwrap().retain(|s| s.token != token);
+        Ok(())
+    }
+
+    async fn revoke_all_for_user(&self, user_id: &UserId) -> Result<(), DomainError> {
+        self.store
+            .lock()
+            .unwrap()
+            .retain(|s| s.user_id != *user_id);
+        Ok(())
+    }
+
+    async fn delete_expired(&self) -> Result<u64, DomainError> {
+        let mut store = self.store.lock().unwrap();
+        let before = store.len();
+        let now = Utc::now();
+        store.retain(|s| s.expires_at >= now);
+        Ok((before - store.len()) as u64)
     }
 }

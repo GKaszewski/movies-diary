@@ -3,6 +3,7 @@ pub struct AppConfig {
     pub allow_registration: bool,
     pub base_url: String,
     pub rate_limit: u64,
+    pub refresh_ttl_seconds: u64,
     pub wrapup: WrapUpConfig,
 }
 
@@ -24,10 +25,15 @@ impl AppConfig {
             .ok()
             .and_then(|v| v.parse().ok())
             .unwrap_or(60);
+        let refresh_ttl_seconds = std::env::var("REFRESH_TTL_SECONDS")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(2_592_000u64);
         Self {
             allow_registration,
             base_url,
             rate_limit,
+            refresh_ttl_seconds,
             wrapup: WrapUpConfig::from_env(),
         }
     }
