@@ -191,7 +191,7 @@ async fn main() -> anyhow::Result<()> {
             Arc::clone(&ctx.repos.wrapup_repo),
         )),
         Arc::new(application::jobs::RefreshSessionCleanupJob::new(
-            ctx.clone(),
+            Arc::clone(&ctx.repos.refresh_session),
         )),
     ];
     if let Some(job) = enrichment_job {

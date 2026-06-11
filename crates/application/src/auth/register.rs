@@ -4,10 +4,10 @@ use domain::{
     value_objects::{Email, Password, Username},
 };
 
-use crate::{auth::commands::RegisterCommand, context::AppContext};
+use crate::auth::{commands::RegisterCommand, deps::RegisterDeps};
 
-pub async fn execute(ctx: &AppContext, cmd: RegisterCommand) -> Result<(), DomainError> {
-    if !ctx.config.allow_registration {
+pub async fn execute(deps: &RegisterDeps, cmd: RegisterCommand) -> Result<(), DomainError> {
+    if !deps.config.allow_registration {
         return Err(DomainError::Unauthorized("Registration is disabled".into()));
     }
 
@@ -15,21 +15,20 @@ pub async fn execute(ctx: &AppContext, cmd: RegisterCommand) -> Result<(), Domai
     let email = Email::new(cmd.email)?;
     let username = Username::new(cmd.username)?;
 
-    if ctx.repos.user.find_by_email(&email).await?.is_some() {
+    if deps.user.find_by_email(&email).await?.is_some() {
         return Err(DomainError::ValidationError(
             "Email already registered".into(),
         ));
     }
 
-    if ctx.repos.user.find_by_username(&username).await?.is_some() {
+    if deps.user.find_by_username(&username).await?.is_some() {
         return Err(DomainError::ValidationError(
             "Username already taken".into(),
         ));
     }
 
-    let hash = ctx.services.password_hasher.hash(password.value()).await?;
-    ctx.repos
-        .user
+    let hash = deps.password_hasher.hash(password.value()).await?;
+    deps.user
         .save(&User::new(email, username, hash, cmd.role))
         .await
 }

@@ -7,7 +7,7 @@ use domain::value_objects::{Email, PasswordHash, UserId, Username};
 use uuid::Uuid;
 
 use crate::{
-    auth::{commands::RegisterCommand, register},
+    auth::{commands::RegisterCommand, deps::RegisterDeps, register},
     test_helpers::TestContextBuilder,
     users::{get_current_profile, queries::GetCurrentProfileQuery},
 };
@@ -17,10 +17,14 @@ async fn returns_profile_for_existing_user() {
     let users = InMemoryUserRepository::new();
     let b = TestContextBuilder::new().with_users(Arc::clone(&users) as _);
     let user_repo = b.user_repo.clone();
-    let ctx = b.build();
+    let reg_deps = RegisterDeps {
+        user: b.user_repo.clone(),
+        password_hasher: b.password_hasher.clone(),
+        config: b.config.clone(),
+    };
 
     register::execute(
-        &ctx,
+        &reg_deps,
         RegisterCommand {
             email: "alice@example.com".into(),
             username: "alice".into(),

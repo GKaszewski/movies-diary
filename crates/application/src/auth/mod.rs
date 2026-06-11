@@ -1,4 +1,5 @@
 pub mod commands;
+pub mod deps;
 pub mod login;
 pub mod logout;
 pub mod queries;

@@ -7,17 +7,19 @@ use domain::testing::{InMemoryUserRepository, NoopEventPublisher};
 use uuid::Uuid;
 
 use crate::{
-    auth::{commands::RegisterCommand, register},
+    auth::{commands::RegisterCommand, deps::RegisterDeps, register},
     test_helpers::TestContextBuilder,
     users::{commands::UpdateProfileCommand, deps::UpdateProfileDeps, update_profile},
 };
 
-async fn register_user(
-    ctx: &crate::context::AppContext,
-    users: &Arc<InMemoryUserRepository>,
-) -> Uuid {
+async fn register_user(b: &TestContextBuilder, users: &Arc<InMemoryUserRepository>) -> Uuid {
+    let reg_deps = RegisterDeps {
+        user: b.user_repo.clone(),
+        password_hasher: b.password_hasher.clone(),
+        config: b.config.clone(),
+    };
     register::execute(
-        ctx,
+        &reg_deps,
         RegisterCommand {
             email: "alice@example.com".into(),
             username: "alice".into(),
@@ -48,9 +50,7 @@ async fn updates_display_name() {
         object_storage: b.object_storage.clone(),
         event_publisher: b.event_publisher.clone(),
     };
-    let ctx = b.build();
-
-    let uid = register_user(&ctx, &users).await;
+    let uid = register_user(&b, &users).await;
 
     update_profile::execute(
         &deps,
@@ -85,9 +85,7 @@ async fn rejects_invalid_avatar_content_type() {
         object_storage: b.object_storage.clone(),
         event_publisher: b.event_publisher.clone(),
     };
-    let ctx = b.build();
-
-    let uid = register_user(&ctx, &users).await;
+    let uid = register_user(&b, &users).await;
 
     let result = update_profile::execute(
         &deps,
@@ -119,9 +117,7 @@ async fn uploads_avatar() {
         object_storage: b.object_storage.clone(),
         event_publisher: b.event_publisher.clone(),
     };
-    let ctx = b.build();
-
-    let uid = register_user(&ctx, &users).await;
+    let uid = register_user(&b, &users).await;
 
     update_profile::execute(
         &deps,
@@ -164,9 +160,7 @@ async fn uploads_banner() {
         object_storage: b.object_storage.clone(),
         event_publisher: b.event_publisher.clone(),
     };
-    let ctx = b.build();
-
-    let uid = register_user(&ctx, &users).await;
+    let uid = register_user(&b, &users).await;
 
     update_profile::execute(
         &deps,
@@ -233,9 +227,7 @@ async fn rejects_invalid_banner_content_type() {
         object_storage: b.object_storage.clone(),
         event_publisher: b.event_publisher.clone(),
     };
-    let ctx = b.build();
-
-    let uid = register_user(&ctx, &users).await;
+    let uid = register_user(&b, &users).await;
 
     let result = update_profile::execute(
         &deps,
@@ -267,9 +259,7 @@ async fn text_only_update_emits_user_updated_no_image_stored() {
         object_storage: b.object_storage.clone(),
         event_publisher: b.event_publisher.clone(),
     };
-    let ctx = b.build();
-
-    let uid = register_user(&ctx, &users).await;
+    let uid = register_user(&b, &users).await;
 
     update_profile::execute(
         &deps,

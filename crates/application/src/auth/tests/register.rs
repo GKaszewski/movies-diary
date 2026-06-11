@@ -5,7 +5,10 @@ use domain::ports::UserRepository;
 use domain::testing::InMemoryUserRepository;
 use domain::value_objects::Email;
 
-use crate::{auth::commands::RegisterCommand, auth::register, test_helpers::TestContextBuilder};
+use crate::{
+    auth::{commands::RegisterCommand, deps::RegisterDeps, register},
+    test_helpers::TestContextBuilder,
+};
 
 fn cmd(email: &str) -> RegisterCommand {
     RegisterCommand {
@@ -19,11 +22,14 @@ fn cmd(email: &str) -> RegisterCommand {
 #[tokio::test]
 async fn test_register_creates_user() {
     let users = InMemoryUserRepository::new();
-    let ctx = TestContextBuilder::new()
-        .with_users(Arc::clone(&users) as _)
-        .build();
+    let b = TestContextBuilder::new().with_users(Arc::clone(&users) as _);
+    let deps = RegisterDeps {
+        user: b.user_repo.clone(),
+        password_hasher: b.password_hasher.clone(),
+        config: b.config.clone(),
+    };
 
-    register::execute(&ctx, cmd("alice@example.com"))
+    register::execute(&deps, cmd("alice@example.com"))
         .await
         .unwrap();
 
@@ -36,22 +42,30 @@ async fn test_register_creates_user() {
 #[tokio::test]
 async fn test_register_duplicate_email_fails() {
     let users = InMemoryUserRepository::new();
-    let ctx = TestContextBuilder::new()
-        .with_users(Arc::clone(&users) as _)
-        .build();
+    let b = TestContextBuilder::new().with_users(Arc::clone(&users) as _);
+    let deps = RegisterDeps {
+        user: b.user_repo.clone(),
+        password_hasher: b.password_hasher.clone(),
+        config: b.config.clone(),
+    };
 
-    register::execute(&ctx, cmd("bob@example.com"))
+    register::execute(&deps, cmd("bob@example.com"))
         .await
         .unwrap();
-    let result = register::execute(&ctx, cmd("bob@example.com")).await;
+    let result = register::execute(&deps, cmd("bob@example.com")).await;
     assert!(result.is_err(), "duplicate email should fail");
 }
 
 #[tokio::test]
 async fn test_register_short_password_fails() {
-    let ctx = TestContextBuilder::new().build();
+    let b = TestContextBuilder::new();
+    let deps = RegisterDeps {
+        user: b.user_repo.clone(),
+        password_hasher: b.password_hasher.clone(),
+        config: b.config.clone(),
+    };
     let result = register::execute(
-        &ctx,
+        &deps,
         RegisterCommand {
             email: "x@y.com".to_string(),
             username: "testuser".to_string(),

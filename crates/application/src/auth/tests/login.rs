@@ -4,15 +4,24 @@ use domain::models::UserRole;
 use domain::testing::InMemoryUserRepository;
 
 use crate::{
-    auth::commands::RegisterCommand,
-    auth::queries::LoginQuery,
-    auth::{login, register},
+    auth::{
+        commands::RegisterCommand,
+        deps::{LoginDeps, RegisterDeps},
+        login,
+        queries::LoginQuery,
+        register,
+    },
     test_helpers::TestContextBuilder,
 };
 
-async fn setup_user(ctx: &crate::context::AppContext, email: &str, password: &str) {
+async fn setup_user(b: &TestContextBuilder, email: &str, password: &str) {
+    let deps = RegisterDeps {
+        user: b.user_repo.clone(),
+        password_hasher: b.password_hasher.clone(),
+        config: b.config.clone(),
+    };
     register::execute(
-        ctx,
+        &deps,
         RegisterCommand {
             email: email.to_string(),
             username: "testuser".to_string(),
@@ -27,14 +36,18 @@ async fn setup_user(ctx: &crate::context::AppContext, email: &str, password: &st
 #[tokio::test]
 async fn test_login_valid_credentials_returns_token() {
     let users = InMemoryUserRepository::new();
-    let ctx = TestContextBuilder::new()
-        .with_users(Arc::clone(&users) as _)
-        .build();
+    let b = TestContextBuilder::new().with_users(Arc::clone(&users) as _);
+    setup_user(&b, "carol@example.com", "secret123").await;
 
-    setup_user(&ctx, "carol@example.com", "secret123").await;
-
+    let deps = LoginDeps {
+        user: b.user_repo.clone(),
+        password_hasher: b.password_hasher.clone(),
+        auth: b.auth_service.clone(),
+        refresh_session: b.refresh_session_repo.clone(),
+        config: b.config.clone(),
+    };
     let result = login::execute(
-        &ctx,
+        &deps,
         LoginQuery {
             email: "carol@example.com".into(),
             password: "secret123".into(),
@@ -51,14 +64,18 @@ async fn test_login_valid_credentials_returns_token() {
 #[tokio::test]
 async fn test_login_wrong_password_fails() {
     let users = InMemoryUserRepository::new();
-    let ctx = TestContextBuilder::new()
-        .with_users(Arc::clone(&users) as _)
-        .build();
+    let b = TestContextBuilder::new().with_users(Arc::clone(&users) as _);
+    setup_user(&b, "dave@example.com", "correct_password").await;
 
-    setup_user(&ctx, "dave@example.com", "correct_password").await;
-
+    let deps = LoginDeps {
+        user: b.user_repo.clone(),
+        password_hasher: b.password_hasher.clone(),
+        auth: b.auth_service.clone(),
+        refresh_session: b.refresh_session_repo.clone(),
+        config: b.config.clone(),
+    };
     let result = login::execute(
-        &ctx,
+        &deps,
         LoginQuery {
             email: "dave@example.com".into(),
             password: "wrong_password".into(),
@@ -71,10 +88,16 @@ async fn test_login_wrong_password_fails() {
 
 #[tokio::test]
 async fn test_login_unknown_email_fails() {
-    let ctx = TestContextBuilder::new().build();
-
+    let b = TestContextBuilder::new();
+    let deps = LoginDeps {
+        user: b.user_repo.clone(),
+        password_hasher: b.password_hasher.clone(),
+        auth: b.auth_service.clone(),
+        refresh_session: b.refresh_session_repo.clone(),
+        config: b.config.clone(),
+    };
     let result = login::execute(
-        &ctx,
+        &deps,
         LoginQuery {
             email: "nobody@example.com".into(),
             password: "anything".into(),

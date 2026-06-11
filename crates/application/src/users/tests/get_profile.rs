@@ -2,11 +2,31 @@ use domain::models::UserRole;
 use domain::value_objects::Email;
 
 use crate::auth::commands::RegisterCommand;
+use crate::auth::deps::RegisterDeps;
 use crate::auth::register;
 use crate::test_helpers::TestContextBuilder;
 use crate::users::deps::GetProfileDeps;
 use crate::users::get_profile;
 use crate::users::queries::{GetUserProfileQuery, ProfileView};
+
+async fn setup_user(b: &TestContextBuilder, email: &str, username: &str) {
+    let deps = RegisterDeps {
+        user: b.user_repo.clone(),
+        password_hasher: b.password_hasher.clone(),
+        config: b.config.clone(),
+    };
+    register::execute(
+        &deps,
+        RegisterCommand {
+            email: email.into(),
+            username: username.into(),
+            password: "password123".into(),
+            role: UserRole::Standard,
+        },
+    )
+    .await
+    .unwrap();
+}
 
 #[tokio::test]
 async fn returns_profile_with_empty_stats() {
@@ -17,19 +37,8 @@ async fn returns_profile_with_empty_stats() {
         diary: b.diary_repo.clone(),
         social_query: b.social_query.clone(),
     };
-    let ctx = b.build();
 
-    register::execute(
-        &ctx,
-        RegisterCommand {
-            email: "profile@test.com".into(),
-            username: "profuser".into(),
-            password: "password123".into(),
-            role: UserRole::Standard,
-        },
-    )
-    .await
-    .unwrap();
+    setup_user(&b, "profile@test.com", "profuser").await;
 
     let email = Email::new("profile@test.com".into()).unwrap();
     let user = user_repo.find_by_email(&email).await.unwrap().unwrap();
@@ -62,19 +71,8 @@ async fn returns_history_view() {
         diary: b.diary_repo.clone(),
         social_query: b.social_query.clone(),
     };
-    let ctx = b.build();
 
-    register::execute(
-        &ctx,
-        RegisterCommand {
-            email: "hist@test.com".into(),
-            username: "histuser".into(),
-            password: "password123".into(),
-            role: UserRole::Standard,
-        },
-    )
-    .await
-    .unwrap();
+    setup_user(&b, "hist@test.com", "histuser").await;
 
     let email = Email::new("hist@test.com".into()).unwrap();
     let user = user_repo.find_by_email(&email).await.unwrap().unwrap();
@@ -109,19 +107,8 @@ async fn returns_trends_view() {
         diary: b.diary_repo.clone(),
         social_query: b.social_query.clone(),
     };
-    let ctx = b.build();
 
-    register::execute(
-        &ctx,
-        RegisterCommand {
-            email: "trends@test.com".into(),
-            username: "trendsuser".into(),
-            password: "password123".into(),
-            role: UserRole::Standard,
-        },
-    )
-    .await
-    .unwrap();
+    setup_user(&b, "trends@test.com", "trendsuser").await;
 
     let email = Email::new("trends@test.com".into()).unwrap();
     let user = user_repo.find_by_email(&email).await.unwrap().unwrap();
@@ -156,19 +143,8 @@ async fn returns_ratings_view() {
         diary: b.diary_repo.clone(),
         social_query: b.social_query.clone(),
     };
-    let ctx = b.build();
 
-    register::execute(
-        &ctx,
-        RegisterCommand {
-            email: "ratings@test.com".into(),
-            username: "ratingsuser".into(),
-            password: "password123".into(),
-            role: UserRole::Standard,
-        },
-    )
-    .await
-    .unwrap();
+    setup_user(&b, "ratings@test.com", "ratingsuser").await;
 
     let email = Email::new("ratings@test.com".into()).unwrap();
     let user = user_repo.find_by_email(&email).await.unwrap().unwrap();
@@ -201,19 +177,8 @@ async fn returns_recent_with_search() {
         diary: b.diary_repo.clone(),
         social_query: b.social_query.clone(),
     };
-    let ctx = b.build();
 
-    register::execute(
-        &ctx,
-        RegisterCommand {
-            email: "search@test.com".into(),
-            username: "searchuser".into(),
-            password: "password123".into(),
-            role: UserRole::Standard,
-        },
-    )
-    .await
-    .unwrap();
+    setup_user(&b, "search@test.com", "searchuser").await;
 
     let email = Email::new("search@test.com".into()).unwrap();
     let user = user_repo.find_by_email(&email).await.unwrap().unwrap();
@@ -246,19 +211,8 @@ async fn non_own_profile_skips_pending_followers() {
         diary: b.diary_repo.clone(),
         social_query: b.social_query.clone(),
     };
-    let ctx = b.build();
 
-    register::execute(
-        &ctx,
-        RegisterCommand {
-            email: "other@test.com".into(),
-            username: "otheruser".into(),
-            password: "password123".into(),
-            role: UserRole::Standard,
-        },
-    )
-    .await
-    .unwrap();
+    setup_user(&b, "other@test.com", "otheruser").await;
 
     let email = Email::new("other@test.com".into()).unwrap();
     let user = user_repo.find_by_email(&email).await.unwrap().unwrap();

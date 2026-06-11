@@ -1,9 +1,12 @@
-use domain::errors::DomainError;
+use std::sync::Arc;
 
-use crate::context::AppContext;
+use domain::{errors::DomainError, ports::RefreshSessionRepository};
 
-pub async fn execute(ctx: &AppContext, refresh_token: &str) -> Result<(), DomainError> {
-    ctx.repos.refresh_session.revoke(refresh_token).await
+pub async fn execute(
+    refresh_session: Arc<dyn RefreshSessionRepository>,
+    refresh_token: &str,
+) -> Result<(), DomainError> {
+    refresh_session.revoke(refresh_token).await
 }
 
 #[cfg(test)]

@@ -1,18 +1,25 @@
 use domain::errors::DomainError;
 
-use crate::{
-    auth::commands::RegisterAndLoginCommand,
-    auth::{login, register},
-    context::AppContext,
+use crate::auth::{
+    commands::{RegisterAndLoginCommand, RegisterCommand},
+    deps::{LoginDeps, RegisterAndLoginDeps, RegisterDeps},
+    login::{self, LoginResult},
+    queries::LoginQuery,
+    register,
 };
 
 pub async fn execute(
-    ctx: &AppContext,
+    deps: &RegisterAndLoginDeps,
     cmd: RegisterAndLoginCommand,
-) -> Result<login::LoginResult, DomainError> {
+) -> Result<LoginResult, DomainError> {
+    let reg_deps = RegisterDeps {
+        user: deps.user.clone(),
+        password_hasher: deps.password_hasher.clone(),
+        config: deps.config.clone(),
+    };
     register::execute(
-        ctx,
-        crate::auth::commands::RegisterCommand {
+        &reg_deps,
+        RegisterCommand {
             email: cmd.email.clone(),
             username: cmd.username,
             password: cmd.password.clone(),
@@ -21,9 +28,16 @@ pub async fn execute(
     )
     .await?;
 
+    let log_deps = LoginDeps {
+        user: deps.user.clone(),
+        password_hasher: deps.password_hasher.clone(),
+        auth: deps.auth.clone(),
+        refresh_session: deps.refresh_session.clone(),
+        config: deps.config.clone(),
+    };
     login::execute(
-        ctx,
-        crate::auth::queries::LoginQuery {
+        &log_deps,
+        LoginQuery {
             email: cmd.email,
             password: cmd.password,
         },
