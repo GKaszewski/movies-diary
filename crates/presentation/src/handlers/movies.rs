@@ -9,6 +9,7 @@ use uuid::Uuid;
 use application::{
     diary::{
         commands::SyncPosterCommand,
+        deps::{GetMovieSocialPageDeps},
         get_movie_social_page, get_review_history,
         queries::{GetMovieSocialPageQuery, GetReviewHistoryQuery},
     },
@@ -88,7 +89,7 @@ pub async fn get_review_history(
     Path(movie_id): Path<Uuid>,
 ) -> Result<Json<ReviewHistoryResponse>, ApiError> {
     let (history, trend) =
-        get_review_history::execute(&state.app_ctx, GetReviewHistoryQuery { movie_id }).await?;
+        get_review_history::execute(&state.app_ctx.repos.diary, GetReviewHistoryQuery { movie_id }).await?;
 
     Ok(Json(ReviewHistoryResponse {
         movie: crate::mappers::movies::movie_to_dto(history.movie()),
@@ -154,7 +155,11 @@ pub async fn get_movie_detail(
     let offset = params.offset.unwrap_or(0);
 
     let result = get_movie_social_page::execute(
-        &state.app_ctx,
+        &GetMovieSocialPageDeps {
+            movie: state.app_ctx.repos.movie.clone(),
+            diary: state.app_ctx.repos.diary.clone(),
+            movie_profile: state.app_ctx.repos.movie_profile.clone(),
+        },
         GetMovieSocialPageQuery {
             movie_id,
             limit,
@@ -288,7 +293,11 @@ pub async fn get_movie_detail_html(
     let offset = params.offset.unwrap_or(0);
 
     match get_movie_social_page::execute(
-        &state.app_ctx,
+        &GetMovieSocialPageDeps {
+            movie: state.app_ctx.repos.movie.clone(),
+            diary: state.app_ctx.repos.diary.clone(),
+            movie_profile: state.app_ctx.repos.movie_profile.clone(),
+        },
         GetMovieSocialPageQuery {
             movie_id,
             limit,

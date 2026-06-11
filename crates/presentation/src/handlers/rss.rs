@@ -18,7 +18,7 @@ pub async fn get_feed(State(state): State<AppState>) -> Result<impl IntoResponse
         movie_id: None,
         user_id: None,
     };
-    let page = get_diary::execute(&state.app_ctx, query).await?;
+    let page = get_diary::execute(&state.app_ctx.repos.diary, query).await?;
     let xml = state
         .rss_renderer
         .render_feed(&page.items, "Movie Diary")
@@ -49,7 +49,7 @@ pub async fn get_user_feed(
         movie_id: None,
         user_id: Some(user_id),
     };
-    let page = get_diary::execute(&state.app_ctx, query).await?;
+    let page = get_diary::execute(&state.app_ctx.repos.diary, query).await?;
 
     let display_name = user.email().value().split('@').next().unwrap_or("User");
     let title = format!("{}'s Movie Diary", display_name);

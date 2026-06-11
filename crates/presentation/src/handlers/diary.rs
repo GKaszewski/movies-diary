@@ -11,6 +11,7 @@ use application::diary::{
     delete_review, export_diary as export_diary_uc, get_activity_feed as get_feed_uc, get_diary,
     log_review,
     queries::{ExportQuery, GetActivityFeedQuery},
+    deps::{DeleteReviewDeps, GetActivityFeedDeps},
 };
 use domain::models::ExportFormat;
 
@@ -50,7 +51,7 @@ pub async fn get_diary(
     State(state): State<AppState>,
     Query(params): Query<DiaryQueryParams>,
 ) -> Result<Json<DiaryResponse>, ApiError> {
-    let page = get_diary::execute(&state.app_ctx, to_diary_query(params)).await?;
+    let page = get_diary::execute(&state.app_ctx.repos.diary, to_diary_query(params)).await?;
 
     Ok(Json(DiaryResponse {
         items: page
@@ -80,7 +81,7 @@ pub async fn post_review(
     Json(req): Json<LogReviewRequest>,
 ) -> Result<impl IntoResponse, ApiError> {
     let data = LogReviewData::try_from(req).map_err(ApiError)?;
-    log_review::execute(&state.app_ctx, data.into_command(user.0.value())).await?;
+    log_review::execute(&state.app_ctx.services.review_logger, data.into_command(user.0.value())).await?;
     Ok(StatusCode::CREATED)
 }
 
@@ -104,7 +105,13 @@ pub async fn delete_review(
         review_id,
         requesting_user_id: user_id.value(),
     };
-    delete_review::execute(&state.app_ctx, cmd).await?;
+    let deps = DeleteReviewDeps {
+        review: state.app_ctx.repos.review.clone(),
+        diary: state.app_ctx.repos.diary.clone(),
+        movie: state.app_ctx.repos.movie.clone(),
+        event_publisher: state.app_ctx.services.event_publisher.clone(),
+    };
+    delete_review::execute(&deps, cmd).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -136,7 +143,13 @@ pub async fn export_diary(
         user_id: user.0.value(),
         format,
     };
-    match export_diary_uc::execute(&state.app_ctx, query).await {
+    match export_diary_uc::execute(
+        &state.app_ctx.repos.diary,
+        &state.app_ctx.services.diary_exporter,
+        query,
+    )
+    .await
+    {
         Ok(bytes) => (
             StatusCode::OK,
             [
@@ -165,8 +178,13 @@ pub async fn get_activity_feed(
     State(state): State<AppState>,
     Query(params): Query<ActivityFeedQueryParams>,
 ) -> Result<Json<ActivityFeedResponse>, ApiError> {
+    let deps = GetActivityFeedDeps {
+        diary: state.app_ctx.repos.diary.clone(),
+        social_query: state.app_ctx.repos.social_query.clone(),
+        config: state.app_ctx.config.clone(),
+    };
     let page = get_feed_uc::execute(
-        &state.app_ctx,
+        &deps,
         GetActivityFeedQuery {
             limit: params.limit.unwrap_or(20),
             offset: params.offset.unwrap_or(0),
@@ -226,7 +244,7 @@ pub async fn post_review_html(
         }
     };
 
-    match log_review::execute(&state.app_ctx, data.into_command(user_id.value())).await {
+    match log_review::execute(&state.app_ctx.services.review_logger, data.into_command(user_id.value())).await {
         Ok(_) => Redirect::to("/").into_response(),
         Err(e) => {
             let msg = encode_error(&e.to_string());
@@ -249,7 +267,13 @@ pub async fn post_delete_review_html(
         review_id,
         requesting_user_id: user_id.value(),
     };
-    match delete_review::execute(&state.app_ctx, cmd).await {
+    let deps = DeleteReviewDeps {
+        review: state.app_ctx.repos.review.clone(),
+        diary: state.app_ctx.repos.diary.clone(),
+        movie: state.app_ctx.repos.movie.clone(),
+        event_publisher: state.app_ctx.services.event_publisher.clone(),
+    };
+    match delete_review::execute(&deps, cmd).await {
         Ok(()) => {
             let redirect_url = form
                 .redirect_after
@@ -281,7 +305,13 @@ pub async fn get_export_html(
         user_id: user_id.value(),
         format,
     };
-    match export_diary_uc::execute(&state.app_ctx, query).await {
+    match export_diary_uc::execute(
+        &state.app_ctx.repos.diary,
+        &state.app_ctx.services.diary_exporter,
+        query,
+    )
+    .await
+    {
         Ok(bytes) => (
             StatusCode::OK,
             [
@@ -332,7 +362,13 @@ pub async fn get_activity_feed_html(
         filter_following,
     };
 
-    match application::diary::get_activity_feed::execute(&state.app_ctx, query).await {
+    let deps = GetActivityFeedDeps {
+        diary: state.app_ctx.repos.diary.clone(),
+        social_query: state.app_ctx.repos.social_query.clone(),
+        config: state.app_ctx.config.clone(),
+    };
+
+    match application::diary::get_activity_feed::execute(&deps, query).await {
         Ok(entries) => {
             let entry_limit = entries.limit;
             let entry_offset = entries.offset;

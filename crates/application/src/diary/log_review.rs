@@ -1,9 +1,14 @@
+use std::sync::Arc;
+
 use domain::errors::DomainError;
 
-use crate::{context::AppContext, diary::commands::LogReviewCommand};
+use crate::{diary::commands::LogReviewCommand, ports::ReviewLogger};
 
-pub async fn execute(ctx: &AppContext, cmd: LogReviewCommand) -> Result<(), DomainError> {
-    ctx.services.review_logger.log_review(cmd).await
+pub async fn execute(
+    review_logger: &Arc<dyn ReviewLogger>,
+    cmd: LogReviewCommand,
+) -> Result<(), DomainError> {
+    review_logger.log_review(cmd).await
 }
 
 #[cfg(test)]

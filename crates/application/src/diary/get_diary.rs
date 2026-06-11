@@ -1,16 +1,19 @@
+use std::sync::Arc;
+
 use domain::{
     errors::DomainError,
     models::{
         DiaryEntry, DiaryFilter, SortDirection,
         collections::{PageParams, Paginated},
     },
+    ports::DiaryRepository,
     value_objects::{MovieId, UserId},
 };
 
-use crate::{context::AppContext, diary::queries::GetDiaryQuery};
+use crate::diary::queries::GetDiaryQuery;
 
 pub async fn execute(
-    ctx: &AppContext,
+    diary: &Arc<dyn DiaryRepository>,
     query: GetDiaryQuery,
 ) -> Result<Paginated<DiaryEntry>, DomainError> {
     let page = PageParams::new(query.limit, query.offset)?;
@@ -25,7 +28,7 @@ pub async fn execute(
         search: None,
     };
 
-    ctx.repos.diary.query_diary(&filter).await
+    diary.query_diary(&filter).await
 }
 
 #[cfg(test)]

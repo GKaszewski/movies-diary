@@ -1,4 +1,4 @@
-use crate::{context::AppContext, diary::queries::GetActivityFeedQuery};
+use crate::diary::{deps::GetActivityFeedDeps, queries::GetActivityFeedQuery};
 use domain::{
     errors::DomainError,
     models::{
@@ -9,15 +9,14 @@ use domain::{
 };
 
 pub async fn execute(
-    ctx: &AppContext,
+    deps: &GetActivityFeedDeps,
     query: GetActivityFeedQuery,
 ) -> Result<Paginated<FeedEntry>, DomainError> {
     let page = PageParams::new(Some(query.limit), Some(query.offset))?;
 
-    let following = build_following_filter(ctx, &query).await;
+    let following = build_following_filter(deps, &query).await;
 
-    ctx.repos
-        .diary
+    deps.diary
         .query_activity_feed_filtered(
             &page,
             &query.sort_by,
@@ -28,15 +27,14 @@ pub async fn execute(
 }
 
 async fn build_following_filter(
-    ctx: &AppContext,
+    deps: &GetActivityFeedDeps,
     query: &GetActivityFeedQuery,
 ) -> Option<FollowingFilter> {
     if !query.filter_following {
         return None;
     }
     let viewer_id = query.viewer_user_id?;
-    let urls = ctx
-        .repos
+    let urls = deps
         .social_query
         .get_accepted_following_urls(viewer_id)
         .await
@@ -47,7 +45,7 @@ async fn build_following_filter(
             remote_actor_urls: vec![],
         });
     }
-    let base_url = &ctx.config.base_url;
+    let base_url = &deps.config.base_url;
     let mut local_ids = vec![viewer_id];
     let mut remote_urls = Vec::new();
     for url in urls {

@@ -5,21 +5,26 @@ use uuid::Uuid;
 use domain::{
     models::Movie,
     ports::MovieRepository,
-    testing::InMemoryMovieRepository,
+    testing::{FakeDiaryRepository, InMemoryMovieProfileRepository, InMemoryMovieRepository},
     value_objects::{MovieTitle, ReleaseYear},
 };
 
 use crate::{
-    diary::get_movie_social_page, diary::queries::GetMovieSocialPageQuery,
-    test_helpers::TestContextBuilder,
+    diary::deps::GetMovieSocialPageDeps,
+    diary::get_movie_social_page,
+    diary::queries::GetMovieSocialPageQuery,
 };
 
 #[tokio::test]
 async fn fails_when_movie_not_found() {
-    let ctx = TestContextBuilder::new().build();
+    let deps = GetMovieSocialPageDeps {
+        movie: InMemoryMovieRepository::new(),
+        diary: FakeDiaryRepository::new() as _,
+        movie_profile: InMemoryMovieProfileRepository::new(),
+    };
 
     let result = get_movie_social_page::execute(
-        &ctx,
+        &deps,
         GetMovieSocialPageQuery {
             movie_id: Uuid::new_v4(),
             limit: 10,
@@ -45,12 +50,14 @@ async fn returns_movie_social_page() {
     let movie_uuid = movie.id().value();
     movies.upsert_movie(&movie).await.unwrap();
 
-    let ctx = TestContextBuilder::new()
-        .with_movies(Arc::clone(&movies) as _)
-        .build();
+    let deps = GetMovieSocialPageDeps {
+        movie: Arc::clone(&movies) as _,
+        diary: FakeDiaryRepository::new() as _,
+        movie_profile: InMemoryMovieProfileRepository::new(),
+    };
 
     let result = get_movie_social_page::execute(
-        &ctx,
+        &deps,
         GetMovieSocialPageQuery {
             movie_id: movie_uuid,
             limit: 10,

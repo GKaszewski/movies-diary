@@ -1,13 +1,13 @@
+use std::sync::Arc;
+
 use domain::{
     models::Movie,
+    ports::DiaryRepository,
     services::review_history::Trend,
     value_objects::{MovieTitle, ReleaseYear},
 };
 
-use crate::{
-    diary::get_review_history, diary::queries::GetReviewHistoryQuery,
-    test_helpers::TestContextBuilder,
-};
+use crate::{diary::get_review_history, diary::queries::GetReviewHistoryQuery};
 
 #[tokio::test]
 async fn returns_empty_history() {
@@ -22,10 +22,9 @@ async fn returns_empty_history() {
 
     let diary = domain::testing::FakeDiaryRepository::new();
     diary.seed_history(movie, vec![]);
+    let diary: Arc<dyn DiaryRepository> = diary;
 
-    let ctx = TestContextBuilder::new().with_diary(diary as _).build();
-
-    let (history, trend) = get_review_history::execute(&ctx, GetReviewHistoryQuery { movie_id })
+    let (history, trend) = get_review_history::execute(&diary, GetReviewHistoryQuery { movie_id })
         .await
         .unwrap();
 

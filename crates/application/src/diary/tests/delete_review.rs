@@ -12,7 +12,9 @@ use domain::{
 };
 
 use crate::{
-    diary::commands::DeleteReviewCommand, diary::delete_review, test_helpers::TestContextBuilder,
+    diary::commands::DeleteReviewCommand,
+    diary::delete_review,
+    diary::deps::DeleteReviewDeps,
 };
 
 fn make_movie() -> Movie {
@@ -51,15 +53,15 @@ async fn test_delete_review_removes_it() {
     reviews.save_review(&review).await.unwrap();
     diary.seed_history(movie.clone(), vec![]);
 
-    let ctx = TestContextBuilder::new()
-        .with_movies(Arc::clone(&movies) as _)
-        .with_reviews(Arc::clone(&reviews) as _)
-        .with_diary(Arc::clone(&diary) as _)
-        .with_event_publisher(Arc::clone(&events) as _)
-        .build();
+    let deps = DeleteReviewDeps {
+        review: Arc::clone(&reviews) as _,
+        diary: diary.clone() as _,
+        movie: Arc::clone(&movies) as _,
+        event_publisher: Arc::clone(&events) as _,
+    };
 
     delete_review::execute(
-        &ctx,
+        &deps,
         DeleteReviewCommand {
             review_id: review.id().value(),
             requesting_user_id: user_id.value(),
@@ -78,6 +80,9 @@ async fn test_delete_review_removes_it() {
 #[tokio::test]
 async fn test_delete_review_wrong_user_is_unauthorized() {
     let reviews = InMemoryReviewRepository::new();
+    let diary = FakeDiaryRepository::new();
+    let movies = InMemoryMovieRepository::new();
+    let events = NoopEventPublisher::new();
 
     let movie_id = MovieId::from_uuid(uuid::Uuid::new_v4());
     let owner_id = UserId::from_uuid(uuid::Uuid::new_v4());
@@ -86,12 +91,15 @@ async fn test_delete_review_wrong_user_is_unauthorized() {
 
     reviews.save_review(&review).await.unwrap();
 
-    let ctx = TestContextBuilder::new()
-        .with_reviews(Arc::clone(&reviews) as _)
-        .build();
+    let deps = DeleteReviewDeps {
+        review: Arc::clone(&reviews) as _,
+        diary: diary as _,
+        movie: movies as _,
+        event_publisher: Arc::clone(&events) as _,
+    };
 
     let result = delete_review::execute(
-        &ctx,
+        &deps,
         DeleteReviewCommand {
             review_id: review.id().value(),
             requesting_user_id: other_id,

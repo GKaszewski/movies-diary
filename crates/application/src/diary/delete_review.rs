@@ -1,16 +1,15 @@
-use crate::{context::AppContext, diary::commands::DeleteReviewCommand};
+use crate::diary::{commands::DeleteReviewCommand, deps::DeleteReviewDeps};
 use domain::{
     errors::DomainError,
     events::DomainEvent,
     value_objects::{ReviewId, UserId},
 };
 
-pub async fn execute(ctx: &AppContext, cmd: DeleteReviewCommand) -> Result<(), DomainError> {
+pub async fn execute(deps: &DeleteReviewDeps, cmd: DeleteReviewCommand) -> Result<(), DomainError> {
     let review_id = ReviewId::from_uuid(cmd.review_id);
     let requesting_user_id = UserId::from_uuid(cmd.requesting_user_id);
 
-    let review = ctx
-        .repos
+    let review = deps
         .review
         .get_review_by_id(&review_id)
         .await?
@@ -21,10 +20,9 @@ pub async fn execute(ctx: &AppContext, cmd: DeleteReviewCommand) -> Result<(), D
     }
 
     let movie_id = review.movie_id().clone();
-    ctx.repos.review.delete_review(&review_id).await?;
+    deps.review.delete_review(&review_id).await?;
 
-    if let Err(e) = ctx
-        .services
+    if let Err(e) = deps
         .event_publisher
         .publish(&DomainEvent::ReviewDeleted {
             review_id: review_id.clone(),
@@ -35,13 +33,12 @@ pub async fn execute(ctx: &AppContext, cmd: DeleteReviewCommand) -> Result<(), D
         tracing::warn!("failed to publish ReviewDeleted: {e}");
     }
 
-    let history = ctx.repos.diary.get_review_history(&movie_id).await?;
+    let history = deps.diary.get_review_history(&movie_id).await?;
     if history.viewings().is_empty() {
         let poster_path = history.movie().poster_path().cloned();
-        ctx.repos.movie.delete_movie(&movie_id).await?;
+        deps.movie.delete_movie(&movie_id).await?;
         // best-effort: movie is already deleted, so publish failure is non-fatal
-        if let Err(e) = ctx
-            .services
+        if let Err(e) = deps
             .event_publisher
             .publish(&DomainEvent::MovieDeleted {
                 movie_id,

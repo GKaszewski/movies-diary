@@ -1,11 +1,14 @@
-use crate::{diary::get_diary, diary::queries::GetDiaryQuery, test_helpers::TestContextBuilder};
+use domain::testing::FakeDiaryRepository;
+use std::sync::Arc;
+
+use crate::{diary::get_diary, diary::queries::GetDiaryQuery};
 
 #[tokio::test]
 async fn returns_empty_page() {
-    let ctx = TestContextBuilder::new().build();
+    let diary = FakeDiaryRepository::new() as Arc<dyn domain::ports::DiaryRepository>;
 
     let result = get_diary::execute(
-        &ctx,
+        &diary,
         GetDiaryQuery {
             limit: None,
             offset: None,

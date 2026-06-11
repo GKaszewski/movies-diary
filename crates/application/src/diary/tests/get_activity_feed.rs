@@ -2,18 +2,30 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use domain::errors::DomainError;
+use domain::testing::{FakeDiaryRepository, NoopSocialQueryPort};
 
 use crate::{
-    diary::get_activity_feed, diary::queries::GetActivityFeedQuery,
+    config::AppConfig,
+    diary::deps::GetActivityFeedDeps,
+    diary::get_activity_feed,
+    diary::queries::GetActivityFeedQuery,
     test_helpers::TestContextBuilder,
 };
 
+fn default_deps() -> GetActivityFeedDeps {
+    GetActivityFeedDeps {
+        diary: FakeDiaryRepository::new() as _,
+        social_query: Arc::new(NoopSocialQueryPort),
+        config: TestContextBuilder::new().config,
+    }
+}
+
 #[tokio::test]
 async fn returns_empty_feed() {
-    let ctx = TestContextBuilder::new().build();
+    let deps = default_deps();
 
     let result = get_activity_feed::execute(
-        &ctx,
+        &deps,
         GetActivityFeedQuery {
             limit: 10,
             offset: 0,
@@ -32,12 +44,12 @@ async fn returns_empty_feed() {
 
 #[tokio::test]
 async fn returns_feed_with_following_filter() {
-    let ctx = TestContextBuilder::new().build();
+    let deps = default_deps();
 
     let viewer = uuid::Uuid::new_v4();
 
     let result = get_activity_feed::execute(
-        &ctx,
+        &deps,
         GetActivityFeedQuery {
             limit: 10,
             offset: 0,
@@ -93,12 +105,24 @@ async fn following_filter_parses_local_and_remote_urls() {
 
     let social = Arc::new(FakeSocialWithFollowing(following_urls));
 
-    let ctx = TestContextBuilder::new()
-        .with_social_query(social as _)
-        .build();
+    let deps = GetActivityFeedDeps {
+        diary: FakeDiaryRepository::new() as _,
+        social_query: social as _,
+        config: AppConfig {
+            allow_registration: true,
+            base_url: "http://localhost:3000".into(),
+            rate_limit: 20,
+            refresh_ttl_seconds: 2_592_000,
+            wrapup: crate::config::WrapUpConfig {
+                font_path: None,
+                logo_path: None,
+                bg_dir: None,
+            },
+        },
+    };
 
     let result = get_activity_feed::execute(
-        &ctx,
+        &deps,
         GetActivityFeedQuery {
             limit: 10,
             offset: 0,
@@ -118,10 +142,10 @@ async fn following_filter_parses_local_and_remote_urls() {
 
 #[tokio::test]
 async fn following_filter_without_viewer_returns_none() {
-    let ctx = TestContextBuilder::new().build();
+    let deps = default_deps();
 
     let result = get_activity_feed::execute(
-        &ctx,
+        &deps,
         GetActivityFeedQuery {
             limit: 10,
             offset: 0,

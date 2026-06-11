@@ -17,24 +17,18 @@ use crate::{
     test_helpers::TestContextBuilder,
 };
 
-fn build_ctx_with_real_logger(
+fn build_logger(
     movies: &Arc<InMemoryMovieRepository>,
     reviews: &Arc<InMemoryReviewRepository>,
     events: &Arc<NoopEventPublisher>,
-) -> crate::context::AppContext {
-    let logger = Arc::new(DefaultReviewLogger::new(
+) -> Arc<dyn crate::ports::ReviewLogger> {
+    Arc::new(DefaultReviewLogger::new(
         Arc::clone(movies) as _,
         Arc::clone(reviews) as _,
-        crate::test_helpers::TestContextBuilder::new().watchlist_repo,
+        TestContextBuilder::new().watchlist_repo,
         Arc::new(domain::testing::FakeMetadataClient) as _,
         Arc::clone(events) as _,
-    ));
-    TestContextBuilder::new()
-        .with_movies(Arc::clone(movies) as _)
-        .with_reviews(Arc::clone(reviews) as _)
-        .with_event_publisher(Arc::clone(events) as _)
-        .with_review_logger(logger)
-        .build()
+    ))
 }
 
 fn movie_input_manual(title: &str, year: u16) -> MovieInput {
@@ -62,7 +56,7 @@ async fn test_log_review_creates_movie_and_review() {
     let movies = InMemoryMovieRepository::new();
     let reviews = InMemoryReviewRepository::new();
     let events = NoopEventPublisher::new();
-    let ctx = build_ctx_with_real_logger(&movies, &reviews, &events);
+    let logger = build_logger(&movies, &reviews, &events);
 
     let user_id = uuid::Uuid::new_v4();
     let cmd = LogReviewCommand {
@@ -73,7 +67,7 @@ async fn test_log_review_creates_movie_and_review() {
         watched_at: Utc::now().naive_utc(),
     };
 
-    log_review::execute(&ctx, cmd).await.unwrap();
+    log_review::execute(&logger, cmd).await.unwrap();
 
     assert_eq!(reviews.count(), 1, "review should be saved");
     assert!(!events.published().is_empty(), "events should be published");
@@ -95,7 +89,7 @@ async fn test_log_review_reuses_existing_movie() {
     movies.upsert_movie(&existing_movie).await.unwrap();
 
     let events = NoopEventPublisher::new();
-    let ctx = build_ctx_with_real_logger(&movies, &reviews, &events);
+    let logger = build_logger(&movies, &reviews, &events);
 
     let cmd = LogReviewCommand {
         user_id: uuid::Uuid::new_v4(),
@@ -105,7 +99,7 @@ async fn test_log_review_reuses_existing_movie() {
         watched_at: Utc::now().naive_utc(),
     };
 
-    log_review::execute(&ctx, cmd).await.unwrap();
+    log_review::execute(&logger, cmd).await.unwrap();
 
     assert_eq!(movies.count(), 1, "no duplicate movie");
     assert_eq!(reviews.count(), 1);
@@ -116,7 +110,8 @@ async fn test_log_review_with_invalid_rating_fails() {
     let movies = InMemoryMovieRepository::new();
     let reviews = InMemoryReviewRepository::new();
     let events = NoopEventPublisher::new();
-    let ctx = build_ctx_with_real_logger(&movies, &reviews, &events);
+    let logger = build_logger(&movies, &reviews, &events);
+
     let cmd = LogReviewCommand {
         user_id: uuid::Uuid::new_v4(),
         input: movie_input_manual("Some Film", 2000),
@@ -124,6 +119,6 @@ async fn test_log_review_with_invalid_rating_fails() {
         comment: None,
         watched_at: Utc::now().naive_utc(),
     };
-    let result = log_review::execute(&ctx, cmd).await;
+    let result = log_review::execute(&logger, cmd).await;
     assert!(result.is_err(), "rating > 5 should fail");
 }

@@ -1,15 +1,20 @@
-use domain::{errors::DomainError, value_objects::UserId};
+use std::sync::Arc;
 
-use crate::{context::AppContext, diary::queries::ExportQuery};
+use domain::{
+    errors::DomainError,
+    ports::{DiaryExporter, DiaryRepository},
+    value_objects::UserId,
+};
 
-pub async fn execute(ctx: &AppContext, query: ExportQuery) -> Result<Vec<u8>, DomainError> {
-    let entries = ctx
-        .repos
-        .diary
+use crate::diary::queries::ExportQuery;
+
+pub async fn execute(
+    diary: &Arc<dyn DiaryRepository>,
+    diary_exporter: &Arc<dyn DiaryExporter>,
+    query: ExportQuery,
+) -> Result<Vec<u8>, DomainError> {
+    let entries = diary
         .get_user_history(&UserId::from_uuid(query.user_id))
         .await?;
-    ctx.services
-        .diary_exporter
-        .serialize_entries(&entries, query.format)
-        .await
+    diary_exporter.serialize_entries(&entries, query.format).await
 }
