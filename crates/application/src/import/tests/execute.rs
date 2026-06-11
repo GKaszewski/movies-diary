@@ -519,3 +519,47 @@ async fn deletes_session_after_import() {
         "session should be deleted after import"
     );
 }
+
+#[tokio::test]
+async fn imports_more_rows_than_concurrency_limit() {
+    let sessions = InMemoryImportSessionRepository::new();
+    let uid = Uuid::new_v4();
+    let sid = ImportSessionId::generate();
+
+    let now = Utc::now().naive_utc();
+    let rows: Vec<_> = (0..15)
+        .map(|i| AnnotatedRow {
+            result: RowResult::Valid(domain::models::ImportRow {
+                title: Some(format!("Movie {i}")),
+                release_year: Some("2024".into()),
+                rating: Some("4".into()),
+                watched_at: Some("2024-06-01".into()),
+                external_metadata_id: None,
+                director: None,
+                comment: None,
+            }),
+            is_duplicate: false,
+        })
+        .collect();
+
+    let mut session = ImportSession::new(sid.clone(), UserId::from_uuid(uid), now);
+    session.row_results = Some(rows);
+    sessions.create(&session).await.unwrap();
+
+    let confirmed_indices: Vec<usize> = (0..15).collect();
+    let result = execute::execute(
+        Arc::clone(&sessions) as _,
+        Arc::new(NoopReviewLogger),
+        ExecuteImportCommand {
+            user_id: uid,
+            session_id: sid.value(),
+            confirmed_indices,
+        },
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(result.imported, 15);
+    assert_eq!(result.skipped_duplicates, 0);
+    assert!(result.failed.is_empty());
+}

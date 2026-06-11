@@ -15,6 +15,8 @@ use crate::{
     ports::ReviewLogger,
 };
 
+const CONCURRENCY_LIMIT: usize = 10;
+
 pub struct ImportSummary {
     pub imported: usize,
     pub skipped_duplicates: usize,
@@ -41,22 +43,38 @@ pub async fn execute(
     let mut skipped_duplicates = 0;
     let mut failed = Vec::new();
 
+    let semaphore = Arc::new(tokio::sync::Semaphore::new(CONCURRENCY_LIMIT));
+    let mut tasks: tokio::task::JoinSet<(usize, Result<(), String>)> = tokio::task::JoinSet::new();
+
     for (idx, annotated) in row_results.into_iter().enumerate() {
         if !confirmed_set.contains(&idx) {
             skipped_duplicates += 1;
             continue;
         }
         match annotated.result {
-            RowResult::Valid(row) => match row_to_command(&row, user_id.value()) {
-                Ok(cmd) => match review_logger.log_review(cmd).await {
-                    Ok(_) => imported += 1,
-                    Err(e) => failed.push((idx, e.to_string())),
-                },
-                Err(e) => failed.push((idx, e)),
-            },
             RowResult::Invalid { errors, .. } => {
                 failed.push((idx, errors.join("; ")));
             }
+            RowResult::Valid(row) => match row_to_command(&row, user_id.value()) {
+                Err(e) => failed.push((idx, e)),
+                Ok(log_cmd) => {
+                    let permit = Arc::clone(&semaphore).acquire_owned().await.unwrap();
+                    let logger = Arc::clone(&review_logger);
+                    tasks.spawn(async move {
+                        let result = logger.log_review(log_cmd).await.map_err(|e| e.to_string());
+                        drop(permit);
+                        (idx, result)
+                    });
+                }
+            },
+        }
+    }
+
+    while let Some(res) = tasks.join_next().await {
+        let (idx, outcome) = res.expect("import task panicked");
+        match outcome {
+            Ok(()) => imported += 1,
+            Err(e) => failed.push((idx, e)),
         }
     }
 
