@@ -1,5 +1,4 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
-import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useMutation } from "@tanstack/react-query"
 import {
@@ -18,8 +17,6 @@ import {
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { useAuth, useIsAdmin } from "@/components/auth-provider"
-import { API_URL } from "@/lib/api/client"
-import { getToken } from "@/lib/auth"
 import { reindexSearch } from "@/lib/api/users"
 import { useSettings, useUpdateSettings } from "@/hooks/use-goals"
 import { useDocumentTitle } from "@/hooks/use-document-title"
@@ -57,6 +54,12 @@ function SettingsPage() {
       description: t("settings.importDesc"),
       to: "/settings/import",
       icon: <Download className="size-4" />,
+    },
+    {
+      label: t("settings.export"),
+      description: t("settings.exportDesc"),
+      to: "/settings/export",
+      icon: <Upload className="size-4" />,
     },
     {
       label: t("settings.yearWrapUp"),
@@ -100,7 +103,6 @@ function SettingsPage() {
 
       <SettingsGroup label={t("settings.account")} items={account} />
       <SettingsGroup label={t("settings.data")} items={data} />
-      <ExportSection />
       <SettingsGroup label={t("settings.integrations")} items={integrations} />
       <SettingsGroup label={t("settings.socialGroup")} items={social} />
 
@@ -180,68 +182,6 @@ function AdminActions() {
           <Button variant="outline" size="sm" onClick={() => reindex.mutate()} disabled={reindex.isPending}>
             {reindex.isPending ? t("common.generating") : t("common.run")}
           </Button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function ExportSection() {
-  const { t } = useTranslation()
-  const [exporting, setExporting] = useState<string | null>(null)
-
-  async function handleExport(format: "csv" | "json") {
-    setExporting(format)
-    try {
-      const res = await fetch(`${API_URL}/api/v1/diary/export?format=${format}`, {
-        headers: { Authorization: `Bearer ${getToken()}` },
-      })
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `diary.${format}`
-      a.click()
-      URL.revokeObjectURL(url)
-    } finally {
-      setExporting(null)
-    }
-  }
-
-  return (
-    <div>
-      <p className="mb-1.5 px-1 text-xs font-medium text-muted-foreground">
-        {t("settings.export")}
-      </p>
-      <div className="divide-y divide-border rounded-xl bg-card">
-        <div className="flex items-center gap-3 p-3">
-          <span className="text-muted-foreground">
-            <Upload className="size-4" />
-          </span>
-          <div className="flex-1">
-            <p className="text-sm font-medium">{t("settings.export")}</p>
-            <p className="text-xs text-muted-foreground">
-              {t("settings.exportDesc")}
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleExport("csv")}
-              disabled={exporting !== null}
-            >
-              {exporting === "csv" ? t("settings.exporting") : t("settings.exportCsv")}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleExport("json")}
-              disabled={exporting !== null}
-            >
-              {exporting === "json" ? t("settings.exporting") : t("settings.exportJson")}
-            </Button>
-          </div>
         </div>
       </div>
     </div>
