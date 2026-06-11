@@ -5,6 +5,7 @@ import { Calendar, ChevronDown, ExternalLink, Film, Globe, MapPin, User } from "
 import { Link } from "@tanstack/react-router"
 import { BackButton } from "@/components/back-button"
 import { EmptyState } from "@/components/empty-state"
+import { HorizontalStrip } from "@/components/horizontal-strip"
 import { SwipeTabs } from "@/components/swipe-tabs"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -167,7 +168,7 @@ type FilmStripItem = {
 
 function FilmStrip({ items }: { items: FilmStripItem[] }) {
   return (
-    <div className="-mx-4 flex gap-3 overflow-x-auto overscroll-x-contain px-4 pb-2" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(255,255,255,0.15) transparent" }}>
+    <HorizontalStrip>
       {items.map((item, i) => (
         <Link key={`${item.movieId}-${i}`} to="/movies/$id" params={{ id: item.movieId }} className="w-28 flex-shrink-0">
           <div className="aspect-[2/3] overflow-hidden rounded-xl bg-muted">
@@ -184,7 +185,7 @@ function FilmStrip({ items }: { items: FilmStripItem[] }) {
           <p className="truncate text-[10px] italic text-muted-foreground">{item.subtitle}</p>
         </Link>
       ))}
-    </div>
+    </HorizontalStrip>
   )
 }
 

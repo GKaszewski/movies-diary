@@ -5,6 +5,7 @@ import { BackButton } from "@/components/back-button"
 import { StarDisplay } from "@/components/star-display"
 import { RatingHistogram } from "@/components/rating-histogram"
 import { EmptyState } from "@/components/empty-state"
+import { HorizontalStrip } from "@/components/horizontal-strip"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -231,7 +232,7 @@ function HeroSection({
 
 function PersonStrip({ items, type }: { items: (CastMemberDto | CrewMemberDto)[]; type: "cast" | "crew" }) {
   return (
-    <div className="-mx-4 flex gap-2.5 overflow-x-auto overscroll-x-contain px-4 pb-2" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(255,255,255,0.15) transparent" }}>
+    <HorizontalStrip gap="gap-2.5">
       {items.map((person, i) => {
         const subtitle = type === "cast"
           ? (person as CastMemberDto).character
@@ -253,7 +254,7 @@ function PersonStrip({ items, type }: { items: (CastMemberDto | CrewMemberDto)[]
           </Link>
         )
       })}
-    </div>
+    </HorizontalStrip>
   )
 }
 
