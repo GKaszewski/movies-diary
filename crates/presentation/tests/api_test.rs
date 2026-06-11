@@ -25,7 +25,10 @@ use http_body_util::BodyExt;
 use presentation::context::{AppContext, Repositories, Services};
 use presentation::{routes, state::AppState};
 use rss::RssAdapter;
-use sqlite::SqliteMovieRepository;
+use sqlite::{
+    SqliteDiaryRepository, SqliteMovieRepository, SqliteReviewRepository, SqliteStatsRepository,
+    migrate as sqlite_migrate,
+};
 use sqlx::SqlitePool;
 use tower::ServiceExt;
 
@@ -426,17 +429,15 @@ async fn test_app() -> Router {
     let pool = SqlitePool::connect("sqlite::memory:")
         .await
         .expect("in-memory SQLite failed");
-    let repo = SqliteMovieRepository::new(pool);
-    repo.migrate().await.expect("migration failed");
+    sqlite_migrate(&pool).await.expect("migration failed");
 
-    let repo = Arc::new(repo);
     let state = AppState {
         app_ctx: AppContext {
             repos: Repositories {
-                movie: Arc::clone(&repo) as _,
-                review: Arc::clone(&repo) as _,
-                diary: Arc::clone(&repo) as _,
-                stats: Arc::clone(&repo) as _,
+                movie: Arc::new(SqliteMovieRepository::new(pool.clone())) as _,
+                review: Arc::new(SqliteReviewRepository::new(pool.clone())) as _,
+                diary: Arc::new(SqliteDiaryRepository::new(pool.clone())) as _,
+                stats: Arc::new(SqliteStatsRepository::new(pool.clone())) as _,
                 user: Arc::new(NobodyUserRepo),
                 import_session: Arc::new(PanicImportSession),
                 import_profile: Arc::new(PanicImportProfile),
