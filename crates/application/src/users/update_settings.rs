@@ -5,6 +5,8 @@ use domain::{errors::DomainError, ports::UserSettingsRepository, value_objects::
 pub struct UpdateUserSettingsCommand {
     pub user_id: uuid::Uuid,
     pub federate_goals: bool,
+    pub federate_reviews: bool,
+    pub federate_watchlist: bool,
 }
 
 pub async fn execute(
@@ -14,6 +16,8 @@ pub async fn execute(
     let uid = UserId::from_uuid(cmd.user_id);
     let mut settings = user_settings.get(&uid).await?;
     settings.set_federate_goals(cmd.federate_goals);
+    settings.set_federate_reviews(cmd.federate_reviews);
+    settings.set_federate_watchlist(cmd.federate_watchlist);
     user_settings.save(&settings).await
 }
 

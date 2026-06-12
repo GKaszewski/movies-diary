@@ -3,9 +3,11 @@ import { useTranslation } from "react-i18next"
 import { useMutation } from "@tanstack/react-query"
 import {
   ArrowLeft,
+  BookOpen,
   ChevronRight,
   Download,
   Key,
+  List,
   LogOut,
   RefreshCw,
   ShieldBan,
@@ -19,6 +21,7 @@ import { Switch } from "@/components/ui/switch"
 import { useAuth, useIsAdmin } from "@/components/auth-provider"
 import { reindexSearch } from "@/lib/api/users"
 import { useSettings, useUpdateSettings } from "@/hooks/use-goals"
+import { UpdateUserSettingsRequest } from "@/lib/api/goals"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 
 export const Route = createFileRoute("/_app/settings/")({
@@ -128,6 +131,18 @@ function PrivacySection() {
   const { data: settings } = useSettings()
   const updateMutation = useUpdateSettings()
 
+  const disabled = updateMutation.isPending
+
+  const toggle = (patch: Partial<UpdateUserSettingsRequest>) => {
+    if (!settings) return
+    updateMutation.mutate({
+      federate_goals: settings.federate_goals,
+      federate_reviews: settings.federate_reviews,
+      federate_watchlist: settings.federate_watchlist,
+      ...patch,
+    })
+  }
+
   return (
     <div>
       <p className="mb-1.5 px-1 text-xs font-medium text-muted-foreground">
@@ -145,11 +160,41 @@ function PrivacySection() {
             </p>
           </div>
           <Switch
-            checked={settings?.federate_goals ?? false}
-            onCheckedChange={(checked) =>
-              updateMutation.mutate({ federate_goals: checked })
-            }
-            disabled={updateMutation.isPending}
+            checked={settings?.federate_goals ?? true}
+            onCheckedChange={(checked) => toggle({ federate_goals: checked })}
+            disabled={disabled}
+          />
+        </div>
+        <div className="flex items-center gap-3 p-3">
+          <span className="text-muted-foreground">
+            <BookOpen className="size-4" />
+          </span>
+          <div className="flex-1">
+            <p className="text-sm font-medium">{t("settings.federateReviews")}</p>
+            <p className="text-xs text-muted-foreground">
+              {t("settings.federateReviewsDesc")}
+            </p>
+          </div>
+          <Switch
+            checked={settings?.federate_reviews ?? true}
+            onCheckedChange={(checked) => toggle({ federate_reviews: checked })}
+            disabled={disabled}
+          />
+        </div>
+        <div className="flex items-center gap-3 p-3">
+          <span className="text-muted-foreground">
+            <List className="size-4" />
+          </span>
+          <div className="flex-1">
+            <p className="text-sm font-medium">{t("settings.federateWatchlist")}</p>
+            <p className="text-xs text-muted-foreground">
+              {t("settings.federateWatchlistDesc")}
+            </p>
+          </div>
+          <Switch
+            checked={settings?.federate_watchlist ?? true}
+            onCheckedChange={(checked) => toggle({ federate_watchlist: checked })}
+            disabled={disabled}
           />
         </div>
       </div>

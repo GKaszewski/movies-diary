@@ -1,6 +1,9 @@
 use async_trait::async_trait;
 use domain::{
-    errors::DomainError, models::UserSettings, ports::UserSettingsRepository, value_objects::UserId,
+    errors::DomainError,
+    models::UserSettings,
+    ports::{FederationFlags, UserFederationSettingsQuery, UserSettingsRepository},
+    value_objects::UserId,
 };
 use sqlx::{PgPool, Row};
 
@@ -23,20 +26,25 @@ impl PostgresUserSettingsRepository {
 impl UserSettingsRepository for PostgresUserSettingsRepository {
     async fn get(&self, user_id: &UserId) -> Result<UserSettings, DomainError> {
         let uid = user_id.value().to_string();
-
-        let row =
-            sqlx::query("SELECT user_id, federate_goals FROM user_settings WHERE user_id = $1")
-                .bind(&uid)
-                .fetch_optional(&self.pool)
-                .await
-                .map_err(Self::map_err)?;
+        let row = sqlx::query(
+            "SELECT federate_goals, federate_reviews, federate_watchlist \
+             FROM user_settings WHERE user_id = $1",
+        )
+        .bind(&uid)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(Self::map_err)?;
 
         match row {
             Some(r) => {
-                let federate: i64 = r.try_get("federate_goals").unwrap_or(0);
+                let goals: bool = r.try_get("federate_goals").unwrap_or(true);
+                let reviews: bool = r.try_get("federate_reviews").unwrap_or(true);
+                let watchlist: bool = r.try_get("federate_watchlist").unwrap_or(true);
                 Ok(UserSettings::from_persistence(
                     user_id.clone(),
-                    federate != 0,
+                    goals,
+                    reviews,
+                    watchlist,
                 ))
             }
             None => Ok(UserSettings::new(user_id.clone())),
@@ -45,18 +53,48 @@ impl UserSettingsRepository for PostgresUserSettingsRepository {
 
     async fn save(&self, settings: &UserSettings) -> Result<(), DomainError> {
         let uid = settings.user_id().value().to_string();
-        let federate = if settings.federate_goals() { 1i64 } else { 0 };
-
         sqlx::query(
-            "INSERT INTO user_settings (user_id, federate_goals) VALUES ($1, $2) \
-             ON CONFLICT (user_id) DO UPDATE SET federate_goals = $2",
+            "INSERT INTO user_settings (user_id, federate_goals, federate_reviews, federate_watchlist) \
+             VALUES ($1, $2, $3, $4) \
+             ON CONFLICT (user_id) DO UPDATE \
+             SET federate_goals = $2, federate_reviews = $3, federate_watchlist = $4",
         )
         .bind(&uid)
-        .bind(federate)
+        .bind(settings.federate_goals())
+        .bind(settings.federate_reviews())
+        .bind(settings.federate_watchlist())
         .execute(&self.pool)
         .await
         .map_err(Self::map_err)?;
-
         Ok(())
+    }
+}
+
+#[async_trait]
+impl UserFederationSettingsQuery for PostgresUserSettingsRepository {
+    async fn get_federation_flags(&self, user_id: &UserId) -> Result<FederationFlags, DomainError> {
+        let uid = user_id.value().to_string();
+        let row = sqlx::query(
+            "SELECT federate_goals, federate_reviews, federate_watchlist \
+             FROM user_settings WHERE user_id = $1",
+        )
+        .bind(&uid)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(Self::map_err)?;
+
+        match row {
+            Some(r) => {
+                let goals: bool = r.try_get("federate_goals").unwrap_or(true);
+                let reviews: bool = r.try_get("federate_reviews").unwrap_or(true);
+                let watchlist: bool = r.try_get("federate_watchlist").unwrap_or(true);
+                Ok(FederationFlags { goals, reviews, watchlist })
+            }
+            None => Ok(FederationFlags {
+                goals: true,
+                reviews: true,
+                watchlist: true,
+            }),
+        }
     }
 }

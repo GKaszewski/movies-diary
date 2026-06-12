@@ -36,6 +36,7 @@ pub struct DatabaseOutput {
     pub wrapup_repo: Arc<dyn domain::ports::WrapUpRepository>,
     pub goal: Arc<dyn domain::ports::GoalRepository>,
     pub user_settings: Arc<dyn domain::ports::UserSettingsRepository>,
+    pub federation_settings: std::sync::Arc<dyn domain::ports::UserFederationSettingsQuery>,
     pub remote_goal: Arc<dyn domain::ports::RemoteGoalRepository>,
     pub refresh_session: Arc<dyn RefreshSessionRepository>,
     pub db_pool: DbPool,
@@ -78,6 +79,7 @@ pub async fn build_database_adapters(backend: &str, url: &str) -> anyhow::Result
                 wrapup_repo: w.wrapup_repo,
                 goal: w.goal,
                 user_settings: w.user_settings,
+                federation_settings: w.federation_settings,
                 remote_goal: w.remote_goal,
                 refresh_session: Arc::new(postgres::PostgresRefreshSessionAdapter::new(
                     w.pool.clone(),
@@ -119,6 +121,7 @@ pub async fn build_database_adapters(backend: &str, url: &str) -> anyhow::Result
                 wrapup_repo: w.wrapup_repo,
                 goal: w.goal,
                 user_settings: w.user_settings,
+                federation_settings: w.federation_settings,
                 remote_goal: w.remote_goal,
                 refresh_session: Arc::new(sqlite::SqliteRefreshSessionAdapter::new(w.pool.clone()))
                     as _,

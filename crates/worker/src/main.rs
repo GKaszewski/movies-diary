@@ -241,6 +241,7 @@ async fn main() -> anyhow::Result<()> {
                 base_url,
                 allow_registration,
                 event_publisher: Arc::clone(&event_publisher),
+                federation_settings: std::sync::Arc::clone(&db.federation_settings),
             })
             .await?;
 

@@ -52,6 +52,7 @@ pub struct ActivityPubDeps {
     pub remote_goal_repo: std::sync::Arc<dyn domain::ports::RemoteGoalRepository>,
     pub local_ap_content: std::sync::Arc<dyn domain::ports::LocalApContentQuery>,
     pub user_repo: std::sync::Arc<dyn domain::ports::UserRepository>,
+    pub federation_settings: std::sync::Arc<dyn domain::ports::UserFederationSettingsQuery>,
     pub base_url: String,
     pub allow_registration: bool,
     pub event_publisher: std::sync::Arc<dyn domain::ports::EventPublisher>,
@@ -68,6 +69,7 @@ pub async fn wire(deps: ActivityPubDeps) -> anyhow::Result<ActivityPubWire> {
         remote_goal_repo,
         local_ap_content,
         user_repo,
+        federation_settings,
         base_url,
         allow_registration,
         event_publisher,
@@ -129,6 +131,7 @@ pub async fn wire(deps: ActivityPubDeps) -> anyhow::Result<ActivityPubWire> {
     let event_handler = std::sync::Arc::new(ActivityPubEventHandler::new(
         std::sync::Arc::clone(&concrete),
         local_ap_content,
+        federation_settings,
         base_url,
     )) as std::sync::Arc<dyn domain::ports::EventHandler>;
 

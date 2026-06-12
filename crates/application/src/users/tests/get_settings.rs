@@ -11,5 +11,7 @@ async fn returns_default_settings() {
         .await
         .unwrap();
 
-    assert!(!settings.federate_goals());
+    assert!(settings.federate_goals());
+    assert!(settings.federate_reviews());
+    assert!(settings.federate_watchlist());
 }

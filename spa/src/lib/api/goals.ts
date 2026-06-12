@@ -18,11 +18,15 @@ export type UpdateGoalRequest = {
 
 export const userSettingsDtoSchema = z.object({
   federate_goals: z.boolean(),
+  federate_reviews: z.boolean(),
+  federate_watchlist: z.boolean(),
 })
 export type UserSettingsDto = z.infer<typeof userSettingsDtoSchema>
 
 export type UpdateUserSettingsRequest = {
   federate_goals: boolean
+  federate_reviews: boolean
+  federate_watchlist: boolean
 }
 
 export function getGoals() {

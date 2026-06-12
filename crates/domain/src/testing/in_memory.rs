@@ -18,9 +18,10 @@ use crate::{
         collections::{PageParams, Paginated},
     },
     ports::{
-        GoalRepository, ImportProfileRepository, ImportSessionRepository, MovieProfileRepository,
-        MovieRepository, RefreshSessionRepository, ReviewRepository, UserProfileFieldsRepository,
-        UserRepository, UserSettingsRepository, WatchEventRepository, WatchlistRepository,
+        FederationFlags, GoalRepository, ImportProfileRepository, ImportSessionRepository,
+        MovieProfileRepository, MovieRepository, RefreshSessionRepository, ReviewRepository,
+        UserFederationSettingsQuery, UserProfileFieldsRepository, UserRepository,
+        UserSettingsRepository, WatchEventRepository, WatchlistRepository,
         WebhookTokenRepository,
     },
     value_objects::{
@@ -438,6 +439,22 @@ impl UserSettingsRepository for InMemoryUserSettingsRepository {
             .unwrap()
             .insert(settings.user_id().value(), settings.clone());
         Ok(())
+    }
+}
+
+#[async_trait]
+impl UserFederationSettingsQuery for InMemoryUserSettingsRepository {
+    async fn get_federation_flags(&self, user_id: &UserId) -> Result<FederationFlags, DomainError> {
+        let store = self.store.lock().unwrap();
+        let settings = store
+            .get(&user_id.value())
+            .cloned()
+            .unwrap_or_else(|| UserSettings::new(user_id.clone()));
+        Ok(FederationFlags {
+            goals: settings.federate_goals(),
+            reviews: settings.federate_reviews(),
+            watchlist: settings.federate_watchlist(),
+        })
     }
 }
 

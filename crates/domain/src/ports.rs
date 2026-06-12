@@ -456,6 +456,17 @@ pub trait UserSettingsRepository: Send + Sync {
     async fn save(&self, settings: &UserSettings) -> Result<(), DomainError>;
 }
 
+pub struct FederationFlags {
+    pub goals: bool,
+    pub reviews: bool,
+    pub watchlist: bool,
+}
+
+#[async_trait]
+pub trait UserFederationSettingsQuery: Send + Sync {
+    async fn get_federation_flags(&self, user_id: &UserId) -> Result<FederationFlags, DomainError>;
+}
+
 #[async_trait]
 pub trait RemoteGoalRepository: Send + Sync {
     async fn save(&self, entry: RemoteGoalEntry) -> Result<(), DomainError>;
@@ -501,8 +512,6 @@ pub trait LocalApContentQuery: Send + Sync {
         before: Option<chrono::NaiveDateTime>,
         limit: usize,
     ) -> Result<Vec<DiaryEntry>, DomainError>;
-
-    async fn get_user_federate_goals(&self, user_id: &UserId) -> Result<bool, DomainError>;
 
     async fn get_goal_with_progress(
         &self,

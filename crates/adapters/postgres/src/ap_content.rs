@@ -229,23 +229,6 @@ impl LocalApContentQuery for PostgresApContentQuery {
         rows.into_iter().map(DiaryRow::into_domain).collect()
     }
 
-    async fn get_user_federate_goals(&self, user_id: &UserId) -> Result<bool, DomainError> {
-        let uid = user_id.value().to_string();
-        let row = sqlx::query("SELECT federate_goals FROM user_settings WHERE user_id = $1")
-            .bind(&uid)
-            .fetch_optional(&self.pool)
-            .await
-            .map_err(Self::map_err)?;
-
-        match row {
-            Some(r) => {
-                let val: i64 = r.try_get("federate_goals").unwrap_or(0);
-                Ok(val != 0)
-            }
-            None => Ok(false),
-        }
-    }
-
     async fn get_goal_with_progress(
         &self,
         user_id: &UserId,

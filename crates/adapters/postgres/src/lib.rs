@@ -93,6 +93,7 @@ pub struct PostgresWireOutput {
     pub wrapup_stats: std::sync::Arc<dyn domain::ports::WrapUpStatsQuery>,
     pub goal: std::sync::Arc<dyn domain::ports::GoalRepository>,
     pub user_settings: std::sync::Arc<dyn domain::ports::UserSettingsRepository>,
+    pub federation_settings: std::sync::Arc<dyn domain::ports::UserFederationSettingsQuery>,
     pub remote_goal: std::sync::Arc<dyn domain::ports::RemoteGoalRepository>,
 }
 
@@ -107,6 +108,8 @@ pub async fn wire(database_url: &str) -> anyhow::Result<PostgresWireOutput> {
         .await
         .map_err(|e| anyhow::anyhow!("{e}"))
         .context("Database migration failed")?;
+
+    let user_settings_repo = std::sync::Arc::new(user_settings::PostgresUserSettingsRepository::new(pool.clone()));
 
     Ok(PostgresWireOutput {
         pool: pool.clone(),
@@ -125,9 +128,8 @@ pub async fn wire(database_url: &str) -> anyhow::Result<PostgresWireOutput> {
         wrapup_repo: std::sync::Arc::new(PostgresWrapUpRepository::new(pool.clone())) as _,
         wrapup_stats: std::sync::Arc::new(PostgresWrapUpStatsQuery::new(pool.clone())) as _,
         goal: std::sync::Arc::new(goals::PostgresGoalRepository::new(pool.clone())) as _,
-        user_settings: std::sync::Arc::new(user_settings::PostgresUserSettingsRepository::new(
-            pool.clone(),
-        )) as _,
+        user_settings: std::sync::Arc::clone(&user_settings_repo) as _,
+        federation_settings: user_settings_repo as _,
         remote_goal: std::sync::Arc::new(remote_goals::PostgresRemoteGoalRepository::new(pool))
             as _,
     })

@@ -89,6 +89,7 @@ pub struct SqliteWireOutput {
     pub wrapup_stats: std::sync::Arc<dyn domain::ports::WrapUpStatsQuery>,
     pub goal: std::sync::Arc<dyn domain::ports::GoalRepository>,
     pub user_settings: std::sync::Arc<dyn domain::ports::UserSettingsRepository>,
+    pub federation_settings: std::sync::Arc<dyn domain::ports::UserFederationSettingsQuery>,
     pub remote_goal: std::sync::Arc<dyn domain::ports::RemoteGoalRepository>,
 }
 
@@ -113,6 +114,8 @@ pub async fn wire(database_url: &str) -> anyhow::Result<SqliteWireOutput> {
         .map_err(|e| anyhow::anyhow!("{e}"))
         .context("Database migration failed")?;
 
+    let user_settings_repo = std::sync::Arc::new(user_settings::SqliteUserSettingsRepository::new(pool.clone()));
+
     Ok(SqliteWireOutput {
         pool: pool.clone(),
         movie: std::sync::Arc::new(SqliteMovieRepository::new(pool.clone())) as _,
@@ -128,9 +131,8 @@ pub async fn wire(database_url: &str) -> anyhow::Result<SqliteWireOutput> {
         wrapup_repo: std::sync::Arc::new(SqliteWrapUpRepository::new(pool.clone())) as _,
         wrapup_stats: std::sync::Arc::new(SqliteWrapUpStatsQuery::new(pool.clone())) as _,
         goal: std::sync::Arc::new(goals::SqliteGoalRepository::new(pool.clone())) as _,
-        user_settings: std::sync::Arc::new(user_settings::SqliteUserSettingsRepository::new(
-            pool.clone(),
-        )) as _,
+        user_settings: std::sync::Arc::clone(&user_settings_repo) as _,
+        federation_settings: user_settings_repo as _,
         remote_goal: std::sync::Arc::new(remote_goals::SqliteRemoteGoalRepository::new(pool)) as _,
     })
 }

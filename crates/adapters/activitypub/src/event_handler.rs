@@ -4,7 +4,7 @@ use domain::ports::EventHandler;
 use domain::{
     errors::DomainError,
     events::DomainEvent,
-    ports::LocalApContentQuery,
+    ports::{LocalApContentQuery, UserFederationSettingsQuery},
     value_objects::{MovieId, ReviewId, UserId},
 };
 use std::sync::Arc;
@@ -17,6 +17,7 @@ use crate::urls::{actor_url, goal_url, review_url};
 pub struct ActivityPubEventHandler {
     ap_service: Arc<ActivityPubService>,
     content_query: Arc<dyn LocalApContentQuery>,
+    federation_settings: Arc<dyn UserFederationSettingsQuery>,
     base_url: String,
 }
 
@@ -24,11 +25,13 @@ impl ActivityPubEventHandler {
     pub fn new(
         ap_service: Arc<ActivityPubService>,
         content_query: Arc<dyn LocalApContentQuery>,
+        federation_settings: Arc<dyn UserFederationSettingsQuery>,
         base_url: String,
     ) -> Self {
         Self {
             ap_service,
             content_query,
+            federation_settings,
             base_url,
         }
     }
@@ -131,6 +134,12 @@ impl EventHandler for ActivityPubEventHandler {
 
 impl ActivityPubEventHandler {
     async fn on_review_logged(&self, user_id: &UserId, review_id: &ReviewId) -> anyhow::Result<()> {
+        let flags = self.federation_settings.get_federation_flags(user_id).await
+            .unwrap_or(domain::ports::FederationFlags { goals: true, reviews: true, watchlist: true });
+        if !flags.reviews {
+            return Ok(());
+        }
+
         let review = match self.content_query.get_review_by_id(review_id).await? {
             Some(r) => r,
             None => return Ok(()),
@@ -184,6 +193,12 @@ impl ActivityPubEventHandler {
         user_id: &UserId,
         review_id: &ReviewId,
     ) -> anyhow::Result<()> {
+        let flags = self.federation_settings.get_federation_flags(user_id).await
+            .unwrap_or(domain::ports::FederationFlags { goals: true, reviews: true, watchlist: true });
+        if !flags.reviews {
+            return Ok(());
+        }
+
         let review = match self.content_query.get_review_by_id(review_id).await? {
             Some(r) => r,
             None => return Ok(()),
@@ -250,6 +265,12 @@ impl ActivityPubEventHandler {
         external_metadata_id: &Option<String>,
         added_at: &chrono::NaiveDateTime,
     ) -> anyhow::Result<()> {
+        let flags = self.federation_settings.get_federation_flags(user_id).await
+            .unwrap_or(domain::ports::FederationFlags { goals: true, reviews: true, watchlist: true });
+        if !flags.watchlist {
+            return Ok(());
+        }
+
         use crate::urls::watchlist_entry_url;
         let ap_id = watchlist_entry_url(&self.base_url, user_id.value(), movie_id.value());
         let actor = actor_url(&self.base_url, user_id.value());
@@ -316,6 +337,13 @@ impl ActivityPubEventHandler {
         for entry in entries {
             let review = entry.review();
             let user_id = review.user_id();
+
+            let flags = self.federation_settings.get_federation_flags(user_id).await
+                .unwrap_or(domain::ports::FederationFlags { goals: true, reviews: true, watchlist: true });
+            if !flags.reviews {
+                continue;
+            }
+
             let ap_id = review_url(&self.base_url, review.id());
             let actor = actor_url(&self.base_url, user_id.value());
 
@@ -343,12 +371,9 @@ impl ActivityPubEventHandler {
         user_id: &UserId,
         year: u16,
     ) -> anyhow::Result<()> {
-        if !self
-            .content_query
-            .get_user_federate_goals(user_id)
-            .await
-            .unwrap_or(false)
-        {
+        let flags = self.federation_settings.get_federation_flags(user_id).await
+            .unwrap_or(domain::ports::FederationFlags { goals: true, reviews: true, watchlist: true });
+        if !flags.goals {
             return Ok(());
         }
         let Some((goal, current)) = self
@@ -384,12 +409,9 @@ impl ActivityPubEventHandler {
         target_count: u32,
         is_create: bool,
     ) -> anyhow::Result<()> {
-        if !self
-            .content_query
-            .get_user_federate_goals(user_id)
-            .await
-            .unwrap_or(false)
-        {
+        let flags = self.federation_settings.get_federation_flags(user_id).await
+            .unwrap_or(domain::ports::FederationFlags { goals: true, reviews: true, watchlist: true });
+        if !flags.goals {
             return Ok(());
         }
         let current = self
@@ -418,12 +440,9 @@ impl ActivityPubEventHandler {
     }
 
     async fn on_goal_deleted(&self, user_id: &UserId, year: u16) -> anyhow::Result<()> {
-        if !self
-            .content_query
-            .get_user_federate_goals(user_id)
-            .await
-            .unwrap_or(false)
-        {
+        let flags = self.federation_settings.get_federation_flags(user_id).await
+            .unwrap_or(domain::ports::FederationFlags { goals: true, reviews: true, watchlist: true });
+        if !flags.goals {
             return Ok(());
         }
         let ap_id = goal_url(&self.base_url, user_id.value(), year);

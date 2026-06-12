@@ -119,6 +119,7 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
             remote_goal_repo: Arc::clone(&db.remote_goal),
             local_ap_content: Arc::clone(&ap_content_repo),
             user_repo: Arc::clone(&db.user),
+            federation_settings: std::sync::Arc::clone(&db.federation_settings),
             base_url: app_config.base_url.clone(),
             allow_registration: app_config.allow_registration,
             event_publisher: Arc::clone(&ep),

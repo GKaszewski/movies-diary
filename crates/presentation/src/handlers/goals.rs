@@ -176,6 +176,8 @@ pub async fn get_settings(
     .await?;
     Ok(Json(UserSettingsDto {
         federate_goals: settings.federate_goals(),
+        federate_reviews: settings.federate_reviews(),
+        federate_watchlist: settings.federate_watchlist(),
     }))
 }
 
@@ -198,6 +200,8 @@ pub async fn update_settings(
         application::users::update_settings::UpdateUserSettingsCommand {
             user_id: user.0.value(),
             federate_goals: req.federate_goals,
+            federate_reviews: req.federate_reviews,
+            federate_watchlist: req.federate_watchlist,
         },
     )
     .await?;
