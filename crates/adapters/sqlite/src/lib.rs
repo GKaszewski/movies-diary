@@ -114,7 +114,9 @@ pub async fn wire(database_url: &str) -> anyhow::Result<SqliteWireOutput> {
         .map_err(|e| anyhow::anyhow!("{e}"))
         .context("Database migration failed")?;
 
-    let user_settings_repo = std::sync::Arc::new(user_settings::SqliteUserSettingsRepository::new(pool.clone()));
+    let user_settings_repo = std::sync::Arc::new(user_settings::SqliteUserSettingsRepository::new(
+        pool.clone(),
+    ));
 
     Ok(SqliteWireOutput {
         pool: pool.clone(),

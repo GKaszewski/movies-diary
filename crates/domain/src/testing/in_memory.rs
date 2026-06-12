@@ -21,8 +21,7 @@ use crate::{
         FederationFlags, GoalRepository, ImportProfileRepository, ImportSessionRepository,
         MovieProfileRepository, MovieRepository, RefreshSessionRepository, ReviewRepository,
         UserFederationSettingsQuery, UserProfileFieldsRepository, UserRepository,
-        UserSettingsRepository, WatchEventRepository, WatchlistRepository,
-        WebhookTokenRepository,
+        UserSettingsRepository, WatchEventRepository, WatchlistRepository, WebhookTokenRepository,
     },
     value_objects::{
         Email, ExternalMetadataId, GoalId, ImportProfileId, ImportSessionId, MovieId, MovieTitle,

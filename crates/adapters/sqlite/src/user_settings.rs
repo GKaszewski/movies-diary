@@ -61,7 +61,11 @@ impl UserSettingsRepository for SqliteUserSettingsRepository {
         .bind(&uid)
         .bind(if settings.federate_goals() { 1i64 } else { 0 })
         .bind(if settings.federate_reviews() { 1i64 } else { 0 })
-        .bind(if settings.federate_watchlist() { 1i64 } else { 0 })
+        .bind(if settings.federate_watchlist() {
+            1i64
+        } else {
+            0
+        })
         .execute(&self.pool)
         .await
         .map_err(Self::map_err)?;

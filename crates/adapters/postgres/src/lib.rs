@@ -109,7 +109,9 @@ pub async fn wire(database_url: &str) -> anyhow::Result<PostgresWireOutput> {
         .map_err(|e| anyhow::anyhow!("{e}"))
         .context("Database migration failed")?;
 
-    let user_settings_repo = std::sync::Arc::new(user_settings::PostgresUserSettingsRepository::new(pool.clone()));
+    let user_settings_repo = std::sync::Arc::new(
+        user_settings::PostgresUserSettingsRepository::new(pool.clone()),
+    );
 
     Ok(PostgresWireOutput {
         pool: pool.clone(),

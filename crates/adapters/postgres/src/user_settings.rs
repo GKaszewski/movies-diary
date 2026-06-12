@@ -88,7 +88,11 @@ impl UserFederationSettingsQuery for PostgresUserSettingsRepository {
                 let goals: bool = r.try_get("federate_goals").unwrap_or(true);
                 let reviews: bool = r.try_get("federate_reviews").unwrap_or(true);
                 let watchlist: bool = r.try_get("federate_watchlist").unwrap_or(true);
-                Ok(FederationFlags { goals, reviews, watchlist })
+                Ok(FederationFlags {
+                    goals,
+                    reviews,
+                    watchlist,
+                })
             }
             None => Ok(FederationFlags {
                 goals: true,

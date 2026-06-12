@@ -134,8 +134,15 @@ impl EventHandler for ActivityPubEventHandler {
 
 impl ActivityPubEventHandler {
     async fn on_review_logged(&self, user_id: &UserId, review_id: &ReviewId) -> anyhow::Result<()> {
-        let flags = self.federation_settings.get_federation_flags(user_id).await
-            .unwrap_or(domain::ports::FederationFlags { goals: true, reviews: true, watchlist: true });
+        let flags = self
+            .federation_settings
+            .get_federation_flags(user_id)
+            .await
+            .unwrap_or(domain::ports::FederationFlags {
+                goals: true,
+                reviews: true,
+                watchlist: true,
+            });
         if !flags.reviews {
             return Ok(());
         }
@@ -193,8 +200,15 @@ impl ActivityPubEventHandler {
         user_id: &UserId,
         review_id: &ReviewId,
     ) -> anyhow::Result<()> {
-        let flags = self.federation_settings.get_federation_flags(user_id).await
-            .unwrap_or(domain::ports::FederationFlags { goals: true, reviews: true, watchlist: true });
+        let flags = self
+            .federation_settings
+            .get_federation_flags(user_id)
+            .await
+            .unwrap_or(domain::ports::FederationFlags {
+                goals: true,
+                reviews: true,
+                watchlist: true,
+            });
         if !flags.reviews {
             return Ok(());
         }
@@ -265,8 +279,15 @@ impl ActivityPubEventHandler {
         external_metadata_id: &Option<String>,
         added_at: &chrono::NaiveDateTime,
     ) -> anyhow::Result<()> {
-        let flags = self.federation_settings.get_federation_flags(user_id).await
-            .unwrap_or(domain::ports::FederationFlags { goals: true, reviews: true, watchlist: true });
+        let flags = self
+            .federation_settings
+            .get_federation_flags(user_id)
+            .await
+            .unwrap_or(domain::ports::FederationFlags {
+                goals: true,
+                reviews: true,
+                watchlist: true,
+            });
         if !flags.watchlist {
             return Ok(());
         }
@@ -338,8 +359,15 @@ impl ActivityPubEventHandler {
             let review = entry.review();
             let user_id = review.user_id();
 
-            let flags = self.federation_settings.get_federation_flags(user_id).await
-                .unwrap_or(domain::ports::FederationFlags { goals: true, reviews: true, watchlist: true });
+            let flags = self
+                .federation_settings
+                .get_federation_flags(user_id)
+                .await
+                .unwrap_or(domain::ports::FederationFlags {
+                    goals: true,
+                    reviews: true,
+                    watchlist: true,
+                });
             if !flags.reviews {
                 continue;
             }
@@ -371,8 +399,15 @@ impl ActivityPubEventHandler {
         user_id: &UserId,
         year: u16,
     ) -> anyhow::Result<()> {
-        let flags = self.federation_settings.get_federation_flags(user_id).await
-            .unwrap_or(domain::ports::FederationFlags { goals: true, reviews: true, watchlist: true });
+        let flags = self
+            .federation_settings
+            .get_federation_flags(user_id)
+            .await
+            .unwrap_or(domain::ports::FederationFlags {
+                goals: true,
+                reviews: true,
+                watchlist: true,
+            });
         if !flags.goals {
             return Ok(());
         }
@@ -409,8 +444,15 @@ impl ActivityPubEventHandler {
         target_count: u32,
         is_create: bool,
     ) -> anyhow::Result<()> {
-        let flags = self.federation_settings.get_federation_flags(user_id).await
-            .unwrap_or(domain::ports::FederationFlags { goals: true, reviews: true, watchlist: true });
+        let flags = self
+            .federation_settings
+            .get_federation_flags(user_id)
+            .await
+            .unwrap_or(domain::ports::FederationFlags {
+                goals: true,
+                reviews: true,
+                watchlist: true,
+            });
         if !flags.goals {
             return Ok(());
         }
@@ -440,8 +482,15 @@ impl ActivityPubEventHandler {
     }
 
     async fn on_goal_deleted(&self, user_id: &UserId, year: u16) -> anyhow::Result<()> {
-        let flags = self.federation_settings.get_federation_flags(user_id).await
-            .unwrap_or(domain::ports::FederationFlags { goals: true, reviews: true, watchlist: true });
+        let flags = self
+            .federation_settings
+            .get_federation_flags(user_id)
+            .await
+            .unwrap_or(domain::ports::FederationFlags {
+                goals: true,
+                reviews: true,
+                watchlist: true,
+            });
         if !flags.goals {
             return Ok(());
         }

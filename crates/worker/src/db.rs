@@ -4,7 +4,7 @@ use anyhow::Context;
 use domain::ports::{
     ImageRefCommand, ImageRefQuery, ImportSessionRepository, LocalApContentQuery,
     MovieProfileRepository, MovieRepository, PersonCommand, PersonQuery, SearchCommand,
-    UserFederationSettingsQuery, UserRepository, WatchEventRepository,
+    UserRepository, WatchEventRepository,
 };
 
 pub enum DbPool {
