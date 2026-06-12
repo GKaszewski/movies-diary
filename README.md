@@ -2,6 +2,49 @@
 
 A self-hosted, server-side rendered movie logging system with a full REST API. Built in Rust — no JavaScript in the HTML interface, just HTML forms and an RSS feed. Designed to run as a lightweight widget embedded on a personal site or as a backend for third-party clients.
 
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Built with Rust](https://img.shields.io/badge/built_with-Rust-orange.svg?logo=rust)](https://www.rust-lang.org/)
+[![Docker](https://img.shields.io/badge/docker-ready-2496ED?logo=docker&logoColor=white)](https://hub.docker.com/)
+[![ActivityPub](https://img.shields.io/badge/ActivityPub-federated-5b5ea6)](https://activitypub.rocks/)
+[![SQLite](https://img.shields.io/badge/database-SQLite%20%7C%20PostgreSQL-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
+
+---
+
+## Table of Contents
+
+- [Quick Start](#quick-start)
+- [Features](#features)
+- [Screenshots](#screenshots)
+- [Architecture](#architecture)
+- [Prerequisites](#prerequisites)
+- [Configuration](#configuration)
+- [Run](#run)
+- [API](#api)
+- [SPA](#spa)
+- [Development](#development)
+- [Test](#test)
+- [Docker](#docker)
+- [Media Server Integration](#media-server-integration)
+- [Annual Wrap-Up](#annual-wrap-up)
+- [Contributing](#contributing)
+- [License](#license)
+
+---
+
+## Quick Start
+
+The fastest way to run Movies Diary is via Docker Compose:
+
+```bash
+cp .env.example .env
+# Set JWT_SECRET and OMDB_API_KEY (or TMDB_API_KEY) in .env
+docker compose up -d
+```
+
+Open `http://localhost:3000`. The HTTP server and background worker start together; data is persisted in a Docker volume.
+
+---
+
 ## Features
 
 - Log movies with a TMDB/OMDb ID or manual title/year/director, with a 0–5 rating
@@ -27,6 +70,18 @@ A self-hosted, server-side rendered movie logging system with a full REST API. B
 - Per-IP rate limiting via token bucket (production-grade, backed by `axum-governor`)
 - Single-page app at `/app/` — React + TanStack Router + shadcn/ui, built with Vite, served from the backend with client-side routing fallback
 - Terminal UI client (`crates/tui`, deprecated) for logging reviews, bulk CSV import, and diary browsing
+
+## Screenshots
+
+> SPA at `/app/` — React + TanStack Router + shadcn/ui
+
+| Feed | Movie | Person |
+|------|-------|--------|
+| ![Feed](screenshots/feed.jpeg) | ![Movie detail](screenshots/movie.jpeg) | ![Person detail](screenshots/person.jpeg) |
+
+| Profile | Wrap-Up | Wrap-Up card |
+|---------|---------|--------------|
+| ![Profile](screenshots/profile.jpeg) | ![Wrap-Up stats](screenshots/wrapup-stats.jpeg) | ![Wrap-Up shareable card](screenshots/wrapup-card.jpeg) |
 
 ## Architecture
 
@@ -75,59 +130,35 @@ spa/                — React SPA (TanStack Router + shadcn/ui + Vite); served a
 - Poster storage: local filesystem (zero deps) or an S3-compatible object store (e.g. MinIO)
 - An [OMDb API key](https://www.omdbapi.com/apikey.aspx)
 
-## Environment Variables
+## Configuration
 
-A `.env.example` file is provided at the repo root — copy it to `.env` and fill in your values.
+Copy `.env.example` to `.env` and set the values below. Required fields must be set before the server will start.
 
-```env
-# Database
-DATABASE_URL=sqlite://movies.db
-
-# Authentication
-JWT_SECRET=change-me
-
-# OMDb metadata
-OMDB_API_KEY=your-key
-
-# TMDb metadata + enrichment (optional — enables full cast/crew/genre data)
-# TMDB_API_KEY=your-key
-
-# Public base URL (used for ActivityPub actor URLs and canonical links)
-BASE_URL=https://yourdomain.example.com
-
-# Image storage — pick one backend:
-
-# Option A: local filesystem (zero deps)
-IMAGE_STORAGE_BACKEND=local
-IMAGE_STORAGE_PATH=./images
-
-# Option B: S3-compatible (MinIO, AWS S3, etc.)
-# IMAGE_STORAGE_BACKEND=s3
-# MINIO_ENDPOINT=http://localhost:9000
-# MINIO_BUCKET=posters
-# MINIO_REGION=minio
-# MINIO_ACCESS_KEY_ID=minioadmin
-# MINIO_SECRET_ACCESS_KEY=minioadmin
-
-# Image conversion (optional — converts stored images to AVIF or WebP to save space)
-# IMAGE_CONVERSION_ENABLED=false
-# IMAGE_CONVERSION_FORMAT=avif   # avif or webp
-
-# Optional
-HOST=0.0.0.0
-PORT=3000
-RATE_LIMIT=60           # requests per minute per IP (default: 60)
-ALLOW_REGISTRATION=true # set to false to disable new sign-ups
-SECURE_COOKIES=true     # set when serving over HTTPS
-RUST_LOG=presentation=info,tower_http=info,worker=info,application=info
-
-# CORS — comma-separated origins for SPA dev (omit or "*" for any)
-# CORS_ORIGINS=http://localhost:5173
-
-# Event bus — "db" (default, uses same database) or "nats"
-EVENT_BUS_BACKEND=db
-# NATS_URL=nats://localhost:4222   # required when EVENT_BUS_BACKEND=nats
-```
+| Variable | Default | Required | Description |
+|---|---|---|---|
+| `DATABASE_URL` | `sqlite://movies.db` | Yes | SQLite or PostgreSQL connection string |
+| `JWT_SECRET` | — | Yes | Secret for JWT signing — use a long random string |
+| `OMDB_API_KEY` | — | Yes | [OMDb](https://www.omdbapi.com/apikey.aspx) key for movie metadata |
+| `TMDB_API_KEY` | — | No | [TMDb](https://www.themoviedb.org/settings/api) key — enables cast, crew, genres, enrichment |
+| `BASE_URL` | — | Yes | Public URL of your instance (used for ActivityPub actor URLs) |
+| `IMAGE_STORAGE_BACKEND` | `local` | No | `local` or `s3` |
+| `IMAGE_STORAGE_PATH` | `./images` | No | Path for local image storage |
+| `MINIO_ENDPOINT` | — | S3 only | S3-compatible endpoint (e.g. `http://localhost:9000`) |
+| `MINIO_BUCKET` | — | S3 only | Bucket name |
+| `MINIO_REGION` | — | S3 only | Region (e.g. `minio`) |
+| `MINIO_ACCESS_KEY_ID` | — | S3 only | Access key ID |
+| `MINIO_SECRET_ACCESS_KEY` | — | S3 only | Secret access key |
+| `IMAGE_CONVERSION_ENABLED` | `false` | No | Convert stored images to AVIF or WebP |
+| `IMAGE_CONVERSION_FORMAT` | `avif` | No | `avif` or `webp` |
+| `HOST` | `0.0.0.0` | No | Bind address |
+| `PORT` | `3000` | No | HTTP port |
+| `RATE_LIMIT` | `60` | No | Requests per minute per IP |
+| `ALLOW_REGISTRATION` | `true` | No | Set `false` to disable new sign-ups |
+| `SECURE_COOKIES` | `true` | No | Must be `true` when serving over HTTPS |
+| `RUST_LOG` | — | No | Log verbosity (e.g. `presentation=info,worker=info`) |
+| `CORS_ORIGINS` | `*` | No | Comma-separated allowed origins for SPA dev |
+| `EVENT_BUS_BACKEND` | `db` | No | `db` (default) or `nats` |
+| `NATS_URL` | — | NATS only | NATS connection URL (e.g. `nats://localhost:4222`) |
 
 The `worker` binary must run alongside `presentation` to process events:
 
