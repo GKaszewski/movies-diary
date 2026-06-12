@@ -184,6 +184,8 @@ Interactive API documentation is available at runtime:
 - **Swagger UI** — `http://localhost:3000/docs`
 - **Scalar** — `http://localhost:3000/scalar`
 
+An [Insomnia](https://insomnia.rest/) collection covering all endpoints is included at [`movies-diary.insomnia.json`](movies-diary.insomnia.json). Import it via **File → Import**, set `base_url` and `token` in the environment, and you're ready to go.
+
 ## SPA
 
 The single-page app lives in `spa/` and is served at `/app/` by the backend. For local development:
