@@ -7,7 +7,7 @@ use domain::{
     ports::{EventHandler, PersonCommand, PersonEnrichmentClient, PersonQuery},
 };
 
-use application::person::deps::EnrichPersonDeps;
+use super::deps::EnrichPersonDeps;
 
 pub struct PersonEnrichmentHandler {
     deps: EnrichPersonDeps,
@@ -40,7 +40,6 @@ impl EventHandler for PersonEnrichmentHandler {
             _ => return Ok(()),
         };
 
-        application::person::enrich::execute(&self.deps, person_id, external_person_id.value())
-            .await
+        super::enrich::execute(&self.deps, person_id, external_person_id.value()).await
     }
 }

@@ -1,8 +1,5 @@
 use std::sync::Arc;
 
-use application::movies::{
-    commands::EnrichMovieCommand, deps::EnrichMovieDeps, enrich_movie, request_enrichment,
-};
 use async_trait::async_trait;
 use domain::{
     errors::DomainError,
@@ -12,6 +9,10 @@ use domain::{
         EventHandler, MovieEnrichmentClient, MovieProfileRepository, MovieRepository,
         ObjectStorage, PersonCommand, SearchCommand,
     },
+};
+
+use crate::movies::{
+    commands::EnrichMovieCommand, deps::EnrichMovieDeps, enrich_movie, request_enrichment,
 };
 
 pub struct MovieEnrichmentHandler {

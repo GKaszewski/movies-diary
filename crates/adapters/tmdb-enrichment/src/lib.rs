@@ -1,7 +1,5 @@
 mod client;
-mod movie_handler;
-mod person_handler;
+mod movie;
+mod person;
 
 pub use client::TmdbEnrichmentClient;
-pub use movie_handler::MovieEnrichmentHandler;
-pub use person_handler::PersonEnrichmentHandler;

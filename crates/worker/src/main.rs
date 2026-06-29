@@ -92,7 +92,7 @@ async fn main() -> anyhow::Result<()> {
             Ok(client) => {
                 tracing::info!("TMDb enrichment enabled");
                 let client = Arc::new(client);
-                let handler = Arc::new(tmdb_enrichment::MovieEnrichmentHandler::new(
+                let handler = Arc::new(application::movies::MovieEnrichmentHandler::new(
                     Arc::clone(&client) as Arc<dyn MovieEnrichmentClient>,
                     Arc::clone(&movie),
                     Arc::clone(&movie_profile),
@@ -101,7 +101,7 @@ async fn main() -> anyhow::Result<()> {
                     Arc::clone(&object_storage),
                 )) as Arc<dyn EventHandler>;
                 let person_enrichment_arc = Arc::clone(&client) as Arc<dyn PersonEnrichmentClient>;
-                let person_handler = Arc::new(tmdb_enrichment::PersonEnrichmentHandler::new(
+                let person_handler = Arc::new(application::person::PersonEnrichmentHandler::new(
                     Arc::clone(&person_query),
                     Some(person_enrichment_arc),
                     Arc::clone(&person_command),
