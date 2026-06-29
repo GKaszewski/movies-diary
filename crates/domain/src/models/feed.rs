@@ -3,6 +3,33 @@ use super::{
     review::{DiaryEntry, Review},
 };
 
+#[derive(Debug, Clone, Default, PartialEq)]
+pub enum FeedSortBy {
+    #[default]
+    Date,
+    DateAsc,
+    Rating,
+    RatingAsc,
+}
+
+impl std::str::FromStr for FeedSortBy {
+    type Err = std::convert::Infallible;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
+            "date_asc" => Self::DateAsc,
+            "rating" => Self::Rating,
+            "rating_asc" => Self::RatingAsc,
+            _ => Self::Date,
+        })
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct FollowingFilter {
+    pub local_user_ids: Vec<uuid::Uuid>,
+    pub remote_actor_urls: Vec<String>,
+}
+
 #[derive(Clone, Debug)]
 pub struct FeedEntry {
     entry: DiaryEntry,

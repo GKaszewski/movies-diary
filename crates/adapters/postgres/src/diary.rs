@@ -242,18 +242,18 @@ impl DiaryRepository for PostgresDiaryRepository {
         &self,
         page: &PageParams,
     ) -> Result<Paginated<FeedEntry>, DomainError> {
-        self.query_activity_feed_filtered(page, &domain::ports::FeedSortBy::Date, None, None)
+        self.query_activity_feed_filtered(page, &domain::models::FeedSortBy::Date, None, None)
             .await
     }
 
     async fn query_activity_feed_filtered(
         &self,
         page: &PageParams,
-        sort_by: &domain::ports::FeedSortBy,
+        sort_by: &domain::models::FeedSortBy,
         search: Option<&str>,
-        following: Option<&domain::ports::FollowingFilter>,
+        following: Option<&domain::models::FollowingFilter>,
     ) -> Result<Paginated<FeedEntry>, DomainError> {
-        use domain::ports::FeedSortBy;
+        use domain::models::FeedSortBy;
 
         let limit = page.limit as i64;
         let offset = page.offset as i64;

@@ -102,7 +102,7 @@ impl crate::ports::SocialQueryPort for NoopSocialQueryPort {
     }
     async fn list_all_followed_remote_actors(
         &self,
-    ) -> Result<Vec<crate::ports::RemoteActorInfo>, DomainError> {
+    ) -> Result<Vec<crate::models::RemoteActorInfo>, DomainError> {
         Ok(vec![])
     }
     async fn count_following(&self, _: uuid::Uuid) -> Result<usize, DomainError> {
@@ -114,7 +114,7 @@ impl crate::ports::SocialQueryPort for NoopSocialQueryPort {
     async fn get_pending_followers(
         &self,
         _: uuid::Uuid,
-    ) -> Result<Vec<crate::ports::PendingFollowerInfo>, DomainError> {
+    ) -> Result<Vec<crate::models::PendingFollowerInfo>, DomainError> {
         Ok(vec![])
     }
 }

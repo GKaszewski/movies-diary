@@ -11,7 +11,8 @@ use uuid::Uuid;
 
 use domain::{
     errors::DomainError,
-    ports::{AuthService, GeneratedToken, PasswordHasher},
+    models::GeneratedToken,
+    ports::{AuthService, PasswordHasher},
     value_objects::{PasswordHash, UserId},
 };
 

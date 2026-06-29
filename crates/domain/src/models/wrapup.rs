@@ -4,6 +4,25 @@ use uuid::Uuid;
 
 use crate::value_objects::WrapUpId;
 
+#[derive(Clone, Debug)]
+pub struct WrapUpMovieRow {
+    pub movie_id: Uuid,
+    pub title: String,
+    pub release_year: u16,
+    pub director: Option<String>,
+    pub poster_path: Option<String>,
+    pub rating: u8,
+    pub watched_at: NaiveDateTime,
+    pub user_id: Uuid,
+    pub runtime_minutes: Option<u32>,
+    pub budget_usd: Option<i64>,
+    pub original_language: Option<String>,
+    pub genres: Vec<String>,
+    pub keywords: Vec<String>,
+    pub cast_names: Vec<(String, u32, i64)>,
+    pub cast_profile_paths: Vec<Option<String>>,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DateRange {
     start: NaiveDate,

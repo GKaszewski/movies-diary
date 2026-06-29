@@ -3,8 +3,8 @@ use std::sync::Arc;
 use crate::users::queries::GetUsersQuery;
 use domain::{
     errors::DomainError,
-    models::UserSummary,
-    ports::{RemoteActorInfo, SocialQueryPort, UserRepository},
+    models::{RemoteActorInfo, UserSummary},
+    ports::{SocialQueryPort, UserRepository},
 };
 
 pub struct UsersListData {

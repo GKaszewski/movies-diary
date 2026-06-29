@@ -11,16 +11,16 @@ use domain::{
     errors::DomainError,
     events::DomainEvent,
     models::{
-        DiaryEntry, DiaryFilter, EntityType, FeedEntry, IndexableDocument, Movie, Person,
-        PersonCredits, PersonEnrichmentData, PersonId, Review, ReviewHistory, SearchQuery,
+        DiaryEntry, DiaryFilter, EntityType, FeedEntry, GeneratedToken, IndexableDocument, Movie,
+        Person, PersonCredits, PersonEnrichmentData, PersonId, Review, ReviewHistory, SearchQuery,
         SearchResults, UserStats, UserTrends,
         collections::{PageParams, Paginated},
     },
     ports::{
-        AuthService, DiaryRepository, EventPublisher, GeneratedToken, MetadataClient,
-        MovieRepository, ObjectStorage, PasswordHasher, PersonCommand, PersonQuery,
-        PosterFetcherClient, ReviewRepository, SearchCommand, SearchPort, StatsRepository,
-        UserRepository, WatchlistRepository,
+        AuthService, DiaryRepository, EventPublisher, MetadataClient, MovieRepository,
+        ObjectStorage, PasswordHasher, PersonCommand, PersonQuery, PosterFetcherClient,
+        ReviewRepository, SearchCommand, SearchPort, StatsRepository, UserRepository,
+        WatchlistRepository,
     },
     value_objects::{
         Email, ExternalMetadataId, MovieId, MovieTitle, PasswordHash, PosterUrl, ReleaseYear,
@@ -108,9 +108,9 @@ impl DiaryRepository for Panic {
     async fn query_activity_feed_filtered(
         &self,
         _: &PageParams,
-        _: &domain::ports::FeedSortBy,
+        _: &domain::models::FeedSortBy,
         _: Option<&str>,
-        _: Option<&domain::ports::FollowingFilter>,
+        _: Option<&domain::models::FollowingFilter>,
     ) -> Result<Paginated<FeedEntry>, DomainError> {
         panic!()
     }
@@ -151,7 +151,7 @@ impl domain::ports::SocialQueryPort for Panic {
     }
     async fn list_all_followed_remote_actors(
         &self,
-    ) -> Result<Vec<domain::ports::RemoteActorInfo>, DomainError> {
+    ) -> Result<Vec<domain::models::RemoteActorInfo>, DomainError> {
         panic!()
     }
     async fn count_following(&self, _: uuid::Uuid) -> Result<usize, DomainError> {
@@ -163,7 +163,7 @@ impl domain::ports::SocialQueryPort for Panic {
     async fn get_pending_followers(
         &self,
         _: uuid::Uuid,
-    ) -> Result<Vec<domain::ports::PendingFollowerInfo>, DomainError> {
+    ) -> Result<Vec<domain::models::PendingFollowerInfo>, DomainError> {
         panic!()
     }
 }
@@ -180,7 +180,7 @@ impl StatsRepository for Panic {
 impl MetadataClient for Panic {
     async fn fetch_movie_metadata(
         &self,
-        _: &domain::ports::MetadataSearchCriteria,
+        _: &domain::models::MetadataSearchCriteria,
     ) -> Result<Movie, DomainError> {
         panic!()
     }
@@ -608,7 +608,7 @@ impl domain::ports::WrapUpStatsQuery for Panic {
         &self,
         _: &domain::models::wrapup::WrapUpScope,
         _: &domain::models::wrapup::DateRange,
-    ) -> Result<Vec<domain::ports::WrapUpMovieRow>, DomainError> {
+    ) -> Result<Vec<domain::models::WrapUpMovieRow>, DomainError> {
         panic!()
     }
 }

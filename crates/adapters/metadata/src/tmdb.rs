@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use domain::{
     errors::DomainError,
-    ports::MetadataSearchCriteria,
+    models::MetadataSearchCriteria,
     value_objects::{ExternalMetadataId, MovieTitle, PosterUrl, ReleaseYear},
 };
 use serde::Deserialize;

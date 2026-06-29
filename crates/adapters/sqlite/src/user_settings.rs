@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use domain::{
     errors::DomainError,
-    models::UserSettings,
-    ports::{FederationFlags, UserFederationSettingsQuery, UserSettingsRepository},
+    models::{FederationFlags, UserSettings},
+    ports::{UserFederationSettingsQuery, UserSettingsRepository},
     value_objects::UserId,
 };
 use sqlx::{Row, SqlitePool};

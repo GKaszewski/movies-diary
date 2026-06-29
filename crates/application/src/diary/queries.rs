@@ -16,7 +16,7 @@ pub struct GetReviewHistoryQuery {
 pub struct GetActivityFeedQuery {
     pub limit: u32,
     pub offset: u32,
-    pub sort_by: domain::ports::FeedSortBy,
+    pub sort_by: domain::models::FeedSortBy,
     pub search: Option<String>,
     pub viewer_user_id: Option<Uuid>,
     pub filter_following: bool,

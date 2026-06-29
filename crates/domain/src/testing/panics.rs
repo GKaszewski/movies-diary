@@ -4,17 +4,17 @@ use crate::{
     errors::DomainError,
     models::{
         AnnotatedRow, DiaryEntry, DiaryFilter, EntityType, ExportFormat, ExternalPersonId,
-        FeedEntry, FieldMapping, FileFormat, ImportError, ImportProfile, ImportSession,
-        IndexableDocument, MovieProfile, MovieStats, ParsedFile, Person, PersonCredits,
-        PersonEnrichmentData, PersonId, RefreshSession, ReviewHistory, SearchQuery, SearchResults,
-        UserStats, UserTrends,
+        FeedEntry, FeedSortBy, FieldMapping, FileFormat, FollowingFilter, ImportError,
+        ImportProfile, ImportSession, IndexableDocument, MovieProfile, MovieStats, ParsedFile,
+        PendingFollowerInfo, Person, PersonCredits, PersonEnrichmentData, PersonId, RefreshSession,
+        RemoteActorInfo, ReviewHistory, SearchQuery, SearchResults, UserStats, UserTrends,
         collections::{PageParams, Paginated},
     },
     ports::{
-        DiaryExporter, DiaryRepository, DocumentParser, FeedSortBy, FollowingFilter,
-        ImportProfileRepository, ImportSessionRepository, MovieProfileRepository, PersonCommand,
-        PersonQuery, PosterFetcherClient, RefreshSessionRepository, SearchCommand, SearchPort,
-        StatsRepository, UserProfileFieldsRepository,
+        DiaryExporter, DiaryRepository, DocumentParser, ImportProfileRepository,
+        ImportSessionRepository, MovieProfileRepository, PersonCommand, PersonQuery,
+        PosterFetcherClient, RefreshSessionRepository, SearchCommand, SearchPort, StatsRepository,
+        UserProfileFieldsRepository,
     },
     value_objects::{ImportProfileId, ImportSessionId, MovieId, PosterUrl, UserId},
 };
@@ -330,9 +330,7 @@ impl crate::ports::SocialQueryPort for PanicSocialQueryPort {
     async fn get_accepted_following_urls(&self, _: uuid::Uuid) -> Result<Vec<String>, DomainError> {
         panic!("PanicSocialQueryPort called")
     }
-    async fn list_all_followed_remote_actors(
-        &self,
-    ) -> Result<Vec<crate::ports::RemoteActorInfo>, DomainError> {
+    async fn list_all_followed_remote_actors(&self) -> Result<Vec<RemoteActorInfo>, DomainError> {
         panic!("PanicSocialQueryPort called")
     }
     async fn count_following(&self, _: uuid::Uuid) -> Result<usize, DomainError> {
@@ -344,7 +342,7 @@ impl crate::ports::SocialQueryPort for PanicSocialQueryPort {
     async fn get_pending_followers(
         &self,
         _: uuid::Uuid,
-    ) -> Result<Vec<crate::ports::PendingFollowerInfo>, DomainError> {
+    ) -> Result<Vec<PendingFollowerInfo>, DomainError> {
         panic!("PanicSocialQueryPort called")
     }
 }

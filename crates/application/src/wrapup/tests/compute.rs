@@ -1,6 +1,6 @@
 use chrono::NaiveDate;
+use domain::models::WrapUpMovieRow;
 use domain::models::wrapup::{DateRange, WrapUpScope};
-use domain::ports::WrapUpMovieRow;
 use domain::testing::InMemoryWrapUpStatsQuery;
 use uuid::Uuid;
 

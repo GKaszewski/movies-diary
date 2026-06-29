@@ -15,7 +15,7 @@ impl crate::ports::WrapUpStatsQuery for PanicWrapUpStatsQuery {
         &self,
         _: &crate::models::wrapup::WrapUpScope,
         _: &crate::models::wrapup::DateRange,
-    ) -> Result<Vec<crate::ports::WrapUpMovieRow>, DomainError> {
+    ) -> Result<Vec<crate::models::WrapUpMovieRow>, DomainError> {
         unimplemented!("WrapUpStatsQuery not wired")
     }
 }
@@ -23,7 +23,7 @@ impl crate::ports::WrapUpStatsQuery for PanicWrapUpStatsQuery {
 // ── InMemoryWrapUpStatsQuery ────────────────────────────────────────────────
 
 pub struct InMemoryWrapUpStatsQuery {
-    pub rows: Mutex<Vec<crate::ports::WrapUpMovieRow>>,
+    pub rows: Mutex<Vec<crate::models::WrapUpMovieRow>>,
 }
 
 impl InMemoryWrapUpStatsQuery {
@@ -33,7 +33,7 @@ impl InMemoryWrapUpStatsQuery {
         })
     }
 
-    pub fn with_rows(rows: Vec<crate::ports::WrapUpMovieRow>) -> Arc<Self> {
+    pub fn with_rows(rows: Vec<crate::models::WrapUpMovieRow>) -> Arc<Self> {
         Arc::new(Self {
             rows: Mutex::new(rows),
         })
@@ -46,7 +46,7 @@ impl crate::ports::WrapUpStatsQuery for InMemoryWrapUpStatsQuery {
         &self,
         scope: &crate::models::wrapup::WrapUpScope,
         range: &crate::models::wrapup::DateRange,
-    ) -> Result<Vec<crate::ports::WrapUpMovieRow>, DomainError> {
+    ) -> Result<Vec<crate::models::WrapUpMovieRow>, DomainError> {
         let rows = self.rows.lock().unwrap();
         let filtered: Vec<_> = rows
             .iter()

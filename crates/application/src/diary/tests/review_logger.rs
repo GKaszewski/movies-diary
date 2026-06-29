@@ -4,9 +4,9 @@ use async_trait::async_trait;
 use chrono::Utc;
 use domain::{
     errors::DomainError,
-    models::Movie,
     models::WatchlistEntry,
-    ports::{MetadataClient, MetadataSearchCriteria, MovieRepository, WatchlistRepository},
+    models::{MetadataSearchCriteria, Movie},
+    ports::{MetadataClient, MovieRepository, WatchlistRepository},
     testing::{
         FakeMetadataClient, InMemoryMovieRepository, InMemoryReviewRepository,
         InMemoryWatchlistRepository, NoopEventPublisher,

@@ -1,5 +1,13 @@
 use crate::value_objects::{ExternalMetadataId, MovieId, MovieTitle, PosterPath, ReleaseYear};
 
+pub enum MetadataSearchCriteria {
+    ImdbId(ExternalMetadataId),
+    Title {
+        title: MovieTitle,
+        year: Option<ReleaseYear>,
+    },
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct MovieFilter {
     pub search: Option<String>,

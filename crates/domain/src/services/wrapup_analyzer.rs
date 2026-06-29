@@ -3,9 +3,9 @@ use std::collections::HashMap;
 use chrono::Datelike;
 use uuid::Uuid;
 
+use crate::models::WrapUpMovieRow;
 use crate::models::wrapup::*;
 use crate::models::{ExternalPersonId, PersonId};
-use crate::ports::WrapUpMovieRow;
 
 pub fn build_report(
     scope: WrapUpScope,

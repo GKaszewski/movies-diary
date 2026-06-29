@@ -1,4 +1,5 @@
 mod enrichment;
+mod federation;
 mod feed;
 mod movie;
 mod refresh_session;
@@ -21,6 +22,7 @@ pub mod watchlist;
 pub mod wrapup;
 
 pub use enrichment::*;
+pub use federation::*;
 pub use feed::*;
 pub use movie::*;
 pub use review::*;
@@ -47,7 +49,7 @@ pub use import_session::ImportSession;
 pub use person::{
     CastCredit, CrewCredit, ExternalPersonId, Person, PersonCredits, PersonEnrichmentData, PersonId,
 };
-pub use refresh_session::RefreshSession;
+pub use refresh_session::{GeneratedToken, RefreshSession};
 pub use search::{
     EntityType, IndexableDocument, MovieSearchHit, PersonSearchHit, SearchFilters, SearchQuery,
     SearchResults,

@@ -4,8 +4,10 @@ use async_trait::async_trait;
 use chrono::NaiveDate;
 use domain::{
     errors::DomainError,
-    models::wrapup::{DateRange, WrapUpRecord, WrapUpReport, WrapUpScope, WrapUpStatus},
-    ports::{WrapUpMovieRow, WrapUpRepository, WrapUpStatsQuery},
+    models::wrapup::{
+        DateRange, WrapUpMovieRow, WrapUpRecord, WrapUpReport, WrapUpScope, WrapUpStatus,
+    },
+    ports::{WrapUpRepository, WrapUpStatsQuery},
     value_objects::WrapUpId,
 };
 use sqlx::{PgPool, Row};

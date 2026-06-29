@@ -138,7 +138,7 @@ impl ActivityPubEventHandler {
             .federation_settings
             .get_federation_flags(user_id)
             .await
-            .unwrap_or(domain::ports::FederationFlags {
+            .unwrap_or(domain::models::FederationFlags {
                 goals: true,
                 reviews: true,
                 watchlist: true,
@@ -204,7 +204,7 @@ impl ActivityPubEventHandler {
             .federation_settings
             .get_federation_flags(user_id)
             .await
-            .unwrap_or(domain::ports::FederationFlags {
+            .unwrap_or(domain::models::FederationFlags {
                 goals: true,
                 reviews: true,
                 watchlist: true,
@@ -283,7 +283,7 @@ impl ActivityPubEventHandler {
             .federation_settings
             .get_federation_flags(user_id)
             .await
-            .unwrap_or(domain::ports::FederationFlags {
+            .unwrap_or(domain::models::FederationFlags {
                 goals: true,
                 reviews: true,
                 watchlist: true,
@@ -363,7 +363,7 @@ impl ActivityPubEventHandler {
                 .federation_settings
                 .get_federation_flags(user_id)
                 .await
-                .unwrap_or(domain::ports::FederationFlags {
+                .unwrap_or(domain::models::FederationFlags {
                     goals: true,
                     reviews: true,
                     watchlist: true,
@@ -403,7 +403,7 @@ impl ActivityPubEventHandler {
             .federation_settings
             .get_federation_flags(user_id)
             .await
-            .unwrap_or(domain::ports::FederationFlags {
+            .unwrap_or(domain::models::FederationFlags {
                 goals: true,
                 reviews: true,
                 watchlist: true,
@@ -448,7 +448,7 @@ impl ActivityPubEventHandler {
             .federation_settings
             .get_federation_flags(user_id)
             .await
-            .unwrap_or(domain::ports::FederationFlags {
+            .unwrap_or(domain::models::FederationFlags {
                 goals: true,
                 reviews: true,
                 watchlist: true,
@@ -486,7 +486,7 @@ impl ActivityPubEventHandler {
             .federation_settings
             .get_federation_flags(user_id)
             .await
-            .unwrap_or(domain::ports::FederationFlags {
+            .unwrap_or(domain::models::FederationFlags {
                 goals: true,
                 reviews: true,
                 watchlist: true,

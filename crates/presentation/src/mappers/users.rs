@@ -1,7 +1,7 @@
 use application::users::get_profile::PendingFollowerView;
 use chrono::Datelike;
+use domain::models::RemoteActorInfo;
 use domain::models::{DiaryEntry, MonthActivity, UserSummary};
-use domain::ports::RemoteActorInfo;
 use template_askama::{RemoteActorData, RemoteActorDisplay, UserSummaryView};
 
 pub fn user_summary_view(u: &UserSummary) -> UserSummaryView {

@@ -2,8 +2,8 @@ use super::*;
 use crate::diary::commands::MovieInput;
 use domain::{
     errors::DomainError,
-    models::Movie,
-    ports::{MetadataSearchCriteria, MovieRepository},
+    models::{MetadataSearchCriteria, Movie},
+    ports::MovieRepository,
     value_objects::{ExternalMetadataId, MovieId, MovieTitle, PosterUrl, ReleaseYear},
 };
 

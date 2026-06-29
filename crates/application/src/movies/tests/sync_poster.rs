@@ -74,7 +74,7 @@ struct FakeMetaWithPoster;
 impl MetadataClient for FakeMetaWithPoster {
     async fn fetch_movie_metadata(
         &self,
-        _: &domain::ports::MetadataSearchCriteria,
+        _: &domain::models::MetadataSearchCriteria,
     ) -> Result<Movie, DomainError> {
         unimplemented!()
     }

@@ -1,7 +1,8 @@
 use super::*;
 use domain::{
     models::collections::PageParams,
-    ports::{DiaryRepository, FeedSortBy, FollowingFilter},
+    models::{FeedSortBy, FollowingFilter},
+    ports::DiaryRepository,
 };
 use sqlx::SqlitePool;
 

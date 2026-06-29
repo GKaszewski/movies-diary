@@ -11,13 +11,13 @@ use domain::{
     errors::DomainError,
     events::DomainEvent,
     models::{
-        EntityType, ExternalPersonId, IndexableDocument, Movie, Person, PersonCredits,
-        PersonEnrichmentData, PersonId, SearchQuery, SearchResults, User,
+        EntityType, ExternalPersonId, GeneratedToken, IndexableDocument, MetadataSearchCriteria,
+        Movie, Person, PersonCredits, PersonEnrichmentData, PersonId, SearchQuery, SearchResults,
+        User,
     },
     ports::{
-        AuthService, EventPublisher, GeneratedToken, MetadataClient, MetadataSearchCriteria,
-        ObjectStorage, PasswordHasher, PersonCommand, PersonQuery, PosterFetcherClient,
-        SearchCommand, SearchPort, UserRepository,
+        AuthService, EventPublisher, MetadataClient, ObjectStorage, PasswordHasher, PersonCommand,
+        PersonQuery, PosterFetcherClient, SearchCommand, SearchPort, UserRepository,
     },
     value_objects::{Email, ExternalMetadataId, PasswordHash, PosterUrl, UserId},
 };
@@ -410,7 +410,7 @@ impl domain::ports::SocialQueryPort for PanicSocialQuery {
     }
     async fn list_all_followed_remote_actors(
         &self,
-    ) -> Result<Vec<domain::ports::RemoteActorInfo>, DomainError> {
+    ) -> Result<Vec<domain::models::RemoteActorInfo>, DomainError> {
         panic!()
     }
     async fn count_following(&self, _: uuid::Uuid) -> Result<usize, DomainError> {
@@ -422,7 +422,7 @@ impl domain::ports::SocialQueryPort for PanicSocialQuery {
     async fn get_pending_followers(
         &self,
         _: uuid::Uuid,
-    ) -> Result<Vec<domain::ports::PendingFollowerInfo>, DomainError> {
+    ) -> Result<Vec<domain::models::PendingFollowerInfo>, DomainError> {
         panic!()
     }
 }

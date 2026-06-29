@@ -1,11 +1,11 @@
 use crate::diary::{deps::GetActivityFeedDeps, queries::GetActivityFeedQuery};
 use domain::{
     errors::DomainError,
+    models::FollowingFilter,
     models::{
         FeedEntry,
         collections::{PageParams, Paginated},
     },
-    ports::FollowingFilter,
 };
 
 pub async fn execute(

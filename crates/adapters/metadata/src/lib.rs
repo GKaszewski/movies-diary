@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use domain::{
     errors::DomainError,
-    models::Movie,
-    ports::{MetadataClient, MetadataSearchCriteria},
+    models::{MetadataSearchCriteria, Movie},
+    ports::MetadataClient,
     value_objects::{ExternalMetadataId, MovieTitle, PosterUrl, ReleaseYear},
 };
 

@@ -1,8 +1,8 @@
 use chrono::NaiveDate;
 use uuid::Uuid;
 
+use crate::models::WrapUpMovieRow;
 use crate::models::wrapup::{DateRange, WrapUpScope};
-use crate::ports::WrapUpMovieRow;
 
 use super::super::wrapup_analyzer::build_report;
 

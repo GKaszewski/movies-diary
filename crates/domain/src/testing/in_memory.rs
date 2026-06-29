@@ -12,16 +12,16 @@ use crate::{
     errors::DomainError,
     events::DomainEvent,
     models::{
-        Goal, ImportProfile, ImportSession, Movie, MovieFilter, MovieProfile, MovieSummary,
-        ProfileField, RefreshSession, Review, User, UserSettings, UserSummary, WatchEvent,
-        WatchEventStatus, WatchlistEntry, WatchlistWithMovie, WebhookToken,
+        FederationFlags, Goal, ImportProfile, ImportSession, Movie, MovieFilter, MovieProfile,
+        MovieSummary, ProfileField, RefreshSession, Review, User, UserSettings, UserSummary,
+        WatchEvent, WatchEventStatus, WatchlistEntry, WatchlistWithMovie, WebhookToken,
         collections::{PageParams, Paginated},
     },
     ports::{
-        FederationFlags, GoalRepository, ImportProfileRepository, ImportSessionRepository,
-        MovieProfileRepository, MovieRepository, RefreshSessionRepository, ReviewRepository,
-        UserFederationSettingsQuery, UserProfileFieldsRepository, UserRepository,
-        UserSettingsRepository, WatchEventRepository, WatchlistRepository, WebhookTokenRepository,
+        GoalRepository, ImportProfileRepository, ImportSessionRepository, MovieProfileRepository,
+        MovieRepository, RefreshSessionRepository, ReviewRepository, UserFederationSettingsQuery,
+        UserProfileFieldsRepository, UserRepository, UserSettingsRepository, WatchEventRepository,
+        WatchlistRepository, WebhookTokenRepository,
     },
     value_objects::{
         Email, ExternalMetadataId, GoalId, ImportProfileId, ImportSessionId, MovieId, MovieTitle,

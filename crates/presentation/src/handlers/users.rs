@@ -291,7 +291,7 @@ pub async fn get_user_profile(
             view: profile_view,
             limit: params.limit,
             offset: params.offset,
-            sort_by: domain::ports::FeedSortBy::Date,
+            sort_by: domain::models::FeedSortBy::Date,
             search: params.search,
             is_own_profile: viewer_id.value() == user_id,
         },

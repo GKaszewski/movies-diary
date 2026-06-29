@@ -4,11 +4,11 @@ use crate::users::{
 };
 use domain::{
     errors::DomainError,
+    models::FeedSortBy,
     models::{
         DiaryEntry, DiaryFilter, SortDirection, UserStats, UserTrends,
         collections::{PageParams, Paginated},
     },
-    ports::FeedSortBy,
     value_objects::UserId,
 };
 
@@ -143,7 +143,7 @@ mod helper_tests {
 
     #[test]
     fn feed_sort_to_direction_all_variants() {
-        use domain::ports::FeedSortBy;
+        use domain::models::FeedSortBy;
         assert!(matches!(
             feed_sort_to_direction(FeedSortBy::Date),
             SortDirection::Descending

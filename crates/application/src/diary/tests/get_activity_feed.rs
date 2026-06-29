@@ -26,7 +26,7 @@ async fn returns_empty_feed() {
         GetActivityFeedQuery {
             limit: 10,
             offset: 0,
-            sort_by: domain::ports::FeedSortBy::Date,
+            sort_by: domain::models::FeedSortBy::Date,
             search: None,
             viewer_user_id: None,
             filter_following: false,
@@ -50,7 +50,7 @@ async fn returns_feed_with_following_filter() {
         GetActivityFeedQuery {
             limit: 10,
             offset: 0,
-            sort_by: domain::ports::FeedSortBy::Date,
+            sort_by: domain::models::FeedSortBy::Date,
             search: None,
             viewer_user_id: Some(viewer),
             filter_following: true,
@@ -80,12 +80,12 @@ impl domain::ports::SocialQueryPort for FakeSocialWithFollowing {
     async fn get_pending_followers(
         &self,
         _: uuid::Uuid,
-    ) -> Result<Vec<domain::ports::PendingFollowerInfo>, DomainError> {
+    ) -> Result<Vec<domain::models::PendingFollowerInfo>, DomainError> {
         Ok(vec![])
     }
     async fn list_all_followed_remote_actors(
         &self,
-    ) -> Result<Vec<domain::ports::RemoteActorInfo>, DomainError> {
+    ) -> Result<Vec<domain::models::RemoteActorInfo>, DomainError> {
         Ok(vec![])
     }
 }
@@ -123,7 +123,7 @@ async fn following_filter_parses_local_and_remote_urls() {
         GetActivityFeedQuery {
             limit: 10,
             offset: 0,
-            sort_by: domain::ports::FeedSortBy::Date,
+            sort_by: domain::models::FeedSortBy::Date,
             search: None,
             viewer_user_id: Some(viewer),
             filter_following: true,
@@ -146,7 +146,7 @@ async fn following_filter_without_viewer_returns_none() {
         GetActivityFeedQuery {
             limit: 10,
             offset: 0,
-            sort_by: domain::ports::FeedSortBy::Date,
+            sort_by: domain::models::FeedSortBy::Date,
             search: None,
             viewer_user_id: None,
             filter_following: true,

@@ -927,7 +927,7 @@ impl domain::ports::SocialQueryPort for SqliteFederationRepository {
 
     async fn list_all_followed_remote_actors(
         &self,
-    ) -> Result<Vec<domain::ports::RemoteActorInfo>, domain::errors::DomainError> {
+    ) -> Result<Vec<domain::models::RemoteActorInfo>, domain::errors::DomainError> {
         let rows = sqlx::query_as::<_, (String, String, Option<String>)>(
             "SELECT DISTINCT ar.url, ar.handle, ar.display_name
              FROM ap_remote_actors ar
@@ -941,7 +941,7 @@ impl domain::ports::SocialQueryPort for SqliteFederationRepository {
         Ok(rows
             .into_iter()
             .map(
-                |(url, handle, display_name)| domain::ports::RemoteActorInfo {
+                |(url, handle, display_name)| domain::models::RemoteActorInfo {
                     url,
                     handle,
                     display_name,
@@ -983,7 +983,7 @@ impl domain::ports::SocialQueryPort for SqliteFederationRepository {
     async fn get_pending_followers(
         &self,
         user_id: uuid::Uuid,
-    ) -> Result<Vec<domain::ports::PendingFollowerInfo>, domain::errors::DomainError> {
+    ) -> Result<Vec<domain::models::PendingFollowerInfo>, domain::errors::DomainError> {
         let uid = user_id.to_string();
         let rows = sqlx::query_as::<_, (String, String, Option<String>, Option<String>)>(
             "SELECT ar.url, ar.handle, ar.display_name, ar.avatar_url
@@ -998,7 +998,7 @@ impl domain::ports::SocialQueryPort for SqliteFederationRepository {
         Ok(rows
             .into_iter()
             .map(
-                |(url, handle, display_name, avatar_url)| domain::ports::PendingFollowerInfo {
+                |(url, handle, display_name, avatar_url)| domain::models::PendingFollowerInfo {
                     url,
                     handle,
                     display_name,
