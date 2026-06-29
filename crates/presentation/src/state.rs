@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::context::AppContext;
 
-use crate::ports::RssFeedRenderer;
+use application::ports::RssFeedRenderer;
 
 #[derive(Clone)]
 pub struct AppState {

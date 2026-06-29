@@ -201,7 +201,7 @@ fn format_watch_time(minutes: u32) -> String {
 fn render_wrapup(
     report: &WrapUpReport,
     year: i32,
-    ctx: &application::ports::HtmlPageContext,
+    ctx: &application::rendering::HtmlPageContext,
 ) -> axum::response::Response {
     let rating_max = report
         .rating_distribution

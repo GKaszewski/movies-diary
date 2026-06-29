@@ -1,7 +1,7 @@
 pub use askama;
 use askama::Template;
 
-use application::ports::HtmlPageContext;
+use application::rendering::HtmlPageContext;
 use chrono::Datelike;
 use domain::models::{
     DiaryEntry, FeedEntry, MonthActivity, MonthlyRating, ReviewSource, UserStats, UserTrends,

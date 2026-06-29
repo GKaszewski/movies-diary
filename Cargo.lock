@@ -320,6 +320,7 @@ dependencies = [
  "futures",
  "hex",
  "rand 0.9.4",
+ "reqwest 0.13.3",
  "serde_json",
  "sha2",
  "tokio",
@@ -5787,7 +5788,6 @@ name = "tmdb-enrichment"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "application",
  "async-trait",
  "chrono",
  "domain",

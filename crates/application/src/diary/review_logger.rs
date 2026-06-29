@@ -89,10 +89,6 @@ impl ReviewLogger for DefaultReviewLogger {
     }
 }
 
-#[cfg(test)]
-#[path = "tests/review_logger.rs"]
-mod tests;
-
 async fn publish_events(
     publisher: &Arc<dyn EventPublisher>,
     movie: &Movie,
@@ -119,3 +115,7 @@ async fn publish_events(
 
     publisher.publish(&review_event).await
 }
+
+#[cfg(test)]
+#[path = "tests/review_logger.rs"]
+mod tests;

@@ -24,7 +24,7 @@ use crate::{
 use api_types::{
     LoginRequest, LoginResponse, LogoutRequest, RefreshRequest, RefreshResponse, RegisterRequest,
 };
-use application::ports::HtmlPageContext;
+use application::rendering::HtmlPageContext;
 use template_askama::{LoginTemplate, RegisterTemplate};
 
 // ── HTML helpers ─────────────────────────────────────────────────────────────

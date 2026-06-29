@@ -416,7 +416,7 @@ impl domain::ports::DocumentParser for Panic {
     }
 }
 
-impl crate::ports::RssFeedRenderer for Panic {
+impl application::ports::RssFeedRenderer for Panic {
     fn render_feed(&self, _: &[DiaryEntry], _: &str) -> Result<String, String> {
         panic!()
     }
