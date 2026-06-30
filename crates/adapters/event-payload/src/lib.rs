@@ -114,6 +114,13 @@ pub enum EventPayload {
         person_id: String,
         external_person_id: String,
     },
+    UserDeleted {
+        user_id: String,
+    },
+    UserAccountMoved {
+        user_id: String,
+        new_actor_url: String,
+    },
 }
 
 impl EventPayload {
@@ -141,6 +148,8 @@ impl EventPayload {
             EventPayload::GoalUpdated { .. } => "GoalUpdated",
             EventPayload::GoalDeleted { .. } => "GoalDeleted",
             EventPayload::PersonEnrichmentRequested { .. } => "PersonEnrichmentRequested",
+            EventPayload::UserDeleted { .. } => "UserDeleted",
+            EventPayload::UserAccountMoved { .. } => "UserAccountMoved",
         }
     }
 }
@@ -323,6 +332,16 @@ impl From<&DomainEvent> for EventPayload {
             } => EventPayload::PersonEnrichmentRequested {
                 person_id: person_id.value().to_string(),
                 external_person_id: external_person_id.value().to_string(),
+            },
+            DomainEvent::UserDeleted { user_id } => EventPayload::UserDeleted {
+                user_id: user_id.value().to_string(),
+            },
+            DomainEvent::UserAccountMoved {
+                user_id,
+                new_actor_url,
+            } => EventPayload::UserAccountMoved {
+                user_id: user_id.value().to_string(),
+                new_actor_url: new_actor_url.clone(),
             },
         }
     }
@@ -516,6 +535,16 @@ impl TryFrom<EventPayload> for DomainEvent {
             } => Ok(DomainEvent::PersonEnrichmentRequested {
                 person_id: PersonId::from_uuid(parse_uuid(&person_id, "person_id")?),
                 external_person_id: ExternalPersonId::new(external_person_id),
+            }),
+            EventPayload::UserDeleted { user_id } => Ok(DomainEvent::UserDeleted {
+                user_id: UserId::from_uuid(parse_uuid(&user_id, "user_id")?),
+            }),
+            EventPayload::UserAccountMoved {
+                user_id,
+                new_actor_url,
+            } => Ok(DomainEvent::UserAccountMoved {
+                user_id: UserId::from_uuid(parse_uuid(&user_id, "user_id")?),
+                new_actor_url,
             }),
         }
     }

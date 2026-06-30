@@ -138,6 +138,17 @@ impl MovieRepository for InMemoryMovieRepository {
             offset: 0,
         })
     }
+
+    async fn list_movies_with_external_id(&self) -> Result<Vec<Movie>, DomainError> {
+        Ok(self
+            .store
+            .lock()
+            .unwrap()
+            .values()
+            .filter(|m| m.external_metadata_id().is_some())
+            .cloned()
+            .collect())
+    }
 }
 
 // ── InMemoryReviewRepository ──────────────────────────────────────────────────

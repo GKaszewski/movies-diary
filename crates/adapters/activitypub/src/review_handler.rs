@@ -2,20 +2,22 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use domain::{
+    events::DomainEvent,
     models::ReviewSource,
-    ports::LocalApContentQuery,
-    value_objects::{Comment, MovieId, Rating, ReviewId, UserId},
+    ports::{EventPublisher, LocalApContentQuery},
+    value_objects::{Comment, ExternalMetadataId, MovieId, Rating, ReviewId, UserId},
 };
 use k_ap::{ApContentReader, ApObjectHandler};
 use url::Url;
 
-use crate::objects::{ReviewObject, review_to_ap_object};
+use crate::objects::{ReviewApInput, ReviewObject, review_to_ap_object};
 use crate::remote_review_repository::RemoteReviewRepository;
 use crate::urls::{actor_url, review_url};
 
 pub struct ReviewObjectHandler {
     pub content_query: Arc<dyn LocalApContentQuery>,
     pub review_store: Arc<dyn RemoteReviewRepository>,
+    pub event_publisher: Arc<dyn EventPublisher>,
     pub base_url: String,
 }
 
@@ -49,12 +51,17 @@ impl ApContentReader for ReviewObjectHandler {
 
             let obj = review_to_ap_object(
                 review,
-                ap_id.clone(),
-                actor.clone(),
-                movie.title().value().to_string(),
-                movie.release_year().value(),
-                poster_url,
-                &self.base_url,
+                ReviewApInput {
+                    ap_id: ap_id.clone(),
+                    actor_url: actor.clone(),
+                    movie_title: movie.title().value().to_string(),
+                    release_year: movie.release_year().value(),
+                    external_metadata_id: movie
+                        .external_metadata_id()
+                        .map(|id| id.value().to_string()),
+                    poster_url,
+                    base_url: self.base_url.clone(),
+                },
             );
             results.push((ap_id, serde_json::to_value(obj)?, published));
         }
@@ -89,10 +96,24 @@ impl ApObjectHandler for ReviewObjectHandler {
 
         let actor_url_str = obj.attributed_to.to_string();
         let review_id = ReviewId::generate();
-        let movie_id = MovieId::from_uuid(uuid::Uuid::new_v5(
-            &uuid::Uuid::NAMESPACE_URL,
-            obj.movie_title.as_bytes(),
-        ));
+        let movie_id = if let Some(ref ext_id) = obj.external_metadata_id {
+            match self
+                .content_query
+                .get_movie_by_external_metadata_id(ext_id)
+                .await
+            {
+                Ok(Some(movie)) => movie.id().clone(),
+                _ => MovieId::from_uuid(uuid::Uuid::new_v5(
+                    &uuid::Uuid::NAMESPACE_URL,
+                    ext_id.as_bytes(),
+                )),
+            }
+        } else {
+            MovieId::from_uuid(uuid::Uuid::new_v5(
+                &uuid::Uuid::NAMESPACE_URL,
+                format!("{}:{}", obj.movie_title, obj.release_year).as_bytes(),
+            ))
+        };
         let user_id = UserId::from_uuid(uuid::Uuid::new_v5(
             &uuid::Uuid::NAMESPACE_URL,
             actor_url_str.as_bytes(),
@@ -102,7 +123,7 @@ impl ApObjectHandler for ReviewObjectHandler {
 
         let review = domain::models::Review::from_persistence(domain::models::PersistedReview {
             id: review_id,
-            movie_id,
+            movie_id: movie_id.clone(),
             user_id,
             rating,
             comment,
@@ -119,9 +140,22 @@ impl ApObjectHandler for ReviewObjectHandler {
                 obj.id.as_str(),
                 &obj.movie_title,
                 obj.release_year,
+                obj.external_metadata_id.as_deref(),
                 obj.poster_url.as_deref(),
             )
             .await?;
+
+        if let Some(ref ext_id_str) = obj.external_metadata_id
+            && let Ok(external_metadata_id) = ExternalMetadataId::new(ext_id_str.clone())
+        {
+            let _ = self
+                .event_publisher
+                .publish(&DomainEvent::MovieEnrichmentRequested {
+                    movie_id: movie_id.clone(),
+                    external_metadata_id,
+                })
+                .await;
+        }
 
         Ok(())
     }

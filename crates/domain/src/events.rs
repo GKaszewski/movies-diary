@@ -112,6 +112,13 @@ pub enum DomainEvent {
         user_id: UserId,
         year: u16,
     },
+    UserDeleted {
+        user_id: UserId,
+    },
+    UserAccountMoved {
+        user_id: UserId,
+        new_actor_url: String,
+    },
 }
 
 #[async_trait]

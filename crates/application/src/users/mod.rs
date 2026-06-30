@@ -1,4 +1,5 @@
 pub mod commands;
+pub mod delete_account;
 pub mod deps;
 pub mod get_current_profile;
 pub mod get_profile;

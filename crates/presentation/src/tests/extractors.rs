@@ -78,6 +78,11 @@ impl MovieRepository for Panic {
     {
         panic!()
     }
+    async fn list_movies_with_external_id(
+        &self,
+    ) -> Result<Vec<domain::models::Movie>, DomainError> {
+        Ok(vec![])
+    }
 }
 #[async_trait::async_trait]
 impl ReviewRepository for Panic {

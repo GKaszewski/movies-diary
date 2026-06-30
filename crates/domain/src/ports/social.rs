@@ -74,6 +74,10 @@ pub trait LocalApContentQuery: Send + Sync {
     ) -> Result<Vec<WatchlistWithMovie>, DomainError>;
     async fn get_review_by_id(&self, review_id: &ReviewId) -> Result<Option<Review>, DomainError>;
     async fn get_movie_by_id(&self, movie_id: &MovieId) -> Result<Option<Movie>, DomainError>;
+    async fn get_movie_by_external_metadata_id(
+        &self,
+        external_id: &str,
+    ) -> Result<Option<Movie>, DomainError>;
     async fn count_local_posts(&self) -> Result<u64, DomainError>;
     async fn get_local_reviews_for_movie(
         &self,
@@ -90,4 +94,5 @@ pub trait LocalApContentQuery: Send + Sync {
         user_id: &UserId,
         year: u16,
     ) -> Result<Option<(Goal, u32)>, DomainError>;
+    async fn list_goals_for_user(&self, user_id: &UserId) -> Result<Vec<Goal>, DomainError>;
 }

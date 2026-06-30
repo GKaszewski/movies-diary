@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 use k_ap::{ActivityPubService, ApVisibility};
 
-use crate::objects::{goal_to_ap_object, review_to_ap_object};
+use crate::objects::{ReviewApInput, goal_to_ap_object, review_to_ap_object};
 use crate::urls::{actor_url, goal_url, review_url};
 
 pub struct ActivityPubEventHandler {
@@ -127,6 +127,25 @@ impl EventHandler for ActivityPubEventHandler {
                 .on_goal_deleted(user_id, *year)
                 .await
                 .map_err(|e| DomainError::InfrastructureError(e.to_string())),
+            DomainEvent::UserDeleted { user_id } => {
+                let ap_id = actor_url(&self.base_url, user_id.value());
+                self.ap_service
+                    .broadcast_delete_to_followers(user_id.value(), ap_id)
+                    .await
+                    .map_err(|e| DomainError::InfrastructureError(e.to_string()))
+            }
+            DomainEvent::UserAccountMoved {
+                user_id,
+                new_actor_url,
+            } => {
+                let target = new_actor_url.parse::<url::Url>().map_err(|e| {
+                    DomainError::InfrastructureError(format!("invalid new_actor_url: {e}"))
+                })?;
+                self.ap_service
+                    .broadcast_move(user_id.value(), target)
+                    .await
+                    .map_err(|e| DomainError::InfrastructureError(e.to_string()))
+            }
             _ => Ok(()),
         }
     }
@@ -169,19 +188,23 @@ impl ActivityPubEventHandler {
             .as_ref()
             .map(|m| m.release_year().value())
             .unwrap_or(0);
-        let poster_url = movie
-            .as_ref()
-            .and_then(|m| m.poster_path())
-            .map(|p| format!("{}/images/{}", self.base_url, p.value()));
-
         let obj = review_to_ap_object(
             &review,
-            ap_id.clone(),
-            actor,
-            movie_title,
-            release_year,
-            poster_url,
-            &self.base_url,
+            ReviewApInput {
+                ap_id: ap_id.clone(),
+                actor_url: actor,
+                movie_title,
+                release_year,
+                external_metadata_id: movie
+                    .as_ref()
+                    .and_then(|m| m.external_metadata_id())
+                    .map(|id| id.value().to_string()),
+                poster_url: movie
+                    .as_ref()
+                    .and_then(|m| m.poster_path())
+                    .map(|p| format!("{}/images/{}", self.base_url, p.value())),
+                base_url: self.base_url.clone(),
+            },
         );
         let json = serde_json::to_value(obj)?;
 
@@ -235,19 +258,23 @@ impl ActivityPubEventHandler {
             .as_ref()
             .map(|m| m.release_year().value())
             .unwrap_or(0);
-        let poster_url = movie
-            .as_ref()
-            .and_then(|m| m.poster_path())
-            .map(|p| format!("{}/images/{}", self.base_url, p.value()));
-
         let obj = review_to_ap_object(
             &review,
-            ap_id,
-            actor,
-            movie_title,
-            release_year,
-            poster_url,
-            &self.base_url,
+            ReviewApInput {
+                ap_id,
+                actor_url: actor,
+                movie_title,
+                release_year,
+                external_metadata_id: movie
+                    .as_ref()
+                    .and_then(|m| m.external_metadata_id())
+                    .map(|id| id.value().to_string()),
+                poster_url: movie
+                    .as_ref()
+                    .and_then(|m| m.poster_path())
+                    .map(|p| format!("{}/images/{}", self.base_url, p.value())),
+                base_url: self.base_url.clone(),
+            },
         );
         let json = serde_json::to_value(obj)?;
 
@@ -351,6 +378,9 @@ impl ActivityPubEventHandler {
             Some(m) => m,
             None => return Ok(()),
         };
+        let external_metadata_id = movie
+            .external_metadata_id()
+            .map(|id| id.value().to_string());
         let poster_url = movie
             .poster_path()
             .map(|p| format!("{}/images/{}", self.base_url, p.value()));
@@ -377,12 +407,15 @@ impl ActivityPubEventHandler {
 
             let obj = review_to_ap_object(
                 review,
-                ap_id,
-                actor,
-                movie.title().value().to_string(),
-                movie.release_year().value(),
-                poster_url.clone(),
-                &self.base_url,
+                ReviewApInput {
+                    ap_id,
+                    actor_url: actor,
+                    movie_title: movie.title().value().to_string(),
+                    release_year: movie.release_year().value(),
+                    external_metadata_id: external_metadata_id.clone(),
+                    poster_url: poster_url.clone(),
+                    base_url: self.base_url.clone(),
+                },
             );
             let json = serde_json::to_value(obj)?;
 

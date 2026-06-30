@@ -20,6 +20,19 @@ macro_rules! uuid_id {
 }
 
 uuid_id!(MovieId);
+
+impl MovieId {
+    /// Derives a stable, deterministic UUID from an external metadata ID (e.g. `tmdb:12345`).
+    /// All instances that know a movie by the same external ID will produce the same MovieId,
+    /// enabling remote and local reviews to be linked to the same movie record.
+    pub fn from_external(external_id: &crate::value_objects::ExternalMetadataId) -> Self {
+        Self(Uuid::new_v5(
+            &Uuid::NAMESPACE_URL,
+            external_id.value().as_bytes(),
+        ))
+    }
+}
+
 uuid_id!(ReviewId);
 uuid_id!(UserId);
 uuid_id!(ImportSessionId);

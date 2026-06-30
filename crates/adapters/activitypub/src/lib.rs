@@ -77,6 +77,7 @@ pub async fn wire(deps: ActivityPubDeps) -> anyhow::Result<ActivityPubWire> {
     let review_handler = std::sync::Arc::new(ReviewObjectHandler {
         content_query: std::sync::Arc::clone(&local_ap_content),
         review_store,
+        event_publisher: std::sync::Arc::clone(&event_publisher),
         base_url: base_url.clone(),
     });
     let watchlist_handler = std::sync::Arc::new(watchlist_handler::WatchlistObjectHandler {
@@ -84,7 +85,11 @@ pub async fn wire(deps: ActivityPubDeps) -> anyhow::Result<ActivityPubWire> {
         content_query: std::sync::Arc::clone(&local_ap_content),
         base_url: base_url.clone(),
     });
-    let goal_handler = std::sync::Arc::new(goal_handler::GoalObjectHandler { remote_goal_repo });
+    let goal_handler = std::sync::Arc::new(goal_handler::GoalObjectHandler {
+        remote_goal_repo,
+        content_query: std::sync::Arc::clone(&local_ap_content),
+        base_url: base_url.clone(),
+    });
     let composite = std::sync::Arc::new(composite_handler::CompositeObjectHandler {
         review: review_handler,
         watchlist: watchlist_handler,

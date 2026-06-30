@@ -7,6 +7,18 @@ use url::Url;
 use domain::models::Review;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApAttachment {
+    #[serde(rename = "type")]
+    pub(crate) kind: String,
+    pub(crate) url: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) media_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) name: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ApHashtag {
     #[serde(rename = "type")]
     pub(crate) kind: String,
@@ -31,10 +43,17 @@ pub struct ReviewObject {
     #[serde(default)]
     pub(crate) release_year: u16,
     #[serde(default)]
+    pub(crate) external_metadata_id: Option<String>,
+    #[serde(default)]
     pub(crate) poster_url: Option<String>,
     pub(crate) rating: u8,
     pub(crate) comment: Option<String>,
     pub(crate) watched_at: DateTime<Utc>,
+    /// Discriminator so Movies Diary instances detect this as a review Note.
+    #[serde(default)]
+    pub(crate) review: bool,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub(crate) attachment: Vec<ApAttachment>,
     #[serde(default)]
     pub(crate) tag: Vec<ApHashtag>,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
@@ -43,17 +62,26 @@ pub struct ReviewObject {
     pub(crate) cc: Vec<String>,
 }
 
-/// Serialize a local Review into a ReviewObject for AP delivery.
-/// Takes movie metadata explicitly since the handler fetches it separately.
-pub fn review_to_ap_object(
-    review: &Review,
-    ap_id: Url,
-    actor_url: Url,
-    movie_title: String,
-    release_year: u16,
-    poster_url: Option<String>,
-    base_url: &str,
-) -> ReviewObject {
+pub struct ReviewApInput {
+    pub ap_id: Url,
+    pub actor_url: Url,
+    pub movie_title: String,
+    pub release_year: u16,
+    pub external_metadata_id: Option<String>,
+    pub poster_url: Option<String>,
+    pub base_url: String,
+}
+
+pub fn review_to_ap_object(review: &Review, input: ReviewApInput) -> ReviewObject {
+    let ReviewApInput {
+        ap_id,
+        actor_url,
+        movie_title,
+        release_year,
+        external_metadata_id,
+        poster_url,
+        base_url,
+    } = input;
     let stars: String = "\u{2B50}".repeat(review.rating().value() as usize);
     let comment_text = review.comment().map(|c| c.value().to_string());
     let year_str = if release_year > 0 {
@@ -74,16 +102,25 @@ pub fn review_to_ap_object(
     let tag = vec![
         ApHashtag {
             kind: "Hashtag".to_string(),
-            href: Url::parse(&format!("{}/tags/moviesdiary", base_url)).expect("valid base_url"),
+            href: Url::parse(&format!("{}/tags/moviesdiary", &base_url)).expect("valid base_url"),
             name: "#MoviesDiary".to_string(),
         },
         ApHashtag {
             kind: "Hashtag".to_string(),
-            href: Url::parse(&format!("{}/tags/{}", base_url, normalized.to_lowercase()))
+            href: Url::parse(&format!("{}/tags/{}", &base_url, normalized.to_lowercase()))
                 .expect("valid base_url"),
             name: format!("#{}", normalized),
         },
     ];
+    let attachment = match &poster_url {
+        Some(url) => vec![ApAttachment {
+            kind: "Image".to_string(),
+            url: url.clone(),
+            media_type: Some("image/jpeg".to_string()),
+            name: Some(movie_title.clone()),
+        }],
+        None => vec![],
+    };
 
     ReviewObject {
         kind: NoteType::default(),
@@ -93,10 +130,13 @@ pub fn review_to_ap_object(
         published: DateTime::from_naive_utc_and_offset(*review.created_at(), Utc),
         movie_title,
         release_year,
+        external_metadata_id,
         poster_url,
         rating: review.rating().value(),
         comment: comment_text,
         watched_at: DateTime::from_naive_utc_and_offset(*review.watched_at(), Utc),
+        review: true,
+        attachment,
         tag,
         to: vec![AS_PUBLIC.to_string()],
         cc: vec![format!("{}/followers", actor_url)],

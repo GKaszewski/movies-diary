@@ -36,6 +36,8 @@ pub trait MovieRepository: Send + Sync {
         page: &PageParams,
         filter: &MovieFilter,
     ) -> Result<Paginated<MovieSummary>, DomainError>;
+    /// Returns all movies that have an external_metadata_id set. Used for deduplication.
+    async fn list_movies_with_external_id(&self) -> Result<Vec<Movie>, DomainError>;
 }
 
 #[async_trait]
@@ -67,4 +69,16 @@ pub trait MovieEnrichmentClient: Send + Sync {
         movie_id: MovieId,
         external_metadata_id: &str,
     ) -> Result<MovieProfile, DomainError>;
+}
+
+#[async_trait]
+pub trait MovieDeduplicator: Send + Sync {
+    /// Atomically re-points all foreign keys (reviews, watchlist entries, movie profiles)
+    /// from `old_id` to `canonical_id`, upserts the canonical movie record, then deletes
+    /// the old duplicate. Returns the number of rows re-pointed across all tables.
+    async fn merge_into_canonical(
+        &self,
+        old_id: &MovieId,
+        canonical: &Movie,
+    ) -> Result<u64, DomainError>;
 }

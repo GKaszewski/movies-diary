@@ -62,6 +62,7 @@ async fn main() -> anyhow::Result<()> {
     };
 
     let movie = db.movie;
+    let deduplicator = db.deduplicator;
     let user = db.user;
     let import_session = db.import_session;
     let movie_profile = db.movie_profile;
@@ -130,6 +131,11 @@ async fn main() -> anyhow::Result<()> {
     // ── Periodic jobs ─────────────────────────────────────────────────────────
 
     let mut periodic_jobs: Vec<Arc<dyn PeriodicJob>> = vec![
+        Arc::new(application::jobs::MovieDeduplicationJob::new(
+            Arc::clone(&movie),
+            Arc::clone(&deduplicator),
+            Arc::clone(&object_storage),
+        )),
         Arc::new(application::jobs::ImportSessionCleanupJob::new(
             import_session.clone(),
         )),

@@ -1,7 +1,6 @@
 use domain::errors::DomainError;
 use sqlx::PgPool;
 
-mod ap_content;
 mod diary;
 mod goals;
 mod image_ref;
@@ -9,11 +8,11 @@ mod import_profile;
 mod import_session;
 mod models;
 mod movie;
+mod movie_dedup;
 mod persons;
 mod profile;
 mod profile_fields;
 mod refresh_sessions;
-mod remote_goals;
 mod review;
 mod stats;
 mod user_settings;
@@ -22,13 +21,14 @@ mod watch_event;
 mod watchlist;
 mod wrapup;
 
-pub use ap_content::PostgresApContentQuery;
 pub use diary::PostgresDiaryRepository;
 pub use image_ref::{PostgresImageRefAdapter, create_image_ref};
 pub use import_profile::PostgresImportProfileRepository;
 pub use import_session::PostgresImportSessionRepository;
 pub use movie::PostgresMovieRepository;
+pub use movie_dedup::PostgresMovieDeduplicator;
 pub use persons::{PostgresPersonAdapter, create_person_adapter};
+pub use postgres_federation::PostgresApContentQuery;
 pub use profile::PostgresMovieProfileRepository;
 pub use profile_fields::PostgresProfileFieldsRepository;
 pub use refresh_sessions::PostgresRefreshSessionAdapter;
@@ -95,6 +95,7 @@ pub struct PostgresWireOutput {
     pub user_settings: std::sync::Arc<dyn domain::ports::UserSettingsRepository>,
     pub federation_settings: std::sync::Arc<dyn domain::ports::UserFederationSettingsQuery>,
     pub remote_goal: std::sync::Arc<dyn domain::ports::RemoteGoalRepository>,
+    pub deduplicator: std::sync::Arc<dyn domain::ports::MovieDeduplicator>,
 }
 
 pub async fn wire(database_url: &str) -> anyhow::Result<PostgresWireOutput> {
@@ -132,7 +133,9 @@ pub async fn wire(database_url: &str) -> anyhow::Result<PostgresWireOutput> {
         goal: std::sync::Arc::new(goals::PostgresGoalRepository::new(pool.clone())) as _,
         user_settings: std::sync::Arc::clone(&user_settings_repo) as _,
         federation_settings: user_settings_repo as _,
-        remote_goal: std::sync::Arc::new(remote_goals::PostgresRemoteGoalRepository::new(pool))
-            as _,
+        remote_goal: std::sync::Arc::new(postgres_federation::PostgresRemoteGoalRepository::new(
+            pool.clone(),
+        )) as _,
+        deduplicator: std::sync::Arc::new(PostgresMovieDeduplicator::new(pool)) as _,
     })
 }

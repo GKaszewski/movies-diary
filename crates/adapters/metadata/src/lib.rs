@@ -3,7 +3,7 @@ use domain::{
     errors::DomainError,
     models::{MetadataSearchCriteria, Movie},
     ports::MetadataClient,
-    value_objects::{ExternalMetadataId, MovieTitle, PosterUrl, ReleaseYear},
+    value_objects::{ExternalMetadataId, MovieId, MovieTitle, PosterUrl, ReleaseYear},
 };
 
 mod omdb;
@@ -47,7 +47,9 @@ impl MetadataClient for MetadataClientImpl {
         criteria: &MetadataSearchCriteria,
     ) -> Result<Movie, DomainError> {
         let pm = self.provider.fetch(criteria).await?;
-        Ok(Movie::new(
+        let movie_id = MovieId::from_external(&pm.imdb_id);
+        Ok(Movie::from_persistence(
+            movie_id,
             Some(pm.imdb_id),
             pm.title,
             pm.release_year,

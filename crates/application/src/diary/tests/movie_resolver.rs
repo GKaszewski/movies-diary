@@ -75,6 +75,11 @@ impl MovieRepository for RepoWithExternalMovie {
     {
         panic!("unexpected")
     }
+    async fn list_movies_with_external_id(
+        &self,
+    ) -> Result<Vec<domain::models::Movie>, DomainError> {
+        Ok(vec![])
+    }
 }
 
 #[async_trait::async_trait]
@@ -121,6 +126,11 @@ impl MovieRepository for RepoEmpty {
     {
         panic!("unexpected")
     }
+    async fn list_movies_with_external_id(
+        &self,
+    ) -> Result<Vec<domain::models::Movie>, DomainError> {
+        Ok(vec![])
+    }
 }
 
 #[async_trait::async_trait]
@@ -166,6 +176,11 @@ impl MovieRepository for RepoWithTitleMatch {
     ) -> Result<domain::models::collections::Paginated<domain::models::MovieSummary>, DomainError>
     {
         panic!("unexpected")
+    }
+    async fn list_movies_with_external_id(
+        &self,
+    ) -> Result<Vec<domain::models::Movie>, DomainError> {
+        Ok(vec![])
     }
 }
 

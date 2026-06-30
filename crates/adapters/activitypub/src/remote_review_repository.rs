@@ -11,6 +11,7 @@ pub trait RemoteReviewRepository: Send + Sync {
         ap_id: &str,
         movie_title: &str,
         release_year: u16,
+        external_metadata_id: Option<&str>,
         poster_url: Option<&str>,
     ) -> Result<()>;
 

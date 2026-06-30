@@ -1,6 +1,7 @@
 use super::*;
 use chrono::Utc;
 use domain::ports::SocialQueryPort;
+use k_ap::ActorRepository;
 use sqlx::SqlitePool;
 
 async fn test_pool() -> SqlitePool {

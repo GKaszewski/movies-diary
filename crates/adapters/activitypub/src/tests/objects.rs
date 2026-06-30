@@ -32,12 +32,15 @@ fn review_to_ap_object_includes_two_hashtags() {
     });
     let obj = review_to_ap_object(
         &review,
-        "https://example.com/reviews/1".parse().unwrap(),
-        "https://example.com/users/1".parse().unwrap(),
-        "Dune".to_string(),
-        2021,
-        None,
-        "https://example.com",
+        ReviewApInput {
+            ap_id: "https://example.com/reviews/1".parse().unwrap(),
+            actor_url: "https://example.com/users/1".parse().unwrap(),
+            movie_title: "Dune".to_string(),
+            release_year: 2021,
+            external_metadata_id: None,
+            poster_url: None,
+            base_url: "https://example.com".to_string(),
+        },
     );
     assert_eq!(obj.tag.len(), 2);
     let names: Vec<&str> = obj.tag.iter().map(|t| t.name.as_str()).collect();
@@ -68,12 +71,15 @@ fn review_to_ap_object_has_public_addressing() {
     let actor_url: url::Url = "https://example.com/users/abc".parse().unwrap();
     let obj = review_to_ap_object(
         &review,
-        "https://example.com/reviews/1".parse().unwrap(),
-        actor_url.clone(),
-        "Dune".to_string(),
-        2021,
-        None,
-        "https://example.com",
+        ReviewApInput {
+            ap_id: "https://example.com/reviews/1".parse().unwrap(),
+            actor_url: actor_url.clone(),
+            movie_title: "Dune".to_string(),
+            release_year: 2021,
+            external_metadata_id: None,
+            poster_url: None,
+            base_url: "https://example.com".to_string(),
+        },
     );
     assert_eq!(obj.to, vec!["https://www.w3.org/ns/activitystreams#Public"]);
     assert_eq!(obj.cc, vec!["https://example.com/users/abc/followers"]);

@@ -1,6 +1,5 @@
 use sqlx::SqlitePool;
 
-mod ap_content;
 mod diary;
 mod goals;
 mod image_ref;
@@ -9,11 +8,11 @@ mod import_session;
 mod migrations;
 mod models;
 mod movie;
+mod movie_dedup;
 mod persons;
 mod profile;
 mod profile_fields;
 mod refresh_sessions;
-mod remote_goals;
 mod review;
 mod stats;
 mod user_settings;
@@ -22,17 +21,18 @@ mod watch_event;
 mod watchlist;
 mod wrapup;
 
-pub use ap_content::SqliteApContentQuery;
 pub use diary::SqliteDiaryRepository;
 pub use image_ref::{SqliteImageRefAdapter, create_image_ref};
 pub use import_profile::SqliteImportProfileRepository;
 pub use import_session::SqliteImportSessionRepository;
 pub use movie::SqliteMovieRepository;
+pub use movie_dedup::SqliteMovieDeduplicator;
 pub use persons::{SqlitePersonAdapter, create_person_adapter};
 pub use profile::SqliteMovieProfileRepository;
 pub use profile_fields::SqliteProfileFieldsRepository;
 pub use refresh_sessions::SqliteRefreshSessionAdapter;
 pub use review::SqliteReviewRepository;
+pub use sqlite_federation::SqliteApContentQuery;
 pub use stats::SqliteStatsRepository;
 pub use users::SqliteUserRepository;
 pub use watch_event::{SqliteWatchEventRepository, SqliteWebhookTokenRepository};
@@ -91,6 +91,7 @@ pub struct SqliteWireOutput {
     pub user_settings: std::sync::Arc<dyn domain::ports::UserSettingsRepository>,
     pub federation_settings: std::sync::Arc<dyn domain::ports::UserFederationSettingsQuery>,
     pub remote_goal: std::sync::Arc<dyn domain::ports::RemoteGoalRepository>,
+    pub deduplicator: std::sync::Arc<dyn domain::ports::MovieDeduplicator>,
 }
 
 pub async fn wire(database_url: &str) -> anyhow::Result<SqliteWireOutput> {
@@ -135,6 +136,9 @@ pub async fn wire(database_url: &str) -> anyhow::Result<SqliteWireOutput> {
         goal: std::sync::Arc::new(goals::SqliteGoalRepository::new(pool.clone())) as _,
         user_settings: std::sync::Arc::clone(&user_settings_repo) as _,
         federation_settings: user_settings_repo as _,
-        remote_goal: std::sync::Arc::new(remote_goals::SqliteRemoteGoalRepository::new(pool)) as _,
+        remote_goal: std::sync::Arc::new(sqlite_federation::SqliteRemoteGoalRepository::new(
+            pool.clone(),
+        )) as _,
+        deduplicator: std::sync::Arc::new(SqliteMovieDeduplicator::new(pool)) as _,
     })
 }

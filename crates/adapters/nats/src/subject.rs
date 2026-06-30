@@ -24,6 +24,8 @@ pub fn event_to_subject(prefix: &str, event: &DomainEvent) -> String {
         DomainEvent::GoalUpdated { .. } => "goal.updated",
         DomainEvent::GoalDeleted { .. } => "goal.deleted",
         DomainEvent::PersonEnrichmentRequested { .. } => "person.enrichment.requested",
+        DomainEvent::UserDeleted { .. } => "user.deleted",
+        DomainEvent::UserAccountMoved { .. } => "user.account.moved",
     };
     format!("{prefix}.{suffix}")
 }

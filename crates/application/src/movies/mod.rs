@@ -5,6 +5,7 @@ pub mod enrich_movie;
 pub mod event_handler;
 pub mod get_movie_profile;
 pub mod get_movies;
+pub mod merge_duplicates;
 pub mod queries;
 pub mod reindex_search;
 pub mod request_enrichment;

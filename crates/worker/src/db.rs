@@ -3,8 +3,8 @@ use std::sync::Arc;
 use anyhow::Context;
 use domain::ports::{
     ImageRefCommand, ImageRefQuery, ImportSessionRepository, LocalApContentQuery,
-    MovieProfileRepository, MovieRepository, PersonCommand, PersonQuery, SearchCommand,
-    UserRepository, WatchEventRepository,
+    MovieDeduplicator, MovieProfileRepository, MovieRepository, PersonCommand, PersonQuery,
+    SearchCommand, UserRepository, WatchEventRepository,
 };
 
 pub enum DbPool {
@@ -31,6 +31,7 @@ pub struct WorkerDbOutput {
     pub remote_goal: Arc<dyn domain::ports::RemoteGoalRepository>,
     pub refresh_session: Arc<dyn domain::ports::RefreshSessionRepository>,
     pub federation_settings: Arc<dyn domain::ports::UserFederationSettingsQuery>,
+    pub deduplicator: Arc<dyn MovieDeduplicator>,
     pub db_pool: DbPool,
 }
 
@@ -66,6 +67,7 @@ pub async fn connect(database_url: &str, backend: &str) -> anyhow::Result<Worker
                     w.pool.clone(),
                 )) as _,
                 federation_settings: w.federation_settings,
+                deduplicator: w.deduplicator,
                 db_pool: DbPool::Postgres(w.pool),
             })
         }
@@ -98,6 +100,7 @@ pub async fn connect(database_url: &str, backend: &str) -> anyhow::Result<Worker
                 refresh_session: Arc::new(sqlite::SqliteRefreshSessionAdapter::new(w.pool.clone()))
                     as _,
                 federation_settings: w.federation_settings,
+                deduplicator: w.deduplicator,
                 db_pool: DbPool::Sqlite(w.pool),
             })
         }

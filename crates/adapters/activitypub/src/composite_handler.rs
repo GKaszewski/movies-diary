@@ -24,9 +24,33 @@ impl ApContentReader for CompositeObjectHandler {
         before: Option<DateTime<Utc>>,
         limit: usize,
     ) -> anyhow::Result<Vec<(Url, serde_json::Value, DateTime<Utc>)>> {
-        self.review
-            .get_local_objects_page(user_id, before, limit)
-            .await
+        // Fetch from all three sources (watchlist/goals return all, reviews use DB pagination)
+        let fetch_limit = limit * 3;
+        let reviews = self
+            .review
+            .get_local_objects_page(user_id, before, fetch_limit)
+            .await?;
+        let watchlist = self
+            .watchlist
+            .get_local_objects_page(user_id, None, usize::MAX)
+            .await?;
+        let goals = self
+            .goal
+            .get_local_objects_page(user_id, None, usize::MAX)
+            .await?;
+
+        let mut all: Vec<(Url, serde_json::Value, DateTime<Utc>)> = Vec::new();
+        all.extend(reviews);
+        all.extend(watchlist);
+        all.extend(goals);
+
+        // Apply before filter and sort descending by timestamp
+        if let Some(before_ts) = before {
+            all.retain(|(_, _, ts)| *ts < before_ts);
+        }
+        all.sort_by_key(|b| std::cmp::Reverse(b.2));
+        all.truncate(limit);
+        Ok(all)
     }
 
     async fn count_local_posts(&self) -> anyhow::Result<u64> {
@@ -42,10 +66,14 @@ impl ApObjectHandler for CompositeObjectHandler {
         actor_url: &Url,
         object: serde_json::Value,
     ) -> anyhow::Result<()> {
+        let is_review = object.get("review").and_then(|v| v.as_bool()) == Some(true)
+            || object.get("rating").is_some();
         let is_watchlist = object.get("watchlistEntry").and_then(|v| v.as_bool()) == Some(true)
-            || (object.get("movieTitle").is_some() && object.get("rating").is_none());
+            || (object.get("movieTitle").is_some()
+                && object.get("rating").is_none()
+                && object.get("review").is_none());
         let is_goal = object.get("goal").and_then(|v| v.as_bool()) == Some(true);
-        if object.get("rating").is_some() {
+        if is_review {
             self.review.on_create(ap_id, actor_url, object).await
         } else if is_goal {
             self.goal.on_create(ap_id, actor_url, object).await
@@ -63,11 +91,16 @@ impl ApObjectHandler for CompositeObjectHandler {
         actor_url: &Url,
         object: serde_json::Value,
     ) -> anyhow::Result<()> {
+        let is_review = object.get("review").and_then(|v| v.as_bool()) == Some(true)
+            || object.get("rating").is_some();
         let is_goal = object.get("goal").and_then(|v| v.as_bool()) == Some(true);
-        if object.get("rating").is_some() {
+        let is_watchlist = object.get("watchlistEntry").and_then(|v| v.as_bool()) == Some(true);
+        if is_review {
             self.review.on_update(ap_id, actor_url, object).await
         } else if is_goal {
             self.goal.on_update(ap_id, actor_url, object).await
+        } else if is_watchlist {
+            self.watchlist.on_update(ap_id, actor_url, object).await
         } else {
             Ok(())
         }
@@ -87,36 +120,19 @@ impl ApObjectHandler for CompositeObjectHandler {
         Ok(())
     }
 
-    async fn on_like(&self, _object_url: &Url, _actor_url: &Url) -> anyhow::Result<()> {
+    async fn on_like(&self, _: &Url, _: &Url) -> anyhow::Result<()> {
         Ok(())
     }
-
-    async fn on_announce_received(
-        &self,
-        _object_url: &Url,
-        _actor_url: &Url,
-    ) -> anyhow::Result<()> {
+    async fn on_announce_received(&self, _: &Url, _: &Url) -> anyhow::Result<()> {
         Ok(())
     }
-
-    async fn on_announce_of_remote(
-        &self,
-        _object_url: &Url,
-        _actor_url: &Url,
-    ) -> anyhow::Result<()> {
+    async fn on_announce_of_remote(&self, _: &Url, _: &Url) -> anyhow::Result<()> {
         Ok(())
     }
-
-    async fn on_unlike(&self, _object_url: &Url, _actor_url: &Url) -> anyhow::Result<()> {
+    async fn on_unlike(&self, _: &Url, _: &Url) -> anyhow::Result<()> {
         Ok(())
     }
-
-    async fn on_mention(
-        &self,
-        _thought_ap_id: &Url,
-        _mentioned_user_uuid: uuid::Uuid,
-        _actor_url: &Url,
-    ) -> anyhow::Result<()> {
+    async fn on_mention(&self, _: &Url, _: uuid::Uuid, _: &Url) -> anyhow::Result<()> {
         Ok(())
     }
 }

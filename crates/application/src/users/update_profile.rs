@@ -68,6 +68,14 @@ pub async fn execute(
         user.banner_path().map(|s| s.to_string())
     };
 
+    let moved_to = cmd.also_known_as.as_deref().and_then(|new_url| {
+        if user.also_known_as().map(|s| s != new_url).unwrap_or(true) {
+            Some(new_url.to_string())
+        } else {
+            None
+        }
+    });
+
     deps.user
         .update_profile(
             &user_id,
@@ -83,8 +91,20 @@ pub async fn execute(
         .await?;
 
     deps.event_publisher
-        .publish(&DomainEvent::UserUpdated { user_id })
+        .publish(&DomainEvent::UserUpdated {
+            user_id: user_id.clone(),
+        })
         .await?;
+
+    if let Some(new_actor_url) = moved_to {
+        let _ = deps
+            .event_publisher
+            .publish(&DomainEvent::UserAccountMoved {
+                user_id,
+                new_actor_url,
+            })
+            .await;
+    }
 
     Ok(())
 }

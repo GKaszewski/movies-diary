@@ -239,4 +239,17 @@ impl MovieRepository for PostgresMovieRepository {
             offset: page.offset,
         })
     }
+
+    async fn list_movies_with_external_id(&self) -> Result<Vec<Movie>, DomainError> {
+        sqlx::query_as::<_, MovieRow>(
+            "SELECT id, external_metadata_id, title, release_year, director, poster_path
+             FROM movies WHERE external_metadata_id IS NOT NULL",
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(Self::map_err)?
+        .into_iter()
+        .map(|r| r.into_domain())
+        .collect()
+    }
 }

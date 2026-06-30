@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 sqlx = { workspace = true }
 activitypub = { workspace = true }
-k-ap = { version = "0.4.0", registry = "gitea" }
+k-ap = { version = "0.4.1", registry = "gitea" }
 domain = { workspace = true }
 anyhow = { workspace = true }
 serde_json = { workspace = true }

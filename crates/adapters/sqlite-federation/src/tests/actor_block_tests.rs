@@ -1,4 +1,5 @@
 use super::*;
+use k_ap::BlocklistRepository;
 use sqlx::SqlitePool;
 
 async fn test_pool() -> SqlitePool {
