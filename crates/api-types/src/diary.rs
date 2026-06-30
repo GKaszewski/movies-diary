@@ -55,9 +55,10 @@ pub struct FeedEntryDto {
     pub movie: MovieDto,
     pub review: ReviewDto,
     pub user_id: Uuid,
-    pub user_email: String,
     pub user_display_name: String,
     pub is_federated: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub actor_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]

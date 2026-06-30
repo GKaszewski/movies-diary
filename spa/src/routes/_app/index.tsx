@@ -115,8 +115,9 @@ function FeedTab() {
                 movie={entry.movie}
                 review={entry.review}
                 userName={entry.user_display_name}
-                userId={entry.user_id}
+                userId={entry.is_federated ? undefined : entry.user_id}
                 isFederated={entry.is_federated}
+                actorUrl={entry.actor_url}
               />
             )
             return entry.user_id === auth?.user_id ? (

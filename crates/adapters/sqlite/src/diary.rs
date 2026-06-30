@@ -291,10 +291,11 @@ impl DiaryRepository for SqliteDiaryRepository {
             "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
                     r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment,
                     r.watched_at, r.created_at, r.remote_actor_url,
-                    COALESCE(u.email, r.remote_actor_url) AS user_email
+                    COALESCE(u.email, a.handle, r.remote_actor_url) AS user_email
              FROM reviews r
              INNER JOIN movies m ON m.id = r.movie_id
              LEFT JOIN users u ON u.id = r.user_id
+             LEFT JOIN ap_remote_actors a ON a.url = r.remote_actor_url
              WHERE {}
              ORDER BY {}
              LIMIT ? OFFSET ?",

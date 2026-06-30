@@ -29,9 +29,9 @@ export const feedEntryDtoSchema = z.object({
   movie: movieDtoSchema,
   review: reviewDtoSchema,
   user_id: z.string().uuid(),
-  user_email: z.string(),
   user_display_name: z.string(),
   is_federated: z.boolean(),
+  actor_url: z.string().optional(),
 })
 export type FeedEntryDto = z.infer<typeof feedEntryDtoSchema>
 

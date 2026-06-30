@@ -12,9 +12,10 @@ type ReviewCardProps = {
   userName?: string
   userId?: string
   isFederated?: boolean
+  actorUrl?: string
 }
 
-export function ReviewCard({ movie, review, userName, userId, isFederated }: ReviewCardProps) {
+export function ReviewCard({ movie, review, userName, userId, isFederated, actorUrl }: ReviewCardProps) {
   return (
     <Card size="sm">
       <CardContent className="flex gap-3">
@@ -28,6 +29,10 @@ export function ReviewCard({ movie, review, userName, userId, isFederated }: Rev
                 <Link to="/users/$id" params={{ id: userId }} className="relative z-10 font-semibold text-primary">
                   {userName}
                 </Link>
+              ) : actorUrl ? (
+                <a href={actorUrl} target="_blank" rel="noopener noreferrer" className="relative z-10 font-semibold text-primary">
+                  {userName}
+                </a>
               ) : (
                 <span>{userName}</span>
               )}
