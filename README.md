@@ -55,10 +55,10 @@ Open `http://localhost:3000`. The HTTP server and background worker start togeth
 - People as first-class entities — browse by person via `GET /api/v1/people/{id}` and full credit history via `GET /api/v1/people/{id}/credits`; index populated automatically during TMDb enrichment
 - RSS/Atom feed for public subscription (global and per-user)
 - JWT authentication via cookie (HTML) or Bearer token (REST API)
-- ActivityPub federation — follow/unfollow remote users, accept/reject/remove followers, federated reviews broadcast as `Note` objects with `#MoviesDiary` + `#MovieTitle` hashtags, paginated outbox, boost/Announce tracking, NodeInfo discovery endpoint, shared inbox delivery, actor profile sync (bio, avatar, discoverable)
-- Federation moderation — instance-level domain blocking (admin-managed), per-user actor blocking with `Block` activity, delivery filter excludes blocked actors and blocked-domain inboxes
+- ActivityPub federation — follow/unfollow remote users, accept/reject/remove followers, federated reviews broadcast as `Note` objects with movie poster image attachment, `#MoviesDiary` + `#MovieTitle` hashtags, paginated outbox (reviews, watchlist entries, goals), boost/Announce tracking, NodeInfo discovery endpoint, shared inbox delivery, actor profile sync (bio, avatar, discoverable); account migration via `Move` activity; account deletion broadcasts `Delete` actor to followers
+- Federation moderation — instance-level domain blocking (admin-managed), per-user actor blocking with `Block` / `Undo Block` activities, delivery filter excludes blocked actors and blocked-domain inboxes
 - Watchlist — add movies to watch later, per-user; federated watchlist entries visible for remote actors
-- User profiles — display name, bio, avatar, banner, custom profile fields; editable via HTML settings page or REST API
+- User profiles — display name, bio, avatar, banner, custom profile fields; editable via HTML settings page or REST API; account deletion broadcasts AP `Delete` actor activity; `alsoKnownAs` change triggers AP `Move` for account migration
 - Jellyfin/Plex auto-import — media server sends a webhook on playback stop, movies land in a watch queue; review and confirm with a rating to create diary entries; per-user webhook tokens with SHA-256 auth; setup UI at `/settings/integrations`
 - Annual Wrap-Up — Spotify Wrapped for movies: per-user and instance-wide year-in-review with stats (top directors, actors, genres, rating distribution, watch time, rewatches, budget analysis), shareable HTML page at `/wrapups/{user_id}/{year}`; admin-triggered or auto-generated in January
 - Goals — set a "watch N movies in YEAR" target with a progress bar; progress computed from existing reviews (backwards compatible); per-user federation toggle in settings; displayed on profile (SPA: interactive with create/edit/delete, classic HTML: read-only glassmorphic card)
@@ -102,7 +102,7 @@ adapters/
   image-storage        — stores images (posters + user avatars) on local filesystem or S3-compatible storage
   poster-sync          — event handler: triggers poster fetch+store on MovieDiscovered
   image-converter      — optional background worker: converts stored images to AVIF or WebP; backfills existing images via a 24h periodic job
-  tmdb-enrichment      — event handler: fetches full movie profile (cast, crew, genres, keywords, box office) from TMDb on MovieEnrichmentRequested; resolves IMDb IDs automatically
+  tmdb-enrichment      — TMDb HTTP client implementing MovieEnrichmentClient and PersonEnrichmentClient; event handlers (MovieEnrichmentHandler, PersonEnrichmentHandler) live in the application layer
   template-askama      — Askama HTML rendering
   rss                  — RSS/Atom feed generation
   export               — CSV and JSON diary serialization

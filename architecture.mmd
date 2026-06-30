@@ -15,9 +15,9 @@ graph TB
         subgraph UseCases["Use Cases"]
             UC_AUTH["auth<br/>login, register"]
             UC_DIARY["diary<br/>log_review, get_diary,<br/>get_activity_feed, export"]
-            UC_MOVIES["movies<br/>get_movies, get_movie_profile,<br/>enrich_movie, request_enrichment,<br/>sync_poster, reindex_search"]
+            UC_MOVIES["movies<br/>get_movies, get_movie_profile,<br/>enrich_movie, request_enrichment,<br/>sync_poster, reindex_search,<br/>merge_duplicates"]
             UC_IMPORT["import<br/>create_session, apply_mapping,<br/>execute, profiles"]
-            UC_USERS["users<br/>get_users, get_profile,<br/>update_profile"]
+            UC_USERS["users<br/>get_users, get_profile,<br/>update_profile, delete_account"]
             UC_WATCHLIST["watchlist<br/>add, remove, get"]
             UC_WRAPUP["wrapup<br/>generate, compute,<br/>list, delete"]
             UC_GOALS["goals<br/>create, update, delete,<br/>get, list"]
@@ -26,17 +26,22 @@ graph TB
             UC_PERSON["person<br/>get, get_credits"]
         end
         subgraph EventHandlers["Event Handlers"]
-            EH_ENRICH["EnrichmentHandler"]
+            EH_MOVIE["MovieEnrichmentHandler<br/><i>on MovieEnrichmentRequested</i>"]
+            EH_PERSON["PersonEnrichmentHandler<br/><i>on PersonEnrichmentRequested</i>"]
             EH_DISCOVER["MovieDiscoveryIndexer"]
             EH_CLEANUP["SearchCleanupHandler"]
             EH_REINDEX["SearchReindexHandler"]
             EH_WRAPUP["WrapUpEventHandler"]
+            EH_AP["ActivityPubEventHandler<br/><i>reviews, watchlist, goals,<br/>UserDeleted, UserAccountMoved</i>"]
         end
         subgraph Jobs["Periodic Jobs"]
             JOB_IMPORT["ImportSessionCleanup"]
             JOB_WATCH["WatchEventCleanup"]
             JOB_STALE["EnrichmentStaleness"]
             JOB_WRAPGEN["WrapUpAutoGenerate"]
+            JOB_WRAPCLEAN["WrapUpCleanup"]
+            JOB_SESSION["RefreshSessionCleanup"]
+            JOB_DEDUP["MovieDeduplication<br/><i>merge duplicate movie<br/>records (daily)</i>"]
         end
         WORKER_SVC["WorkerService<br/><i>Semaphore(8), JoinSet,<br/>shutdown signal</i>"]
     end
@@ -54,7 +59,7 @@ graph TB
             M_SEARCH["SearchQuery,<br/>SearchResults"]
         end
         subgraph Ports["Port Traits (Interfaces)"]
-            P_REPOS["MovieRepository<br/>ReviewRepository<br/>DiaryRepository<br/>UserRepository<br/>WatchlistRepository<br/>WatchEventRepository<br/>WebhookTokenRepository<br/>ImportSessionRepository<br/>MovieProfileRepository<br/>WrapUpRepository<br/>GoalRepository<br/>UserSettingsRepository"]
+            P_REPOS["MovieRepository<br/>ReviewRepository<br/>DiaryRepository<br/>UserRepository<br/>WatchlistRepository<br/>WatchEventRepository<br/>WebhookTokenRepository<br/>ImportSessionRepository<br/>MovieProfileRepository<br/>WrapUpRepository<br/>GoalRepository<br/>UserSettingsRepository<br/>MovieDeduplicator"]
             P_SERVICES["AuthService<br/>MetadataClient<br/>PosterFetcherClient<br/>ObjectStorage<br/>EventPublisher<br/>EventConsumer<br/>PasswordHasher<br/>DiaryExporter<br/>DocumentParser"]
             P_SEARCH["SearchPort<br/>SearchCommand<br/>PersonQuery<br/>PersonCommand"]
             P_FEDERATION["SocialQueryPort<br/>LocalApContentQuery<br/>RemoteWatchlistRepository<br/>RemoteGoalRepository"]
@@ -63,7 +68,7 @@ graph TB
             DS_WRAPUP["WrapUpAnalyzer<br/><i>build_report, compute_*</i>"]
             DS_REVIEW["ReviewHistoryAnalyzer<br/><i>rating_trend</i>"]
         end
-        EVENTS["DomainEvent enum<br/><i>ReviewLogged, MovieDiscovered,<br/>GoalCreated, GoalUpdated,<br/>SearchReindexRequested, ...</i>"]
+        EVENTS["DomainEvent enum<br/><i>ReviewLogged, MovieDiscovered,<br/>GoalCreated, GoalUpdated,<br/>UserDeleted, UserAccountMoved,<br/>SearchReindexRequested, ...</i>"]
         VO["Value Objects<br/><i>MovieId, UserId, Rating,<br/>Email, Username, Password, ...</i>"]
     end
 
