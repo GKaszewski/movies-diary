@@ -18,3 +18,13 @@ pub struct FederationFlags {
     pub reviews: bool,
     pub watchlist: bool,
 }
+
+#[derive(Debug, Clone)]
+pub struct FederatedProfile {
+    pub actor_url: String,
+    pub handle: String,
+    pub display_name: Option<String>,
+    pub bio: Option<String>,
+    pub avatar_url: Option<String>,
+    pub banner_url: Option<String>,
+}

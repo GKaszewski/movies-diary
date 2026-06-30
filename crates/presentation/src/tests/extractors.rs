@@ -807,6 +807,7 @@ pub fn make_test_state(auth_service: Arc<dyn AuthService>) -> crate::state::AppS
                 user_settings: Arc::clone(&repo) as _,
                 remote_goal: Arc::clone(&repo) as _,
                 refresh_session: Arc::clone(&repo) as _,
+                federated_profile: None,
             },
             services: Services {
                 auth: auth_service,

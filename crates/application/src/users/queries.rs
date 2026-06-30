@@ -43,6 +43,7 @@ pub struct GetUserProfileQuery {
     pub sort_by: domain::models::FeedSortBy,
     pub search: Option<String>,
     pub is_own_profile: bool,
+    pub include_remote: bool,
 }
 
 pub struct GetCurrentProfileQuery {

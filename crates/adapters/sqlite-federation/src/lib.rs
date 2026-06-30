@@ -1,12 +1,14 @@
 mod activity;
 mod actor;
-pub mod ap_content;
 mod blocklist;
+mod federated_profile;
 mod follow;
-pub mod remote_goals;
 mod review;
 mod social;
 mod watchlist;
+
+pub mod ap_content;
+pub mod remote_goals;
 
 pub use ap_content::SqliteApContentQuery;
 pub use remote_goals::SqliteRemoteGoalRepository;
@@ -84,6 +86,12 @@ impl SqliteFederationRepository {
     pub fn new(pool: SqlitePool) -> Self {
         Self { pool }
     }
+}
+
+pub fn create_federated_profile_query(
+    pool: SqlitePool,
+) -> std::sync::Arc<dyn domain::ports::FederatedProfileQuery> {
+    std::sync::Arc::new(SqliteFederationRepository::new(pool))
 }
 
 pub fn wire(pool: SqlitePool) -> activitypub::FederationRepos {

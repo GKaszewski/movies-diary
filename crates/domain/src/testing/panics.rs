@@ -347,6 +347,18 @@ impl crate::ports::SocialQueryPort for PanicSocialQueryPort {
     }
 }
 
+pub struct PanicFederatedProfileQuery;
+
+#[async_trait]
+impl crate::ports::FederatedProfileQuery for PanicFederatedProfileQuery {
+    async fn get_federated_profile(
+        &self,
+        _: uuid::Uuid,
+    ) -> Result<Option<crate::models::FederatedProfile>, DomainError> {
+        panic!("PanicFederatedProfileQuery called")
+    }
+}
+
 pub struct PanicWatchEventRepository;
 
 #[async_trait]

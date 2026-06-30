@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
-import { UserCheck, UserPlus } from "lucide-react"
+import { ExternalLink, UserCheck, UserPlus } from "lucide-react"
 import { BackButton } from "@/components/back-button"
 import { Button } from "@/components/ui/button"
 import { ProfileView, ProfileSkeleton } from "@/components/profile-view"
@@ -39,10 +39,14 @@ function UserProfilePage() {
       <ProfileView
         data={data}
         userId={id}
-        search={search}
-        onSearchChange={setSearch}
+        search={data.is_federated ? undefined : search}
+        onSearchChange={data.is_federated ? undefined : setSearch}
+        isFederated={data.is_federated}
+        bio={data.bio}
+        handle={data.handle}
+        actorUrl={data.actor_url}
         actions={
-          data.goals?.length ? (
+          !data.is_federated && data.goals?.length ? (
             <div className="space-y-2">
               {data.goals.map((g) => (
                 <GoalCard key={g.year} goal={g} />
@@ -51,7 +55,7 @@ function UserProfilePage() {
           ) : undefined
         }
         headerRight={
-          !isSelf ? (
+          !isSelf && !data.is_federated ? (
             isFollowing ? (
               <Button
                 size="sm"
@@ -72,6 +76,13 @@ function UserProfilePage() {
                 {t("common.follow")}
               </Button>
             )
+          ) : data.is_federated && data.actor_url ? (
+            <a href={data.actor_url} target="_blank" rel="noopener noreferrer">
+              <Button size="sm" variant="outline">
+                <ExternalLink className="mr-1 size-3.5" />
+                {t("common.viewOnRemote", { defaultValue: "Remote" })}
+              </Button>
+            </a>
           ) : undefined
         }
       />

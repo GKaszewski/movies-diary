@@ -54,6 +54,7 @@ async fn returns_profile_with_empty_stats() {
             sort_by: domain::models::FeedSortBy::Date,
             search: None,
             is_own_profile: true,
+            include_remote: false,
         },
     )
     .await
@@ -88,6 +89,7 @@ async fn returns_history_view() {
             sort_by: domain::models::FeedSortBy::Date,
             search: None,
             is_own_profile: true,
+            include_remote: false,
         },
     )
     .await
@@ -124,6 +126,7 @@ async fn returns_trends_view() {
             sort_by: domain::models::FeedSortBy::Date,
             search: None,
             is_own_profile: true,
+            include_remote: false,
         },
     )
     .await
@@ -160,6 +163,7 @@ async fn returns_ratings_view() {
             sort_by: domain::models::FeedSortBy::Rating,
             search: None,
             is_own_profile: true,
+            include_remote: false,
         },
     )
     .await
@@ -194,6 +198,7 @@ async fn returns_recent_with_search() {
             sort_by: domain::models::FeedSortBy::Date,
             search: Some("blade".into()),
             is_own_profile: true,
+            include_remote: false,
         },
     )
     .await
@@ -228,6 +233,7 @@ async fn non_own_profile_skips_pending_followers() {
             sort_by: domain::models::FeedSortBy::Date,
             search: None,
             is_own_profile: false,
+            include_remote: false,
         },
     )
     .await

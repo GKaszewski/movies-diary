@@ -26,6 +26,7 @@ pub async fn execute(
         movie_id,
         user_id,
         search: None,
+        include_remote: false,
     };
 
     diary.query_diary(&filter).await

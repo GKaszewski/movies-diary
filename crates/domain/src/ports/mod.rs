@@ -1,6 +1,7 @@
 pub mod auth;
 pub mod diary;
 pub mod events;
+pub mod federated_profile;
 pub mod goals;
 pub mod images;
 pub mod import;
@@ -16,6 +17,7 @@ pub mod wrapup;
 pub use auth::*;
 pub use diary::*;
 pub use events::*;
+pub use federated_profile::*;
 pub use goals::*;
 pub use images::*;
 pub use import::*;

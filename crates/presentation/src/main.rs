@@ -207,6 +207,23 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
             user_settings: db.user_settings,
             remote_goal: db.remote_goal,
             refresh_session: db.refresh_session,
+            #[cfg(feature = "federation")]
+            federated_profile: Some({
+                match &db_pool {
+                    #[cfg(feature = "sqlite-federation")]
+                    factory::DbPool::Sqlite(pool) => {
+                        sqlite_federation::create_federated_profile_query(pool.clone())
+                    }
+                    #[cfg(feature = "postgres-federation")]
+                    factory::DbPool::Postgres(pool) => {
+                        postgres_federation::create_federated_profile_query(pool.clone())
+                    }
+                    #[cfg(not(feature = "sqlite-federation"))]
+                    _ => unreachable!(),
+                }
+            }),
+            #[cfg(not(feature = "federation"))]
+            federated_profile: None,
         },
         services: Services {
             auth: auth_service,

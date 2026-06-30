@@ -86,6 +86,11 @@ export const userProfileResponseSchema = z.object({
   history: z.array(monthActivityDtoSchema).optional(),
   trends: userTrendsDtoSchema.optional(),
   goals: z.array(goalDtoSchema).optional(),
+  is_federated: z.boolean().optional().default(false),
+  handle: z.string().optional(),
+  display_name: z.string().optional(),
+  bio: z.string().optional(),
+  actor_url: z.string().optional(),
 })
 export type UserProfileResponse = z.infer<typeof userProfileResponseSchema>
 

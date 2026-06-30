@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router"
 import { useCallback } from "react"
 import { useTranslation } from "react-i18next"
 import { Bar, BarChart, XAxis, YAxis } from "recharts"
-import { Search, User } from "lucide-react"
+import { Globe, Search, User } from "lucide-react"
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -23,6 +23,10 @@ type ProfileViewProps = {
   userId?: string
   search?: string
   onSearchChange?: (value: string) => void
+  isFederated?: boolean
+  bio?: string
+  handle?: string
+  actorUrl?: string
 }
 
 export function ProfileView({
@@ -32,6 +36,9 @@ export function ProfileView({
   userId,
   search,
   onSearchChange,
+  isFederated,
+  bio,
+  handle,
 }: ProfileViewProps) {
   const { t } = useTranslation()
   const initial = (data.username || "?")[0]?.toUpperCase() ?? "?"
@@ -50,8 +57,15 @@ export function ProfileView({
           {avatar && <AvatarImage src={avatar} />}
           <AvatarFallback>{initial}</AvatarFallback>
         </Avatar>
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <p className="font-semibold">{data.username}</p>
+          {isFederated && handle && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Globe className="size-3" />
+              <span>{handle}</span>
+            </div>
+          )}
+          {bio && <p className="mt-1 text-sm text-muted-foreground">{bio}</p>}
         </div>
         {headerRight}
       </div>

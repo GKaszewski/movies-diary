@@ -114,19 +114,24 @@ impl PostgresDiaryRepository {
         &self,
         user_id: &str,
         search: Option<&str>,
+        include_remote: bool,
     ) -> Result<i64, DomainError> {
         let has_search = search.map(|s| !s.is_empty()).unwrap_or(false);
-        let sql = if has_search {
-            "SELECT COUNT(*) FROM reviews r
-             INNER JOIN movies m ON m.id = r.movie_id
-             WHERE r.user_id = $1 AND m.title ILIKE '%' || $2 || '%'"
-                .to_string()
+        let remote_clause = if include_remote {
+            ""
         } else {
+            " AND r.remote_actor_url IS NULL"
+        };
+        let search_clause = if has_search {
+            " AND m.title ILIKE '%' || $2 || '%'"
+        } else {
+            ""
+        };
+        let sql = format!(
             "SELECT COUNT(*) FROM reviews r
              INNER JOIN movies m ON m.id = r.movie_id
-             WHERE r.user_id = $1"
-                .to_string()
-        };
+             WHERE r.user_id = $1{remote_clause}{search_clause}"
+        );
         let mut q = sqlx::query_scalar::<_, i64>(&sql).bind(user_id);
         if has_search {
             q = q.bind(search.unwrap());
@@ -139,6 +144,7 @@ impl PostgresDiaryRepository {
         user_id: &str,
         sort: &SortDirection,
         search: Option<&str>,
+        include_remote: bool,
         limit: i64,
         offset: i64,
     ) -> Result<Vec<DiaryRow>, DomainError> {
@@ -149,9 +155,13 @@ impl PostgresDiaryRepository {
             SortDirection::Ascending => "r.watched_at ASC",
             SortDirection::Descending => "r.watched_at DESC",
         };
+        let remote_clause = if include_remote {
+            ""
+        } else {
+            " AND r.remote_actor_url IS NULL"
+        };
 
-        // Build param counter: user_id=$1, optional search=$2, limit=$N-1, offset=$N
-        let mut p: i32 = 1; // $1 is user_id
+        let mut p: i32 = 1;
         let search_clause = if has_search {
             p += 1;
             format!(" AND m.title ILIKE '%' || ${} || '%'", p)
@@ -171,10 +181,9 @@ impl PostgresDiaryRepository {
                     r.remote_actor_url
              FROM reviews r
              INNER JOIN movies m ON m.id = r.movie_id
-             WHERE r.user_id = $1 AND r.remote_actor_url IS NULL{}
-             ORDER BY {}
-             LIMIT {} OFFSET {}",
-            search_clause, order_clause, limit_param, offset_param
+             WHERE r.user_id = $1{remote_clause}{search_clause}
+             ORDER BY {order_clause}
+             LIMIT {limit_param} OFFSET {offset_param}",
         );
 
         let mut q = sqlx::query_as::<_, DiaryRow>(&sql).bind(user_id);
@@ -213,9 +222,17 @@ impl DiaryRepository for PostgresDiaryRepository {
             (None, Some(uid)) => {
                 let uid_str = uid.value().to_string();
                 let search = filter.search.as_deref();
+                let inc = filter.include_remote;
                 tokio::try_join!(
-                    self.count_user_diary_entries(&uid_str, search),
-                    self.fetch_user_diary_rows(&uid_str, &filter.sort_by, search, limit, offset)
+                    self.count_user_diary_entries(&uid_str, search, inc),
+                    self.fetch_user_diary_rows(
+                        &uid_str,
+                        &filter.sort_by,
+                        search,
+                        inc,
+                        limit,
+                        offset
+                    )
                 )?
             }
             (Some(_), Some(_)) => {

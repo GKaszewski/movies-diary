@@ -85,6 +85,16 @@ pub struct UserProfileResponse {
     pub trends: Option<UserTrendsDto>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub goals: Option<Vec<GoalDto>>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub is_federated: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub handle: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub display_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bio: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub actor_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]

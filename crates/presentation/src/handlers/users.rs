@@ -265,19 +265,29 @@ pub async fn get_user_profile(
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
-    let user = match state
+    let local_user = match state
         .app_ctx
         .repos
         .user
         .find_by_id(&UserId::from_uuid(user_id))
         .await
     {
-        Ok(Some(u)) => u,
-        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+        Ok(u) => u,
         Err(e) => {
             return crate::errors::domain_error_response(e);
         }
     };
+
+    if local_user.is_none() {
+        if let Some(ref fed_query) = state.app_ctx.repos.federated_profile
+            && let Ok(Some(fed)) = fed_query.get_federated_profile(user_id).await
+        {
+            return build_federated_profile_response(&state, user_id, fed, profile_view, &params)
+                .await;
+        }
+        return StatusCode::NOT_FOUND.into_response();
+    }
+    let user = local_user.unwrap();
 
     let get_profile_deps = GetProfileDeps {
         stats: state.app_ctx.repos.stats.clone(),
@@ -294,6 +304,7 @@ pub async fn get_user_profile(
             sort_by: domain::models::FeedSortBy::Date,
             search: params.search,
             is_own_profile: viewer_id.value() == user_id,
+            include_remote: false,
         },
     )
     .await
@@ -384,6 +395,106 @@ pub async fn get_user_profile(
                 Some(goals_list.iter().map(goal_with_progress_to_dto).collect())
             }
         },
+        is_federated: false,
+        handle: None,
+        display_name: None,
+        bio: None,
+        actor_url: None,
+    })
+    .into_response()
+}
+
+async fn build_federated_profile_response(
+    state: &AppState,
+    user_id: Uuid,
+    fed: domain::models::FederatedProfile,
+    profile_view: application::users::queries::ProfileView,
+    params: &UserProfileQueryParams,
+) -> axum::response::Response {
+    let get_profile_deps = GetProfileDeps {
+        stats: state.app_ctx.repos.stats.clone(),
+        diary: state.app_ctx.repos.diary.clone(),
+        social_query: state.app_ctx.repos.social_query.clone(),
+    };
+    let profile = match get_user_profile_uc::execute(
+        &get_profile_deps,
+        GetUserProfileQuery {
+            user_id,
+            view: profile_view,
+            limit: params.limit,
+            offset: params.offset,
+            sort_by: domain::models::FeedSortBy::Date,
+            search: params.search.clone(),
+            is_own_profile: false,
+            include_remote: true,
+        },
+    )
+    .await
+    {
+        Ok(p) => p,
+        Err(e) => return crate::errors::domain_error_response(e),
+    };
+
+    let entries = profile.entries.map(|p| DiaryResponse {
+        items: p
+            .items
+            .iter()
+            .map(crate::mappers::movies::entry_to_dto)
+            .collect(),
+        total_count: p.total_count,
+        limit: p.limit,
+        offset: p.offset,
+    });
+
+    let trends = profile.trends.map(|t| UserTrendsDto {
+        monthly_ratings: t
+            .monthly_ratings
+            .into_iter()
+            .map(|r| MonthlyRatingDto {
+                year_month: r.year_month,
+                month_label: r.month_label,
+                avg_rating: r.avg_rating,
+                count: r.count,
+            })
+            .collect(),
+        top_directors: t
+            .top_directors
+            .into_iter()
+            .map(|d| DirectorStatDto {
+                director: d.director,
+                count: d.count,
+            })
+            .collect(),
+        max_director_count: t.max_director_count,
+    });
+
+    let username = fed
+        .display_name
+        .clone()
+        .unwrap_or_else(|| fed.handle.clone());
+
+    Json(UserProfileResponse {
+        user_id,
+        username,
+        avatar_url: fed.avatar_url,
+        banner_url: fed.banner_url,
+        stats: UserStatsDto {
+            total_movies: profile.stats.total_movies,
+            avg_rating: profile.stats.avg_rating,
+            favorite_director: profile.stats.favorite_director,
+            most_active_month: profile.stats.most_active_month,
+        },
+        following_count: 0,
+        followers_count: 0,
+        entries,
+        history: None,
+        trends,
+        goals: None,
+        is_federated: true,
+        handle: Some(fed.handle),
+        display_name: fed.display_name,
+        bio: fed.bio,
+        actor_url: Some(fed.actor_url),
     })
     .into_response()
 }
@@ -538,6 +649,7 @@ pub async fn get_user_profile_html(
             Some(params.search.clone())
         },
         is_own_profile,
+        include_remote: false,
     };
 
     let html_profile_deps = GetProfileDeps {

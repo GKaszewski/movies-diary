@@ -1,14 +1,14 @@
 use std::sync::Arc;
 
 use domain::ports::{
-    AuthService, DiaryExporter, DiaryRepository, DocumentParser, EventPublisher, GoalRepository,
-    ImportProfileRepository, ImportSessionRepository, MetadataClient, MovieProfileRepository,
-    MovieRepository, ObjectStorage, PasswordHasher, PersonCommand, PersonEnrichmentClient,
-    PersonQuery, PosterFetcherClient, RefreshSessionRepository, RemoteGoalRepository,
-    RemoteWatchlistRepository, ReviewRepository, SearchCommand, SearchPort, SocialQueryPort,
-    StatsRepository, UserProfileFieldsRepository, UserRepository, UserSettingsRepository,
-    WatchEventRepository, WatchlistRepository, WebhookTokenRepository, WrapUpRepository,
-    WrapUpStatsQuery,
+    AuthService, DiaryExporter, DiaryRepository, DocumentParser, EventPublisher,
+    FederatedProfileQuery, GoalRepository, ImportProfileRepository, ImportSessionRepository,
+    MetadataClient, MovieProfileRepository, MovieRepository, ObjectStorage, PasswordHasher,
+    PersonCommand, PersonEnrichmentClient, PersonQuery, PosterFetcherClient,
+    RefreshSessionRepository, RemoteGoalRepository, RemoteWatchlistRepository, ReviewRepository,
+    SearchCommand, SearchPort, SocialQueryPort, StatsRepository, UserProfileFieldsRepository,
+    UserRepository, UserSettingsRepository, WatchEventRepository, WatchlistRepository,
+    WebhookTokenRepository, WrapUpRepository, WrapUpStatsQuery,
 };
 
 use application::config::AppConfig;
@@ -40,6 +40,7 @@ pub struct Repositories {
     pub user_settings: Arc<dyn UserSettingsRepository>,
     pub remote_goal: Arc<dyn RemoteGoalRepository>,
     pub refresh_session: Arc<dyn RefreshSessionRepository>,
+    pub federated_profile: Option<Arc<dyn FederatedProfileQuery>>,
 }
 
 #[derive(Clone)]

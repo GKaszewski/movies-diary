@@ -133,6 +133,7 @@ pub struct DiaryFilter {
     pub movie_id: Option<MovieId>,
     pub user_id: Option<UserId>,
     pub search: Option<String>,
+    pub include_remote: bool,
 }
 
 #[derive(Clone, Debug)]

@@ -66,6 +66,7 @@ pub async fn execute(
                 query.limit,
                 query.offset,
                 query.search.clone(),
+                query.include_remote,
             )?;
             let entries = deps.diary.query_diary(&filter).await?;
             Ok(base(Some(entries), None, None))
@@ -122,6 +123,7 @@ fn paged_user_filter(
     limit: Option<u32>,
     offset: Option<u32>,
     search: Option<String>,
+    include_remote: bool,
 ) -> Result<DiaryFilter, DomainError> {
     let page = PageParams::new(limit, offset)?;
     Ok(DiaryFilter {
@@ -130,6 +132,7 @@ fn paged_user_filter(
         movie_id: None,
         user_id: Some(user_id),
         search,
+        include_remote,
     })
 }
 
@@ -171,6 +174,7 @@ mod helper_tests {
             Some(20),
             Some(5),
             Some("blade".into()),
+            false,
         )
         .unwrap();
 

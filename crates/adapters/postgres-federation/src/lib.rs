@@ -2,6 +2,7 @@ mod activity;
 mod actor;
 pub mod ap_content;
 mod blocklist;
+mod federated_profile;
 mod follow;
 pub mod remote_goals;
 mod review;
@@ -73,6 +74,12 @@ impl PostgresFederationRepository {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
+}
+
+pub fn create_federated_profile_query(
+    pool: PgPool,
+) -> std::sync::Arc<dyn domain::ports::FederatedProfileQuery> {
+    std::sync::Arc::new(PostgresFederationRepository::new(pool))
 }
 
 pub fn wire(pool: PgPool) -> activitypub::FederationRepos {
