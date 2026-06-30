@@ -153,7 +153,7 @@ impl SqliteDiaryRepository {
                     r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url
              FROM reviews r
              INNER JOIN movies m ON m.id = r.movie_id
-             WHERE r.user_id = ?{}
+             WHERE r.user_id = ? AND r.remote_actor_url IS NULL{}
              ORDER BY {}
              LIMIT ? OFFSET ?",
             search_clause, order_clause

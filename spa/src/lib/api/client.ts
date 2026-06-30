@@ -4,6 +4,7 @@ export const API_URL = import.meta.env.VITE_API_URL ?? ""
 
 export function posterUrl(path: string | undefined | null): string | undefined {
   if (!path) return undefined
+  if (path.startsWith("http://") || path.startsWith("https://")) return path
   const clean = path.startsWith("/") ? path.slice(1) : path
   return `${API_URL}/images/${clean}`
 }

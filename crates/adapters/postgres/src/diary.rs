@@ -171,7 +171,7 @@ impl PostgresDiaryRepository {
                     r.remote_actor_url
              FROM reviews r
              INNER JOIN movies m ON m.id = r.movie_id
-             WHERE r.user_id = $1{}
+             WHERE r.user_id = $1 AND r.remote_actor_url IS NULL{}
              ORDER BY {}
              LIMIT {} OFFSET {}",
             search_clause, order_clause, limit_param, offset_param
