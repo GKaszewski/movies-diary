@@ -1,5 +1,6 @@
 import { createRootRoute, Outlet } from "@tanstack/react-router"
 import { ThemeProvider } from "@/components/theme-provider"
+import { TooltipProvider } from "@/components/ui/tooltip"
 
 export const Route = createRootRoute({
   component: RootLayout,
@@ -8,7 +9,9 @@ export const Route = createRootRoute({
 function RootLayout() {
   return (
     <ThemeProvider>
-      <Outlet />
+      <TooltipProvider>
+        <Outlet />
+      </TooltipProvider>
     </ThemeProvider>
   )
 }
