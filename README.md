@@ -47,8 +47,8 @@ Open `http://localhost:3000`. The HTTP server and background worker start togeth
 
 ## Features
 
-- Log movies with a TMDB/OMDb ID or manual title/year/director, with a 0–5 rating
-- Immutable append-only viewing ledger (tracks re-watches)
+- Log movies with a TMDB/OMDb ID or manual title/year/director, with a 0–5 rating and optional watch medium (cinema, streaming, TV, physical media, download, media server)
+- Edit reviews after the fact — update rating, comment, date, or watch medium via partial PATCH; each watch is still a separate record (re-watches tracked)
 - Background poster fetching and storage (local filesystem or S3-compatible)
 - Movie enrichment via TMDb — full cast, crew, genres, keywords, runtime, budget/revenue, ratings; fetched automatically on movie discovery and refreshed every 30 days; exposed via `GET /api/v1/movies/{id}/profile`
 - Full-text search across movies and people via `GET /api/v1/search` — free-text query plus structured filters (genre, year, person, department, language); backed by SQLite FTS5 or PostgreSQL tsvector + GIN indexes

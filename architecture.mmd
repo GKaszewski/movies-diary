@@ -14,7 +14,7 @@ graph TB
         APP_PORTS["ReviewLogger<br/><i>application-layer port</i>"]
         subgraph UseCases["Use Cases"]
             UC_AUTH["auth<br/>login, register"]
-            UC_DIARY["diary<br/>log_review, get_diary,<br/>get_activity_feed, export"]
+            UC_DIARY["diary<br/>log_review, edit_review,<br/>get_diary, get_activity_feed,<br/>export"]
             UC_MOVIES["movies<br/>get_movies, get_movie_profile,<br/>enrich_movie, request_enrichment,<br/>sync_poster, reindex_search,<br/>merge_duplicates"]
             UC_IMPORT["import<br/>create_session, apply_mapping,<br/>execute, profiles"]
             UC_USERS["users<br/>get_users, get_profile,<br/>update_profile, delete_account"]
@@ -50,7 +50,7 @@ graph TB
         direction TB
         subgraph Models["Models"]
             M_MOVIE["Movie, MovieSummary,<br/>MovieProfile"]
-            M_REVIEW["Review, DiaryEntry,<br/>FeedEntry"]
+            M_REVIEW["Review, ReviewEdit,<br/>DiaryEntry, FeedEntry"]
             M_USER["User, UserSummary"]
             M_PERSON["Person, PersonId,<br/>PersonCredits"]
             M_WATCHLIST["WatchlistEntry,<br/>WatchEvent"]
@@ -69,7 +69,7 @@ graph TB
             DS_REVIEW["ReviewHistoryAnalyzer<br/><i>rating_trend</i>"]
         end
         EVENTS["DomainEvent enum<br/><i>ReviewLogged, MovieDiscovered,<br/>GoalCreated, GoalUpdated,<br/>UserDeleted, UserAccountMoved,<br/>SearchReindexRequested, ...</i>"]
-        VO["Value Objects<br/><i>MovieId, UserId, Rating,<br/>Email, Username, Password, ...</i>"]
+        VO["Value Objects<br/><i>MovieId, UserId, Rating,<br/>WatchMedium, Email, Username,<br/>Password, ...</i>"]
     end
 
     subgraph ApiTypes["api-types (0 domain deps)"]
