@@ -12,6 +12,7 @@ import { WatchMediumBadge } from "@/components/watch-medium-badge"
 import { VirtualList } from "@/components/virtual-list"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useAuth } from "@/components/auth-provider"
 import { useInfiniteDiary, useDeleteReview } from "@/hooks/use-diary"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import type { DiaryEntryDto } from "@/lib/api/common"
@@ -31,10 +32,11 @@ function groupByDate(items: DiaryEntryDto[]) {
 
 function DiaryPage() {
   const { t } = useTranslation()
+  const { auth } = useAuth()
   useDocumentTitle(t("diary.title"))
   const [month, setMonth] = useState(() => startOfMonth(new Date()))
   const { data, isPending, hasNextPage, isFetchingNextPage, fetchNextPage } =
-    useInfiniteDiary({ sort_by: "desc" })
+    useInfiniteDiary({ sort_by: "desc", user_id: auth?.user_id })
   const deleteReview = useDeleteReview()
   const [editingEntry, setEditingEntry] = useState<DiaryEntryDto | null>(null)
 
