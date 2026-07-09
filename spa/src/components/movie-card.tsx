@@ -8,7 +8,7 @@ type MovieCardProps = {
   movie: MovieDto
   rating?: number
   comment?: string
-  subtitle?: string
+  subtitle?: React.ReactNode
   variant?: "compact" | "full"
   action?: React.ReactNode
 }

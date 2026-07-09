@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router"
 import { Globe, Pencil } from "lucide-react"
-import { timeAgo } from "@/lib/date"
+import { TimeAgo } from "@/components/time-ago"
 import { StarDisplay } from "@/components/star-display"
 import { WatchMediumBadge } from "@/components/watch-medium-badge"
 import { EditableContextMenu } from "@/components/editable-context-menu"
@@ -42,7 +42,7 @@ export function ReviewCard({ movie, review, userName, userId, isFederated, actor
               )}
               {isFederated && <Globe className="size-3 text-muted-foreground/60" />}
               <span>·</span>
-              <span>{timeAgo(review.watched_at)}</span>
+              <TimeAgo date={review.watched_at} />
             </div>
           )}
           <div className="flex items-center justify-between">
