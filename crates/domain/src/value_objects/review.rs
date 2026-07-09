@@ -28,6 +28,20 @@ impl fmt::Display for WatchMedium {
     }
 }
 
+impl WatchMedium {
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::Cinema => "Cinema",
+            Self::Streaming => "Streaming",
+            Self::TV => "TV",
+            Self::PhysicalMedia => "Physical Media",
+            Self::Download => "Download",
+            Self::MediaServer => "Media Server",
+            Self::Other => "Other",
+        }
+    }
+}
+
 impl FromStr for WatchMedium {
     type Err = DomainError;
 

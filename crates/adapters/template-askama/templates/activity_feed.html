@@ -43,7 +43,7 @@
         {% endfor %}
       </div>
       {% if let Some(wm) = entry.review().watch_medium() %}
-      <span class="watch-medium">{{ wm }}</span>
+      <span class="watch-medium">{{ wm.label() }}</span>
       {% endif %}
       {% if let Some(comment) = entry.review().comment() %}
       <div class="comment">{{ comment.value() }}</div>
