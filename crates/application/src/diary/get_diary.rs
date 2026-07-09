@@ -24,9 +24,9 @@ pub async fn execute(
         sort_by: query.sort_by.unwrap_or(SortDirection::Descending),
         page,
         movie_id,
-        user_id,
+        user_id: user_id.clone(),
         search: None,
-        include_remote: false,
+        include_remote: user_id.is_some(),
     };
 
     diary.query_diary(&filter).await
