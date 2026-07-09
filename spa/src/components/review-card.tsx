@@ -17,9 +17,10 @@ type ReviewCardProps = {
   isFederated?: boolean
   actorUrl?: string
   onEdit?: () => void
+  onShowDetail?: () => void
 }
 
-export function ReviewCard({ movie, review, userName, userId, isFederated, actorUrl, onEdit }: ReviewCardProps) {
+export function ReviewCard({ movie, review, userName, userId, isFederated, actorUrl, onEdit, onShowDetail }: ReviewCardProps) {
   const card = (
     <Card size="sm">
       <CardContent className="flex gap-3">
@@ -59,7 +60,17 @@ export function ReviewCard({ movie, review, userName, userId, isFederated, actor
             <StarDisplay rating={review.rating} />
             {review.watch_medium && <WatchMediumBadge medium={review.watch_medium} />}
           </div>
-          {review.comment && <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{review.comment}</p>}
+          {review.comment && (
+            <p
+              className="mt-1 line-clamp-2 text-xs text-muted-foreground"
+              role={onShowDetail ? "button" : undefined}
+              tabIndex={onShowDetail ? 0 : undefined}
+              onClick={onShowDetail}
+              onKeyDown={onShowDetail ? (e) => e.key === "Enter" && onShowDetail() : undefined}
+            >
+              {review.comment}
+            </p>
+          )}
         </div>
       </CardContent>
     </Card>

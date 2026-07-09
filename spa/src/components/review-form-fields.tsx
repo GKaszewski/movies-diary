@@ -1,3 +1,4 @@
+import { useCallback, useRef } from "react"
 import { useTranslation } from "react-i18next"
 import { CalendarIcon } from "lucide-react"
 import { format } from "date-fns"
@@ -38,7 +39,7 @@ export function ReviewFormFields({
         <div className="flex justify-center"><StarRating value={rating} onChange={onRatingChange} /></div>
       </div>
 
-      <Textarea value={comment} onChange={(e) => onCommentChange(e.target.value)} placeholder={t("logReview.commentPlaceholder")} className="mb-5" rows={3} />
+      <AutoGrowTextarea value={comment} onChange={onCommentChange} placeholder={t("logReview.commentPlaceholder")} className="mb-5" />
 
       <div className="mb-5">
         <p className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">{t("logReview.watchedAt")}</p>
@@ -66,5 +67,40 @@ export function ReviewFormFields({
         <WatchMediumPicker value={watchMedium} onChange={onWatchMediumChange} />
       </div>
     </>
+  )
+}
+
+function AutoGrowTextarea({
+  value,
+  onChange,
+  placeholder,
+  className,
+}: {
+  value: string
+  onChange: (v: string) => void
+  placeholder?: string
+  className?: string
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null)
+  const handleInput = useCallback(() => {
+    const el = ref.current
+    if (!el) return
+    el.style.height = "auto"
+    el.style.height = `${el.scrollHeight}px`
+  }, [])
+
+  return (
+    <Textarea
+      ref={ref}
+      value={value}
+      onChange={(e) => {
+        onChange(e.target.value)
+        handleInput()
+      }}
+      placeholder={placeholder}
+      className={className}
+      rows={2}
+      style={{ overflow: "hidden", resize: "none" }}
+    />
   )
 }

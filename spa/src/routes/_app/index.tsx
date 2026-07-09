@@ -16,6 +16,7 @@ import { StarRating } from "@/components/star-rating"
 import { useAuth } from "@/components/auth-provider"
 import { useQueryClient } from "@tanstack/react-query"
 import { EditReviewSheet } from "@/components/edit-review-sheet"
+import { ReviewDetailSheet } from "@/components/review-detail-sheet"
 import { useInfiniteActivityFeed, useDeleteReview } from "@/hooks/use-diary"
 import type { FeedEntryDto } from "@/lib/api/diary"
 import { SearchOverlay } from "@/components/search-overlay"
@@ -69,6 +70,7 @@ function FeedTab() {
     useInfiniteActivityFeed({ sort_by: sortBy })
   const deleteReview = useDeleteReview()
   const [editingEntry, setEditingEntry] = useState<FeedEntryDto | null>(null)
+  const [detailEntry, setDetailEntry] = useState<FeedEntryDto | null>(null)
   const items = data?.pages.flatMap((p) => p.items) ?? []
   const loadMore = useCallback(() => fetchNextPage(), [fetchNextPage])
 
@@ -123,6 +125,7 @@ function FeedTab() {
                 isFederated={entry.is_federated}
                 actorUrl={entry.actor_url}
                 onEdit={isOwn ? () => setEditingEntry(entry) : undefined}
+                onShowDetail={entry.review.comment ? () => setDetailEntry(entry) : undefined}
               />
             )
             return isOwn ? (
@@ -147,6 +150,16 @@ function FeedTab() {
           onOpenChange={(open) => !open && setEditingEntry(null)}
           movie={editingEntry.movie}
           review={editingEntry.review}
+        />
+      )}
+
+      {detailEntry && (
+        <ReviewDetailSheet
+          open={!!detailEntry}
+          onOpenChange={(open) => !open && setDetailEntry(null)}
+          movie={detailEntry.movie}
+          review={detailEntry.review}
+          userName={detailEntry.user_display_name}
         />
       )}
     </div>
