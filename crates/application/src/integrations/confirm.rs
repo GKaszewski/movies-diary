@@ -56,7 +56,7 @@ pub async fn execute(
             rating: c.rating,
             comment: c.comment,
             watched_at: *event.watched_at(),
-            watch_medium: None,
+            watch_medium: Some(domain::value_objects::WatchMedium::MediaServer),
         };
 
         review_logger.log_review(review_cmd).await?;
