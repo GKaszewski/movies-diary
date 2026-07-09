@@ -343,7 +343,8 @@ impl DiaryRepository for PostgresDiaryRepository {
                     to_char(r.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS created_at,
                     r.remote_actor_url,
                     r.watch_medium,
-                    COALESCE(u.email, a.handle, r.remote_actor_url) AS user_email
+                    CASE WHEN r.remote_actor_url IS NOT NULL THEN COALESCE(a.handle, r.remote_actor_url)
+                         ELSE COALESCE(u.email, r.user_id) END AS user_email
              FROM reviews r
              INNER JOIN movies m ON m.id = r.movie_id
              LEFT JOIN users u ON u.id = r.user_id
@@ -522,12 +523,13 @@ impl DiaryRepository for PostgresDiaryRepository {
                     to_char(r.watched_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS watched_at,
                     to_char(r.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS created_at,
                     r.remote_actor_url,
-                    CASE WHEN r.remote_actor_url IS NOT NULL THEN r.remote_actor_url
-                         WHEN u.email IS NOT NULL THEN u.email
-                         ELSE r.user_id END AS user_email
+                    r.watch_medium,
+                    CASE WHEN r.remote_actor_url IS NOT NULL THEN COALESCE(a.handle, r.remote_actor_url)
+                         ELSE COALESCE(u.email, r.user_id) END AS user_email
              FROM reviews r
              INNER JOIN movies m ON m.id = r.movie_id
              LEFT JOIN users u ON u.id = r.user_id
+             LEFT JOIN ap_remote_actors a ON a.url = r.remote_actor_url
              WHERE r.movie_id = $1
              ORDER BY r.watched_at DESC
              LIMIT $2 OFFSET $3",

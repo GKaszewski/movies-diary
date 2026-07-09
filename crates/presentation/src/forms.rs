@@ -265,7 +265,7 @@ pub fn to_diary_query(p: DiaryQueryParams) -> GetDiaryQuery {
             _ => SortDirection::Descending,
         }),
         movie_id: p.movie_id,
-        user_id: None,
+        user_id: p.user_id,
     }
 }
 

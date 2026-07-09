@@ -8,6 +8,7 @@ export const diaryQueryParamsSchema = z.object({
   offset: z.number().optional(),
   sort_by: z.string().optional(),
   movie_id: z.string().uuid().optional(),
+  user_id: z.string().uuid().optional(),
 })
 export type DiaryQueryParams = z.infer<typeof diaryQueryParamsSchema>
 

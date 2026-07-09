@@ -84,6 +84,7 @@ fn sort_by_asc_string_becomes_ascending() {
         limit: None,
         offset: None,
         movie_id: None,
+        user_id: None,
     };
     let query = to_diary_query(params);
     assert!(matches!(
@@ -99,6 +100,7 @@ fn sort_by_other_string_becomes_descending() {
         limit: None,
         offset: None,
         movie_id: None,
+        user_id: None,
     };
     let query = to_diary_query(params);
     assert!(matches!(

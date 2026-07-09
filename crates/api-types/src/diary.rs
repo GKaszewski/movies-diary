@@ -42,6 +42,7 @@ pub struct DiaryQueryParams {
     pub offset: Option<u32>,
     pub sort_by: Option<String>,
     pub movie_id: Option<Uuid>,
+    pub user_id: Option<Uuid>,
 }
 
 #[derive(Debug, Clone, Deserialize, utoipa::IntoParams)]

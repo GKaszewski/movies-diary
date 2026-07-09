@@ -141,10 +141,10 @@ function StatCell({ label, value }: { label: string; value: string | number }) {
   )
 }
 
-function DiaryTab({ sortBy, search }: { sortBy: string; userId?: string; search?: string }) {
+function DiaryTab({ sortBy, userId, search }: { sortBy: string; userId?: string; search?: string }) {
   const { t } = useTranslation()
   const { data, isPending, hasNextPage, isFetchingNextPage, fetchNextPage } =
-    useInfiniteDiary({ sort_by: sortBy, movie_id: undefined })
+    useInfiniteDiary({ sort_by: sortBy, user_id: userId })
   const items = data?.pages.flatMap((p) => p.items) ?? []
   const filtered = search
     ? items.filter((e) =>

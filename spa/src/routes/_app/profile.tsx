@@ -43,6 +43,7 @@ function ProfilePage() {
 
       <ProfileView
         data={data}
+        userId={auth.user_id}
         search={search}
         onSearchChange={setSearch}
         actions={
