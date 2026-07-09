@@ -79,15 +79,17 @@ impl RemoteReviewRepository for SqliteFederationRepository {
         comment: Option<&str>,
         watched_at: chrono::NaiveDateTime,
         poster_url: Option<&str>,
+        watch_medium: Option<&str>,
     ) -> Result<()> {
         let watched_at_str = datetime_to_str(&watched_at);
         sqlx::query(
-            "UPDATE reviews SET rating = ?, comment = ?, watched_at = ?
+            "UPDATE reviews SET rating = ?, comment = ?, watched_at = ?, watch_medium = ?
              WHERE ap_id = ? AND remote_actor_url = ?",
         )
         .bind(rating as i64)
         .bind(comment)
         .bind(&watched_at_str)
+        .bind(watch_medium)
         .bind(ap_id)
         .bind(actor_url)
         .execute(&self.pool)

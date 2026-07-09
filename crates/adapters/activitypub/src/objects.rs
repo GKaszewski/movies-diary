@@ -49,6 +49,8 @@ pub struct ReviewObject {
     pub(crate) rating: u8,
     pub(crate) comment: Option<String>,
     pub(crate) watched_at: DateTime<Utc>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub(crate) watch_medium: Option<String>,
     /// Discriminator so Movies Diary instances detect this as a review Note.
     #[serde(default)]
     pub(crate) review: bool,
@@ -135,6 +137,7 @@ pub fn review_to_ap_object(review: &Review, input: ReviewApInput) -> ReviewObjec
         rating: review.rating().value(),
         comment: comment_text,
         watched_at: DateTime::from_naive_utc_and_offset(*review.watched_at(), Utc),
+        watch_medium: review.watch_medium().map(|wm| wm.to_string()),
         review: true,
         attachment,
         tag,

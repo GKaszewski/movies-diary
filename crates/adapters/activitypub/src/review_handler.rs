@@ -120,6 +120,12 @@ impl ApObjectHandler for ReviewObjectHandler {
         ));
         let rating = Rating::new(obj.rating.min(5))?;
         let comment = obj.comment.map(Comment::new).transpose()?;
+        let watch_medium = obj
+            .watch_medium
+            .as_deref()
+            .map(|s| s.parse())
+            .transpose()
+            .unwrap_or(None);
 
         let review = domain::models::Review::from_persistence(domain::models::PersistedReview {
             id: review_id,
@@ -132,7 +138,7 @@ impl ApObjectHandler for ReviewObjectHandler {
             source: ReviewSource::Remote {
                 actor_url: actor_url_str,
             },
-            watch_medium: None,
+            watch_medium,
         });
 
         self.review_store
@@ -189,6 +195,7 @@ impl ApObjectHandler for ReviewObjectHandler {
                 obj.comment.as_deref(),
                 obj.watched_at.naive_utc(),
                 obj.poster_url.as_deref(),
+                obj.watch_medium.as_deref(),
             )
             .await?;
 

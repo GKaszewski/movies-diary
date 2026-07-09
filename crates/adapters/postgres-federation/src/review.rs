@@ -79,15 +79,17 @@ impl RemoteReviewRepository for PostgresFederationRepository {
         comment: Option<&str>,
         watched_at: chrono::NaiveDateTime,
         poster_url: Option<&str>,
+        watch_medium: Option<&str>,
     ) -> Result<()> {
         let watched_at_str = datetime_to_str(&watched_at);
         sqlx::query(
-            "UPDATE reviews SET rating = $1, comment = $2, watched_at = $3::timestamptz
-             WHERE ap_id = $4 AND remote_actor_url = $5",
+            "UPDATE reviews SET rating = $1, comment = $2, watched_at = $3::timestamptz, watch_medium = $4
+             WHERE ap_id = $5 AND remote_actor_url = $6",
         )
         .bind(rating as i64)
         .bind(comment)
         .bind(&watched_at_str)
+        .bind(watch_medium)
         .bind(ap_id)
         .bind(actor_url)
         .execute(&self.pool)
