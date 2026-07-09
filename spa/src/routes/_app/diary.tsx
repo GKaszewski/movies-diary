@@ -1,11 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { useCallback, useState } from "react"
 import { useTranslation } from "react-i18next"
-import { BookOpen, ChevronLeft, ChevronRight } from "lucide-react"
+import { BookOpen, ChevronLeft, ChevronRight, Pencil } from "lucide-react"
 import { format, startOfMonth, subMonths } from "date-fns"
+import { EditReviewSheet } from "@/components/edit-review-sheet"
+import { EditableContextMenu } from "@/components/editable-context-menu"
 import { MovieCard } from "@/components/movie-card"
 import { EmptyState } from "@/components/empty-state"
 import { SwipeToDelete } from "@/components/swipe-to-delete"
+import { WatchMediumBadge } from "@/components/watch-medium-badge"
 import { VirtualList } from "@/components/virtual-list"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -33,6 +36,7 @@ function DiaryPage() {
   const { data, isPending, hasNextPage, isFetchingNextPage, fetchNextPage } =
     useInfiniteDiary({ sort_by: "desc" })
   const deleteReview = useDeleteReview()
+  const [editingEntry, setEditingEntry] = useState<DiaryEntryDto | null>(null)
 
   const monthLabel = format(month, "MMMM yyyy")
   const monthStr = format(month, "yyyy-MM")
@@ -109,15 +113,42 @@ function DiaryPage() {
                 confirmTitle={t("diary.deleteReview")}
                 confirmDescription={`${item.entry.movie.title} — ${item.entry.review.watched_at.slice(0, 10)}`}
               >
-                <MovieCard
-                  movie={item.entry.movie}
-                  rating={item.entry.review.rating}
-                  comment={item.entry.review.comment}
-                  variant="full"
-                />
+                <EditableContextMenu onEdit={() => setEditingEntry(item.entry)}>
+                  <MovieCard
+                    movie={item.entry.movie}
+                    rating={item.entry.review.rating}
+                    comment={item.entry.review.comment}
+                    variant="full"
+                    action={
+                      <div className="flex items-center gap-1">
+                        {item.entry.review.watch_medium && (
+                          <WatchMediumBadge medium={item.entry.review.watch_medium} />
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="hidden size-7 md:inline-flex"
+                          onClick={(e) => { e.preventDefault(); setEditingEntry(item.entry) }}
+                        >
+                          <Pencil className="size-3.5" />
+                        </Button>
+                      </div>
+                    }
+                  />
+                </EditableContextMenu>
               </SwipeToDelete>
             )
           }
+        />
+      )}
+
+      {editingEntry && (
+        <EditReviewSheet
+          key={editingEntry.review.id}
+          open={!!editingEntry}
+          onOpenChange={(open) => !open && setEditingEntry(null)}
+          movie={editingEntry.movie}
+          review={editingEntry.review}
         />
       )}
     </div>

@@ -78,6 +78,7 @@ fn make_review() -> Review {
         Rating::new(4).unwrap(),
         Some(Comment::new("great".into()).unwrap()),
         chrono::Utc::now().naive_utc(),
+        None,
     )
     .unwrap()
 }
@@ -112,6 +113,7 @@ fn review_from_persistence() {
         source: ReviewSource::Remote {
             actor_url: "https://example.com/actor".into(),
         },
+        watch_medium: None,
     });
     assert_eq!(*r.id(), id);
     assert!(r.is_remote());

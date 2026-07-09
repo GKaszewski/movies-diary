@@ -1,6 +1,7 @@
 pub mod commands;
 pub mod delete_review;
 pub mod deps;
+pub mod edit_review;
 pub mod export_diary;
 pub mod get_activity_feed;
 pub mod get_diary;

@@ -106,6 +106,7 @@ impl ReviewRow {
             watched_at,
             created_at,
             source,
+            watch_medium: None,
         }))
     }
 }

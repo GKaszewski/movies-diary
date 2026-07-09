@@ -9,6 +9,7 @@ fn make_form(watched_at: &str) -> LogReviewForm {
         rating: 4,
         comment: None,
         watched_at: watched_at.to_string(),
+        watch_medium: None,
         csrf_token: String::new(),
     }
 }
@@ -22,6 +23,7 @@ fn make_request(watched_at: &str) -> LogReviewRequest {
         rating: 4,
         comment: None,
         watched_at: watched_at.to_string(),
+        watch_medium: None,
     }
 }
 
@@ -49,8 +51,9 @@ fn api_accepts_datetime_with_seconds() {
 }
 
 #[test]
-fn api_rejects_datetime_without_seconds() {
-    assert!(LogReviewData::try_from(make_request("2024-03-15T20:30")).is_err());
+fn api_accepts_datetime_without_seconds() {
+    let data = LogReviewData::try_from(make_request("2024-03-15T20:30")).unwrap();
+    assert_eq!(data.watched_at.format("%H:%M").to_string(), "20:30");
 }
 
 #[test]

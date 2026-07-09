@@ -54,6 +54,7 @@ fn diary_entry() -> DiaryEntryDto {
             rating: 5,
             comment: None,
             watched_at: "1999-03-31T00:00:00".into(),
+            watch_medium: None,
         },
     }
 }
@@ -381,6 +382,7 @@ fn bulk_import_all_with_valid_rows_returns_import_next_command() {
                 rating: 5,
                 comment: None,
                 watched_at: "1999-03-31T00:00:00".into(),
+                watch_medium: None,
             }),
         }];
     }
@@ -403,6 +405,7 @@ fn bulk_item_done_advances_stage_and_returns_next_command() {
                 rating: 5,
                 comment: None,
                 watched_at: "2024-01-01T00:00:00".into(),
+                watch_medium: None,
             },
             LogReviewRequest {
                 external_metadata_id: None,
@@ -412,6 +415,7 @@ fn bulk_item_done_advances_stage_and_returns_next_command() {
                 rating: 4,
                 comment: None,
                 watched_at: "2024-01-02T00:00:00".into(),
+                watch_medium: None,
             },
         ];
         m.bulk_import.results = vec![None, None];
@@ -440,6 +444,7 @@ fn bulk_item_done_last_item_transitions_to_done() {
             rating: 5,
             comment: None,
             watched_at: "2024-01-01T00:00:00".into(),
+            watch_medium: None,
         }];
         m.bulk_import.results = vec![None];
     }

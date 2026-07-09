@@ -29,6 +29,7 @@ fn review_to_ap_object_includes_two_hashtags() {
         created_at: NaiveDateTime::parse_from_str("2024-01-01 00:00:00", "%Y-%m-%d %H:%M:%S")
             .unwrap(),
         source: ReviewSource::Local,
+        watch_medium: None,
     });
     let obj = review_to_ap_object(
         &review,
@@ -67,6 +68,7 @@ fn review_to_ap_object_has_public_addressing() {
         created_at: NaiveDateTime::parse_from_str("2024-06-01 00:00:00", "%Y-%m-%d %H:%M:%S")
             .unwrap(),
         source: ReviewSource::Local,
+        watch_medium: None,
     });
     let actor_url: url::Url = "https://example.com/users/abc".parse().unwrap();
     let obj = review_to_ap_object(

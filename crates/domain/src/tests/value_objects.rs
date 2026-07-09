@@ -158,3 +158,44 @@ fn password_value_preserves_content() {
     let raw = "supersecret!".to_string();
     assert_eq!(Password::new(raw.clone()).unwrap().value(), raw);
 }
+
+#[test]
+fn watch_medium_parses_valid_strings() {
+    let cases = [
+        ("cinema", WatchMedium::Cinema),
+        ("streaming", WatchMedium::Streaming),
+        ("tv", WatchMedium::TV),
+        ("physical_media", WatchMedium::PhysicalMedia),
+        ("download", WatchMedium::Download),
+        ("media_server", WatchMedium::MediaServer),
+        ("other", WatchMedium::Other),
+    ];
+    for (input, expected) in cases {
+        let parsed: WatchMedium = input.parse().unwrap();
+        assert_eq!(parsed, expected);
+    }
+}
+
+#[test]
+fn watch_medium_rejects_invalid() {
+    assert!("nonsense".parse::<WatchMedium>().is_err());
+    assert!("".parse::<WatchMedium>().is_err());
+}
+
+#[test]
+fn watch_medium_display_round_trips() {
+    let variants = [
+        WatchMedium::Cinema,
+        WatchMedium::Streaming,
+        WatchMedium::TV,
+        WatchMedium::PhysicalMedia,
+        WatchMedium::Download,
+        WatchMedium::MediaServer,
+        WatchMedium::Other,
+    ];
+    for v in variants {
+        let s = v.to_string();
+        let parsed: WatchMedium = s.parse().unwrap();
+        assert_eq!(parsed, v);
+    }
+}

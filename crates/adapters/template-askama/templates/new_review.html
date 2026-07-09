@@ -35,6 +35,19 @@
     Comment<br>
     <textarea name="comment"></textarea>
   </label>
+  <label>
+    Watched via <span class="optional">(optional)</span><br>
+    <select name="watch_medium">
+      <option value="">—</option>
+      <option value="cinema">Cinema</option>
+      <option value="streaming">Streaming</option>
+      <option value="tv">TV</option>
+      <option value="physical_media">Physical Media</option>
+      <option value="download">Download</option>
+      <option value="media_server">Media Server</option>
+      <option value="other">Other</option>
+    </select>
+  </label>
   <input type="hidden" name="_csrf" value="{{ ctx.csrf_token }}">
   <button type="submit">Log Review</button>
 </form>

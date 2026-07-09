@@ -28,6 +28,7 @@ fn review_with_rating(movie_id: &MovieId, rating: u8, watched_at: NaiveDateTime)
         Rating::new(rating).unwrap(),
         None,
         watched_at,
+        None,
     )
     .unwrap()
 }

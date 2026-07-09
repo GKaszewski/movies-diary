@@ -90,6 +90,7 @@ pub(crate) struct ReviewRow {
     pub watched_at: String,
     pub created_at: String,
     pub remote_actor_url: Option<String>,
+    pub watch_medium: Option<String>,
 }
 
 impl ReviewRow {
@@ -105,6 +106,7 @@ impl ReviewRow {
             None => ReviewSource::Local,
             Some(url) => ReviewSource::Remote { actor_url: url },
         };
+        let watch_medium = self.watch_medium.map(|s| s.parse()).transpose()?;
         Ok(Review::from_persistence(PersistedReview {
             id,
             movie_id,
@@ -114,6 +116,7 @@ impl ReviewRow {
             watched_at,
             created_at,
             source,
+            watch_medium,
         }))
     }
 }
@@ -134,6 +137,7 @@ pub(crate) struct DiaryRow {
     pub watched_at: String,
     pub created_at: String,
     pub remote_actor_url: Option<String>,
+    pub watch_medium: Option<String>,
 }
 
 impl DiaryRow {
@@ -156,6 +160,7 @@ impl DiaryRow {
             watched_at: self.watched_at,
             created_at: self.created_at,
             remote_actor_url: self.remote_actor_url,
+            watch_medium: self.watch_medium,
         }
         .into_domain()?;
         Ok(DiaryEntry::new(movie, review))
@@ -178,6 +183,7 @@ pub(crate) struct FeedRow {
     pub watched_at: String,
     pub created_at: String,
     pub remote_actor_url: Option<String>,
+    pub watch_medium: Option<String>,
     pub user_email: String,
 }
 
@@ -198,6 +204,7 @@ impl FeedRow {
             watched_at: self.watched_at,
             created_at: self.created_at,
             remote_actor_url: self.remote_actor_url,
+            watch_medium: self.watch_medium,
         }
         .into_domain()?;
         Ok(FeedEntry::new(diary, self.user_email))

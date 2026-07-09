@@ -118,5 +118,6 @@ fn row_to_command(row: &ImportRow, user_id: Uuid) -> Result<LogReviewCommand, St
         rating,
         comment: row.comment.clone(),
         watched_at,
+        watch_medium: None,
     })
 }

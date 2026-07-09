@@ -157,6 +157,17 @@ export async function putForm<T = void>(
   })
 }
 
+export async function patch<T = void>(
+  path: string,
+  body?: unknown,
+): Promise<T> {
+  return request<T>(buildUrl(path), {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: body ? JSON.stringify(body) : undefined,
+  })
+}
+
 export async function del<T = void>(path: string): Promise<T> {
   return request<T>(buildUrl(path), { method: "DELETE" })
 }

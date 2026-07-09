@@ -17,6 +17,8 @@ pub struct LogReviewRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub comment: Option<String>,
     pub watched_at: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub watch_medium: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
@@ -75,6 +77,18 @@ pub struct ExportQueryParams {
     /// Output format: `csv` (default) or `json`
     #[serde(default = "default_export_format")]
     pub format: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct EditReviewRequest {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rating: Option<u8>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub comment: Option<Option<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub watched_at: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub watch_medium: Option<Option<String>>,
 }
 
 fn default_export_format() -> String {

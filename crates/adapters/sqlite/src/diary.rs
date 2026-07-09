@@ -57,7 +57,7 @@ impl SqliteDiaryRepository {
         };
         let sql = format!(
             "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
-                    r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url
+                    r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url, r.watch_medium
              FROM reviews r
              INNER JOIN movies m ON m.id = r.movie_id
              ORDER BY {}
@@ -87,7 +87,7 @@ impl SqliteDiaryRepository {
         };
         let sql = format!(
             "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
-                    r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url
+                    r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url, r.watch_medium
              FROM reviews r
              INNER JOIN movies m ON m.id = r.movie_id
              WHERE r.movie_id = ?
@@ -161,7 +161,7 @@ impl SqliteDiaryRepository {
         };
         let sql = format!(
             "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
-                    r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url
+                    r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url, r.watch_medium
              FROM reviews r
              INNER JOIN movies m ON m.id = r.movie_id
              WHERE r.user_id = ?{remote_clause}{search_clause}
@@ -308,7 +308,7 @@ impl DiaryRepository for SqliteDiaryRepository {
         let select_sql = format!(
             "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
                     r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment,
-                    r.watched_at, r.created_at, r.remote_actor_url,
+                    r.watched_at, r.created_at, r.remote_actor_url, r.watch_medium,
                     COALESCE(u.email, a.handle, r.remote_actor_url) AS user_email
              FROM reviews r
              INNER JOIN movies m ON m.id = r.movie_id
@@ -395,7 +395,7 @@ impl DiaryRepository for SqliteDiaryRepository {
         let uid = user_id.value().to_string();
         let rows = sqlx::query_as::<_, DiaryRow>(
             "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
-                    r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url
+                    r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url, r.watch_medium
              FROM reviews r
              INNER JOIN movies m ON m.id = r.movie_id
              WHERE r.user_id = ?
@@ -418,7 +418,7 @@ impl DiaryRepository for SqliteDiaryRepository {
         Box::pin(async_stream::stream! {
             let mut rows = sqlx::query_as::<_, DiaryRow>(
                 "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
-                        r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url
+                        r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url, r.watch_medium
                  FROM reviews r
                  INNER JOIN movies m ON m.id = r.movie_id
                  WHERE r.user_id = ?
@@ -475,7 +475,7 @@ impl DiaryRepository for SqliteDiaryRepository {
         let rows = sqlx::query_as::<_, FeedRow>(
             "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
                     r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment,
-                    r.watched_at, r.created_at, r.remote_actor_url,
+                    r.watched_at, r.created_at, r.remote_actor_url, r.watch_medium,
                     CASE WHEN r.remote_actor_url IS NOT NULL THEN r.remote_actor_url
                          WHEN u.email IS NOT NULL THEN u.email
                          ELSE r.user_id END AS user_email

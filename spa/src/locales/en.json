@@ -307,6 +307,23 @@
     "funActors": "You saw {{count}} different actors",
     "allMovies": "All Movies ({{count}})"
   },
+  "watchMedium": {
+    "label": "Watched via",
+    "cinema": "Cinema",
+    "streaming": "Streaming",
+    "tv": "TV",
+    "physicalMedia": "Physical Media",
+    "download": "Download",
+    "mediaServer": "Media Server",
+    "other": "Other"
+  },
+  "editReview": {
+    "title": "Edit Review",
+    "save": "Save Changes",
+    "saving": "Saving...",
+    "saved": "{{title}} updated!",
+    "noChanges": "No changes to save"
+  },
   "logReview": {
     "title": "Log Review",
     "yourRating": "Your Rating",

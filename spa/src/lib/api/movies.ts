@@ -29,6 +29,7 @@ export const socialReviewDtoSchema = z.object({
   comment: z.string().optional(),
   watched_at: z.string(),
   is_federated: z.boolean(),
+  watch_medium: z.string().optional(),
 })
 export type SocialReviewDto = z.infer<typeof socialReviewDtoSchema>
 

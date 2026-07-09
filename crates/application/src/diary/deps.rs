@@ -14,6 +14,11 @@ pub struct DeleteReviewDeps {
     pub event_publisher: Arc<dyn EventPublisher>,
 }
 
+pub struct EditReviewDeps {
+    pub review: Arc<dyn ReviewRepository>,
+    pub event_publisher: Arc<dyn EventPublisher>,
+}
+
 pub struct GetMovieSocialPageDeps {
     pub movie: Arc<dyn MovieRepository>,
     pub diary: Arc<dyn DiaryRepository>,

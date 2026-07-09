@@ -1,7 +1,7 @@
 import { z } from "zod"
 import type { DiaryEntryDto, Paginated } from "./common"
 import { diaryEntryDtoSchema, movieDtoSchema, paginatedSchema, reviewDtoSchema } from "./common"
-import { del, get, post } from "./client"
+import { del, get, patch, post } from "./client"
 
 export const diaryQueryParamsSchema = z.object({
   limit: z.number().optional(),
@@ -22,8 +22,17 @@ export const logReviewRequestSchema = z.object({
   rating: z.number(),
   comment: z.string().optional(),
   watched_at: z.string(),
+  watch_medium: z.string().optional(),
 })
 export type LogReviewRequest = z.infer<typeof logReviewRequestSchema>
+
+export const editReviewRequestSchema = z.object({
+  rating: z.number().optional(),
+  comment: z.string().nullable().optional(),
+  watched_at: z.string().optional(),
+  watch_medium: z.string().nullable().optional(),
+})
+export type EditReviewRequest = z.infer<typeof editReviewRequestSchema>
 
 export const feedEntryDtoSchema = z.object({
   movie: movieDtoSchema,
@@ -56,6 +65,10 @@ export function getDiary(params?: DiaryQueryParams) {
 
 export function logReview(data: LogReviewRequest) {
   return post("/reviews", data)
+}
+
+export function editReview(id: string, data: EditReviewRequest) {
+  return patch(`/reviews/${id}`, data)
 }
 
 export function deleteReview(id: string) {

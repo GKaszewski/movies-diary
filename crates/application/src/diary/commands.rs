@@ -1,4 +1,5 @@
 use chrono::NaiveDateTime;
+use domain::value_objects::WatchMedium;
 use uuid::Uuid;
 
 pub struct MovieInput {
@@ -15,11 +16,21 @@ pub struct LogReviewCommand {
     pub rating: u8,
     pub comment: Option<String>,
     pub watched_at: NaiveDateTime,
+    pub watch_medium: Option<WatchMedium>,
 }
 
 pub struct DeleteReviewCommand {
     pub review_id: Uuid,
     pub requesting_user_id: Uuid,
+}
+
+pub struct EditReviewCommand {
+    pub review_id: Uuid,
+    pub requesting_user_id: Uuid,
+    pub rating: Option<u8>,
+    pub comment: Option<Option<String>>,
+    pub watched_at: Option<NaiveDateTime>,
+    pub watch_medium: Option<Option<WatchMedium>>,
 }
 
 #[derive(Clone)]

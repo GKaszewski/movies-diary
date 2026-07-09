@@ -1,7 +1,10 @@
 import { Link } from "@tanstack/react-router"
-import { Globe } from "lucide-react"
+import { Globe, Pencil } from "lucide-react"
 import { timeAgo } from "@/lib/date"
 import { StarDisplay } from "@/components/star-display"
+import { WatchMediumBadge } from "@/components/watch-medium-badge"
+import { EditableContextMenu } from "@/components/editable-context-menu"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { posterUrl } from "@/lib/api/client"
 import type { MovieDto, ReviewDto } from "@/lib/api/common"
@@ -13,10 +16,11 @@ type ReviewCardProps = {
   userId?: string
   isFederated?: boolean
   actorUrl?: string
+  onEdit?: () => void
 }
 
-export function ReviewCard({ movie, review, userName, userId, isFederated, actorUrl }: ReviewCardProps) {
-  return (
+export function ReviewCard({ movie, review, userName, userId, isFederated, actorUrl, onEdit }: ReviewCardProps) {
+  const card = (
     <Card size="sm">
       <CardContent className="flex gap-3">
         <Link to="/movies/$id" params={{ id: movie.id }} className="h-[84px] w-14 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
@@ -41,13 +45,27 @@ export function ReviewCard({ movie, review, userName, userId, isFederated, actor
               <span>{timeAgo(review.watched_at)}</span>
             </div>
           )}
-          <Link to="/movies/$id" params={{ id: movie.id }} className="font-semibold hover:underline">
-            {movie.title}
-          </Link>
-          <StarDisplay rating={review.rating} />
+          <div className="flex items-center justify-between">
+            <Link to="/movies/$id" params={{ id: movie.id }} className="font-semibold hover:underline">
+              {movie.title}
+            </Link>
+            {onEdit && (
+              <Button variant="ghost" size="icon" className="hidden size-7 md:inline-flex" onClick={onEdit}>
+                <Pencil className="size-3.5" />
+              </Button>
+            )}
+          </div>
+          <div className="flex items-center gap-1.5">
+            <StarDisplay rating={review.rating} />
+            {review.watch_medium && <WatchMediumBadge medium={review.watch_medium} />}
+          </div>
           {review.comment && <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{review.comment}</p>}
         </div>
       </CardContent>
     </Card>
   )
+
+  if (!onEdit) return card
+
+  return <EditableContextMenu onEdit={onEdit}>{card}</EditableContextMenu>
 }

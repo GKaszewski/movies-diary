@@ -55,6 +55,7 @@ async fn logs_review_with_manual_movie() {
         rating: 4,
         comment: None,
         watched_at: Utc::now().naive_utc(),
+        watch_medium: None,
     };
 
     logger.log_review(cmd).await.unwrap();
@@ -103,6 +104,7 @@ async fn removes_from_watchlist_on_review() {
         rating: 5,
         comment: None,
         watched_at: Utc::now().naive_utc(),
+        watch_medium: None,
     };
 
     logger.log_review(cmd).await.unwrap();
@@ -140,6 +142,7 @@ async fn logs_review_with_existing_movie_by_id() {
         rating: 3,
         comment: None,
         watched_at: Utc::now().naive_utc(),
+        watch_medium: None,
     };
 
     logger.log_review(cmd).await.unwrap();
@@ -168,6 +171,7 @@ async fn existing_movie_not_found_returns_error() {
         rating: 4,
         comment: None,
         watched_at: Utc::now().naive_utc(),
+        watch_medium: None,
     };
 
     assert!(logger.log_review(cmd).await.is_err());
@@ -193,6 +197,7 @@ async fn invalid_rating_returns_error() {
         rating: 6,
         comment: None,
         watched_at: Utc::now().naive_utc(),
+        watch_medium: None,
     };
 
     let result = logger.log_review(cmd).await;
@@ -222,6 +227,7 @@ async fn watchlist_not_present_does_not_publish_removed() {
         rating: 4,
         comment: None,
         watched_at: Utc::now().naive_utc(),
+        watch_medium: None,
     };
 
     logger.log_review(cmd).await.unwrap();
@@ -289,6 +295,7 @@ async fn publishes_movie_discovered_for_new_movie_with_external_id() {
         rating: 5,
         comment: None,
         watched_at: Utc::now().naive_utc(),
+        watch_medium: None,
     };
 
     logger.log_review(cmd).await.unwrap();

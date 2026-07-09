@@ -98,6 +98,8 @@ pub struct ReviewDto {
     pub rating: u8,
     pub comment: Option<String>,
     pub watched_at: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub watch_medium: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
@@ -122,6 +124,8 @@ pub struct SocialReviewDto {
     pub comment: Option<String>,
     pub watched_at: String,
     pub is_federated: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub watch_medium: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]

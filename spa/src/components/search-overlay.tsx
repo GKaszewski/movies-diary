@@ -113,9 +113,9 @@ export function SearchOverlay({ open, onClose, onSelect }: SearchOverlayProps) {
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("searchOverlay.searchPlaceholder")} className="pl-9" autoFocus />
           {query && (
-            <button onClick={() => setQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2">
+            <Button variant="ghost" size="icon" onClick={() => setQuery("")} className="absolute right-3 top-1/2 size-6 -translate-y-1/2">
               <X className="size-4 text-muted-foreground" />
-            </button>
+            </Button>
           )}
         </div>
         <Button variant="ghost" size="sm" onClick={onClose}>{t("common.cancel")}</Button>

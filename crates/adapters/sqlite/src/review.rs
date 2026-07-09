@@ -41,8 +41,8 @@ impl ReviewRepository for SqliteReviewRepository {
         };
 
         sqlx::query(
-            "INSERT INTO reviews (id, movie_id, user_id, rating, comment, watched_at, created_at, remote_actor_url)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO reviews (id, movie_id, user_id, rating, comment, watched_at, created_at, remote_actor_url, watch_medium)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         )
         .bind(&id)
         .bind(&movie_id)
@@ -52,6 +52,7 @@ impl ReviewRepository for SqliteReviewRepository {
         .bind(&watched_at)
         .bind(&created_at)
         .bind(&remote_actor_url)
+        .bind(review.watch_medium().map(|wm| wm.to_string()))
         .execute(&self.pool)
         .await
         .map_err(Self::map_err)?;
@@ -68,7 +69,7 @@ impl ReviewRepository for SqliteReviewRepository {
     async fn get_review_by_id(&self, review_id: &ReviewId) -> Result<Option<Review>, DomainError> {
         let id = review_id.value().to_string();
         sqlx::query_as::<_, ReviewRow>(
-            "SELECT id, movie_id, user_id, rating, comment, watched_at, created_at, remote_actor_url
+            "SELECT id, movie_id, user_id, rating, comment, watched_at, created_at, remote_actor_url, watch_medium
              FROM reviews WHERE id = ?",
         )
         .bind(&id)
@@ -77,6 +78,28 @@ impl ReviewRepository for SqliteReviewRepository {
         .map_err(Self::map_err)?
         .map(ReviewRow::into_domain)
         .transpose()
+    }
+
+    async fn update_review(&self, review: &Review) -> Result<(), DomainError> {
+        let id = review.id().value().to_string();
+        let rating = review.rating().value() as i64;
+        let comment = review.comment().map(|c| c.value().to_string());
+        let watched_at = datetime_to_str(review.watched_at());
+        let watch_medium = review.watch_medium().map(|wm| wm.to_string());
+
+        sqlx::query(
+            "UPDATE reviews SET rating = ?, comment = ?, watched_at = ?, watch_medium = ? WHERE id = ?",
+        )
+        .bind(rating)
+        .bind(&comment)
+        .bind(&watched_at)
+        .bind(&watch_medium)
+        .bind(&id)
+        .execute(&self.pool)
+        .await
+        .map_err(Self::map_err)?;
+
+        Ok(())
     }
 
     async fn delete_review(&self, review_id: &ReviewId) -> Result<(), DomainError> {
@@ -92,7 +115,7 @@ impl ReviewRepository for SqliteReviewRepository {
     async fn get_all_reviews_for_user(&self, user_id: &UserId) -> Result<Vec<Review>, DomainError> {
         let uid = user_id.value().to_string();
         sqlx::query_as::<_, ReviewRow>(
-            "SELECT id, movie_id, user_id, rating, comment, watched_at, created_at, remote_actor_url
+            "SELECT id, movie_id, user_id, rating, comment, watched_at, created_at, remote_actor_url, watch_medium
              FROM reviews WHERE user_id = ? ORDER BY watched_at DESC",
         )
         .bind(&uid)

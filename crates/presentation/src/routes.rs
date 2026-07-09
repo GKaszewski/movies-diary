@@ -262,6 +262,7 @@ fn cors_layer() -> CorsLayer {
             Method::GET,
             Method::POST,
             Method::PUT,
+            Method::PATCH,
             Method::DELETE,
             Method::OPTIONS,
         ])
@@ -318,7 +319,7 @@ fn api_routes(rate_limit: u64) -> Router<AppState> {
         .route("/reviews", routing::post(handlers::diary::post_review))
         .route(
             "/reviews/{id}",
-            routing::delete(handlers::diary::delete_review),
+            routing::delete(handlers::diary::delete_review).patch(handlers::diary::patch_review),
         )
         .route(
             "/movies/{id}/sync-poster",

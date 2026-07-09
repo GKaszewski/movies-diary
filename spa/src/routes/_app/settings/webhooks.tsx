@@ -68,9 +68,9 @@ function WebhooksPage() {
           </Link>
           <h1 className="text-lg font-bold">{t("webhooks.title")}</h1>
         </div>
-        <button onClick={() => setOpen(true)} className="text-primary">
+        <Button variant="ghost" size="icon" onClick={() => setOpen(true)} className="text-primary">
           <Plus className="size-5" />
-        </button>
+        </Button>
       </div>
 
       {isPending ? (
@@ -97,12 +97,14 @@ function WebhooksPage() {
                   {new Date(t.created_at).toLocaleDateString()}
                 </p>
               </div>
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => remove.mutate(t.id)}
                 className="text-destructive"
               >
                 <Trash2 className="size-4" />
-              </button>
+              </Button>
             </div>
           ))}
         </div>

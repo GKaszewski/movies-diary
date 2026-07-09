@@ -15,7 +15,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { StarRating } from "@/components/star-rating"
 import { useAuth } from "@/components/auth-provider"
 import { useQueryClient } from "@tanstack/react-query"
+import { EditReviewSheet } from "@/components/edit-review-sheet"
 import { useInfiniteActivityFeed, useDeleteReview } from "@/hooks/use-diary"
+import type { FeedEntryDto } from "@/lib/api/diary"
 import { SearchOverlay } from "@/components/search-overlay"
 import type { MovieSelection } from "@/components/search-overlay"
 import { useInfiniteWatchlist, useAddToWatchlist, useRemoveFromWatchlist } from "@/hooks/use-watchlist"
@@ -66,6 +68,7 @@ function FeedTab() {
   const { data, isPending, hasNextPage, isFetchingNextPage, fetchNextPage } =
     useInfiniteActivityFeed({ sort_by: sortBy })
   const deleteReview = useDeleteReview()
+  const [editingEntry, setEditingEntry] = useState<FeedEntryDto | null>(null)
   const items = data?.pages.flatMap((p) => p.items) ?? []
   const loadMore = useCallback(() => fetchNextPage(), [fetchNextPage])
 
@@ -110,6 +113,7 @@ function FeedTab() {
           isFetching={isFetchingNextPage}
           onLoadMore={loadMore}
           renderItem={(entry) => {
+            const isOwn = entry.user_id === auth?.user_id
             const card = (
               <ReviewCard
                 movie={entry.movie}
@@ -118,9 +122,10 @@ function FeedTab() {
                 userId={entry.user_id}
                 isFederated={entry.is_federated}
                 actorUrl={entry.actor_url}
+                onEdit={isOwn ? () => setEditingEntry(entry) : undefined}
               />
             )
-            return entry.user_id === auth?.user_id ? (
+            return isOwn ? (
               <SwipeToDelete
                 onDelete={() => deleteReview.mutate(entry.review.id)}
                 confirmTitle={t("feed.deleteReview")}
@@ -132,6 +137,16 @@ function FeedTab() {
               card
             )
           }}
+        />
+      )}
+
+      {editingEntry && (
+        <EditReviewSheet
+          key={editingEntry.review.id}
+          open={!!editingEntry}
+          onOpenChange={(open) => !open && setEditingEntry(null)}
+          movie={editingEntry.movie}
+          review={editingEntry.review}
         />
       )}
     </div>

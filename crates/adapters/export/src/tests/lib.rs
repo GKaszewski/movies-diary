@@ -61,6 +61,7 @@ fn make_entry_full(
             .unwrap()
             .and_hms_opt(0, 0, 0)
             .unwrap(),
+        None,
     )
     .unwrap();
     DiaryEntry::new(movie, review)

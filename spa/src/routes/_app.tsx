@@ -5,6 +5,7 @@ import {
 } from "@tanstack/react-router"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
+import { Button } from "@/components/ui/button"
 import { Toaster } from "@/components/ui/sonner"
 import { BottomTabBar } from "@/components/bottom-tab-bar"
 import { LogSheet } from "@/components/log-sheet"
@@ -26,12 +27,9 @@ function ErrorFallback({ error, reset }: { error: unknown; reset: () => void }) 
       <p className="text-sm text-muted-foreground">
         {error instanceof Error ? error.message : t("errors.unknownError")}
       </p>
-      <button
-        onClick={reset}
-        className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
-      >
+      <Button onClick={reset}>
         {t("common.tryAgain")}
-      </button>
+      </Button>
     </div>
   )
 }

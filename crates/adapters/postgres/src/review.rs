@@ -41,8 +41,8 @@ impl ReviewRepository for PostgresReviewRepository {
         };
 
         sqlx::query(
-            "INSERT INTO reviews (id, movie_id, user_id, rating, comment, watched_at, created_at, remote_actor_url)
-             VALUES ($1, $2, $3, $4, $5, $6::timestamptz, $7::timestamptz, $8)",
+            "INSERT INTO reviews (id, movie_id, user_id, rating, comment, watched_at, created_at, remote_actor_url, watch_medium)
+             VALUES ($1, $2, $3, $4, $5, $6::timestamptz, $7::timestamptz, $8, $9)",
         )
         .bind(&id)
         .bind(&movie_id)
@@ -52,6 +52,7 @@ impl ReviewRepository for PostgresReviewRepository {
         .bind(&watched_at)
         .bind(&created_at)
         .bind(&remote_actor_url)
+        .bind(review.watch_medium().map(|wm| wm.to_string()))
         .execute(&self.pool)
         .await
         .map_err(Self::map_err)?;
@@ -71,7 +72,8 @@ impl ReviewRepository for PostgresReviewRepository {
             "SELECT id, movie_id, user_id, rating, comment,
                     to_char(watched_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS watched_at,
                     to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS created_at,
-                    remote_actor_url
+                    remote_actor_url,
+                    watch_medium
              FROM reviews WHERE id = $1",
         )
         .bind(&id)
@@ -80,6 +82,28 @@ impl ReviewRepository for PostgresReviewRepository {
         .map_err(Self::map_err)?
         .map(ReviewRow::into_domain)
         .transpose()
+    }
+
+    async fn update_review(&self, review: &Review) -> Result<(), DomainError> {
+        let id = review.id().value().to_string();
+        let rating = review.rating().value() as i64;
+        let comment = review.comment().map(|c| c.value().to_string());
+        let watched_at = datetime_to_str(review.watched_at());
+        let watch_medium = review.watch_medium().map(|wm| wm.to_string());
+
+        sqlx::query(
+            "UPDATE reviews SET rating = $1, comment = $2, watched_at = $3::timestamptz, watch_medium = $4 WHERE id = $5",
+        )
+        .bind(rating)
+        .bind(&comment)
+        .bind(&watched_at)
+        .bind(&watch_medium)
+        .bind(&id)
+        .execute(&self.pool)
+        .await
+        .map_err(Self::map_err)?;
+
+        Ok(())
     }
 
     async fn delete_review(&self, review_id: &ReviewId) -> Result<(), DomainError> {
@@ -98,7 +122,8 @@ impl ReviewRepository for PostgresReviewRepository {
             "SELECT id, movie_id, user_id, rating, comment,
                     to_char(watched_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS watched_at,
                     to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS created_at,
-                    remote_actor_url
+                    remote_actor_url,
+                    watch_medium
              FROM reviews WHERE user_id = $1 ORDER BY watched_at DESC",
         )
         .bind(&uid)

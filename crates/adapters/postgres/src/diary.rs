@@ -60,7 +60,8 @@ impl PostgresDiaryRepository {
                     r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment,
                     to_char(r.watched_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS watched_at,
                     to_char(r.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS created_at,
-                    r.remote_actor_url
+                    r.remote_actor_url,
+                    r.watch_medium
              FROM reviews r
              INNER JOIN movies m ON m.id = r.movie_id
              ORDER BY {}
@@ -93,7 +94,8 @@ impl PostgresDiaryRepository {
                     r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment,
                     to_char(r.watched_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS watched_at,
                     to_char(r.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS created_at,
-                    r.remote_actor_url
+                    r.remote_actor_url,
+                    r.watch_medium
              FROM reviews r
              INNER JOIN movies m ON m.id = r.movie_id
              WHERE r.movie_id = $1
@@ -178,7 +180,8 @@ impl PostgresDiaryRepository {
                     r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment,
                     to_char(r.watched_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS watched_at,
                     to_char(r.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS created_at,
-                    r.remote_actor_url
+                    r.remote_actor_url,
+                    r.watch_medium
              FROM reviews r
              INNER JOIN movies m ON m.id = r.movie_id
              WHERE r.user_id = $1{remote_clause}{search_clause}
@@ -339,6 +342,7 @@ impl DiaryRepository for PostgresDiaryRepository {
                     to_char(r.watched_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS watched_at,
                     to_char(r.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS created_at,
                     r.remote_actor_url,
+                    r.watch_medium,
                     COALESCE(u.email, a.handle, r.remote_actor_url) AS user_email
              FROM reviews r
              INNER JOIN movies m ON m.id = r.movie_id
@@ -432,7 +436,8 @@ impl DiaryRepository for PostgresDiaryRepository {
                     r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment,
                     to_char(r.watched_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS watched_at,
                     to_char(r.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS created_at,
-                    r.remote_actor_url
+                    r.remote_actor_url,
+                    r.watch_medium
              FROM reviews r
              INNER JOIN movies m ON m.id = r.movie_id
              WHERE r.user_id = $1

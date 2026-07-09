@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next"
 import { Bookmark, BookmarkCheck, Globe, Star, TrendingUp, User, Users } from "lucide-react"
 import { BackButton } from "@/components/back-button"
 import { StarDisplay } from "@/components/star-display"
+import { WatchMediumBadge } from "@/components/watch-medium-badge"
 import { RatingHistogram } from "@/components/rating-histogram"
 import { EmptyState } from "@/components/empty-state"
 import { HorizontalStrip } from "@/components/horizontal-strip"
@@ -121,7 +122,10 @@ function MovieDetailPage() {
                       </CardTitle>
                       <CardDescription className="text-[10px]">{timeAgo(r.watched_at)}</CardDescription>
                     </div>
-                    <StarDisplay rating={r.rating} size="xs" />
+                    <div className="flex items-center gap-1.5">
+                      <StarDisplay rating={r.rating} size="xs" />
+                      {r.watch_medium && <WatchMediumBadge medium={r.watch_medium} />}
+                    </div>
                   </div>
                 </CardHeader>
                 {r.comment && (

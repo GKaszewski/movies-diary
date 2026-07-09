@@ -301,6 +301,28 @@ body > #root {
   fill: rgba(255, 255, 255, 0.85) !important;
 }
 
+/* Tooltip — default shadcn uses bg-foreground which is white in this theme */
+[data-slot="tooltip-content"] {
+  background: var(--popover);
+  color: var(--popover-foreground);
+  backdrop-filter: blur(var(--aero-blur));
+  -webkit-backdrop-filter: blur(var(--aero-blur));
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+[data-slot="tooltip-content"] .lucide,
+[data-slot="tooltip-content"] [data-slot="tooltip-arrow"] {
+  color: var(--popover-foreground);
+}
+
+/* Context menu */
+[data-slot="context-menu-content"] {
+  background: var(--popover);
+  backdrop-filter: blur(var(--aero-blur));
+  -webkit-backdrop-filter: blur(var(--aero-blur));
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
 /* Star glow for filled amber stars */
 .aero-star-filled {
   filter: drop-shadow(0 0 4px var(--aero-primary-glow)) drop-shadow(0 0 1px var(--aero-primary));

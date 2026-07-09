@@ -92,6 +92,9 @@ impl ReviewRepository for Panic {
     async fn get_review_by_id(&self, _: &ReviewId) -> Result<Option<Review>, DomainError> {
         panic!()
     }
+    async fn update_review(&self, _: &Review) -> Result<(), DomainError> {
+        panic!()
+    }
     async fn delete_review(&self, _: &ReviewId) -> Result<(), DomainError> {
         panic!()
     }

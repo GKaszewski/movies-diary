@@ -189,6 +189,14 @@ impl ReviewRepository for InMemoryReviewRepository {
         Ok(self.store.lock().unwrap().get(&review_id.value()).cloned())
     }
 
+    async fn update_review(&self, review: &Review) -> Result<(), DomainError> {
+        self.store
+            .lock()
+            .unwrap()
+            .insert(review.id().value(), review.clone());
+        Ok(())
+    }
+
     async fn delete_review(&self, review_id: &ReviewId) -> Result<(), DomainError> {
         self.store.lock().unwrap().remove(&review_id.value());
         Ok(())

@@ -45,6 +45,7 @@ pub trait DiaryRepository: Send + Sync {
 pub trait ReviewRepository: Send + Sync {
     async fn save_review(&self, review: &Review) -> Result<DomainEvent, DomainError>;
     async fn get_review_by_id(&self, review_id: &ReviewId) -> Result<Option<Review>, DomainError>;
+    async fn update_review(&self, review: &Review) -> Result<(), DomainError>;
     async fn delete_review(&self, review_id: &ReviewId) -> Result<(), DomainError>;
     async fn get_all_reviews_for_user(&self, user_id: &UserId) -> Result<Vec<Review>, DomainError>;
 }

@@ -68,7 +68,14 @@ impl ReviewLogger for DefaultReviewLogger {
 
         self.movie_repo.upsert_movie(&movie).await?;
 
-        let review = Review::new(movie.id().clone(), user_id, rating, comment, cmd.watched_at)?;
+        let review = Review::new(
+            movie.id().clone(),
+            user_id,
+            rating,
+            comment,
+            cmd.watched_at,
+            cmd.watch_medium,
+        )?;
         let review_event = self.review_repo.save_review(&review).await?;
 
         let was_on_watchlist = self

@@ -9,10 +9,11 @@ use futures::StreamExt;
 use uuid::Uuid;
 
 use application::diary::{
-    commands::DeleteReviewCommand,
+    commands::{DeleteReviewCommand, EditReviewCommand},
     delete_review,
-    deps::{DeleteReviewDeps, GetActivityFeedDeps},
-    export_diary as export_diary_uc, get_activity_feed as get_feed_uc, get_diary, log_review,
+    deps::{DeleteReviewDeps, EditReviewDeps, GetActivityFeedDeps},
+    edit_review, export_diary as export_diary_uc, get_activity_feed as get_feed_uc, get_diary,
+    log_review,
     queries::{ExportQuery, GetActivityFeedQuery},
 };
 use domain::models::ExportFormat;
@@ -27,7 +28,7 @@ use crate::{
 };
 use api_types::{
     ActivityFeedQueryParams, ActivityFeedResponse, DiaryQueryParams, DiaryResponse,
-    ExportQueryParams, LogReviewRequest,
+    EditReviewRequest, ExportQueryParams, LogReviewRequest,
 };
 use template_askama::{ActivityFeedTemplate, NewReviewTemplate, build_page_items};
 
@@ -119,6 +120,55 @@ pub async fn delete_review(
     };
     delete_review::execute(&deps, cmd).await?;
     Ok(StatusCode::NO_CONTENT)
+}
+
+#[utoipa::path(
+    patch, path = "/api/v1/reviews/{id}",
+    request_body = EditReviewRequest,
+    params(("id" = Uuid, Path, description = "Review ID")),
+    responses(
+        (status = 200, description = "Review updated"),
+        (status = 400, description = "Invalid input"),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden"),
+        (status = 404, description = "Review not found"),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn patch_review(
+    State(state): State<AppState>,
+    AuthenticatedUser(user_id): AuthenticatedUser,
+    Path(review_id): Path<Uuid>,
+    Json(req): Json<EditReviewRequest>,
+) -> Result<StatusCode, ApiError> {
+    let watched_at = req
+        .watched_at
+        .map(|s| domain::value_objects::parse_watched_at(&s).map_err(ApiError))
+        .transpose()?;
+
+    let watch_medium = req
+        .watch_medium
+        .map(|opt| {
+            opt.map(|s| s.parse::<domain::value_objects::WatchMedium>())
+                .transpose()
+                .map_err(ApiError)
+        })
+        .transpose()?;
+
+    let cmd = EditReviewCommand {
+        review_id,
+        requesting_user_id: user_id.value(),
+        rating: req.rating,
+        comment: req.comment,
+        watched_at,
+        watch_medium,
+    };
+    let deps = EditReviewDeps {
+        review: state.app_ctx.repos.review.clone(),
+        event_publisher: state.app_ctx.services.event_publisher.clone(),
+    };
+    edit_review::execute(&deps, cmd).await?;
+    Ok(StatusCode::OK)
 }
 
 #[utoipa::path(

@@ -2,7 +2,7 @@ use chrono::{NaiveDateTime, Utc};
 
 use crate::{
     errors::DomainError,
-    value_objects::{Comment, MovieId, Rating, ReviewId, UserId},
+    value_objects::{Comment, MovieId, Rating, ReviewId, UserId, WatchMedium},
 };
 
 use super::movie::Movie;
@@ -25,6 +25,16 @@ pub struct PersistedReview {
     pub watched_at: NaiveDateTime,
     pub created_at: NaiveDateTime,
     pub source: ReviewSource,
+    pub watch_medium: Option<WatchMedium>,
+}
+
+/// Partial update for a review. `None` = unchanged, `Some(None)` = clear, `Some(Some(v))` = set.
+#[derive(Clone, Debug, Default)]
+pub struct ReviewEdit {
+    pub rating: Option<Rating>,
+    pub comment: Option<Option<Comment>>,
+    pub watched_at: Option<NaiveDateTime>,
+    pub watch_medium: Option<Option<WatchMedium>>,
 }
 
 #[derive(Clone, Debug)]
@@ -37,6 +47,7 @@ pub struct Review {
     watched_at: NaiveDateTime,
     created_at: NaiveDateTime,
     source: ReviewSource,
+    watch_medium: Option<WatchMedium>,
 }
 
 impl Review {
@@ -46,6 +57,7 @@ impl Review {
         rating: Rating,
         comment: Option<Comment>,
         watched_at: NaiveDateTime,
+        watch_medium: Option<WatchMedium>,
     ) -> Result<Self, DomainError> {
         Ok(Self {
             id: ReviewId::generate(),
@@ -56,6 +68,7 @@ impl Review {
             watched_at,
             created_at: Utc::now().naive_utc(),
             source: ReviewSource::Local,
+            watch_medium,
         })
     }
 
@@ -69,6 +82,27 @@ impl Review {
             watched_at: row.watched_at,
             created_at: row.created_at,
             source: row.source,
+            watch_medium: row.watch_medium,
+        }
+    }
+
+    pub fn apply_edit(&self, edit: ReviewEdit) -> Self {
+        Self {
+            id: self.id.clone(),
+            movie_id: self.movie_id.clone(),
+            user_id: self.user_id.clone(),
+            rating: edit.rating.unwrap_or_else(|| self.rating.clone()),
+            comment: match edit.comment {
+                Some(c) => c,
+                None => self.comment.clone(),
+            },
+            watched_at: edit.watched_at.unwrap_or(self.watched_at),
+            created_at: self.created_at,
+            source: self.source.clone(),
+            watch_medium: match edit.watch_medium {
+                Some(wm) => wm,
+                None => self.watch_medium,
+            },
         }
     }
 
@@ -95,6 +129,9 @@ impl Review {
     }
     pub fn source(&self) -> &ReviewSource {
         &self.source
+    }
+    pub fn watch_medium(&self) -> Option<&WatchMedium> {
+        self.watch_medium.as_ref()
     }
     /// Returns [star1_filled, star2_filled, ..., star5_filled]
     pub fn stars(&self) -> [bool; 5] {
@@ -157,3 +194,7 @@ impl ReviewHistory {
         self.viewings.sort_by_key(|r| *r.watched_at());
     }
 }
+
+#[cfg(test)]
+#[path = "tests/review.rs"]
+mod tests;

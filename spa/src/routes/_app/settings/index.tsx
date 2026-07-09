@@ -113,15 +113,14 @@ function SettingsPage() {
 
       {isAdmin && <AdminActions />}
 
-      <button
+      <Button
+        variant="ghost"
         onClick={handleLogout}
-        className="w-full rounded-xl bg-card p-3 text-sm font-medium text-red-400"
+        className="w-full justify-start gap-3 rounded-xl bg-card p-3 text-red-400 hover:text-red-300"
       >
-        <div className="flex items-center gap-3">
-          <LogOut className="size-4" />
-          {t("settings.logOut")}
-        </div>
-      </button>
+        <LogOut className="size-4" />
+        {t("settings.logOut")}
+      </Button>
     </div>
   )
 }

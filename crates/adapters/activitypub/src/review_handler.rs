@@ -132,6 +132,7 @@ impl ApObjectHandler for ReviewObjectHandler {
             source: ReviewSource::Remote {
                 actor_url: actor_url_str,
             },
+            watch_medium: None,
         });
 
         self.review_store

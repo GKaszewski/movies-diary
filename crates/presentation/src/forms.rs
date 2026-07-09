@@ -37,6 +37,8 @@ pub struct LogReviewForm {
     #[serde(default, deserialize_with = "empty_string_as_none")]
     pub comment: Option<String>,
     pub watched_at: String,
+    #[serde(default, deserialize_with = "empty_string_as_none")]
+    pub watch_medium: Option<String>,
     #[serde(rename = "_csrf", default)]
     pub csrf_token: String,
 }
@@ -170,6 +172,7 @@ pub struct LogReviewData {
     pub rating: u8,
     pub comment: Option<String>,
     pub watched_at: NaiveDateTime,
+    pub watch_medium: Option<domain::value_objects::WatchMedium>,
 }
 
 #[derive(Debug)]
@@ -182,18 +185,23 @@ impl TryFrom<LogReviewForm> for LogReviewData {
     type Error = ParseReviewError;
 
     fn try_from(form: LogReviewForm) -> Result<Self, Self::Error> {
-        let watched_at = NaiveDateTime::parse_from_str(&form.watched_at, "%Y-%m-%dT%H:%M:%S")
-            .or_else(|_| NaiveDateTime::parse_from_str(&form.watched_at, "%Y-%m-%dT%H:%M"))
-            .or_else(|_| {
-                chrono::NaiveDate::parse_from_str(&form.watched_at, "%Y-%m-%d")
-                    .map(|d| d.and_hms_opt(0, 0, 0).expect("midnight always valid"))
-            })
+        let watched_at =
+            domain::value_objects::parse_watched_at(&form.watched_at).map_err(|_| {
+                ParseReviewError {
+                    field: "watched_at",
+                    message: format!(
+                        "invalid date '{}'; expected YYYY-MM-DD or YYYY-MM-DDTHH:MM[:SS]",
+                        form.watched_at
+                    ),
+                }
+            })?;
+        let watch_medium = form
+            .watch_medium
+            .map(|s| s.parse())
+            .transpose()
             .map_err(|_| ParseReviewError {
-                field: "watched_at",
-                message: format!(
-                    "invalid date '{}'; expected YYYY-MM-DD or YYYY-MM-DDTHH:MM[:SS]",
-                    form.watched_at
-                ),
+                field: "watch_medium",
+                message: "invalid watch medium".into(),
             })?;
         Ok(Self {
             external_metadata_id: form.external_metadata_id.filter(|s| !s.trim().is_empty()),
@@ -203,6 +211,7 @@ impl TryFrom<LogReviewForm> for LogReviewData {
             rating: form.rating,
             comment: form.comment,
             watched_at,
+            watch_medium,
         })
     }
 }
@@ -211,12 +220,8 @@ impl TryFrom<LogReviewRequest> for LogReviewData {
     type Error = DomainError;
 
     fn try_from(req: LogReviewRequest) -> Result<Self, Self::Error> {
-        let watched_at = NaiveDateTime::parse_from_str(&req.watched_at, "%Y-%m-%dT%H:%M:%S")
-            .map_err(|_| {
-                DomainError::ValidationError(
-                    "invalid watched_at; expected YYYY-MM-DDTHH:MM:SS".into(),
-                )
-            })?;
+        let watched_at = domain::value_objects::parse_watched_at(&req.watched_at)?;
+        let watch_medium = req.watch_medium.map(|s| s.parse()).transpose()?;
         Ok(Self {
             external_metadata_id: req.external_metadata_id.filter(|s| !s.trim().is_empty()),
             manual_title: req.manual_title,
@@ -225,6 +230,7 @@ impl TryFrom<LogReviewRequest> for LogReviewData {
             rating: req.rating,
             comment: req.comment,
             watched_at,
+            watch_medium,
         })
     }
 }
@@ -243,6 +249,7 @@ impl LogReviewData {
             rating: self.rating,
             comment: self.comment,
             watched_at: self.watched_at,
+            watch_medium: self.watch_medium,
         }
     }
 }

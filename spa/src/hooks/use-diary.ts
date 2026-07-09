@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-query"
 import {
   deleteReview,
+  editReview,
   getActivityFeed,
   getDiary,
   logReview,
@@ -13,6 +14,7 @@ import {
 import type {
   ActivityFeedQueryParams,
   DiaryQueryParams,
+  EditReviewRequest,
   LogReviewRequest,
 } from "@/lib/api/diary"
 
@@ -72,6 +74,18 @@ export function useLogReview() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (data: LogReviewRequest) => logReview(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: diaryKeys.all })
+      qc.invalidateQueries({ queryKey: ["activity-feed"] })
+    },
+  })
+}
+
+export function useEditReview() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: EditReviewRequest }) =>
+      editReview(id, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: diaryKeys.all })
       qc.invalidateQueries({ queryKey: ["activity-feed"] })
