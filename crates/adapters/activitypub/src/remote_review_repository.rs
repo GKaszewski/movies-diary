@@ -3,6 +3,16 @@ use async_trait::async_trait;
 use chrono::NaiveDateTime;
 use domain::models::Review;
 
+pub struct RemoteReviewUpdate<'a> {
+    pub ap_id: &'a str,
+    pub actor_url: &'a str,
+    pub rating: u8,
+    pub comment: Option<&'a str>,
+    pub watched_at: NaiveDateTime,
+    pub poster_url: Option<&'a str>,
+    pub watch_medium: Option<&'a str>,
+}
+
 #[async_trait]
 pub trait RemoteReviewRepository: Send + Sync {
     async fn save_remote_review(
@@ -17,16 +27,7 @@ pub trait RemoteReviewRepository: Send + Sync {
 
     async fn delete_remote_review(&self, ap_id: &str, actor_url: &str) -> Result<()>;
 
-    async fn update_remote_review(
-        &self,
-        ap_id: &str,
-        actor_url: &str,
-        rating: u8,
-        comment: Option<&str>,
-        watched_at: NaiveDateTime,
-        poster_url: Option<&str>,
-        watch_medium: Option<&str>,
-    ) -> Result<()>;
+    async fn update_remote_review(&self, update: RemoteReviewUpdate<'_>) -> Result<()>;
 
     async fn delete_by_actor(&self, actor_url: &str) -> Result<()>;
 }

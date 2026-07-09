@@ -188,15 +188,15 @@ impl ApObjectHandler for ReviewObjectHandler {
         }
 
         self.review_store
-            .update_remote_review(
-                ap_id.as_str(),
-                actor_url.as_str(),
-                obj.rating.min(5),
-                obj.comment.as_deref(),
-                obj.watched_at.naive_utc(),
-                obj.poster_url.as_deref(),
-                obj.watch_medium.as_deref(),
-            )
+            .update_remote_review(crate::remote_review_repository::RemoteReviewUpdate {
+                ap_id: ap_id.as_str(),
+                actor_url: actor_url.as_str(),
+                rating: obj.rating.min(5),
+                comment: obj.comment.as_deref(),
+                watched_at: obj.watched_at.naive_utc(),
+                poster_url: obj.poster_url.as_deref(),
+                watch_medium: obj.watch_medium.as_deref(),
+            })
             .await?;
 
         Ok(())

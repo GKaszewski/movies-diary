@@ -22,7 +22,7 @@ pub use k_ap::{
 
 pub use event_handler::ActivityPubEventHandler;
 pub use port::{ActivityPubPort, NoopActivityPubService};
-pub use remote_review_repository::RemoteReviewRepository;
+pub use remote_review_repository::{RemoteReviewRepository, RemoteReviewUpdate};
 pub use review_handler::ReviewObjectHandler;
 pub use user_adapter::DomainUserRepoAdapter;
 
