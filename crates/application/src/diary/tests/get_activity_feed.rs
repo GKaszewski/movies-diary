@@ -67,10 +67,7 @@ struct FakeSocialWithFollowing(Vec<SocialActor>);
 
 #[async_trait]
 impl domain::ports::SocialQuery for FakeSocialWithFollowing {
-    async fn get_following(
-        &self,
-        _: &UserId,
-    ) -> Result<Vec<SocialActor>, DomainError> {
+    async fn get_following(&self, _: &UserId) -> Result<Vec<SocialActor>, DomainError> {
         Ok(self.0.clone())
     }
     async fn get_followers(&self, _: &UserId) -> Result<Vec<SocialActor>, DomainError> {

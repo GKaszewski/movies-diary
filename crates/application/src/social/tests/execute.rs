@@ -39,9 +39,9 @@ async fn follow_emits_follow_requested_event() {
         &deps,
         SocialCmd::Follow {
             follower_id: Uuid::new_v4(),
-            target: FollowTarget::Identity(SocialIdentity::Local(UserId::from_uuid(
-                Uuid::new_v4(),
-            ))),
+            target: FollowTarget::Identity(SocialIdentity::Local(
+                UserId::from_uuid(Uuid::new_v4()),
+            )),
         },
     )
     .await

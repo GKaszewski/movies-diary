@@ -61,7 +61,6 @@ pub trait SocialQuery: Send + Sync {
         follower: &UserId,
         target: &SocialIdentity,
     ) -> Result<bool, DomainError>;
-
 }
 
 #[async_trait]

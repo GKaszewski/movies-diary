@@ -1105,5 +1105,4 @@ impl SocialQuery for InMemorySocialRepository {
             *f == follower.value() && t == target && *state == FollowState::Accepted
         }))
     }
-
 }

@@ -242,5 +242,4 @@ impl SocialQuery for CompositeSocialAdapter {
         let following = self.get_following(follower).await?;
         Ok(following.iter().any(|a| a.identity == *target))
     }
-
 }

@@ -41,7 +41,11 @@ pub struct NoopSocialCommand;
 
 #[async_trait]
 impl super::SocialCommand for NoopSocialCommand {
-    async fn follow(&self, _: &UserId, _: &crate::value_objects::FollowTarget) -> Result<(), DomainError> {
+    async fn follow(
+        &self,
+        _: &UserId,
+        _: &crate::value_objects::FollowTarget,
+    ) -> Result<(), DomainError> {
         Ok(())
     }
     async fn unfollow(&self, _: &UserId, _: &SocialIdentity) -> Result<(), DomainError> {

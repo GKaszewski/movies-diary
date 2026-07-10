@@ -10,10 +10,7 @@ use super::{
     queries::SocialQry,
 };
 
-pub async fn execute_command(
-    deps: &SocialCommandDeps,
-    cmd: SocialCmd,
-) -> Result<(), DomainError> {
+pub async fn execute_command(deps: &SocialCommandDeps, cmd: SocialCmd) -> Result<(), DomainError> {
     let event = match cmd {
         SocialCmd::Follow {
             follower_id,
@@ -58,18 +55,12 @@ pub async fn execute_command(
                 .await?;
             DomainEvent::FollowerRemoved { owner, follower }
         }
-        SocialCmd::Block {
-            blocker_id,
-            target,
-        } => {
+        SocialCmd::Block { blocker_id, target } => {
             let blocker = UserId::from_uuid(blocker_id);
             deps.social_command.block(&blocker, &target).await?;
             DomainEvent::ActorBlocked { blocker, target }
         }
-        SocialCmd::Unblock {
-            blocker_id,
-            target,
-        } => {
+        SocialCmd::Unblock { blocker_id, target } => {
             let blocker = UserId::from_uuid(blocker_id);
             deps.social_command.unblock(&blocker, &target).await?;
             DomainEvent::ActorUnblocked { blocker, target }
