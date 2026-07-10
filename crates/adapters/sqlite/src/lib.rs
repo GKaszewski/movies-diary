@@ -75,7 +75,8 @@ pub async fn migrate(pool: &SqlitePool) -> Result<(), domain::errors::DomainErro
 
 pub struct SqliteWireOutput {
     pub pool: SqlitePool,
-    pub movie: std::sync::Arc<dyn domain::ports::MovieRepository>,
+    pub movie_command: std::sync::Arc<dyn domain::ports::MovieCommand>,
+    pub movie_query: std::sync::Arc<dyn domain::ports::MovieQuery>,
     pub review: std::sync::Arc<dyn domain::ports::ReviewRepository>,
     pub diary: std::sync::Arc<dyn domain::ports::DiaryRepository>,
     pub stats: std::sync::Arc<dyn domain::ports::StatsRepository>,
@@ -119,9 +120,12 @@ pub async fn wire(database_url: &str) -> anyhow::Result<SqliteWireOutput> {
         pool.clone(),
     ));
 
+    let movie_repo = std::sync::Arc::new(SqliteMovieRepository::new(pool.clone()));
+
     Ok(SqliteWireOutput {
         pool: pool.clone(),
-        movie: std::sync::Arc::new(SqliteMovieRepository::new(pool.clone())) as _,
+        movie_command: movie_repo.clone() as _,
+        movie_query: movie_repo as _,
         review: std::sync::Arc::new(SqliteReviewRepository::new(pool.clone())) as _,
         diary: std::sync::Arc::new(SqliteDiaryRepository::new(pool.clone())) as _,
         stats: std::sync::Arc::new(SqliteStatsRepository::new(pool.clone())) as _,

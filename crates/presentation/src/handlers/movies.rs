@@ -48,7 +48,7 @@ pub async fn list_movies(
     Query(params): Query<MoviesQueryParams>,
 ) -> Result<Json<MoviesResponse>, ApiError> {
     let page = get_movies::execute(
-        state.app_ctx.repos.movie.clone(),
+        state.app_ctx.repos.movie_query.clone(),
         GetMoviesQuery {
             limit: params.limit,
             offset: params.offset,
@@ -122,7 +122,8 @@ pub async fn sync_poster(
 ) -> Result<impl IntoResponse, ApiError> {
     sync_poster::execute(
         &SyncPosterDeps {
-            movie: state.app_ctx.repos.movie.clone(),
+            movie_command: state.app_ctx.repos.movie_command.clone(),
+            movie_query: state.app_ctx.repos.movie_query.clone(),
             movie_profile: state.app_ctx.repos.movie_profile.clone(),
             metadata: state.app_ctx.services.metadata.clone(),
             poster_fetcher: state.app_ctx.services.poster_fetcher.clone(),
@@ -154,7 +155,7 @@ pub async fn get_movie_detail(
 
     let result = get_movie_social_page::execute(
         &GetMovieSocialPageDeps {
-            movie: state.app_ctx.repos.movie.clone(),
+            movie_query: state.app_ctx.repos.movie_query.clone(),
             diary: state.app_ctx.repos.diary.clone(),
             movie_profile: state.app_ctx.repos.movie_profile.clone(),
         },
@@ -288,7 +289,7 @@ pub async fn get_movie_detail_html(
 
     match get_movie_social_page::execute(
         &GetMovieSocialPageDeps {
-            movie: state.app_ctx.repos.movie.clone(),
+            movie_query: state.app_ctx.repos.movie_query.clone(),
             diary: state.app_ctx.repos.diary.clone(),
             movie_profile: state.app_ctx.repos.movie_profile.clone(),
         },

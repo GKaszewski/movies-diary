@@ -50,7 +50,7 @@ async fn main() -> anyhow::Result<()> {
         allow_registration,
     ) = (
         Arc::clone(&db.ap_content),
-        Arc::clone(&db.movie),
+        Arc::clone(&db.movie_query),
         Arc::clone(&db.review),
         Arc::clone(&db.diary),
         Arc::clone(&db.goal),
@@ -76,12 +76,14 @@ async fn main() -> anyhow::Result<()> {
         db::DbPool::Postgres(pool) => postgres_federation::wire(pool.clone()),
     };
 
-    let movie = db.movie;
+    let movie_command = db.movie_command;
+    let movie_query = db.movie_query;
     let deduplicator = db.deduplicator;
     let user = db.user;
     let import_session = db.import_session;
     let movie_profile = db.movie_profile;
-    let watch_event = db.watch_event;
+    let watch_event_command = db.watch_event_command;
+    let watch_event_query = db.watch_event_query;
     let person_command = db.person_command;
     let person_query = db.person_query;
     let search_command = db.search_command;
@@ -111,7 +113,7 @@ async fn main() -> anyhow::Result<()> {
                 let image_fetcher = poster_fetcher::create_image_fetcher()?;
                 let handler = Arc::new(application::movies::MovieEnrichmentHandler::new(
                     Arc::clone(&client) as Arc<dyn MovieEnrichmentClient>,
-                    Arc::clone(&movie),
+                    Arc::clone(&movie_query),
                     Arc::clone(&movie_profile),
                     Arc::clone(&person_command),
                     Arc::clone(&search_command),
@@ -149,7 +151,7 @@ async fn main() -> anyhow::Result<()> {
 
     let mut periodic_jobs: Vec<Arc<dyn PeriodicJob>> = vec![
         Arc::new(application::jobs::MovieDeduplicationJob::new(
-            Arc::clone(&movie),
+            Arc::clone(&movie_query),
             Arc::clone(&deduplicator),
             Arc::clone(&object_storage),
         )),
@@ -157,7 +159,7 @@ async fn main() -> anyhow::Result<()> {
             import_session.clone(),
         )),
         Arc::new(application::jobs::WatchEventCleanupJob::new(
-            watch_event.clone(),
+            watch_event_command.clone(),
         )),
         Arc::new(application::jobs::WrapUpAutoGenerateJob::new(
             Arc::clone(&user),
@@ -194,7 +196,8 @@ async fn main() -> anyhow::Result<()> {
 
     let handlers: Vec<Arc<dyn EventHandler>> = {
         let poster = Arc::new(poster_sync::PosterSyncHandler::new(
-            Arc::clone(&movie),
+            Arc::clone(&movie_command),
+            Arc::clone(&movie_query),
             Arc::clone(&metadata),
             Arc::clone(&poster_fetcher),
             Arc::clone(&object_storage),
@@ -212,7 +215,7 @@ async fn main() -> anyhow::Result<()> {
         )) as Arc<dyn EventHandler>;
 
         let discovery_indexer = Arc::new(MovieDiscoveryIndexer::new(
-            Arc::clone(&movie),
+            Arc::clone(&movie_query),
             Arc::clone(&search_command),
         )) as Arc<dyn EventHandler>;
 
@@ -223,7 +226,7 @@ async fn main() -> anyhow::Result<()> {
         )) as Arc<dyn EventHandler>;
 
         let reindex_handler = Arc::new(SearchReindexHandler::new(ReindexSearchDeps {
-            movie: Arc::clone(&movie),
+            movie_query: Arc::clone(&movie_query),
             movie_profile: Arc::clone(&movie_profile),
             search_command: Arc::clone(&search_command),
             person_command: Arc::clone(&person_command),

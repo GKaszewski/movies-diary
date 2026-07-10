@@ -3,7 +3,7 @@ use std::sync::Arc;
 use chrono::Utc;
 use domain::{
     models::{Movie, MovieProfile},
-    ports::MovieRepository,
+    ports::MovieCommand,
     testing::{
         FakeSearchCommand, InMemoryMovieProfileRepository, InMemoryMovieRepository,
         PanicPersonCommand,
@@ -50,7 +50,7 @@ async fn stores_profile_and_indexes() {
     };
 
     let deps = EnrichMovieDeps {
-        movie: movie_repo as Arc<_>,
+        movie_query: movie_repo as Arc<_>,
         movie_profile: Arc::clone(&profile_repo) as Arc<_>,
         person_command: Arc::new(PanicPersonCommand),
         search_command: Arc::new(FakeSearchCommand),
@@ -142,7 +142,7 @@ async fn extracts_and_indexes_persons() {
     };
 
     let deps = EnrichMovieDeps {
-        movie: movie_repo as Arc<_>,
+        movie_query: movie_repo as Arc<_>,
         movie_profile: Arc::clone(&profile_repo) as Arc<_>,
         person_command: Arc::new(NoopPersonCommand),
         search_command: Arc::new(FakeSearchCommand),

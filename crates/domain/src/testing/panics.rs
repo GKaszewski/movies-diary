@@ -371,44 +371,56 @@ impl crate::ports::FederatedProfileQuery for PanicFederatedProfileQuery {
     }
 }
 
-pub struct PanicWatchEventRepository;
+pub struct PanicWatchEventCommand;
 
 #[async_trait]
-impl crate::ports::WatchEventRepository for PanicWatchEventRepository {
+impl crate::ports::WatchEventCommand for PanicWatchEventCommand {
     async fn save(&self, _: &crate::models::WatchEvent) -> Result<(), DomainError> {
-        panic!("PanicWatchEventRepository called")
+        panic!("PanicWatchEventCommand called")
     }
     async fn update_status(
         &self,
         _: &crate::value_objects::WatchEventId,
         _: crate::models::WatchEventStatus,
     ) -> Result<(), DomainError> {
-        panic!("PanicWatchEventRepository called")
-    }
-    async fn list_pending(
-        &self,
-        _: &UserId,
-    ) -> Result<Vec<crate::models::WatchEvent>, DomainError> {
-        panic!("PanicWatchEventRepository called")
-    }
-    async fn get_by_id(
-        &self,
-        _: &crate::value_objects::WatchEventId,
-    ) -> Result<Option<crate::models::WatchEvent>, DomainError> {
-        panic!("PanicWatchEventRepository called")
-    }
-    async fn get_by_ids(
-        &self,
-        _: &[crate::value_objects::WatchEventId],
-    ) -> Result<Vec<crate::models::WatchEvent>, DomainError> {
-        panic!("PanicWatchEventRepository called")
+        panic!("PanicWatchEventCommand called")
     }
     async fn update_status_batch(
         &self,
         _: &[crate::value_objects::WatchEventId],
         _: crate::models::WatchEventStatus,
     ) -> Result<u64, DomainError> {
-        panic!("PanicWatchEventRepository called")
+        panic!("PanicWatchEventCommand called")
+    }
+    async fn delete_non_pending_older_than(
+        &self,
+        _: chrono::NaiveDateTime,
+    ) -> Result<u64, DomainError> {
+        panic!("PanicWatchEventCommand called")
+    }
+}
+
+pub struct PanicWatchEventQuery;
+
+#[async_trait]
+impl crate::ports::WatchEventQuery for PanicWatchEventQuery {
+    async fn list_pending(
+        &self,
+        _: &UserId,
+    ) -> Result<Vec<crate::models::WatchEvent>, DomainError> {
+        panic!("PanicWatchEventQuery called")
+    }
+    async fn get_by_id(
+        &self,
+        _: &crate::value_objects::WatchEventId,
+    ) -> Result<Option<crate::models::WatchEvent>, DomainError> {
+        panic!("PanicWatchEventQuery called")
+    }
+    async fn get_by_ids(
+        &self,
+        _: &[crate::value_objects::WatchEventId],
+    ) -> Result<Vec<crate::models::WatchEvent>, DomainError> {
+        panic!("PanicWatchEventQuery called")
     }
     async fn find_duplicate(
         &self,
@@ -416,13 +428,7 @@ impl crate::ports::WatchEventRepository for PanicWatchEventRepository {
         _: &str,
         _: chrono::NaiveDateTime,
     ) -> Result<bool, DomainError> {
-        panic!("PanicWatchEventRepository called")
-    }
-    async fn delete_non_pending_older_than(
-        &self,
-        _: chrono::NaiveDateTime,
-    ) -> Result<u64, DomainError> {
-        panic!("PanicWatchEventRepository called")
+        panic!("PanicWatchEventQuery called")
     }
 }
 

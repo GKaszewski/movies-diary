@@ -5,14 +5,15 @@ use domain::{
     errors::DomainError,
     events::DomainEvent,
     ports::{
-        EventHandler, EventPublisher, MetadataClient, MovieRepository, ObjectStorage,
+        EventHandler, EventPublisher, MetadataClient, MovieCommand, MovieQuery, ObjectStorage,
         PosterFetcherClient,
     },
     value_objects::{ExternalMetadataId, MovieId, PosterPath},
 };
 
 pub struct PosterSyncHandler {
-    movie_repository: Arc<dyn MovieRepository>,
+    movie_command: Arc<dyn MovieCommand>,
+    movie_query: Arc<dyn MovieQuery>,
     metadata_client: Arc<dyn MetadataClient>,
     poster_fetcher: Arc<dyn PosterFetcherClient>,
     object_storage: Arc<dyn ObjectStorage>,
@@ -22,7 +23,8 @@ pub struct PosterSyncHandler {
 
 impl PosterSyncHandler {
     pub fn new(
-        movie_repository: Arc<dyn MovieRepository>,
+        movie_command: Arc<dyn MovieCommand>,
+        movie_query: Arc<dyn MovieQuery>,
         metadata_client: Arc<dyn MetadataClient>,
         poster_fetcher: Arc<dyn PosterFetcherClient>,
         object_storage: Arc<dyn ObjectStorage>,
@@ -30,7 +32,8 @@ impl PosterSyncHandler {
         max_retries: u32,
     ) -> Self {
         Self {
-            movie_repository,
+            movie_command,
+            movie_query,
             metadata_client,
             poster_fetcher,
             object_storage,
@@ -44,7 +47,7 @@ impl PosterSyncHandler {
         movie_id: MovieId,
         external_metadata_id: ExternalMetadataId,
     ) -> Result<(), DomainError> {
-        let mut movie = match self.movie_repository.get_movie_by_id(&movie_id).await? {
+        let mut movie = match self.movie_query.get_movie_by_id(&movie_id).await? {
             Some(m) => m,
             None => {
                 tracing::warn!("Sync cancelled: Movie {} not found", movie_id.value());
@@ -82,7 +85,7 @@ impl PosterSyncHandler {
         let poster_path = PosterPath::new(stored_path)?;
 
         movie.update_poster(poster_path);
-        self.movie_repository.upsert_movie(&movie).await?;
+        self.movie_command.upsert_movie(&movie).await?;
 
         if let Err(e) = self
             .event_publisher
@@ -115,7 +118,7 @@ impl EventHandler for PosterSyncHandler {
             } => {
                 // Only sync poster if the movie doesn't have one yet
                 let already_has_poster = self
-                    .movie_repository
+                    .movie_query
                     .get_movie_by_id(&MovieId::from_uuid(movie_id.value()))
                     .await?
                     .map(|m| m.poster_path().is_some())

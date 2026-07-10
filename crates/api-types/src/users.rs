@@ -80,6 +80,14 @@ pub struct UserProfileBase {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+#[serde(untagged)]
+pub enum ProfileViewData {
+    Entries { entries: DiaryResponse },
+    History { history: Vec<MonthActivityDto> },
+    Trends { trends: UserTrendsDto },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct UserProfileResponse {
     pub user_id: Uuid,
     #[serde(flatten)]
@@ -87,12 +95,8 @@ pub struct UserProfileResponse {
     pub stats: UserStatsDto,
     pub following_count: usize,
     pub followers_count: usize,
-    /// Populated for view=recent and view=ratings
-    pub entries: Option<DiaryResponse>,
-    /// Populated for view=history
-    pub history: Option<Vec<MonthActivityDto>>,
-    /// Populated for view=trends
-    pub trends: Option<UserTrendsDto>,
+    #[serde(flatten, skip_serializing_if = "Option::is_none")]
+    pub view_data: Option<ProfileViewData>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub goals: Option<Vec<GoalDto>>,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]

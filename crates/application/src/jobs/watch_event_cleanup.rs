@@ -4,15 +4,15 @@ use std::time::Duration;
 use async_trait::async_trait;
 use domain::{
     errors::DomainError,
-    ports::{PeriodicJob, WatchEventRepository},
+    ports::{PeriodicJob, WatchEventCommand},
 };
 
 pub struct WatchEventCleanupJob {
-    watch_event: Arc<dyn WatchEventRepository>,
+    watch_event: Arc<dyn WatchEventCommand>,
 }
 
 impl WatchEventCleanupJob {
-    pub fn new(watch_event: Arc<dyn WatchEventRepository>) -> Self {
+    pub fn new(watch_event: Arc<dyn WatchEventCommand>) -> Self {
         Self { watch_event }
     }
 }

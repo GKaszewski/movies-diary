@@ -129,7 +129,8 @@ async fn run_ingest(
 ) -> StatusCode {
     let deps = IngestWatchEventDeps {
         webhook_token: state.app_ctx.repos.webhook_token.clone(),
-        watch_event: state.app_ctx.repos.watch_event.clone(),
+        watch_event_command: state.app_ctx.repos.watch_event_command.clone(),
+        watch_event_query: state.app_ctx.repos.watch_event_query.clone(),
         event_publisher: state.app_ctx.services.event_publisher.clone(),
     };
     match ingest_watch_event::execute(&deps, cmd, parser).await {
@@ -250,7 +251,7 @@ pub async fn get_watch_queue(
     let query = GetWatchQueueQuery {
         user_id: user.0.value(),
     };
-    let events = get_watch_queue::execute(state.app_ctx.repos.watch_event.clone(), query).await?;
+    let events = get_watch_queue::execute(state.app_ctx.repos.watch_event_query.clone(), query).await?;
 
     let dtos = events
         .into_iter()
@@ -296,7 +297,8 @@ pub async fn post_confirm_watch_events(
     };
 
     let confirmed = confirm_watch_events::execute(
-        state.app_ctx.repos.watch_event.clone(),
+        state.app_ctx.repos.watch_event_command.clone(),
+        state.app_ctx.repos.watch_event_query.clone(),
         state.app_ctx.services.review_logger.clone(),
         cmd,
     )
@@ -325,6 +327,6 @@ pub async fn post_dismiss_watch_events(
     };
 
     let dismissed =
-        dismiss_watch_events::execute(state.app_ctx.repos.watch_event.clone(), cmd).await?;
+        dismiss_watch_events::execute(state.app_ctx.repos.watch_event_command.clone(), state.app_ctx.repos.watch_event_query.clone(), cmd).await?;
     Ok(Json(DismissWatchResponse { dismissed }))
 }

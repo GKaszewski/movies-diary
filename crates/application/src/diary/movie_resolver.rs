@@ -2,14 +2,14 @@ use async_trait::async_trait;
 use domain::{
     errors::DomainError,
     models::{MetadataSearchCriteria, Movie},
-    ports::{MetadataClient, MovieRepository},
+    ports::{MetadataClient, MovieQuery},
     value_objects::{ExternalMetadataId, MovieTitle, ReleaseYear},
 };
 
 use crate::diary::commands::MovieInput;
 
 pub struct MovieResolverDeps<'a> {
-    pub repository: &'a dyn MovieRepository,
+    pub repository: &'a dyn MovieQuery,
     pub metadata_client: &'a dyn MetadataClient,
 }
 

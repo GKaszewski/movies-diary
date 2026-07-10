@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use domain::{
     models::Movie,
-    ports::MovieRepository,
+    ports::MovieCommand,
     testing::{InMemoryMovieRepository, InMemoryWatchlistRepository, NoopEventPublisher},
     value_objects::{MovieTitle, ReleaseYear},
 };
@@ -17,7 +17,8 @@ fn make_deps(
     watchlist: Arc<InMemoryWatchlistRepository>,
 ) -> WatchlistAddDeps {
     WatchlistAddDeps {
-        movie: movies,
+        movie_command: Arc::clone(&movies) as _,
+        movie_query: movies,
         metadata: Arc::new(domain::testing::FakeMetadataClient),
         watchlist,
         event_publisher: NoopEventPublisher::new(),

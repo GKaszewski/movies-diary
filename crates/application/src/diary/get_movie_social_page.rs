@@ -24,7 +24,7 @@ pub async fn execute(
     let page = PageParams::new(Some(query.limit), Some(query.offset))?;
 
     let movie = deps
-        .movie
+        .movie_query
         .get_movie_by_id(&movie_id)
         .await?
         .ok_or_else(|| DomainError::NotFound(format!("Movie {}", query.movie_id)))?;

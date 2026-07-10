@@ -2,12 +2,12 @@ use std::sync::Arc;
 
 use domain::{
     errors::DomainError,
-    ports::{MovieDeduplicator, MovieRepository, ObjectStorage},
+    ports::{MovieDeduplicator, MovieQuery, ObjectStorage},
     value_objects::MovieId,
 };
 
 pub struct MergeDuplicatesDeps {
-    pub movie: Arc<dyn MovieRepository>,
+    pub movie_query: Arc<dyn MovieQuery>,
     pub deduplicator: Arc<dyn MovieDeduplicator>,
     pub object_storage: Arc<dyn ObjectStorage>,
 }
@@ -18,7 +18,7 @@ pub struct MergeReport {
 }
 
 pub async fn execute(deps: &MergeDuplicatesDeps) -> Result<MergeReport, DomainError> {
-    let movies = deps.movie.list_movies_with_external_id().await?;
+    let movies = deps.movie_query.list_movies_with_external_id().await?;
 
     let mut pairs_found = 0u64;
     let mut rows_repointed = 0u64;
@@ -37,7 +37,7 @@ pub async fn execute(deps: &MergeDuplicatesDeps) -> Result<MergeReport, DomainEr
         pairs_found += 1;
 
         // Determine which poster will be dropped after merge
-        let canonical = match deps.movie.get_movie_by_id(&canonical_id).await? {
+        let canonical = match deps.movie_query.get_movie_by_id(&canonical_id).await? {
             Some(existing) => existing,
             None => domain::models::Movie::from_persistence(
                 canonical_id,

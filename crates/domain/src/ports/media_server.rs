@@ -12,32 +12,38 @@ pub trait MediaServerParser: Send + Sync {
     -> Result<Option<ParsedPlaybackEvent>, DomainError>;
 }
 
+/// Write port — mutates watch events.
 #[async_trait]
-pub trait WatchEventRepository: Send + Sync {
+pub trait WatchEventCommand: Send + Sync {
     async fn save(&self, event: &WatchEvent) -> Result<(), DomainError>;
     async fn update_status(
         &self,
         id: &WatchEventId,
         status: WatchEventStatus,
     ) -> Result<(), DomainError>;
-    async fn list_pending(&self, user_id: &UserId) -> Result<Vec<WatchEvent>, DomainError>;
-    async fn get_by_id(&self, id: &WatchEventId) -> Result<Option<WatchEvent>, DomainError>;
-    async fn get_by_ids(&self, ids: &[WatchEventId]) -> Result<Vec<WatchEvent>, DomainError>;
     async fn update_status_batch(
         &self,
         ids: &[WatchEventId],
         status: WatchEventStatus,
     ) -> Result<u64, DomainError>;
+    async fn delete_non_pending_older_than(
+        &self,
+        before: NaiveDateTime,
+    ) -> Result<u64, DomainError>;
+}
+
+/// Read port — queries watch events. No mutations.
+#[async_trait]
+pub trait WatchEventQuery: Send + Sync {
+    async fn list_pending(&self, user_id: &UserId) -> Result<Vec<WatchEvent>, DomainError>;
+    async fn get_by_id(&self, id: &WatchEventId) -> Result<Option<WatchEvent>, DomainError>;
+    async fn get_by_ids(&self, ids: &[WatchEventId]) -> Result<Vec<WatchEvent>, DomainError>;
     async fn find_duplicate(
         &self,
         user_id: &UserId,
         external_id: &str,
         after: NaiveDateTime,
     ) -> Result<bool, DomainError>;
-    async fn delete_non_pending_older_than(
-        &self,
-        before: NaiveDateTime,
-    ) -> Result<u64, DomainError>;
 }
 
 #[async_trait]

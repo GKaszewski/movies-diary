@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use domain::models::WatchEventSource;
-use domain::ports::{EventPublisher, WatchEventRepository, WebhookTokenRepository};
+use domain::ports::{EventPublisher, WebhookTokenRepository};
 use domain::testing::{
     InMemoryWatchEventRepository, InMemoryWebhookTokenRepository, NoopEventPublisher,
 };
@@ -30,7 +30,7 @@ impl domain::ports::MediaServerParser for FakeParser {
 #[tokio::test]
 async fn ingests_watch_event() {
     let tokens: Arc<dyn WebhookTokenRepository> = InMemoryWebhookTokenRepository::new();
-    let watch_events: Arc<dyn WatchEventRepository> = InMemoryWatchEventRepository::new();
+    let watch_events = InMemoryWatchEventRepository::new();
     let event_publisher: Arc<dyn EventPublisher> = NoopEventPublisher::new();
 
     let user_id = Uuid::new_v4();
@@ -47,7 +47,8 @@ async fn ingests_watch_event() {
 
     let deps = IngestWatchEventDeps {
         webhook_token: Arc::clone(&tokens),
-        watch_event: Arc::clone(&watch_events),
+        watch_event_command: Arc::clone(&watch_events) as _,
+        watch_event_query: Arc::clone(&watch_events) as _,
         event_publisher: Arc::clone(&event_publisher),
     };
 
@@ -68,12 +69,13 @@ async fn ingests_watch_event() {
 #[tokio::test]
 async fn rejects_invalid_token() {
     let tokens: Arc<dyn WebhookTokenRepository> = InMemoryWebhookTokenRepository::new();
-    let watch_events: Arc<dyn WatchEventRepository> = InMemoryWatchEventRepository::new();
+    let watch_events = InMemoryWatchEventRepository::new();
     let event_publisher: Arc<dyn EventPublisher> = NoopEventPublisher::new();
 
     let deps = IngestWatchEventDeps {
         webhook_token: Arc::clone(&tokens),
-        watch_event: Arc::clone(&watch_events),
+        watch_event_command: Arc::clone(&watch_events) as _,
+        watch_event_query: Arc::clone(&watch_events) as _,
         event_publisher: Arc::clone(&event_publisher),
     };
 

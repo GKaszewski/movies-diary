@@ -4,13 +4,14 @@ use anyhow::Context;
 use domain::ports::{
     AuthService, LocalApContentQuery, MetadataClient, ObjectStorage, PasswordHasher,
     PosterFetcherClient, RefreshSessionRepository, UserProfileFieldsRepository,
-    WatchEventRepository, WebhookTokenRepository,
+    WatchEventCommand, WatchEventQuery, WebhookTokenRepository,
 };
 
 pub use infra_wiring::DbPool;
 
 pub struct DatabaseOutput {
-    pub movie: Arc<dyn domain::ports::MovieRepository>,
+    pub movie_command: Arc<dyn domain::ports::MovieCommand>,
+    pub movie_query: Arc<dyn domain::ports::MovieQuery>,
     pub review: Arc<dyn domain::ports::ReviewRepository>,
     pub diary: Arc<dyn domain::ports::DiaryRepository>,
     pub stats: Arc<dyn domain::ports::StatsRepository>,
@@ -19,7 +20,8 @@ pub struct DatabaseOutput {
     pub import_profile: Arc<dyn domain::ports::ImportProfileRepository>,
     pub movie_profile: Arc<dyn domain::ports::MovieProfileRepository>,
     pub watchlist: Arc<dyn domain::ports::WatchlistRepository>,
-    pub watch_event: Arc<dyn WatchEventRepository>,
+    pub watch_event_command: Arc<dyn WatchEventCommand>,
+    pub watch_event_query: Arc<dyn WatchEventQuery>,
     pub webhook_token: Arc<dyn WebhookTokenRepository>,
     pub person_command: Arc<dyn domain::ports::PersonCommand>,
     pub person_query: Arc<dyn domain::ports::PersonQuery>,
@@ -47,13 +49,13 @@ pub async fn build_database_adapters(backend: &str, url: &str) -> anyhow::Result
             let (pc, pq) = postgres::create_person_adapter(w.pool.clone());
             let (sc, sp) = postgres_search::create_search_adapter(w.pool.clone());
             let pf = postgres::create_profile_fields_repo(w.pool.clone());
-            let we: Arc<dyn WatchEventRepository> =
-                Arc::new(postgres::PostgresWatchEventRepository::new(w.pool.clone()));
+            let we = Arc::new(postgres::PostgresWatchEventRepository::new(w.pool.clone()));
             let wt: Arc<dyn WebhookTokenRepository> = Arc::new(
                 postgres::PostgresWebhookTokenRepository::new(w.pool.clone()),
             );
             Ok(DatabaseOutput {
-                movie: w.movie,
+                movie_command: w.movie_command,
+                movie_query: w.movie_query,
                 review: w.review,
                 diary: w.diary,
                 stats: w.stats,
@@ -62,7 +64,8 @@ pub async fn build_database_adapters(backend: &str, url: &str) -> anyhow::Result
                 import_profile: w.import_profile,
                 movie_profile: w.movie_profile,
                 watchlist: w.watchlist,
-                watch_event: we,
+                watch_event_command: we.clone() as _,
+                watch_event_query: we as _,
                 webhook_token: wt,
                 person_command: pc,
                 person_query: pq,
@@ -90,12 +93,12 @@ pub async fn build_database_adapters(backend: &str, url: &str) -> anyhow::Result
             let (pc, pq) = sqlite::create_person_adapter(w.pool.clone());
             let (sc, sp) = sqlite_search::create_search_adapter(w.pool.clone());
             let pf = sqlite::create_profile_fields_repo(w.pool.clone());
-            let we: Arc<dyn WatchEventRepository> =
-                Arc::new(sqlite::SqliteWatchEventRepository::new(w.pool.clone()));
+            let we = Arc::new(sqlite::SqliteWatchEventRepository::new(w.pool.clone()));
             let wt: Arc<dyn WebhookTokenRepository> =
                 Arc::new(sqlite::SqliteWebhookTokenRepository::new(w.pool.clone()));
             Ok(DatabaseOutput {
-                movie: w.movie,
+                movie_command: w.movie_command,
+                movie_query: w.movie_query,
                 review: w.review,
                 diary: w.diary,
                 stats: w.stats,
@@ -104,7 +107,8 @@ pub async fn build_database_adapters(backend: &str, url: &str) -> anyhow::Result
                 import_profile: w.import_profile,
                 movie_profile: w.movie_profile,
                 watchlist: w.watchlist,
-                watch_event: we,
+                watch_event_command: we.clone() as _,
+                watch_event_query: we as _,
                 webhook_token: wt,
                 person_command: pc,
                 person_query: pq,

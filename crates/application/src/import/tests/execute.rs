@@ -7,6 +7,7 @@ use domain::value_objects::UserId;
 use uuid::Uuid;
 
 use crate::import::commands::ExecuteImportCommand;
+use crate::import::deps::ExecuteImportDeps;
 use crate::import::execute;
 use crate::test_helpers::NoopReviewLogger;
 
@@ -50,9 +51,13 @@ async fn imports_confirmed_rows() {
     let sid = session.id.clone();
     sessions.create(&session).await.unwrap();
 
+    let deps = ExecuteImportDeps {
+        import_session: Arc::clone(&sessions) as _,
+        review_logger: Arc::new(NoopReviewLogger),
+    };
+
     let result = execute::execute(
-        Arc::clone(&sessions) as _,
-        Arc::new(NoopReviewLogger),
+        &deps,
         ExecuteImportCommand {
             user_id: uid,
             session_id: sid.value(),
@@ -76,9 +81,13 @@ async fn skips_unconfirmed_rows() {
     let sid = session.id.clone();
     sessions.create(&session).await.unwrap();
 
+    let deps = ExecuteImportDeps {
+        import_session: Arc::clone(&sessions) as _,
+        review_logger: Arc::new(NoopReviewLogger),
+    };
+
     let result = execute::execute(
-        Arc::clone(&sessions) as _,
-        Arc::new(NoopReviewLogger),
+        &deps,
         ExecuteImportCommand {
             user_id: uid,
             session_id: sid.value(),
@@ -96,9 +105,13 @@ async fn skips_unconfirmed_rows() {
 async fn fails_when_session_not_found() {
     let sessions = InMemoryImportSessionRepository::new();
 
+    let deps = ExecuteImportDeps {
+        import_session: Arc::clone(&sessions) as _,
+        review_logger: Arc::new(NoopReviewLogger),
+    };
+
     let result = execute::execute(
-        Arc::clone(&sessions) as _,
-        Arc::new(NoopReviewLogger),
+        &deps,
         ExecuteImportCommand {
             user_id: Uuid::new_v4(),
             session_id: Uuid::new_v4(),
@@ -131,9 +144,13 @@ async fn handles_datetime_format() {
     }]);
     sessions.create(&session).await.unwrap();
 
+    let deps = ExecuteImportDeps {
+        import_session: Arc::clone(&sessions) as _,
+        review_logger: Arc::new(NoopReviewLogger),
+    };
+
     let result = execute::execute(
-        Arc::clone(&sessions) as _,
-        Arc::new(NoopReviewLogger),
+        &deps,
         ExecuteImportCommand {
             user_id: uid,
             session_id: sid.value(),
@@ -168,9 +185,13 @@ async fn fails_on_invalid_rating() {
     }]);
     sessions.create(&session).await.unwrap();
 
+    let deps = ExecuteImportDeps {
+        import_session: Arc::clone(&sessions) as _,
+        review_logger: Arc::new(NoopReviewLogger),
+    };
+
     let result = execute::execute(
-        Arc::clone(&sessions) as _,
-        Arc::new(NoopReviewLogger),
+        &deps,
         ExecuteImportCommand {
             user_id: uid,
             session_id: sid.value(),
@@ -205,9 +226,13 @@ async fn fails_on_missing_watched_at() {
     }]);
     sessions.create(&session).await.unwrap();
 
+    let deps = ExecuteImportDeps {
+        import_session: Arc::clone(&sessions) as _,
+        review_logger: Arc::new(NoopReviewLogger),
+    };
+
     let result = execute::execute(
-        Arc::clone(&sessions) as _,
-        Arc::new(NoopReviewLogger),
+        &deps,
         ExecuteImportCommand {
             user_id: uid,
             session_id: sid.value(),
@@ -242,9 +267,13 @@ async fn imports_row_with_external_metadata_id() {
     }]);
     sessions.create(&session).await.unwrap();
 
+    let deps = ExecuteImportDeps {
+        import_session: Arc::clone(&sessions) as _,
+        review_logger: Arc::new(NoopReviewLogger),
+    };
+
     let result = execute::execute(
-        Arc::clone(&sessions) as _,
-        Arc::new(NoopReviewLogger),
+        &deps,
         ExecuteImportCommand {
             user_id: uid,
             session_id: sid.value(),
@@ -279,9 +308,13 @@ async fn imports_row_with_director_and_comment() {
     }]);
     sessions.create(&session).await.unwrap();
 
+    let deps = ExecuteImportDeps {
+        import_session: Arc::clone(&sessions) as _,
+        review_logger: Arc::new(NoopReviewLogger),
+    };
+
     let result = execute::execute(
-        Arc::clone(&sessions) as _,
-        Arc::new(NoopReviewLogger),
+        &deps,
         ExecuteImportCommand {
             user_id: uid,
             session_id: sid.value(),
@@ -316,9 +349,13 @@ async fn handles_space_separated_datetime_format() {
     }]);
     sessions.create(&session).await.unwrap();
 
+    let deps = ExecuteImportDeps {
+        import_session: Arc::clone(&sessions) as _,
+        review_logger: Arc::new(NoopReviewLogger),
+    };
+
     let result = execute::execute(
-        Arc::clone(&sessions) as _,
-        Arc::new(NoopReviewLogger),
+        &deps,
         ExecuteImportCommand {
             user_id: uid,
             session_id: sid.value(),
@@ -348,9 +385,13 @@ async fn reports_invalid_row_result_errors() {
     }]);
     sessions.create(&session).await.unwrap();
 
+    let deps = ExecuteImportDeps {
+        import_session: Arc::clone(&sessions) as _,
+        review_logger: Arc::new(NoopReviewLogger),
+    };
+
     let result = execute::execute(
-        Arc::clone(&sessions) as _,
-        Arc::new(NoopReviewLogger),
+        &deps,
         ExecuteImportCommand {
             user_id: uid,
             session_id: sid.value(),
@@ -387,9 +428,13 @@ async fn fails_on_missing_rating() {
     }]);
     sessions.create(&session).await.unwrap();
 
+    let deps = ExecuteImportDeps {
+        import_session: Arc::clone(&sessions) as _,
+        review_logger: Arc::new(NoopReviewLogger),
+    };
+
     let result = execute::execute(
-        Arc::clone(&sessions) as _,
-        Arc::new(NoopReviewLogger),
+        &deps,
         ExecuteImportCommand {
             user_id: uid,
             session_id: sid.value(),
@@ -425,9 +470,13 @@ async fn fails_on_unparseable_date() {
     }]);
     sessions.create(&session).await.unwrap();
 
+    let deps = ExecuteImportDeps {
+        import_session: Arc::clone(&sessions) as _,
+        review_logger: Arc::new(NoopReviewLogger),
+    };
+
     let result = execute::execute(
-        Arc::clone(&sessions) as _,
-        Arc::new(NoopReviewLogger),
+        &deps,
         ExecuteImportCommand {
             user_id: uid,
             session_id: sid.value(),
@@ -463,9 +512,13 @@ async fn imports_row_without_release_year() {
     }]);
     sessions.create(&session).await.unwrap();
 
+    let deps = ExecuteImportDeps {
+        import_session: Arc::clone(&sessions) as _,
+        review_logger: Arc::new(NoopReviewLogger),
+    };
+
     let result = execute::execute(
-        Arc::clone(&sessions) as _,
-        Arc::new(NoopReviewLogger),
+        &deps,
         ExecuteImportCommand {
             user_id: uid,
             session_id: sid.value(),
@@ -489,9 +542,13 @@ async fn deletes_session_after_import() {
     sessions.create(&session).await.unwrap();
     assert_eq!(sessions.count(), 1);
 
+    let deps = ExecuteImportDeps {
+        import_session: Arc::clone(&sessions) as _,
+        review_logger: Arc::new(NoopReviewLogger),
+    };
+
     execute::execute(
-        Arc::clone(&sessions) as _,
-        Arc::new(NoopReviewLogger),
+        &deps,
         ExecuteImportCommand {
             user_id: uid,
             session_id: sid.value(),
@@ -533,10 +590,14 @@ async fn imports_more_rows_than_concurrency_limit() {
     session.row_results = Some(rows);
     sessions.create(&session).await.unwrap();
 
+    let deps = ExecuteImportDeps {
+        import_session: Arc::clone(&sessions) as _,
+        review_logger: Arc::new(NoopReviewLogger),
+    };
+
     let confirmed_indices: Vec<usize> = (0..15).collect();
     let result = execute::execute(
-        Arc::clone(&sessions) as _,
-        Arc::new(NoopReviewLogger),
+        &deps,
         ExecuteImportCommand {
             user_id: uid,
             session_id: sid.value(),

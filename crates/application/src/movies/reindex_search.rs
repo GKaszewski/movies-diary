@@ -34,7 +34,7 @@ async fn reindex_movies(deps: &ReindexSearchDeps) -> Result<u64, DomainError> {
     let mut offset: u32 = 0;
     loop {
         let page = deps
-            .movie
+            .movie_query
             .list_movies(
                 &PageParams {
                     limit: BATCH_SIZE,

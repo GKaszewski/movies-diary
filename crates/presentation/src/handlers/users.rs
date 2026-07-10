@@ -269,54 +269,62 @@ pub async fn get_user_profile(
         Err(e) => return crate::errors::domain_error_response(e),
     };
 
-    let entries = profile.entries.map(|p| DiaryResponse {
-        items: p
-            .items
-            .iter()
-            .map(crate::mappers::movies::entry_to_dto)
-            .collect(),
-        total_count: p.total_count,
-        limit: p.limit,
-        offset: p.offset,
-    });
-
-    let history = profile.history.map(|entries| {
-        application::users::group_by_month(entries)
-            .into_iter()
-            .map(|m| MonthActivityDto {
-                year_month: m.year_month,
-                month_label: m.month_label,
-                count: m.count,
-                entries: m
-                    .entries
+    let view_data = if let Some(p) = profile.entries {
+        Some(api_types::ProfileViewData::Entries {
+            entries: DiaryResponse {
+                items: p
+                    .items
                     .iter()
                     .map(crate::mappers::movies::entry_to_dto)
                     .collect(),
-            })
-            .collect()
-    });
-
-    let trends = profile.trends.map(|t| UserTrendsDto {
-        monthly_ratings: t
-            .monthly_ratings
-            .into_iter()
-            .map(|r| MonthlyRatingDto {
-                year_month: r.year_month,
-                month_label: r.month_label,
-                avg_rating: r.avg_rating,
-                count: r.count,
-            })
-            .collect(),
-        top_directors: t
-            .top_directors
-            .into_iter()
-            .map(|d| DirectorStatDto {
-                director: d.director,
-                count: d.count,
-            })
-            .collect(),
-        max_director_count: t.max_director_count,
-    });
+                total_count: p.total_count,
+                limit: p.limit,
+                offset: p.offset,
+            },
+        })
+    } else if let Some(h) = profile.history {
+        Some(api_types::ProfileViewData::History {
+            history: application::users::group_by_month(h)
+                .into_iter()
+                .map(|m| MonthActivityDto {
+                    year_month: m.year_month,
+                    month_label: m.month_label,
+                    count: m.count,
+                    entries: m
+                        .entries
+                        .iter()
+                        .map(crate::mappers::movies::entry_to_dto)
+                        .collect(),
+                })
+                .collect(),
+        })
+    } else if let Some(t) = profile.trends {
+        Some(api_types::ProfileViewData::Trends {
+            trends: UserTrendsDto {
+                monthly_ratings: t
+                    .monthly_ratings
+                    .into_iter()
+                    .map(|r| MonthlyRatingDto {
+                        year_month: r.year_month,
+                        month_label: r.month_label,
+                        avg_rating: r.avg_rating,
+                        count: r.count,
+                    })
+                    .collect(),
+                top_directors: t
+                    .top_directors
+                    .into_iter()
+                    .map(|d| DirectorStatDto {
+                        director: d.director,
+                        count: d.count,
+                    })
+                    .collect(),
+                max_director_count: t.max_director_count,
+            },
+        })
+    } else {
+        None
+    };
 
     Json(UserProfileResponse {
         user_id,
@@ -339,13 +347,13 @@ pub async fn get_user_profile(
         },
         following_count: profile.following_count,
         followers_count: profile.followers_count,
-        entries,
-        history,
-        trends,
+        view_data,
         goals: {
             let goals_list = application::goals::list::execute(
-                state.app_ctx.repos.goal.clone(),
-                state.app_ctx.repos.stats.clone(),
+                &application::goals::deps::GoalQueryDeps {
+                    goal: state.app_ctx.repos.goal.clone(),
+                    stats: state.app_ctx.repos.stats.clone(),
+                },
                 application::goals::queries::ListGoalsQuery { user_id },
             )
             .await
@@ -394,38 +402,46 @@ async fn build_federated_profile_response(
         Err(e) => return crate::errors::domain_error_response(e),
     };
 
-    let entries = profile.entries.map(|p| DiaryResponse {
-        items: p
-            .items
-            .iter()
-            .map(crate::mappers::movies::entry_to_dto)
-            .collect(),
-        total_count: p.total_count,
-        limit: p.limit,
-        offset: p.offset,
-    });
-
-    let trends = profile.trends.map(|t| UserTrendsDto {
-        monthly_ratings: t
-            .monthly_ratings
-            .into_iter()
-            .map(|r| MonthlyRatingDto {
-                year_month: r.year_month,
-                month_label: r.month_label,
-                avg_rating: r.avg_rating,
-                count: r.count,
-            })
-            .collect(),
-        top_directors: t
-            .top_directors
-            .into_iter()
-            .map(|d| DirectorStatDto {
-                director: d.director,
-                count: d.count,
-            })
-            .collect(),
-        max_director_count: t.max_director_count,
-    });
+    let view_data = if let Some(p) = profile.entries {
+        Some(api_types::ProfileViewData::Entries {
+            entries: DiaryResponse {
+                items: p
+                    .items
+                    .iter()
+                    .map(crate::mappers::movies::entry_to_dto)
+                    .collect(),
+                total_count: p.total_count,
+                limit: p.limit,
+                offset: p.offset,
+            },
+        })
+    } else if let Some(t) = profile.trends {
+        Some(api_types::ProfileViewData::Trends {
+            trends: UserTrendsDto {
+                monthly_ratings: t
+                    .monthly_ratings
+                    .into_iter()
+                    .map(|r| MonthlyRatingDto {
+                        year_month: r.year_month,
+                        month_label: r.month_label,
+                        avg_rating: r.avg_rating,
+                        count: r.count,
+                    })
+                    .collect(),
+                top_directors: t
+                    .top_directors
+                    .into_iter()
+                    .map(|d| DirectorStatDto {
+                        director: d.director,
+                        count: d.count,
+                    })
+                    .collect(),
+                max_director_count: t.max_director_count,
+            },
+        })
+    } else {
+        None
+    };
 
     let username = fed
         .display_name
@@ -449,9 +465,7 @@ async fn build_federated_profile_response(
         },
         following_count: 0,
         followers_count: 0,
-        entries,
-        history: None,
-        trends,
+        view_data,
         goals: None,
         is_federated: true,
         handle: Some(fed.handle),
@@ -735,8 +749,10 @@ pub async fn get_user_profile_html(
                     search: params.search.clone(),
                     goals: {
                         let goals_list = application::goals::list::execute(
-                            state.app_ctx.repos.goal.clone(),
-                            state.app_ctx.repos.stats.clone(),
+                            &application::goals::deps::GoalQueryDeps {
+                                goal: state.app_ctx.repos.goal.clone(),
+                                stats: state.app_ctx.repos.stats.clone(),
+                            },
                             application::goals::queries::ListGoalsQuery {
                                 user_id: profile_user_uuid,
                             },

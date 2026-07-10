@@ -51,7 +51,7 @@ pub struct ActivityPubDeps {
     pub remote_watchlist_repo: std::sync::Arc<dyn domain::ports::RemoteWatchlistRepository>,
     pub remote_goal_repo: std::sync::Arc<dyn domain::ports::RemoteGoalRepository>,
     pub local_ap_content: std::sync::Arc<dyn domain::ports::LocalApContentQuery>,
-    pub movie_repo: std::sync::Arc<dyn domain::ports::MovieRepository>,
+    pub movie_repo: std::sync::Arc<dyn domain::ports::MovieQuery>,
     pub review_repo: std::sync::Arc<dyn domain::ports::ReviewRepository>,
     pub diary_repo: std::sync::Arc<dyn domain::ports::DiaryRepository>,
     pub goal_repo: std::sync::Arc<dyn domain::ports::GoalRepository>,

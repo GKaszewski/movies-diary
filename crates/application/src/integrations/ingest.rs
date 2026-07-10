@@ -30,7 +30,7 @@ pub async fn execute(
     if let Some(ref ext_id) = external_metadata_id {
         let one_hour_ago = chrono::Utc::now().naive_utc() - Duration::hours(1);
         if deps
-            .watch_event
+            .watch_event_query
             .find_duplicate(&user_id, ext_id, one_hour_ago)
             .await?
         {
@@ -49,7 +49,7 @@ pub async fn execute(
         None,
     );
 
-    deps.watch_event.save(&event).await?;
+    deps.watch_event_command.save(&event).await?;
 
     let _ = deps
         .event_publisher

@@ -4,6 +4,7 @@ use domain::events::DomainEvent;
 use domain::testing::{FakeStatsRepository, InMemoryGoalRepository, NoopEventPublisher};
 use uuid::Uuid;
 
+use crate::goals::deps::GoalCommandDeps;
 use crate::goals::{commands::CreateGoalCommand, create};
 use crate::test_helpers::TestContextBuilder;
 
@@ -12,11 +13,14 @@ async fn creates_goal_and_returns_progress() {
     let goals = InMemoryGoalRepository::new();
     let stats = FakeStatsRepository::new();
     let events = NoopEventPublisher::new();
+    let deps = GoalCommandDeps {
+        goal: Arc::clone(&goals) as _,
+        stats: Arc::clone(&stats) as _,
+        event_publisher: Arc::clone(&events) as _,
+    };
 
     let result = create::execute(
-        Arc::clone(&goals) as _,
-        Arc::clone(&stats) as _,
-        Arc::clone(&events) as _,
+        &deps,
         CreateGoalCommand {
             user_id: Uuid::nil(),
             year: 2025,
@@ -38,11 +42,14 @@ async fn creates_goal_with_review_count() {
     let stats = FakeStatsRepository::new();
     stats.set_review_count(Uuid::nil(), 2025, 5);
     let events = NoopEventPublisher::new();
+    let deps = GoalCommandDeps {
+        goal: Arc::clone(&goals) as _,
+        stats: Arc::clone(&stats) as _,
+        event_publisher: Arc::clone(&events) as _,
+    };
 
     let result = create::execute(
-        Arc::clone(&goals) as _,
-        Arc::clone(&stats) as _,
-        Arc::clone(&events) as _,
+        &deps,
         CreateGoalCommand {
             user_id: Uuid::nil(),
             year: 2025,
@@ -60,11 +67,14 @@ async fn creates_goal_with_review_count() {
 async fn emits_goal_created_event() {
     let b = TestContextBuilder::new();
     let events = NoopEventPublisher::new();
+    let deps = GoalCommandDeps {
+        goal: b.goal_repo.clone(),
+        stats: b.stats_repo.clone(),
+        event_publisher: Arc::clone(&events) as _,
+    };
 
     create::execute(
-        b.goal_repo.clone(),
-        b.stats_repo.clone(),
-        Arc::clone(&events) as _,
+        &deps,
         CreateGoalCommand {
             user_id: Uuid::nil(),
             year: 2025,
@@ -85,25 +95,21 @@ async fn emits_goal_created_event() {
 #[tokio::test]
 async fn rejects_duplicate_year() {
     let b = TestContextBuilder::new();
+    let deps = GoalCommandDeps {
+        goal: b.goal_repo.clone(),
+        stats: b.stats_repo.clone(),
+        event_publisher: b.event_publisher.clone(),
+    };
     let cmd = CreateGoalCommand {
         user_id: Uuid::nil(),
         year: 2025,
         target_count: 10,
     };
 
-    create::execute(
-        b.goal_repo.clone(),
-        b.stats_repo.clone(),
-        b.event_publisher.clone(),
-        cmd,
-    )
-    .await
-    .unwrap();
+    create::execute(&deps, cmd).await.unwrap();
 
     let result = create::execute(
-        b.goal_repo.clone(),
-        b.stats_repo.clone(),
-        b.event_publisher.clone(),
+        &deps,
         CreateGoalCommand {
             user_id: Uuid::nil(),
             year: 2025,
@@ -118,10 +124,13 @@ async fn rejects_duplicate_year() {
 #[tokio::test]
 async fn rejects_year_before_2020() {
     let b = TestContextBuilder::new();
+    let deps = GoalCommandDeps {
+        goal: b.goal_repo.clone(),
+        stats: b.stats_repo.clone(),
+        event_publisher: b.event_publisher.clone(),
+    };
     let result = create::execute(
-        b.goal_repo.clone(),
-        b.stats_repo.clone(),
-        b.event_publisher.clone(),
+        &deps,
         CreateGoalCommand {
             user_id: Uuid::nil(),
             year: 2019,
@@ -136,10 +145,13 @@ async fn rejects_year_before_2020() {
 #[tokio::test]
 async fn rejects_zero_target() {
     let b = TestContextBuilder::new();
+    let deps = GoalCommandDeps {
+        goal: b.goal_repo.clone(),
+        stats: b.stats_repo.clone(),
+        event_publisher: b.event_publisher.clone(),
+    };
     let result = create::execute(
-        b.goal_repo.clone(),
-        b.stats_repo.clone(),
-        b.event_publisher.clone(),
+        &deps,
         CreateGoalCommand {
             user_id: Uuid::nil(),
             year: 2025,

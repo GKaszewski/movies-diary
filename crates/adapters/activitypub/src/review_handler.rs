@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use domain::{
     events::DomainEvent,
     models::ReviewSource,
-    ports::{DiaryRepository, EventPublisher, LocalApContentQuery, MovieRepository},
+    ports::{DiaryRepository, EventPublisher, LocalApContentQuery, MovieQuery},
     value_objects::{Comment, ExternalMetadataId, MovieId, Rating, ReviewId, UserId},
 };
 use k_ap::{ApContentReader, ApObjectHandler};
@@ -16,7 +16,7 @@ use crate::urls::{actor_url, review_url};
 
 pub struct ReviewObjectHandler {
     pub content_query: Arc<dyn LocalApContentQuery>,
-    pub movie_repo: Arc<dyn MovieRepository>,
+    pub movie_repo: Arc<dyn MovieQuery>,
     pub diary_repo: Arc<dyn DiaryRepository>,
     pub review_store: Arc<dyn RemoteReviewRepository>,
     pub event_publisher: Arc<dyn EventPublisher>,

@@ -1,25 +1,21 @@
-use std::sync::Arc;
-
 use domain::{
     errors::DomainError,
     models::GoalWithProgress,
-    ports::{GoalRepository, StatsRepository},
     value_objects::UserId,
 };
 
-use super::queries::ListGoalsQuery;
+use super::{deps::GoalQueryDeps, queries::ListGoalsQuery};
 
 pub async fn execute(
-    goal: Arc<dyn GoalRepository>,
-    stats: Arc<dyn StatsRepository>,
+    deps: &GoalQueryDeps,
     query: ListGoalsQuery,
 ) -> Result<Vec<GoalWithProgress>, DomainError> {
     let user_id = UserId::from_uuid(query.user_id);
-    let goals = goal.list_for_user(&user_id).await?;
+    let goals = deps.goal.list_for_user(&user_id).await?;
 
     let mut result = Vec::with_capacity(goals.len());
     for g in goals {
-        let current_count = stats.count_reviews_in_year(&user_id, g.year()).await?;
+        let current_count = deps.stats.count_reviews_in_year(&user_id, g.year()).await?;
         result.push(GoalWithProgress {
             goal: g,
             current_count,

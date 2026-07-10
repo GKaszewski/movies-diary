@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use domain::models::{WatchEvent, WatchEventSource};
-use domain::ports::{MovieRepository, WatchEventRepository};
+use domain::ports::{MovieCommand, WatchEventCommand};
 use domain::testing::{InMemoryWatchEventRepository, NoopEventPublisher};
 use domain::value_objects::UserId;
 use uuid::Uuid;
@@ -16,7 +16,7 @@ fn noop_logger() -> Arc<dyn crate::ports::ReviewLogger> {
 
 #[tokio::test]
 async fn confirms_watch_event_via_review_logger() {
-    let watch_events: Arc<dyn WatchEventRepository> = InMemoryWatchEventRepository::new();
+    let watch_events = InMemoryWatchEventRepository::new();
     let uid = Uuid::new_v4();
 
     let event = WatchEvent::new(
@@ -32,7 +32,8 @@ async fn confirms_watch_event_via_review_logger() {
     watch_events.save(&event).await.unwrap();
 
     let result = confirm::execute(
-        Arc::clone(&watch_events),
+        Arc::clone(&watch_events) as _,
+        Arc::clone(&watch_events) as _,
         noop_logger(),
         ConfirmWatchEventsCommand {
             user_id: uid,
@@ -51,10 +52,11 @@ async fn confirms_watch_event_via_review_logger() {
 
 #[tokio::test]
 async fn empty_confirmations_returns_zero() {
-    let watch_events: Arc<dyn WatchEventRepository> = InMemoryWatchEventRepository::new();
+    let watch_events = InMemoryWatchEventRepository::new();
 
     let result = confirm::execute(
-        Arc::clone(&watch_events),
+        Arc::clone(&watch_events) as _,
+        Arc::clone(&watch_events) as _,
         noop_logger(),
         ConfirmWatchEventsCommand {
             user_id: Uuid::new_v4(),
@@ -69,7 +71,7 @@ async fn empty_confirmations_returns_zero() {
 
 #[tokio::test]
 async fn confirms_event_with_external_metadata_id_and_no_movie_id() {
-    let watch_events: Arc<dyn WatchEventRepository> = InMemoryWatchEventRepository::new();
+    let watch_events = InMemoryWatchEventRepository::new();
     let uid = Uuid::new_v4();
 
     let event = WatchEvent::new(
@@ -85,7 +87,8 @@ async fn confirms_event_with_external_metadata_id_and_no_movie_id() {
     watch_events.save(&event).await.unwrap();
 
     let result = confirm::execute(
-        Arc::clone(&watch_events),
+        Arc::clone(&watch_events) as _,
+        Arc::clone(&watch_events) as _,
         noop_logger(),
         ConfirmWatchEventsCommand {
             user_id: uid,
@@ -104,7 +107,7 @@ async fn confirms_event_with_external_metadata_id_and_no_movie_id() {
 
 #[tokio::test]
 async fn rejects_other_users_event() {
-    let watch_events: Arc<dyn WatchEventRepository> = InMemoryWatchEventRepository::new();
+    let watch_events = InMemoryWatchEventRepository::new();
     let owner = Uuid::new_v4();
     let intruder = Uuid::new_v4();
 
@@ -121,7 +124,8 @@ async fn rejects_other_users_event() {
     watch_events.save(&event).await.unwrap();
 
     let result = confirm::execute(
-        Arc::clone(&watch_events),
+        Arc::clone(&watch_events) as _,
+        Arc::clone(&watch_events) as _,
         noop_logger(),
         ConfirmWatchEventsCommand {
             user_id: intruder,
@@ -139,10 +143,11 @@ async fn rejects_other_users_event() {
 
 #[tokio::test]
 async fn fails_when_event_not_found() {
-    let watch_events: Arc<dyn WatchEventRepository> = InMemoryWatchEventRepository::new();
+    let watch_events = InMemoryWatchEventRepository::new();
 
     let result = confirm::execute(
-        Arc::clone(&watch_events),
+        Arc::clone(&watch_events) as _,
+        Arc::clone(&watch_events) as _,
         noop_logger(),
         ConfirmWatchEventsCommand {
             user_id: Uuid::new_v4(),
@@ -160,7 +165,7 @@ async fn fails_when_event_not_found() {
 
 #[tokio::test]
 async fn confirms_event_with_movie_id() {
-    let watch_events: Arc<dyn WatchEventRepository> = InMemoryWatchEventRepository::new();
+    let watch_events = InMemoryWatchEventRepository::new();
     let events = NoopEventPublisher::new();
     let uid = Uuid::new_v4();
     let movie_uuid = Uuid::new_v4();
@@ -195,6 +200,7 @@ async fn confirms_event_with_movie_id() {
     let review_logger: Arc<dyn crate::ports::ReviewLogger> =
         Arc::new(crate::diary::review_logger::DefaultReviewLogger::new(
             Arc::clone(&movies) as _,
+            Arc::clone(&movies) as _,
             Arc::clone(&reviews) as _,
             Arc::clone(&watchlist) as _,
             Arc::new(domain::testing::FakeMetadataClient) as _,
@@ -202,7 +208,8 @@ async fn confirms_event_with_movie_id() {
         ));
 
     let result = confirm::execute(
-        Arc::clone(&watch_events),
+        Arc::clone(&watch_events) as _,
+        Arc::clone(&watch_events) as _,
         review_logger,
         ConfirmWatchEventsCommand {
             user_id: uid,
@@ -221,7 +228,7 @@ async fn confirms_event_with_movie_id() {
 
 #[tokio::test]
 async fn confirms_event_without_movie_id_and_without_external_metadata_id() {
-    let watch_events: Arc<dyn WatchEventRepository> = InMemoryWatchEventRepository::new();
+    let watch_events = InMemoryWatchEventRepository::new();
     let uid = Uuid::new_v4();
 
     let event = WatchEvent::new(
@@ -237,7 +244,8 @@ async fn confirms_event_without_movie_id_and_without_external_metadata_id() {
     watch_events.save(&event).await.unwrap();
 
     let result = confirm::execute(
-        Arc::clone(&watch_events),
+        Arc::clone(&watch_events) as _,
+        Arc::clone(&watch_events) as _,
         noop_logger(),
         ConfirmWatchEventsCommand {
             user_id: uid,
@@ -256,7 +264,7 @@ async fn confirms_event_without_movie_id_and_without_external_metadata_id() {
 
 #[tokio::test]
 async fn confirms_multiple_events() {
-    let watch_events: Arc<dyn WatchEventRepository> = InMemoryWatchEventRepository::new();
+    let watch_events = InMemoryWatchEventRepository::new();
     let uid = Uuid::new_v4();
 
     let event1 = WatchEvent::new(
@@ -285,7 +293,8 @@ async fn confirms_multiple_events() {
     watch_events.save(&event2).await.unwrap();
 
     let result = confirm::execute(
-        Arc::clone(&watch_events),
+        Arc::clone(&watch_events) as _,
+        Arc::clone(&watch_events) as _,
         noop_logger(),
         ConfirmWatchEventsCommand {
             user_id: uid,
@@ -311,7 +320,7 @@ async fn confirms_multiple_events() {
 
 #[tokio::test]
 async fn confirms_event_without_year() {
-    let watch_events: Arc<dyn WatchEventRepository> = InMemoryWatchEventRepository::new();
+    let watch_events = InMemoryWatchEventRepository::new();
     let uid = Uuid::new_v4();
 
     let event = WatchEvent::new(
@@ -327,7 +336,8 @@ async fn confirms_event_without_year() {
     watch_events.save(&event).await.unwrap();
 
     let result = confirm::execute(
-        Arc::clone(&watch_events),
+        Arc::clone(&watch_events) as _,
+        Arc::clone(&watch_events) as _,
         noop_logger(),
         ConfirmWatchEventsCommand {
             user_id: uid,

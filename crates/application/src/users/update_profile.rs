@@ -1,6 +1,50 @@
-use domain::{errors::DomainError, events::DomainEvent, value_objects::UserId};
+use domain::{
+    errors::DomainError,
+    events::DomainEvent,
+    ports::{EventPublisher, ObjectStorage},
+    value_objects::UserId,
+};
 
 use crate::users::{commands::UpdateProfileCommand, deps::UpdateProfileDeps};
+
+async fn upload_image(
+    storage: &dyn ObjectStorage,
+    event_publisher: &dyn EventPublisher,
+    user_id: &UserId,
+    kind: &str,
+    old_path: Option<&str>,
+    new_bytes: Option<Vec<u8>>,
+    content_type: Option<&str>,
+) -> Result<Option<String>, DomainError> {
+    let Some(bytes) = new_bytes else {
+        return Ok(old_path.map(|s| s.to_string()));
+    };
+
+    let ct = content_type.unwrap_or("");
+    if !["image/jpeg", "image/png", "image/webp"].contains(&ct) {
+        return Err(DomainError::ValidationError(
+            format!("{kind} must be jpeg, png, or webp"),
+        ));
+    }
+
+    if let Some(old) = old_path {
+        let _ = storage.delete(old).await;
+    }
+
+    let key = format!("{kind}/{}", user_id.value());
+    let stored = storage.store(&key, &bytes).await?;
+
+    if let Err(e) = event_publisher
+        .publish(&DomainEvent::ImageStored {
+            key: stored.clone(),
+        })
+        .await
+    {
+        tracing::warn!("failed to emit ImageStored for {kind} {stored}: {e}");
+    }
+
+    Ok(Some(stored))
+}
 
 pub async fn execute(
     deps: &UpdateProfileDeps,
@@ -14,59 +58,30 @@ pub async fn execute(
         .await?
         .ok_or_else(|| DomainError::NotFound("User not found".into()))?;
 
-    // Handle avatar
-    let new_avatar_path = if let Some(bytes) = cmd.avatar_bytes {
-        let content_type = cmd.avatar_content_type.as_deref().unwrap_or("");
-        if !["image/jpeg", "image/png", "image/webp"].contains(&content_type) {
-            return Err(DomainError::ValidationError(
-                "Avatar must be jpeg, png, or webp".into(),
-            ));
-        }
-        if let Some(old_path) = user.avatar_path() {
-            let _ = deps.object_storage.delete(old_path).await;
-        }
-        let key = format!("avatars/{}", user_id.value());
-        let stored = deps.object_storage.store(&key, &bytes).await?;
-        if let Err(e) = deps
-            .event_publisher
-            .publish(&DomainEvent::ImageStored {
-                key: stored.clone(),
-            })
-            .await
-        {
-            tracing::warn!("failed to emit ImageStored for avatar {stored}: {e}");
-        }
-        Some(stored)
-    } else {
-        user.avatar_path().map(|s| s.to_string())
-    };
+    let storage = deps.object_storage.as_ref();
+    let events = deps.event_publisher.as_ref();
 
-    // Handle banner
-    let new_banner_path = if let Some(bytes) = cmd.banner_bytes {
-        let content_type = cmd.banner_content_type.as_deref().unwrap_or("");
-        if !["image/jpeg", "image/png", "image/webp"].contains(&content_type) {
-            return Err(DomainError::ValidationError(
-                "Banner must be jpeg, png, or webp".into(),
-            ));
-        }
-        if let Some(old_path) = user.banner_path() {
-            let _ = deps.object_storage.delete(old_path).await;
-        }
-        let key = format!("banners/{}", user_id.value());
-        let stored = deps.object_storage.store(&key, &bytes).await?;
-        if let Err(e) = deps
-            .event_publisher
-            .publish(&DomainEvent::ImageStored {
-                key: stored.clone(),
-            })
-            .await
-        {
-            tracing::warn!("failed to emit ImageStored for banner {stored}: {e}");
-        }
-        Some(stored)
-    } else {
-        user.banner_path().map(|s| s.to_string())
-    };
+    let new_avatar_path = upload_image(
+        storage,
+        events,
+        &user_id,
+        "avatars",
+        user.avatar_path(),
+        cmd.avatar_bytes,
+        cmd.avatar_content_type.as_deref(),
+    )
+    .await?;
+
+    let new_banner_path = upload_image(
+        storage,
+        events,
+        &user_id,
+        "banners",
+        user.banner_path(),
+        cmd.banner_bytes,
+        cmd.banner_content_type.as_deref(),
+    )
+    .await?;
 
     let moved_to = cmd.also_known_as.as_deref().and_then(|new_url| {
         if user.also_known_as().map(|s| s != new_url).unwrap_or(true) {

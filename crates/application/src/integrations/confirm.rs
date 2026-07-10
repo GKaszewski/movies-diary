@@ -3,7 +3,7 @@ use std::sync::Arc;
 use domain::{
     errors::DomainError,
     models::WatchEventStatus,
-    ports::WatchEventRepository,
+    ports::{WatchEventCommand, WatchEventQuery},
     value_objects::{UserId, WatchEventId},
 };
 
@@ -14,7 +14,8 @@ use crate::{
 };
 
 pub async fn execute(
-    watch_event: Arc<dyn WatchEventRepository>,
+    watch_event_command: Arc<dyn WatchEventCommand>,
+    watch_event_query: Arc<dyn WatchEventQuery>,
     review_logger: Arc<dyn ReviewLogger>,
     cmd: ConfirmWatchEventsCommand,
 ) -> Result<u32, DomainError> {
@@ -23,7 +24,7 @@ pub async fn execute(
 
     for c in cmd.confirmations {
         let event_id = WatchEventId::from_uuid(c.watch_event_id);
-        let event = watch_event
+        let event = watch_event_query
             .get_by_id(&event_id)
             .await?
             .ok_or_else(|| DomainError::NotFound(format!("WatchEvent {}", c.watch_event_id)))?;
@@ -61,7 +62,7 @@ pub async fn execute(
 
         review_logger.log_review(review_cmd).await?;
 
-        watch_event
+        watch_event_command
             .update_status(&event_id, WatchEventStatus::Confirmed)
             .await?;
 

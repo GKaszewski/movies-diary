@@ -4,13 +4,13 @@ use domain::{
     errors::DomainError,
     models::collections::{PageParams, Paginated},
     models::{MovieFilter, MovieSummary},
-    ports::MovieRepository,
+    ports::MovieQuery,
 };
 
 use crate::movies::queries::GetMoviesQuery;
 
 pub async fn execute(
-    movie: Arc<dyn MovieRepository>,
+    movie: Arc<dyn MovieQuery>,
     query: GetMoviesQuery,
 ) -> Result<Paginated<MovieSummary>, DomainError> {
     let page = PageParams::new(query.limit, query.offset)?;

@@ -6,6 +6,7 @@ use domain::testing::{InMemoryImportProfileRepository, InMemoryImportSessionRepo
 use domain::value_objects::UserId;
 use uuid::Uuid;
 
+use crate::import::deps::SaveProfileDeps;
 use crate::import::{commands::SaveImportProfileCommand, save_profile};
 
 #[tokio::test]
@@ -13,9 +14,13 @@ async fn fails_when_session_not_found() {
     let sessions = InMemoryImportSessionRepository::new();
     let profiles = InMemoryImportProfileRepository::new();
 
+    let deps = SaveProfileDeps {
+        import_session: Arc::clone(&sessions) as _,
+        import_profile: Arc::clone(&profiles) as _,
+    };
+
     let result = save_profile::execute(
-        Arc::clone(&sessions) as _,
-        Arc::clone(&profiles) as _,
+        &deps,
         SaveImportProfileCommand {
             user_id: Uuid::new_v4(),
             session_id: Uuid::new_v4(),
@@ -38,9 +43,13 @@ async fn saves_profile_from_session() {
     session.field_mappings = Some(vec![]);
     sessions.create(&session).await.unwrap();
 
+    let deps = SaveProfileDeps {
+        import_session: Arc::clone(&sessions) as _,
+        import_profile: Arc::clone(&profiles) as _,
+    };
+
     let result = save_profile::execute(
-        Arc::clone(&sessions) as _,
-        Arc::clone(&profiles) as _,
+        &deps,
         SaveImportProfileCommand {
             user_id,
             session_id: sid.value(),

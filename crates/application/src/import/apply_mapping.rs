@@ -3,22 +3,21 @@ use std::sync::Arc;
 use domain::{
     errors::DomainError,
     models::{AnnotatedRow, import::RowResult},
-    ports::{DocumentParser, ImportSessionRepository, MovieRepository},
+    ports::MovieQuery,
     value_objects::{ExternalMetadataId, ImportSessionId, MovieTitle, ReleaseYear, UserId},
 };
 
-use crate::import::commands::ApplyImportMappingCommand;
+use super::{commands::ApplyImportMappingCommand, deps::ApplyMappingDeps};
 
 pub async fn execute(
-    import_session: Arc<dyn ImportSessionRepository>,
-    document_parser: Arc<dyn DocumentParser>,
-    movie: Arc<dyn MovieRepository>,
+    deps: &ApplyMappingDeps,
     cmd: ApplyImportMappingCommand,
 ) -> Result<Vec<AnnotatedRow>, DomainError> {
     let user_id = UserId::from_uuid(cmd.user_id);
     let session_id = ImportSessionId::from_uuid(cmd.session_id);
     let mappings = cmd.mappings;
-    let mut session = import_session
+    let mut session = deps
+        .import_session
         .get(&session_id, &user_id)
         .await?
         .ok_or_else(|| DomainError::NotFound("import session".into()))?;
@@ -28,20 +27,20 @@ pub async fn execute(
         .clone()
         .ok_or_else(|| DomainError::ValidationError("session has no parsed file".into()))?;
 
-    let mut annotated = document_parser.apply_mapping(&parsed, &mappings);
+    let mut annotated = deps.document_parser.apply_mapping(&parsed, &mappings);
 
-    mark_duplicates(movie, &mut annotated).await?;
+    mark_duplicates(deps.movie_query.clone(), &mut annotated).await?;
 
     session.field_mappings = Some(mappings);
     session.row_results = Some(annotated.clone());
 
-    import_session.update(&session).await?;
+    deps.import_session.update(&session).await?;
 
     Ok(annotated)
 }
 
 async fn mark_duplicates(
-    movie: Arc<dyn MovieRepository>,
+    movie: Arc<dyn MovieQuery>,
     rows: &mut [AnnotatedRow],
 ) -> Result<(), DomainError> {
     let mut ext_ids = Vec::new();

@@ -1,23 +1,21 @@
-use std::sync::Arc;
-
-use crate::import::commands::SaveImportProfileCommand;
 use chrono::Utc;
 use domain::{
     errors::DomainError,
     models::ImportProfile,
-    ports::{ImportProfileRepository, ImportSessionRepository},
     value_objects::{ImportProfileId, ImportSessionId, UserId},
 };
 
+use super::{commands::SaveImportProfileCommand, deps::SaveProfileDeps};
+
 pub async fn execute(
-    import_session: Arc<dyn ImportSessionRepository>,
-    import_profile: Arc<dyn ImportProfileRepository>,
+    deps: &SaveProfileDeps,
     cmd: SaveImportProfileCommand,
 ) -> Result<ImportProfileId, DomainError> {
     let user_id = UserId::from_uuid(cmd.user_id);
     let session_id = ImportSessionId::from_uuid(cmd.session_id);
 
-    let session = import_session
+    let session = deps
+        .import_session
         .get(&session_id, &user_id)
         .await?
         .ok_or_else(|| DomainError::NotFound("import session".into()))?;
@@ -32,7 +30,7 @@ pub async fn execute(
         Utc::now().naive_utc(),
     );
     let id = profile.id.clone();
-    import_profile.save(&profile).await?;
+    deps.import_profile.save(&profile).await?;
     Ok(id)
 }
 

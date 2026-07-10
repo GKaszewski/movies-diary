@@ -72,7 +72,7 @@ pub enum EventPayload {
     },
     FederationDeliveryRequested {
         inbox_url: String,
-        activity_json: String,
+        activity_json: serde_json::Value,
         signing_actor_id: String,
     },
     WatchEventIngested {

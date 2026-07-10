@@ -4,7 +4,7 @@ use chrono::Utc;
 
 use domain::{
     models::{Movie, Review},
-    ports::{MovieRepository, ReviewRepository},
+    ports::{MovieCommand, MovieQuery, ReviewRepository},
     testing::{
         FakeDiaryRepository, InMemoryMovieRepository, InMemoryReviewRepository, NoopEventPublisher,
     },
@@ -55,7 +55,7 @@ async fn test_delete_review_removes_it() {
     let deps = DeleteReviewDeps {
         review: Arc::clone(&reviews) as _,
         diary: diary.clone() as _,
-        movie: Arc::clone(&movies) as _,
+        movie_command: Arc::clone(&movies) as _,
         event_publisher: Arc::clone(&events) as _,
     };
 
@@ -93,7 +93,7 @@ async fn test_delete_review_wrong_user_is_unauthorized() {
     let deps = DeleteReviewDeps {
         review: Arc::clone(&reviews) as _,
         diary: diary as _,
-        movie: movies as _,
+        movie_command: movies as _,
         event_publisher: Arc::clone(&events) as _,
     };
 

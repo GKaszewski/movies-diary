@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use domain::{
     errors::DomainError,
     models::{PersistedWatchEvent, WatchEvent, WatchEventSource, WatchEventStatus, WebhookToken},
-    ports::{WatchEventRepository, WebhookTokenRepository},
+    ports::{WatchEventCommand, WatchEventQuery, WebhookTokenRepository},
     value_objects::{MovieId, UserId, WatchEventId, WebhookTokenId},
 };
 use sqlx::{PgPool, Row};
@@ -27,7 +27,7 @@ impl PostgresWatchEventRepository {
 }
 
 #[async_trait]
-impl WatchEventRepository for PostgresWatchEventRepository {
+impl WatchEventCommand for PostgresWatchEventRepository {
     async fn save(&self, event: &WatchEvent) -> Result<(), DomainError> {
         let id = event.id().value().to_string();
         let user_id = event.user_id().value().to_string();
@@ -75,6 +75,41 @@ impl WatchEventRepository for PostgresWatchEventRepository {
         Ok(())
     }
 
+    async fn update_status_batch(
+        &self,
+        ids: &[WatchEventId],
+        status: WatchEventStatus,
+    ) -> Result<u64, DomainError> {
+        if ids.is_empty() {
+            return Ok(0);
+        }
+        let id_strs: Vec<String> = ids.iter().map(|id| id.value().to_string()).collect();
+        let status_str = status.to_string();
+        let result = sqlx::query("UPDATE watch_events SET status = $1 WHERE id = ANY($2)")
+            .bind(&status_str)
+            .bind(&id_strs)
+            .execute(&self.pool)
+            .await
+            .map_err(map_err)?;
+        Ok(result.rows_affected())
+    }
+
+    async fn delete_non_pending_older_than(
+        &self,
+        before: chrono::NaiveDateTime,
+    ) -> Result<u64, DomainError> {
+        let result =
+            sqlx::query("DELETE FROM watch_events WHERE status != 'pending' AND created_at < $1")
+                .bind(before)
+                .execute(&self.pool)
+                .await
+                .map_err(map_err)?;
+        Ok(result.rows_affected())
+    }
+}
+
+#[async_trait]
+impl WatchEventQuery for PostgresWatchEventRepository {
     async fn list_pending(&self, user_id: &UserId) -> Result<Vec<WatchEvent>, DomainError> {
         let uid = user_id.value().to_string();
 
@@ -135,25 +170,6 @@ impl WatchEventRepository for PostgresWatchEventRepository {
         rows.iter().map(row_to_watch_event).collect()
     }
 
-    async fn update_status_batch(
-        &self,
-        ids: &[WatchEventId],
-        status: WatchEventStatus,
-    ) -> Result<u64, DomainError> {
-        if ids.is_empty() {
-            return Ok(0);
-        }
-        let id_strs: Vec<String> = ids.iter().map(|id| id.value().to_string()).collect();
-        let status_str = status.to_string();
-        let result = sqlx::query("UPDATE watch_events SET status = $1 WHERE id = ANY($2)")
-            .bind(&status_str)
-            .bind(&id_strs)
-            .execute(&self.pool)
-            .await
-            .map_err(map_err)?;
-        Ok(result.rows_affected())
-    }
-
     async fn find_duplicate(
         &self,
         user_id: &UserId,
@@ -174,19 +190,6 @@ impl WatchEventRepository for PostgresWatchEventRepository {
         .map_err(map_err)?;
 
         Ok(count > 0)
-    }
-
-    async fn delete_non_pending_older_than(
-        &self,
-        before: chrono::NaiveDateTime,
-    ) -> Result<u64, DomainError> {
-        let result =
-            sqlx::query("DELETE FROM watch_events WHERE status != 'pending' AND created_at < $1")
-                .bind(before)
-                .execute(&self.pool)
-                .await
-                .map_err(map_err)?;
-        Ok(result.rows_affected())
     }
 }
 

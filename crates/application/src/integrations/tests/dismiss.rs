@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use domain::models::{WatchEvent, WatchEventSource};
-use domain::ports::WatchEventRepository;
+use domain::ports::WatchEventCommand;
 use domain::testing::InMemoryWatchEventRepository;
 use domain::value_objects::UserId;
 use uuid::Uuid;
@@ -10,10 +10,11 @@ use crate::integrations::{commands::DismissWatchEventsCommand, dismiss};
 
 #[tokio::test]
 async fn dismisses_empty_list_returns_zero() {
-    let events: Arc<dyn WatchEventRepository> = InMemoryWatchEventRepository::new();
+    let events = InMemoryWatchEventRepository::new();
 
     let result = dismiss::execute(
-        Arc::clone(&events),
+        Arc::clone(&events) as _,
+        Arc::clone(&events) as _,
         DismissWatchEventsCommand {
             user_id: Uuid::new_v4(),
             event_ids: vec![],
@@ -27,10 +28,11 @@ async fn dismisses_empty_list_returns_zero() {
 
 #[tokio::test]
 async fn fails_when_event_not_found() {
-    let events: Arc<dyn WatchEventRepository> = InMemoryWatchEventRepository::new();
+    let events = InMemoryWatchEventRepository::new();
 
     let result = dismiss::execute(
-        Arc::clone(&events),
+        Arc::clone(&events) as _,
+        Arc::clone(&events) as _,
         DismissWatchEventsCommand {
             user_id: Uuid::new_v4(),
             event_ids: vec![Uuid::new_v4()],
@@ -43,7 +45,7 @@ async fn fails_when_event_not_found() {
 
 #[tokio::test]
 async fn dismisses_existing_events() {
-    let watch_events: Arc<dyn WatchEventRepository> = InMemoryWatchEventRepository::new();
+    let watch_events = InMemoryWatchEventRepository::new();
     let uid = Uuid::new_v4();
     let user_id = UserId::from_uuid(uid);
 
@@ -71,7 +73,8 @@ async fn dismisses_existing_events() {
     watch_events.save(&e2).await.unwrap();
 
     let result = dismiss::execute(
-        Arc::clone(&watch_events),
+        Arc::clone(&watch_events) as _,
+        Arc::clone(&watch_events) as _,
         DismissWatchEventsCommand {
             user_id: uid,
             event_ids: vec![id1, id2],

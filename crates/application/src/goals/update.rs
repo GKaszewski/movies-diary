@@ -1,34 +1,30 @@
-use std::sync::Arc;
-
 use domain::{
     errors::DomainError,
     events::DomainEvent,
     models::GoalWithProgress,
-    ports::{EventPublisher, GoalRepository, StatsRepository},
     value_objects::UserId,
 };
 
-use super::commands::UpdateGoalCommand;
+use super::{commands::UpdateGoalCommand, deps::GoalCommandDeps};
 
 pub async fn execute(
-    goal: Arc<dyn GoalRepository>,
-    stats: Arc<dyn StatsRepository>,
-    event_publisher: Arc<dyn EventPublisher>,
+    deps: &GoalCommandDeps,
     cmd: UpdateGoalCommand,
 ) -> Result<GoalWithProgress, DomainError> {
     let user_id = UserId::from_uuid(cmd.user_id);
 
-    let mut g = goal
+    let mut g = deps
+        .goal
         .find_by_user_and_year(&user_id, cmd.year)
         .await?
         .ok_or_else(|| DomainError::NotFound(format!("Goal for year {}", cmd.year)))?;
 
     g.update_target(cmd.target_count)?;
-    goal.update(&g).await?;
+    deps.goal.update(&g).await?;
 
-    let current_count = stats.count_reviews_in_year(&user_id, cmd.year).await?;
+    let current_count = deps.stats.count_reviews_in_year(&user_id, cmd.year).await?;
 
-    event_publisher
+    deps.event_publisher
         .publish(&DomainEvent::GoalUpdated {
             goal_id: g.id().clone(),
             user_id,

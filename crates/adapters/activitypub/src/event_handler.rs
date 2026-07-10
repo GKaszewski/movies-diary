@@ -5,7 +5,7 @@ use domain::{
     errors::DomainError,
     events::DomainEvent,
     ports::{
-        GoalRepository, LocalApContentQuery, MovieRepository, ReviewRepository, StatsRepository,
+        GoalRepository, LocalApContentQuery, MovieQuery, ReviewRepository, StatsRepository,
         UserFederationSettingsQuery,
     },
     value_objects::{MovieId, ReviewId, UserId},
@@ -21,7 +21,7 @@ pub struct ActivityPubEventHandler {
     ap_service: Arc<ActivityPubService>,
     content_query: Arc<dyn LocalApContentQuery>,
     review_repo: Arc<dyn ReviewRepository>,
-    movie_repo: Arc<dyn MovieRepository>,
+    movie_repo: Arc<dyn MovieQuery>,
     goal_repo: Arc<dyn GoalRepository>,
     stats_repo: Arc<dyn StatsRepository>,
     federation_settings: Arc<dyn UserFederationSettingsQuery>,
@@ -34,7 +34,7 @@ impl ActivityPubEventHandler {
         ap_service: Arc<ActivityPubService>,
         content_query: Arc<dyn LocalApContentQuery>,
         review_repo: Arc<dyn ReviewRepository>,
-        movie_repo: Arc<dyn MovieRepository>,
+        movie_repo: Arc<dyn MovieQuery>,
         goal_repo: Arc<dyn GoalRepository>,
         stats_repo: Arc<dyn StatsRepository>,
         federation_settings: Arc<dyn UserFederationSettingsQuery>,
@@ -108,12 +108,8 @@ impl EventHandler for ActivityPubEventHandler {
                 let inbox: url::Url = inbox_url
                     .parse()
                     .map_err(|e| DomainError::InfrastructureError(format!("bad inbox URL: {e}")))?;
-                let activity: serde_json::Value =
-                    serde_json::from_str(activity_json).map_err(|e| {
-                        DomainError::InfrastructureError(format!("bad activity JSON: {e}"))
-                    })?;
                 self.ap_service
-                    .deliver_to_inbox(inbox, activity, *signing_actor_id)
+                    .deliver_to_inbox(inbox, activity_json.clone(), *signing_actor_id)
                     .await
                     .map_err(|e| DomainError::InfrastructureError(e.to_string()))
             }

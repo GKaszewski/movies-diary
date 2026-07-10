@@ -3,11 +3,12 @@ use std::sync::Arc;
 use domain::ports::{
     AuthService, DiaryExporter, DiaryRepository, DocumentParser, EventPublisher,
     FederatedProfileQuery, GoalRepository, ImportProfileRepository, ImportSessionRepository,
-    MetadataClient, MovieProfileRepository, MovieRepository, ObjectStorage, PasswordHasher,
+    MetadataClient, MovieCommand, MovieProfileRepository, MovieQuery, ObjectStorage, PasswordHasher,
     PersonCommand, PersonEnrichmentClient, PersonQuery, PosterFetcherClient,
     RefreshSessionRepository, RemoteGoalRepository, RemoteWatchlistRepository, ReviewRepository,
     SearchCommand, SearchPort, SocialQueryPort, StatsRepository, UserProfileFieldsRepository,
-    UserRepository, UserSettingsRepository, WatchEventRepository, WatchlistRepository,
+    UserRepository, UserSettingsRepository, WatchEventCommand, WatchEventQuery,
+    WatchlistRepository,
     WebhookTokenRepository, WrapUpRepository, WrapUpStatsQuery,
 };
 
@@ -16,7 +17,8 @@ use application::ports::ReviewLogger;
 
 #[derive(Clone)]
 pub struct Repositories {
-    pub movie: Arc<dyn MovieRepository>,
+    pub movie_command: Arc<dyn MovieCommand>,
+    pub movie_query: Arc<dyn MovieQuery>,
     pub review: Arc<dyn ReviewRepository>,
     pub diary: Arc<dyn DiaryRepository>,
     pub stats: Arc<dyn StatsRepository>,
@@ -25,7 +27,8 @@ pub struct Repositories {
     pub import_profile: Arc<dyn ImportProfileRepository>,
     pub movie_profile: Arc<dyn MovieProfileRepository>,
     pub watchlist: Arc<dyn WatchlistRepository>,
-    pub watch_event: Arc<dyn WatchEventRepository>,
+    pub watch_event_command: Arc<dyn WatchEventCommand>,
+    pub watch_event_query: Arc<dyn WatchEventQuery>,
     pub webhook_token: Arc<dyn WebhookTokenRepository>,
     pub person_command: Arc<dyn PersonCommand>,
     pub person_query: Arc<dyn PersonQuery>,

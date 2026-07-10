@@ -18,7 +18,7 @@ pub async fn execute(deps: &EnrichMovieDeps, cmd: EnrichMovieCommand) -> Result<
     }
 
     // 3. Fetch the movie for the search index document
-    let Some(movie) = deps.movie.get_movie_by_id(&cmd.movie_id).await? else {
+    let Some(movie) = deps.movie_query.get_movie_by_id(&cmd.movie_id).await? else {
         tracing::warn!(movie_id = %cmd.movie_id.value(), "enrich_movie: movie not found after profile upsert");
         return Ok(());
     };

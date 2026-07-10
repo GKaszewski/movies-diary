@@ -5,7 +5,7 @@ use domain::{
         Movie, MovieFilter, MovieSummary,
         collections::{PageParams, Paginated},
     },
-    ports::MovieRepository,
+    ports::{MovieCommand, MovieQuery},
     value_objects::{ExternalMetadataId, MovieId, MovieTitle, ReleaseYear},
 };
 use sqlx::PgPool;
@@ -28,7 +28,51 @@ impl PostgresMovieRepository {
 }
 
 #[async_trait]
-impl MovieRepository for PostgresMovieRepository {
+impl MovieCommand for PostgresMovieRepository {
+    async fn upsert_movie(&self, movie: &Movie) -> Result<(), DomainError> {
+        let id = movie.id().value().to_string();
+        let external_metadata_id = movie.external_metadata_id().map(|e| e.value().to_string());
+        let title = movie.title().value();
+        let release_year = movie.release_year().value() as i64;
+        let director = movie.director();
+        let poster_path = movie.poster_path().map(|p| p.value().to_string());
+
+        sqlx::query(
+            "INSERT INTO movies (id, external_metadata_id, title, release_year, director, poster_path)
+             VALUES ($1, $2, $3, $4, $5, $6)
+             ON CONFLICT(id) DO UPDATE SET
+                 external_metadata_id = excluded.external_metadata_id,
+                 title                = excluded.title,
+                 release_year         = excluded.release_year,
+                 director             = excluded.director,
+                 poster_path          = excluded.poster_path",
+        )
+        .bind(&id)
+        .bind(&external_metadata_id)
+        .bind(title)
+        .bind(release_year)
+        .bind(director)
+        .bind(&poster_path)
+        .execute(&self.pool)
+        .await
+        .map_err(Self::map_err)?;
+
+        Ok(())
+    }
+
+    async fn delete_movie(&self, movie_id: &MovieId) -> Result<(), DomainError> {
+        let id = movie_id.value().to_string();
+        sqlx::query("DELETE FROM movies WHERE id = $1")
+            .bind(&id)
+            .execute(&self.pool)
+            .await
+            .map_err(Self::map_err)?;
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl MovieQuery for PostgresMovieRepository {
     async fn get_movie_by_external_id(
         &self,
         external_metadata_id: &ExternalMetadataId,
@@ -79,47 +123,6 @@ impl MovieRepository for PostgresMovieRepository {
         .into_iter()
         .map(MovieRow::into_domain)
         .collect()
-    }
-
-    async fn upsert_movie(&self, movie: &Movie) -> Result<(), DomainError> {
-        let id = movie.id().value().to_string();
-        let external_metadata_id = movie.external_metadata_id().map(|e| e.value().to_string());
-        let title = movie.title().value();
-        let release_year = movie.release_year().value() as i64;
-        let director = movie.director();
-        let poster_path = movie.poster_path().map(|p| p.value().to_string());
-
-        sqlx::query(
-            "INSERT INTO movies (id, external_metadata_id, title, release_year, director, poster_path)
-             VALUES ($1, $2, $3, $4, $5, $6)
-             ON CONFLICT(id) DO UPDATE SET
-                 external_metadata_id = excluded.external_metadata_id,
-                 title                = excluded.title,
-                 release_year         = excluded.release_year,
-                 director             = excluded.director,
-                 poster_path          = excluded.poster_path",
-        )
-        .bind(&id)
-        .bind(&external_metadata_id)
-        .bind(title)
-        .bind(release_year)
-        .bind(director)
-        .bind(&poster_path)
-        .execute(&self.pool)
-        .await
-        .map_err(Self::map_err)?;
-
-        Ok(())
-    }
-
-    async fn delete_movie(&self, movie_id: &MovieId) -> Result<(), DomainError> {
-        let id = movie_id.value().to_string();
-        sqlx::query("DELETE FROM movies WHERE id = $1")
-            .bind(&id)
-            .execute(&self.pool)
-            .await
-            .map_err(Self::map_err)?;
-        Ok(())
     }
 
     async fn existing_external_ids(

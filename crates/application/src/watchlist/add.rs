@@ -15,7 +15,8 @@ pub async fn execute(
 
     let (movie, _is_new) = resolve_and_persist_movie(
         &cmd.input,
-        deps.movie.as_ref(),
+        deps.movie_command.as_ref(),
+        deps.movie_query.as_ref(),
         deps.metadata.as_ref(),
         deps.event_publisher.as_ref(),
     )

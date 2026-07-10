@@ -34,12 +34,10 @@ impl k_ap::EventPublisher for FederationEventBridge {
                 activity,
                 signing_actor_id,
             } => {
-                let json = serde_json::to_string(&activity)
-                    .map_err(|e| anyhow::anyhow!("serialize activity: {e}"))?;
                 self.domain_publisher
                     .publish(&DomainEvent::FederationDeliveryRequested {
                         inbox_url: inbox.to_string(),
-                        activity_json: json,
+                        activity_json: activity,
                         signing_actor_id,
                     })
                     .await

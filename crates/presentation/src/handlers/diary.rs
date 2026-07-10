@@ -106,7 +106,7 @@ pub async fn delete_review(
     let deps = DeleteReviewDeps {
         review: state.app_ctx.repos.review.clone(),
         diary: state.app_ctx.repos.diary.clone(),
-        movie: state.app_ctx.repos.movie.clone(),
+        movie_command: state.app_ctx.repos.movie_command.clone(),
         event_publisher: state.app_ctx.services.event_publisher.clone(),
     };
     delete_review::execute(&deps, cmd).await?;
@@ -277,7 +277,7 @@ pub async fn post_delete_review_html(
     let deps = DeleteReviewDeps {
         review: state.app_ctx.repos.review.clone(),
         diary: state.app_ctx.repos.diary.clone(),
-        movie: state.app_ctx.repos.movie.clone(),
+        movie_command: state.app_ctx.repos.movie_command.clone(),
         event_publisher: state.app_ctx.services.event_publisher.clone(),
     };
     match delete_review::execute(&deps, cmd).await {

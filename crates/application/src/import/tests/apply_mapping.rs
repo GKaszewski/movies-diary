@@ -7,11 +7,12 @@ use domain::{
         AnnotatedRow, Movie,
         import::{ImportRow, ParsedFile, RowResult},
     },
-    ports::{DocumentParser, MovieRepository},
+    ports::{DocumentParser, MovieCommand},
     testing::{InMemoryImportSessionRepository, InMemoryMovieRepository},
     value_objects::{ExternalMetadataId, MovieTitle, ReleaseYear},
 };
 
+use crate::import::deps::{ApplyMappingDeps, CreateSessionDeps};
 use crate::import::{
     apply_mapping,
     commands::{ApplyImportMappingCommand, CreateImportSessionCommand},
@@ -25,9 +26,13 @@ async fn applies_mapping_to_session() {
     let b = TestContextBuilder::new();
     let user_id = Uuid::new_v4();
 
+    let create_deps = CreateSessionDeps {
+        import_session: Arc::clone(&sessions) as _,
+        document_parser: b.document_parser.clone(),
+    };
+
     let session = create_session::execute(
-        Arc::clone(&sessions) as _,
-        b.document_parser.clone(),
+        &create_deps,
         CreateImportSessionCommand {
             user_id,
             bytes: b"title\nTest".to_vec(),
@@ -37,10 +42,14 @@ async fn applies_mapping_to_session() {
     .await
     .unwrap();
 
+    let mapping_deps = ApplyMappingDeps {
+        import_session: Arc::clone(&sessions) as _,
+        document_parser: b.document_parser.clone(),
+        movie_query: b.movie_query.clone(),
+    };
+
     let rows = apply_mapping::execute(
-        Arc::clone(&sessions) as _,
-        b.document_parser.clone(),
-        b.movie_repo.clone(),
+        &mapping_deps,
         ApplyImportMappingCommand {
             user_id,
             session_id: session.session_id.value(),
@@ -58,10 +67,14 @@ async fn fails_when_session_not_found() {
     let sessions = InMemoryImportSessionRepository::new();
     let b = TestContextBuilder::new();
 
+    let deps = ApplyMappingDeps {
+        import_session: Arc::clone(&sessions) as _,
+        document_parser: b.document_parser.clone(),
+        movie_query: b.movie_query.clone(),
+    };
+
     let result = apply_mapping::execute(
-        Arc::clone(&sessions) as _,
-        b.document_parser.clone(),
-        b.movie_repo.clone(),
+        &deps,
         ApplyImportMappingCommand {
             user_id: Uuid::new_v4(),
             session_id: Uuid::new_v4(),
@@ -132,9 +145,13 @@ async fn marks_duplicate_by_external_id() {
 
     let user_id = Uuid::new_v4();
 
+    let create_deps = CreateSessionDeps {
+        import_session: Arc::clone(&sessions) as _,
+        document_parser: Arc::clone(&parser) as _,
+    };
+
     let session = create_session::execute(
-        Arc::clone(&sessions) as _,
-        Arc::clone(&parser) as _,
+        &create_deps,
         CreateImportSessionCommand {
             user_id,
             bytes: b"title\nKnown Movie".to_vec(),
@@ -144,10 +161,14 @@ async fn marks_duplicate_by_external_id() {
     .await
     .unwrap();
 
+    let mapping_deps = ApplyMappingDeps {
+        import_session: Arc::clone(&sessions) as _,
+        document_parser: Arc::clone(&parser) as _,
+        movie_query: Arc::clone(&movies) as _,
+    };
+
     let rows = apply_mapping::execute(
-        Arc::clone(&sessions) as _,
-        Arc::clone(&parser) as _,
-        Arc::clone(&movies) as _,
+        &mapping_deps,
         ApplyImportMappingCommand {
             user_id,
             session_id: session.session_id.value(),
@@ -185,9 +206,13 @@ async fn marks_duplicate_by_title_and_year() {
 
     let user_id = Uuid::new_v4();
 
+    let create_deps = CreateSessionDeps {
+        import_session: Arc::clone(&sessions) as _,
+        document_parser: Arc::clone(&parser) as _,
+    };
+
     let session = create_session::execute(
-        Arc::clone(&sessions) as _,
-        Arc::clone(&parser) as _,
+        &create_deps,
         CreateImportSessionCommand {
             user_id,
             bytes: b"title\nDuplicate Film".to_vec(),
@@ -197,10 +222,14 @@ async fn marks_duplicate_by_title_and_year() {
     .await
     .unwrap();
 
+    let mapping_deps = ApplyMappingDeps {
+        import_session: Arc::clone(&sessions) as _,
+        document_parser: Arc::clone(&parser) as _,
+        movie_query: Arc::clone(&movies) as _,
+    };
+
     let rows = apply_mapping::execute(
-        Arc::clone(&sessions) as _,
-        Arc::clone(&parser) as _,
-        Arc::clone(&movies) as _,
+        &mapping_deps,
         ApplyImportMappingCommand {
             user_id,
             session_id: session.session_id.value(),

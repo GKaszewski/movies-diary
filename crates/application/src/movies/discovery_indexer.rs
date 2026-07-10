@@ -5,20 +5,20 @@ use domain::{
     errors::DomainError,
     events::DomainEvent,
     models::IndexableDocument,
-    ports::{EventHandler, MovieRepository, SearchCommand},
+    ports::{EventHandler, MovieQuery, SearchCommand},
 };
 
 /// Reacts to `MovieDiscovered` and inserts a bare search index entry immediately,
 /// so movies are findable before TMDb enrichment runs.
 /// Enrichment will later overwrite this with the full document (cast, genres, etc.).
 pub struct MovieDiscoveryIndexer {
-    movie_repository: Arc<dyn MovieRepository>,
+    movie_repository: Arc<dyn MovieQuery>,
     search_command: Arc<dyn SearchCommand>,
 }
 
 impl MovieDiscoveryIndexer {
     pub fn new(
-        movie_repository: Arc<dyn MovieRepository>,
+        movie_repository: Arc<dyn MovieQuery>,
         search_command: Arc<dyn SearchCommand>,
     ) -> Self {
         Self {

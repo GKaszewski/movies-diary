@@ -74,7 +74,7 @@ pub enum DomainEvent {
     },
     FederationDeliveryRequested {
         inbox_url: String,
-        activity_json: String,
+        activity_json: serde_json::Value,
         signing_actor_id: uuid::Uuid,
     },
     WatchEventIngested {

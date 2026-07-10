@@ -3,15 +3,16 @@ use std::sync::Arc;
 use anyhow::Context;
 use domain::ports::{
     DiaryRepository, GoalRepository, ImageRefCommand, ImageRefQuery, ImportSessionRepository,
-    LocalApContentQuery, MovieDeduplicator, MovieProfileRepository, MovieRepository, PersonCommand,
-    PersonQuery, ReviewRepository, SearchCommand, StatsRepository, UserRepository,
-    WatchEventRepository,
+    LocalApContentQuery, MovieCommand, MovieDeduplicator, MovieProfileRepository, MovieQuery,
+    PersonCommand, PersonQuery, ReviewRepository, SearchCommand, StatsRepository, UserRepository,
+    WatchEventCommand, WatchEventQuery,
 };
 
 pub use infra_wiring::DbPool;
 
 pub struct WorkerDbOutput {
-    pub movie: Arc<dyn MovieRepository>,
+    pub movie_command: Arc<dyn MovieCommand>,
+    pub movie_query: Arc<dyn MovieQuery>,
     pub review: Arc<dyn ReviewRepository>,
     pub diary: Arc<dyn DiaryRepository>,
     pub stats: Arc<dyn StatsRepository>,
@@ -19,7 +20,8 @@ pub struct WorkerDbOutput {
     pub user: Arc<dyn UserRepository>,
     pub import_session: Arc<dyn ImportSessionRepository>,
     pub movie_profile: Arc<dyn MovieProfileRepository>,
-    pub watch_event: Arc<dyn WatchEventRepository>,
+    pub watch_event_command: Arc<dyn WatchEventCommand>,
+    pub watch_event_query: Arc<dyn WatchEventQuery>,
     pub person_command: Arc<dyn PersonCommand>,
     pub person_query: Arc<dyn PersonQuery>,
     pub search_command: Arc<dyn SearchCommand>,
@@ -46,10 +48,10 @@ pub async fn connect(database_url: &str, backend: &str) -> anyhow::Result<Worker
             let (person_command, person_query) = postgres::create_person_adapter(w.pool.clone());
             let (search_command, _search_port) =
                 postgres_search::create_search_adapter(w.pool.clone());
-            let we: Arc<dyn WatchEventRepository> =
-                Arc::new(postgres::PostgresWatchEventRepository::new(w.pool.clone()));
+            let we = Arc::new(postgres::PostgresWatchEventRepository::new(w.pool.clone()));
             Ok(WorkerDbOutput {
-                movie: w.movie,
+                movie_command: w.movie_command,
+                movie_query: w.movie_query,
                 review: w.review,
                 diary: w.diary,
                 stats: w.stats,
@@ -57,7 +59,8 @@ pub async fn connect(database_url: &str, backend: &str) -> anyhow::Result<Worker
                 user: w.user,
                 import_session: w.import_session,
                 movie_profile: w.movie_profile,
-                watch_event: we,
+                watch_event_command: we.clone() as _,
+                watch_event_query: we as _,
                 person_command,
                 person_query,
                 search_command,
@@ -84,10 +87,10 @@ pub async fn connect(database_url: &str, backend: &str) -> anyhow::Result<Worker
             let (person_command, person_query) = sqlite::create_person_adapter(w.pool.clone());
             let (search_command, _search_port) =
                 sqlite_search::create_search_adapter(w.pool.clone());
-            let we: Arc<dyn WatchEventRepository> =
-                Arc::new(sqlite::SqliteWatchEventRepository::new(w.pool.clone()));
+            let we = Arc::new(sqlite::SqliteWatchEventRepository::new(w.pool.clone()));
             Ok(WorkerDbOutput {
-                movie: w.movie,
+                movie_command: w.movie_command,
+                movie_query: w.movie_query,
                 review: w.review,
                 diary: w.diary,
                 stats: w.stats,
@@ -95,7 +98,8 @@ pub async fn connect(database_url: &str, backend: &str) -> anyhow::Result<Worker
                 user: w.user,
                 import_session: w.import_session,
                 movie_profile: w.movie_profile,
-                watch_event: we,
+                watch_event_command: we.clone() as _,
+                watch_event_query: we as _,
                 person_command,
                 person_query,
                 search_command,

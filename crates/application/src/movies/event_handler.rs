@@ -6,7 +6,7 @@ use domain::{
     events::DomainEvent,
     models::MovieProfile,
     ports::{
-        EventHandler, ImageFetcher, MovieEnrichmentClient, MovieProfileRepository, MovieRepository,
+        EventHandler, ImageFetcher, MovieEnrichmentClient, MovieProfileRepository, MovieQuery,
         ObjectStorage, PersonCommand, SearchCommand,
     },
 };
@@ -17,7 +17,7 @@ use crate::movies::{
 
 pub struct MovieEnrichmentHandler {
     enrichment_client: Arc<dyn MovieEnrichmentClient>,
-    movie_repository: Arc<dyn MovieRepository>,
+    movie_repository: Arc<dyn MovieQuery>,
     profile_repo: Arc<dyn MovieProfileRepository>,
     person_command: Arc<dyn PersonCommand>,
     search_command: Arc<dyn SearchCommand>,
@@ -28,7 +28,7 @@ pub struct MovieEnrichmentHandler {
 impl MovieEnrichmentHandler {
     pub fn new(
         enrichment_client: Arc<dyn MovieEnrichmentClient>,
-        movie_repository: Arc<dyn MovieRepository>,
+        movie_repository: Arc<dyn MovieQuery>,
         profile_repo: Arc<dyn MovieProfileRepository>,
         person_command: Arc<dyn PersonCommand>,
         search_command: Arc<dyn SearchCommand>,
@@ -92,7 +92,7 @@ impl EventHandler for MovieEnrichmentHandler {
 
         self.download_cast_photos(&profile).await;
         let enrich_deps = EnrichMovieDeps {
-            movie: self.movie_repository.clone(),
+            movie_query: self.movie_repository.clone(),
             movie_profile: self.profile_repo.clone(),
             person_command: self.person_command.clone(),
             search_command: self.search_command.clone(),

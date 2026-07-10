@@ -97,7 +97,7 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
             remote_watchlist_repo: remote_watchlist_repo.clone(),
             remote_goal_repo: Arc::clone(&db.remote_goal),
             local_ap_content: Arc::clone(&ap_content_repo),
-            movie_repo: Arc::clone(&db.movie),
+            movie_repo: Arc::clone(&db.movie_query),
             review_repo: Arc::clone(&db.review),
             diary_repo: Arc::clone(&db.diary),
             goal_repo: Arc::clone(&db.goal),
@@ -127,7 +127,8 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
     let ap_router = axum::Router::new();
 
     let review_logger = Arc::new(application::diary::review_logger::DefaultReviewLogger::new(
-        Arc::clone(&db.movie),
+        Arc::clone(&db.movie_command),
+        Arc::clone(&db.movie_query),
         Arc::clone(&db.review),
         Arc::clone(&db.watchlist),
         Arc::clone(&metadata_client),
@@ -136,7 +137,8 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
 
     let app_ctx = AppContext {
         repos: Repositories {
-            movie: db.movie,
+            movie_command: db.movie_command,
+            movie_query: db.movie_query,
             review: db.review,
             diary: db.diary,
             stats: db.stats,
@@ -145,7 +147,8 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
             import_profile: db.import_profile,
             movie_profile: db.movie_profile,
             watchlist: db.watchlist,
-            watch_event: db.watch_event,
+            watch_event_command: db.watch_event_command,
+            watch_event_query: db.watch_event_query,
             webhook_token: db.webhook_token,
             person_command: db.person_command,
             person_query: db.person_query,

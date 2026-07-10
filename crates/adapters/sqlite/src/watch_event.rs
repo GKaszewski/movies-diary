@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use domain::{
     errors::DomainError,
     models::{PersistedWatchEvent, WatchEvent, WatchEventSource, WatchEventStatus, WebhookToken},
-    ports::{WatchEventRepository, WebhookTokenRepository},
+    ports::{WatchEventCommand, WatchEventQuery, WebhookTokenRepository},
     value_objects::{MovieId, UserId, WatchEventId, WebhookTokenId},
 };
 use sqlx::{Row, SqlitePool};
@@ -38,7 +38,7 @@ impl SqliteWatchEventRepository {
 }
 
 #[async_trait]
-impl WatchEventRepository for SqliteWatchEventRepository {
+impl WatchEventCommand for SqliteWatchEventRepository {
     async fn save(&self, event: &WatchEvent) -> Result<(), DomainError> {
         let id = event.id().value().to_string();
         let user_id = event.user_id().value().to_string();
@@ -88,6 +88,44 @@ impl WatchEventRepository for SqliteWatchEventRepository {
         Ok(())
     }
 
+    async fn update_status_batch(
+        &self,
+        ids: &[WatchEventId],
+        status: WatchEventStatus,
+    ) -> Result<u64, DomainError> {
+        if ids.is_empty() {
+            return Ok(0);
+        }
+        let placeholders: Vec<&str> = ids.iter().map(|_| "?").collect();
+        let sql = format!(
+            "UPDATE watch_events SET status = ? WHERE id IN ({})",
+            placeholders.join(",")
+        );
+        let mut q = sqlx::query(&sql).bind(status.to_string());
+        for id in ids {
+            q = q.bind(id.value().to_string());
+        }
+        let result = q.execute(&self.pool).await.map_err(map_err)?;
+        Ok(result.rows_affected())
+    }
+
+    async fn delete_non_pending_older_than(
+        &self,
+        before: chrono::NaiveDateTime,
+    ) -> Result<u64, DomainError> {
+        let before_str = datetime_to_str(&before);
+        let result =
+            sqlx::query("DELETE FROM watch_events WHERE status != 'pending' AND created_at < ?")
+                .bind(&before_str)
+                .execute(&self.pool)
+                .await
+                .map_err(map_err)?;
+        Ok(result.rows_affected())
+    }
+}
+
+#[async_trait]
+impl WatchEventQuery for SqliteWatchEventRepository {
     async fn list_pending(&self, user_id: &UserId) -> Result<Vec<WatchEvent>, DomainError> {
         let uid = user_id.value().to_string();
 
@@ -141,27 +179,6 @@ impl WatchEventRepository for SqliteWatchEventRepository {
         rows.iter().map(row_to_watch_event).collect()
     }
 
-    async fn update_status_batch(
-        &self,
-        ids: &[WatchEventId],
-        status: WatchEventStatus,
-    ) -> Result<u64, DomainError> {
-        if ids.is_empty() {
-            return Ok(0);
-        }
-        let placeholders: Vec<&str> = ids.iter().map(|_| "?").collect();
-        let sql = format!(
-            "UPDATE watch_events SET status = ? WHERE id IN ({})",
-            placeholders.join(",")
-        );
-        let mut q = sqlx::query(&sql).bind(status.to_string());
-        for id in ids {
-            q = q.bind(id.value().to_string());
-        }
-        let result = q.execute(&self.pool).await.map_err(map_err)?;
-        Ok(result.rows_affected())
-    }
-
     async fn find_duplicate(
         &self,
         user_id: &UserId,
@@ -185,20 +202,6 @@ impl WatchEventRepository for SqliteWatchEventRepository {
         .unwrap_or(0);
 
         Ok(count > 0)
-    }
-
-    async fn delete_non_pending_older_than(
-        &self,
-        before: chrono::NaiveDateTime,
-    ) -> Result<u64, DomainError> {
-        let before_str = datetime_to_str(&before);
-        let result =
-            sqlx::query("DELETE FROM watch_events WHERE status != 'pending' AND created_at < ?")
-                .bind(&before_str)
-                .execute(&self.pool)
-                .await
-                .map_err(map_err)?;
-        Ok(result.rows_affected())
     }
 }
 

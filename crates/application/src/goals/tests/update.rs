@@ -1,5 +1,6 @@
 use uuid::Uuid;
 
+use crate::goals::deps::GoalCommandDeps;
 use crate::goals::{
     commands::{CreateGoalCommand, UpdateGoalCommand},
     create, update,
@@ -9,10 +10,14 @@ use crate::test_helpers::TestContextBuilder;
 #[tokio::test]
 async fn updates_target_count() {
     let b = TestContextBuilder::new();
+    let deps = GoalCommandDeps {
+        goal: b.goal_repo.clone(),
+        stats: b.stats_repo.clone(),
+        event_publisher: b.event_publisher.clone(),
+    };
+
     create::execute(
-        b.goal_repo.clone(),
-        b.stats_repo.clone(),
-        b.event_publisher.clone(),
+        &deps,
         CreateGoalCommand {
             user_id: Uuid::nil(),
             year: 2025,
@@ -23,9 +28,7 @@ async fn updates_target_count() {
     .unwrap();
 
     let result = update::execute(
-        b.goal_repo.clone(),
-        b.stats_repo.clone(),
-        b.event_publisher.clone(),
+        &deps,
         UpdateGoalCommand {
             user_id: Uuid::nil(),
             year: 2025,
@@ -41,10 +44,13 @@ async fn updates_target_count() {
 #[tokio::test]
 async fn fails_when_goal_not_found() {
     let b = TestContextBuilder::new();
+    let deps = GoalCommandDeps {
+        goal: b.goal_repo.clone(),
+        stats: b.stats_repo.clone(),
+        event_publisher: b.event_publisher.clone(),
+    };
     let result = update::execute(
-        b.goal_repo.clone(),
-        b.stats_repo.clone(),
-        b.event_publisher.clone(),
+        &deps,
         UpdateGoalCommand {
             user_id: Uuid::nil(),
             year: 2025,
@@ -59,10 +65,14 @@ async fn fails_when_goal_not_found() {
 #[tokio::test]
 async fn rejects_zero_target() {
     let b = TestContextBuilder::new();
+    let deps = GoalCommandDeps {
+        goal: b.goal_repo.clone(),
+        stats: b.stats_repo.clone(),
+        event_publisher: b.event_publisher.clone(),
+    };
+
     create::execute(
-        b.goal_repo.clone(),
-        b.stats_repo.clone(),
-        b.event_publisher.clone(),
+        &deps,
         CreateGoalCommand {
             user_id: Uuid::nil(),
             year: 2025,
@@ -73,9 +83,7 @@ async fn rejects_zero_target() {
     .unwrap();
 
     let result = update::execute(
-        b.goal_repo.clone(),
-        b.stats_repo.clone(),
-        b.event_publisher.clone(),
+        &deps,
         UpdateGoalCommand {
             user_id: Uuid::nil(),
             year: 2025,

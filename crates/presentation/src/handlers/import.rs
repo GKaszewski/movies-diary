@@ -19,6 +19,7 @@ use application::import::{
         DeleteImportProfileCommand, ExecuteImportCommand, SaveImportProfileCommand,
     },
     create_session as create_import_session, delete_profile as delete_import_profile,
+    deps::{ApplyMappingDeps, ApplyProfileDeps, CreateSessionDeps, ExecuteImportDeps, SaveProfileDeps},
     execute as execute_import, list_profiles as list_import_profiles,
     save_profile as save_import_profile,
 };
@@ -160,8 +161,10 @@ pub async fn post_upload(
     };
 
     match create_import_session::execute(
-        state.app_ctx.repos.import_session.clone(),
-        state.app_ctx.services.document_parser.clone(),
+        &CreateSessionDeps {
+            import_session: state.app_ctx.repos.import_session.clone(),
+            document_parser: state.app_ctx.services.document_parser.clone(),
+        },
         CreateImportSessionCommand {
             user_id: user_id.value(),
             bytes,
@@ -250,9 +253,11 @@ pub async fn post_mapping(
         .into_response();
     }
     match apply_import_mapping::execute(
-        state.app_ctx.repos.import_session.clone(),
-        state.app_ctx.services.document_parser.clone(),
-        state.app_ctx.repos.movie.clone(),
+        &ApplyMappingDeps {
+            import_session: state.app_ctx.repos.import_session.clone(),
+            document_parser: state.app_ctx.services.document_parser.clone(),
+            movie_query: state.app_ctx.repos.movie_query.clone(),
+        },
         ApplyImportMappingCommand {
             user_id: user_id.value(),
             session_id: session_id.value(),
@@ -346,8 +351,10 @@ pub async fn post_confirm(
         .filter(|n| !n.trim().is_empty());
     if let Some(name) = profile_name {
         let _ = save_import_profile::execute(
-            state.app_ctx.repos.import_session.clone(),
-            state.app_ctx.repos.import_profile.clone(),
+            &SaveProfileDeps {
+                import_session: state.app_ctx.repos.import_session.clone(),
+                import_profile: state.app_ctx.repos.import_profile.clone(),
+            },
             SaveImportProfileCommand {
                 user_id: user_id.value(),
                 session_id: session_id.value(),
@@ -365,8 +372,10 @@ pub async fn post_confirm(
         .collect();
 
     match execute_import::execute(
-        state.app_ctx.repos.import_session.clone(),
-        state.app_ctx.services.review_logger.clone(),
+        &ExecuteImportDeps {
+            import_session: state.app_ctx.repos.import_session.clone(),
+            review_logger: state.app_ctx.services.review_logger.clone(),
+        },
         ExecuteImportCommand {
             user_id: user_id.value(),
             session_id: session_id.value(),
@@ -487,8 +496,10 @@ pub async fn api_post_session(
         _ => FileFormat::Csv,
     };
     let r = create_import_session::execute(
-        state.app_ctx.repos.import_session.clone(),
-        state.app_ctx.services.document_parser.clone(),
+        &CreateSessionDeps {
+            import_session: state.app_ctx.repos.import_session.clone(),
+            document_parser: state.app_ctx.services.document_parser.clone(),
+        },
         CreateImportSessionCommand {
             user_id: user_id.value(),
             bytes,
@@ -583,9 +594,11 @@ pub async fn api_put_mapping(
         .collect();
 
     let rows = apply_import_mapping::execute(
-        state.app_ctx.repos.import_session.clone(),
-        state.app_ctx.services.document_parser.clone(),
-        state.app_ctx.repos.movie.clone(),
+        &ApplyMappingDeps {
+            import_session: state.app_ctx.repos.import_session.clone(),
+            document_parser: state.app_ctx.services.document_parser.clone(),
+            movie_query: state.app_ctx.repos.movie_query.clone(),
+        },
         ApplyImportMappingCommand {
             user_id: user_id.value(),
             session_id: session_id.value(),
@@ -674,8 +687,10 @@ pub async fn api_post_confirm(
         .map(ImportSessionId::from_uuid)
         .map_err(|_| DomainError::ValidationError("invalid session id".into()))?;
     let s = execute_import::execute(
-        state.app_ctx.repos.import_session.clone(),
-        state.app_ctx.services.review_logger.clone(),
+        &ExecuteImportDeps {
+            import_session: state.app_ctx.repos.import_session.clone(),
+            review_logger: state.app_ctx.services.review_logger.clone(),
+        },
         ExecuteImportCommand {
             user_id: user_id.value(),
             session_id: session_id.value(),
@@ -739,8 +754,10 @@ pub async fn api_post_profile(
         .map(ImportSessionId::from_uuid)
         .map_err(|_| DomainError::ValidationError("invalid session id".into()))?;
     let id = save_import_profile::execute(
-        state.app_ctx.repos.import_session.clone(),
-        state.app_ctx.repos.import_profile.clone(),
+        &SaveProfileDeps {
+            import_session: state.app_ctx.repos.import_session.clone(),
+            import_profile: state.app_ctx.repos.import_profile.clone(),
+        },
         SaveImportProfileCommand {
             user_id: user_id.value(),
             session_id: session_id.value(),
@@ -810,8 +827,10 @@ pub async fn api_apply_profile(
         .map_err(|_| DomainError::ValidationError("invalid profile id".into()))?;
 
     apply_import_profile::execute(
-        state.app_ctx.repos.import_profile.clone(),
-        state.app_ctx.repos.import_session.clone(),
+        &ApplyProfileDeps {
+            import_profile: state.app_ctx.repos.import_profile.clone(),
+            import_session: state.app_ctx.repos.import_session.clone(),
+        },
         ApplyImportProfileCommand {
             user_id: user_id.value(),
             session_id,
@@ -832,9 +851,11 @@ pub async fn api_apply_profile(
 
     let mappings = session.field_mappings.unwrap_or_default();
     let rows = apply_import_mapping::execute(
-        state.app_ctx.repos.import_session.clone(),
-        state.app_ctx.services.document_parser.clone(),
-        state.app_ctx.repos.movie.clone(),
+        &ApplyMappingDeps {
+            import_session: state.app_ctx.repos.import_session.clone(),
+            document_parser: state.app_ctx.services.document_parser.clone(),
+            movie_query: state.app_ctx.repos.movie_query.clone(),
+        },
         ApplyImportMappingCommand {
             user_id: user_id.value(),
             session_id,

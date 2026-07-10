@@ -135,7 +135,7 @@ pub async fn get_watch_queue_page(
     let query = GetWatchQueueQuery {
         user_id: user_id.value(),
     };
-    let events = get_watch_queue::execute(state.app_ctx.repos.watch_event.clone(), query)
+    let events = get_watch_queue::execute(state.app_ctx.repos.watch_event_query.clone(), query)
         .await
         .unwrap_or_default();
 
@@ -173,7 +173,8 @@ pub async fn post_confirm_single(
     };
 
     match confirm_watch_events::execute(
-        state.app_ctx.repos.watch_event.clone(),
+        state.app_ctx.repos.watch_event_command.clone(),
+        state.app_ctx.repos.watch_event_query.clone(),
         state.app_ctx.services.review_logger.clone(),
         cmd,
     )
@@ -203,7 +204,7 @@ pub async fn post_dismiss_single(
         event_ids: vec![event_id],
     };
 
-    match dismiss_watch_events::execute(state.app_ctx.repos.watch_event.clone(), cmd).await {
+    match dismiss_watch_events::execute(state.app_ctx.repos.watch_event_command.clone(), state.app_ctx.repos.watch_event_query.clone(), cmd).await {
         Ok(_) => Redirect::to("/watch-queue").into_response(),
         Err(e) => {
             let msg = encode_error(&e.to_string());

@@ -9,8 +9,16 @@ use crate::{
     value_objects::{ExternalMetadataId, MovieId, MovieTitle, PosterUrl, ReleaseYear},
 };
 
+/// Write port — mutates the movies table.
 #[async_trait]
-pub trait MovieRepository: Send + Sync {
+pub trait MovieCommand: Send + Sync {
+    async fn upsert_movie(&self, movie: &Movie) -> Result<(), DomainError>;
+    async fn delete_movie(&self, movie_id: &MovieId) -> Result<(), DomainError>;
+}
+
+/// Read port — queries movies. No mutations.
+#[async_trait]
+pub trait MovieQuery: Send + Sync {
     async fn get_movie_by_external_id(
         &self,
         external_metadata_id: &ExternalMetadataId,
@@ -21,8 +29,6 @@ pub trait MovieRepository: Send + Sync {
         title: &MovieTitle,
         year: &ReleaseYear,
     ) -> Result<Vec<Movie>, DomainError>;
-    async fn upsert_movie(&self, movie: &Movie) -> Result<(), DomainError>;
-    async fn delete_movie(&self, movie_id: &MovieId) -> Result<(), DomainError>;
     async fn existing_external_ids(
         &self,
         ids: &[ExternalMetadataId],

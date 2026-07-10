@@ -95,7 +95,8 @@ pub async fn post_watchlist_add(
     Json(req): Json<AddToWatchlistRequest>,
 ) -> Result<impl IntoResponse, ApiError> {
     let deps = WatchlistAddDeps {
-        movie: state.app_ctx.repos.movie.clone(),
+        movie_command: state.app_ctx.repos.movie_command.clone(),
+        movie_query: state.app_ctx.repos.movie_query.clone(),
         metadata: state.app_ctx.services.metadata.clone(),
         watchlist: state.app_ctx.repos.watchlist.clone(),
         event_publisher: state.app_ctx.services.event_publisher.clone(),
@@ -280,7 +281,8 @@ pub async fn post_watchlist_add_html(
     };
 
     let deps = WatchlistAddDeps {
-        movie: state.app_ctx.repos.movie.clone(),
+        movie_command: state.app_ctx.repos.movie_command.clone(),
+        movie_query: state.app_ctx.repos.movie_query.clone(),
         metadata: state.app_ctx.services.metadata.clone(),
         watchlist: state.app_ctx.repos.watchlist.clone(),
         event_publisher: state.app_ctx.services.event_publisher.clone(),

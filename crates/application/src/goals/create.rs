@@ -1,24 +1,19 @@
-use std::sync::Arc;
-
 use domain::{
     errors::DomainError,
     events::DomainEvent,
     models::{Goal, GoalType, GoalWithProgress},
-    ports::{EventPublisher, GoalRepository, StatsRepository},
     value_objects::UserId,
 };
 
-use super::commands::CreateGoalCommand;
+use super::{commands::CreateGoalCommand, deps::GoalCommandDeps};
 
 pub async fn execute(
-    goal: Arc<dyn GoalRepository>,
-    stats: Arc<dyn StatsRepository>,
-    event_publisher: Arc<dyn EventPublisher>,
+    deps: &GoalCommandDeps,
     cmd: CreateGoalCommand,
 ) -> Result<GoalWithProgress, DomainError> {
     let user_id = UserId::from_uuid(cmd.user_id);
 
-    let existing = goal.find_by_user_and_year(&user_id, cmd.year).await?;
+    let existing = deps.goal.find_by_user_and_year(&user_id, cmd.year).await?;
     if existing.is_some() {
         return Err(DomainError::ValidationError(
             "Goal already exists for this year".into(),
@@ -31,11 +26,11 @@ pub async fn execute(
         cmd.target_count,
         GoalType::Movies,
     )?;
-    goal.save(&g).await?;
+    deps.goal.save(&g).await?;
 
-    let current_count = stats.count_reviews_in_year(&user_id, cmd.year).await?;
+    let current_count = deps.stats.count_reviews_in_year(&user_id, cmd.year).await?;
 
-    event_publisher
+    deps.event_publisher
         .publish(&DomainEvent::GoalCreated {
             goal_id: g.id().clone(),
             user_id,

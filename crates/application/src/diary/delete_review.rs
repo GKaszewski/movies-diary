@@ -36,7 +36,7 @@ pub async fn execute(deps: &DeleteReviewDeps, cmd: DeleteReviewCommand) -> Resul
     let history = deps.diary.get_review_history(&movie_id).await?;
     if history.viewings().is_empty() {
         let poster_path = history.movie().poster_path().cloned();
-        deps.movie.delete_movie(&movie_id).await?;
+        deps.movie_command.delete_movie(&movie_id).await?;
         // best-effort: movie is already deleted, so publish failure is non-fatal
         if let Err(e) = deps
             .event_publisher

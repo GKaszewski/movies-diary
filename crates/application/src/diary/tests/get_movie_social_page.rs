@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use domain::{
     models::Movie,
-    ports::MovieRepository,
+    ports::MovieCommand,
     testing::{FakeDiaryRepository, InMemoryMovieProfileRepository, InMemoryMovieRepository},
     value_objects::{MovieTitle, ReleaseYear},
 };
@@ -17,7 +17,7 @@ use crate::{
 #[tokio::test]
 async fn fails_when_movie_not_found() {
     let deps = GetMovieSocialPageDeps {
-        movie: InMemoryMovieRepository::new(),
+        movie_query: InMemoryMovieRepository::new(),
         diary: FakeDiaryRepository::new() as _,
         movie_profile: InMemoryMovieProfileRepository::new(),
     };
@@ -50,7 +50,7 @@ async fn returns_movie_social_page() {
     movies.upsert_movie(&movie).await.unwrap();
 
     let deps = GetMovieSocialPageDeps {
-        movie: Arc::clone(&movies) as _,
+        movie_query: Arc::clone(&movies) as _,
         diary: FakeDiaryRepository::new() as _,
         movie_profile: InMemoryMovieProfileRepository::new(),
     };

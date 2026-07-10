@@ -6,7 +6,7 @@ use domain::{
     errors::DomainError,
     models::WatchlistEntry,
     models::{MetadataSearchCriteria, Movie},
-    ports::{MetadataClient, MovieRepository, WatchlistRepository},
+    ports::{MetadataClient, MovieCommand, WatchlistRepository},
     testing::{
         FakeMetadataClient, InMemoryMovieRepository, InMemoryReviewRepository,
         InMemoryWatchlistRepository, NoopEventPublisher,
@@ -26,6 +26,7 @@ fn make_logger(
     events: &Arc<NoopEventPublisher>,
 ) -> DefaultReviewLogger {
     DefaultReviewLogger::new(
+        Arc::clone(movies) as _,
         Arc::clone(movies) as _,
         Arc::clone(reviews) as _,
         Arc::clone(watchlist) as _,
@@ -276,6 +277,7 @@ async fn publishes_movie_discovered_for_new_movie_with_external_id() {
     let events = NoopEventPublisher::new();
 
     let logger = DefaultReviewLogger::new(
+        Arc::clone(&movies) as _,
         Arc::clone(&movies) as _,
         Arc::clone(&reviews) as _,
         Arc::clone(&watchlist) as _,

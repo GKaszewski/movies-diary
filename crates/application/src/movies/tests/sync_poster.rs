@@ -5,7 +5,7 @@ use uuid::Uuid;
 use domain::{
     errors::DomainError,
     models::Movie,
-    ports::{MetadataClient, MovieRepository},
+    ports::{MetadataClient, MovieCommand, MovieQuery},
     testing::{
         FakeSearchCommand, InMemoryMovieProfileRepository, InMemoryMovieRepository,
         NoopEventPublisher, NoopObjectStorage,
@@ -20,7 +20,8 @@ use crate::{
 
 fn default_deps() -> SyncPosterDeps {
     SyncPosterDeps {
-        movie: InMemoryMovieRepository::new(),
+        movie_command: InMemoryMovieRepository::new(),
+        movie_query: InMemoryMovieRepository::new(),
         movie_profile: InMemoryMovieProfileRepository::new(),
         metadata: Arc::new(domain::testing::FakeMetadataClient),
         poster_fetcher: Arc::new(domain::testing::FakePosterFetcher),
@@ -59,7 +60,8 @@ async fn fails_when_no_external_id() {
     movies.upsert_movie(&movie).await.unwrap();
 
     let deps = SyncPosterDeps {
-        movie: Arc::clone(&movies) as _,
+        movie_command: Arc::clone(&movies) as _,
+        movie_query: Arc::clone(&movies) as _,
         ..default_deps()
     };
 
@@ -103,7 +105,8 @@ async fn syncs_poster_for_movie_with_external_id() {
     movies.upsert_movie(&movie).await.unwrap();
 
     let deps = SyncPosterDeps {
-        movie: Arc::clone(&movies) as _,
+        movie_command: Arc::clone(&movies) as _,
+        movie_query: Arc::clone(&movies) as _,
         metadata: Arc::new(FakeMetaWithPoster) as _,
         ..default_deps()
     };

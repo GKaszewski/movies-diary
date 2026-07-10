@@ -1,13 +1,10 @@
-use std::sync::Arc;
-
 use domain::{
     errors::DomainError,
     models::ImportSession,
-    ports::{DocumentParser, ImportSessionRepository},
     value_objects::{ImportSessionId, UserId},
 };
 
-use crate::import::commands::CreateImportSessionCommand;
+use super::{commands::CreateImportSessionCommand, deps::CreateSessionDeps};
 
 pub struct CreateSessionResult {
     pub session_id: ImportSessionId,
@@ -16,14 +13,14 @@ pub struct CreateSessionResult {
 }
 
 pub async fn execute(
-    import_session: Arc<dyn ImportSessionRepository>,
-    document_parser: Arc<dyn DocumentParser>,
+    deps: &CreateSessionDeps,
     cmd: CreateImportSessionCommand,
 ) -> Result<CreateSessionResult, DomainError> {
     let user_id = UserId::from_uuid(cmd.user_id);
-    import_session.delete_expired_for_user(&user_id).await?;
+    deps.import_session.delete_expired_for_user(&user_id).await?;
 
-    let parsed = document_parser
+    let parsed = deps
+        .document_parser
         .parse(&cmd.bytes, cmd.format)
         .map_err(|e| DomainError::ValidationError(e.to_string()))?;
 
@@ -34,7 +31,7 @@ pub async fn execute(
     let session_id = session.id.clone();
     session.parsed_file = Some(parsed);
 
-    import_session.create(&session).await?;
+    deps.import_session.create(&session).await?;
 
     Ok(CreateSessionResult {
         session_id,

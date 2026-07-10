@@ -4,7 +4,7 @@ use std::time::Duration;
 use async_trait::async_trait;
 use domain::{
     errors::DomainError,
-    ports::{MovieDeduplicator, MovieRepository, ObjectStorage, PeriodicJob},
+    ports::{MovieDeduplicator, MovieQuery, ObjectStorage, PeriodicJob},
 };
 
 use crate::movies::merge_duplicates::{MergeDuplicatesDeps, execute};
@@ -15,13 +15,13 @@ pub struct MovieDeduplicationJob {
 
 impl MovieDeduplicationJob {
     pub fn new(
-        movie: Arc<dyn MovieRepository>,
+        movie: Arc<dyn MovieQuery>,
         deduplicator: Arc<dyn MovieDeduplicator>,
         object_storage: Arc<dyn ObjectStorage>,
     ) -> Self {
         Self {
             deps: MergeDuplicatesDeps {
-                movie,
+                movie_query: movie,
                 deduplicator,
                 object_storage,
             },

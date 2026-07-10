@@ -4,6 +4,7 @@ pub mod cleanup;
 pub mod commands;
 pub mod create_session;
 pub mod delete_profile;
+pub mod deps;
 pub mod execute;
 pub mod list_profiles;
 pub mod save_profile;

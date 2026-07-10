@@ -7,10 +7,11 @@ use domain::{
     ports::{
         AuthService, DiaryExporter, DiaryRepository, DocumentParser, EventPublisher,
         GoalRepository, ImportProfileRepository, ImportSessionRepository, MetadataClient,
-        MovieProfileRepository, MovieRepository, ObjectStorage, PasswordHasher, PersonCommand,
-        PersonQuery, PosterFetcherClient, RefreshSessionRepository, ReviewRepository,
-        SearchCommand, SearchPort, StatsRepository, UserProfileFieldsRepository, UserRepository,
-        UserSettingsRepository, WatchEventRepository, WatchlistRepository, WebhookTokenRepository,
+        MovieCommand, MovieProfileRepository, MovieQuery, ObjectStorage, PasswordHasher,
+        PersonCommand, PersonQuery, PosterFetcherClient, RefreshSessionRepository,
+        ReviewRepository, SearchCommand, SearchPort, StatsRepository,
+        UserProfileFieldsRepository, UserRepository, UserSettingsRepository, WatchEventCommand,
+        WatchEventQuery, WatchlistRepository, WebhookTokenRepository,
         WrapUpRepository, WrapUpStatsQuery,
     },
     testing::{
@@ -40,7 +41,8 @@ impl ReviewLogger for NoopReviewLogger {
 }
 
 pub struct TestContextBuilder {
-    pub movie_repo: Arc<dyn MovieRepository>,
+    pub movie_command: Arc<dyn MovieCommand>,
+    pub movie_query: Arc<dyn MovieQuery>,
     pub review_repo: Arc<dyn ReviewRepository>,
     pub diary_repo: Arc<dyn DiaryRepository>,
     pub diary_exporter: Arc<dyn DiaryExporter>,
@@ -57,7 +59,8 @@ pub struct TestContextBuilder {
     pub import_profile_repo: Arc<dyn ImportProfileRepository>,
     pub movie_profile_repo: Arc<dyn MovieProfileRepository>,
     pub watchlist_repo: Arc<dyn WatchlistRepository>,
-    pub watch_event_repo: Arc<dyn WatchEventRepository>,
+    pub watch_event_command: Arc<dyn WatchEventCommand>,
+    pub watch_event_query: Arc<dyn WatchEventQuery>,
     pub webhook_token_repo: Arc<dyn WebhookTokenRepository>,
     pub profile_fields_repo: Arc<dyn UserProfileFieldsRepository>,
     pub person_command: Arc<dyn PersonCommand>,
@@ -83,7 +86,8 @@ impl Default for TestContextBuilder {
 impl TestContextBuilder {
     pub fn new() -> Self {
         Self {
-            movie_repo: InMemoryMovieRepository::new(),
+            movie_command: InMemoryMovieRepository::new(),
+            movie_query: InMemoryMovieRepository::new(),
             review_repo: InMemoryReviewRepository::new(),
             diary_repo: FakeDiaryRepository::new(),
             diary_exporter: Arc::new(PanicDiaryExporter),
@@ -100,7 +104,8 @@ impl TestContextBuilder {
             import_profile_repo: InMemoryImportProfileRepository::new(),
             movie_profile_repo: InMemoryMovieProfileRepository::new(),
             watchlist_repo: InMemoryWatchlistRepository::new(),
-            watch_event_repo: InMemoryWatchEventRepository::new(),
+            watch_event_command: InMemoryWatchEventRepository::new(),
+            watch_event_query: InMemoryWatchEventRepository::new(),
             webhook_token_repo: InMemoryWebhookTokenRepository::new(),
             profile_fields_repo: InMemoryProfileFieldsRepo::new(),
             person_command: Arc::new(PanicPersonCommand),
@@ -128,8 +133,13 @@ impl TestContextBuilder {
         }
     }
 
-    pub fn with_movies(mut self, r: Arc<dyn MovieRepository>) -> Self {
-        self.movie_repo = r;
+    pub fn with_movie_command(mut self, r: Arc<dyn MovieCommand>) -> Self {
+        self.movie_command = r;
+        self
+    }
+
+    pub fn with_movie_query(mut self, r: Arc<dyn MovieQuery>) -> Self {
+        self.movie_query = r;
         self
     }
 
@@ -173,8 +183,13 @@ impl TestContextBuilder {
         self
     }
 
-    pub fn with_watch_events(mut self, r: Arc<dyn WatchEventRepository>) -> Self {
-        self.watch_event_repo = r;
+    pub fn with_watch_event_command(mut self, r: Arc<dyn WatchEventCommand>) -> Self {
+        self.watch_event_command = r;
+        self
+    }
+
+    pub fn with_watch_event_query(mut self, r: Arc<dyn WatchEventQuery>) -> Self {
+        self.watch_event_query = r;
         self
     }
 

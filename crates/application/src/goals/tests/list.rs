@@ -1,14 +1,18 @@
 use uuid::Uuid;
 
+use crate::goals::deps::{GoalCommandDeps, GoalQueryDeps};
 use crate::goals::{commands::CreateGoalCommand, create, list, queries::ListGoalsQuery};
 use crate::test_helpers::TestContextBuilder;
 
 #[tokio::test]
 async fn returns_empty_when_no_goals() {
     let b = TestContextBuilder::new();
+    let query_deps = GoalQueryDeps {
+        goal: b.goal_repo.clone(),
+        stats: b.stats_repo.clone(),
+    };
     let result = list::execute(
-        b.goal_repo.clone(),
-        b.stats_repo.clone(),
+        &query_deps,
         ListGoalsQuery {
             user_id: Uuid::nil(),
         },
@@ -22,11 +26,19 @@ async fn returns_empty_when_no_goals() {
 #[tokio::test]
 async fn returns_all_goals_for_user() {
     let b = TestContextBuilder::new();
+    let cmd_deps = GoalCommandDeps {
+        goal: b.goal_repo.clone(),
+        stats: b.stats_repo.clone(),
+        event_publisher: b.event_publisher.clone(),
+    };
+    let query_deps = GoalQueryDeps {
+        goal: b.goal_repo.clone(),
+        stats: b.stats_repo.clone(),
+    };
+
     for year in [2023, 2024, 2025] {
         create::execute(
-            b.goal_repo.clone(),
-            b.stats_repo.clone(),
-            b.event_publisher.clone(),
+            &cmd_deps,
             CreateGoalCommand {
                 user_id: Uuid::nil(),
                 year,
@@ -38,8 +50,7 @@ async fn returns_all_goals_for_user() {
     }
 
     let result = list::execute(
-        b.goal_repo.clone(),
-        b.stats_repo.clone(),
+        &query_deps,
         ListGoalsQuery {
             user_id: Uuid::nil(),
         },

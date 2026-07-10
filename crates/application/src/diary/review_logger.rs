@@ -6,7 +6,8 @@ use domain::{
     events::DomainEvent,
     models::Review,
     ports::{
-        EventPublisher, MetadataClient, MovieRepository, ReviewRepository, WatchlistRepository,
+        EventPublisher, MetadataClient, MovieCommand, MovieQuery, ReviewRepository,
+        WatchlistRepository,
     },
     value_objects::{Comment, Rating, UserId},
 };
@@ -16,7 +17,8 @@ use crate::movies::resolve::resolve_and_persist_movie;
 use crate::ports::ReviewLogger;
 
 pub struct DefaultReviewLogger {
-    movie_repo: Arc<dyn MovieRepository>,
+    movie_command: Arc<dyn MovieCommand>,
+    movie_query: Arc<dyn MovieQuery>,
     review_repo: Arc<dyn ReviewRepository>,
     watchlist_repo: Arc<dyn WatchlistRepository>,
     metadata_client: Arc<dyn MetadataClient>,
@@ -25,14 +27,16 @@ pub struct DefaultReviewLogger {
 
 impl DefaultReviewLogger {
     pub fn new(
-        movie_repo: Arc<dyn MovieRepository>,
+        movie_command: Arc<dyn MovieCommand>,
+        movie_query: Arc<dyn MovieQuery>,
         review_repo: Arc<dyn ReviewRepository>,
         watchlist_repo: Arc<dyn WatchlistRepository>,
         metadata_client: Arc<dyn MetadataClient>,
         event_publisher: Arc<dyn EventPublisher>,
     ) -> Self {
         Self {
-            movie_repo,
+            movie_command,
+            movie_query,
             review_repo,
             watchlist_repo,
             metadata_client,
@@ -50,7 +54,8 @@ impl ReviewLogger for DefaultReviewLogger {
 
         let (movie, is_new_movie) = resolve_and_persist_movie(
             &cmd.input,
-            self.movie_repo.as_ref(),
+            self.movie_command.as_ref(),
+            self.movie_query.as_ref(),
             self.metadata_client.as_ref(),
             self.event_publisher.as_ref(),
         )
@@ -58,7 +63,7 @@ impl ReviewLogger for DefaultReviewLogger {
 
         // Always upsert: even existing movies may have updated metadata
         if !is_new_movie {
-            self.movie_repo.upsert_movie(&movie).await?;
+            self.movie_command.upsert_movie(&movie).await?;
         }
 
         let review = Review::new(

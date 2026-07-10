@@ -445,7 +445,8 @@ async fn test_app() -> Router {
     let state = AppState {
         app_ctx: AppContext {
             repos: Repositories {
-                movie: Arc::new(SqliteMovieRepository::new(pool.clone())) as _,
+                movie_command: Arc::new(SqliteMovieRepository::new(pool.clone())) as _,
+                movie_query: Arc::new(SqliteMovieRepository::new(pool.clone())) as _,
                 review: Arc::new(SqliteReviewRepository::new(pool.clone())) as _,
                 diary: Arc::new(SqliteDiaryRepository::new(pool.clone())) as _,
                 stats: Arc::new(SqliteStatsRepository::new(pool.clone())) as _,
@@ -454,7 +455,8 @@ async fn test_app() -> Router {
                 import_profile: Arc::new(PanicImportProfile),
                 movie_profile: Arc::new(PanicMovieProfile),
                 watchlist: Arc::new(PanicWatchlist),
-                watch_event: Arc::new(domain::testing::PanicWatchEventRepository),
+                watch_event_command: Arc::new(domain::testing::PanicWatchEventCommand),
+                watch_event_query: Arc::new(domain::testing::PanicWatchEventQuery),
                 webhook_token: Arc::new(domain::testing::PanicWebhookTokenRepository),
                 profile_fields: Arc::new(PanicProfileFields),
                 person_command: Arc::new(PanicPersonCommand),

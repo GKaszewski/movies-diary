@@ -79,7 +79,8 @@ pub fn create_profile_fields_repo(
 
 pub struct PostgresWireOutput {
     pub pool: PgPool,
-    pub movie: std::sync::Arc<dyn domain::ports::MovieRepository>,
+    pub movie_command: std::sync::Arc<dyn domain::ports::MovieCommand>,
+    pub movie_query: std::sync::Arc<dyn domain::ports::MovieQuery>,
     pub review: std::sync::Arc<dyn domain::ports::ReviewRepository>,
     pub diary: std::sync::Arc<dyn domain::ports::DiaryRepository>,
     pub stats: std::sync::Arc<dyn domain::ports::StatsRepository>,
@@ -114,9 +115,12 @@ pub async fn wire(database_url: &str) -> anyhow::Result<PostgresWireOutput> {
         user_settings::PostgresUserSettingsRepository::new(pool.clone()),
     );
 
+    let movie_repo = std::sync::Arc::new(PostgresMovieRepository::new(pool.clone()));
+
     Ok(PostgresWireOutput {
         pool: pool.clone(),
-        movie: std::sync::Arc::new(PostgresMovieRepository::new(pool.clone())) as _,
+        movie_command: movie_repo.clone() as _,
+        movie_query: movie_repo as _,
         review: std::sync::Arc::new(PostgresReviewRepository::new(pool.clone())) as _,
         diary: std::sync::Arc::new(PostgresDiaryRepository::new(pool.clone())) as _,
         stats: std::sync::Arc::new(PostgresStatsRepository::new(pool.clone())) as _,

@@ -17,7 +17,7 @@ use domain::{
         collections::{PageParams, Paginated},
     },
     ports::{
-        AuthService, DiaryRepository, EventPublisher, MetadataClient, MovieRepository,
+        AuthService, DiaryRepository, EventPublisher, MetadataClient, MovieCommand, MovieQuery,
         ObjectStorage, PasswordHasher, PersonCommand, PersonQuery, PosterFetcherClient,
         ReviewRepository, SearchCommand, SearchPort, StatsRepository, UserRepository,
         WatchlistRepository,
@@ -35,7 +35,16 @@ use tower::ServiceExt;
 pub struct Panic;
 
 #[async_trait::async_trait]
-impl MovieRepository for Panic {
+impl MovieCommand for Panic {
+    async fn upsert_movie(&self, _: &Movie) -> Result<(), DomainError> {
+        panic!()
+    }
+    async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> {
+        panic!()
+    }
+}
+#[async_trait::async_trait]
+impl MovieQuery for Panic {
     async fn get_movie_by_external_id(
         &self,
         _: &ExternalMetadataId,
@@ -50,12 +59,6 @@ impl MovieRepository for Panic {
         _: &MovieTitle,
         _: &ReleaseYear,
     ) -> Result<Vec<Movie>, DomainError> {
-        panic!()
-    }
-    async fn upsert_movie(&self, _: &Movie) -> Result<(), DomainError> {
-        panic!()
-    }
-    async fn delete_movie(&self, _: &MovieId) -> Result<(), DomainError> {
         panic!()
     }
     async fn existing_external_ids(
@@ -530,7 +533,7 @@ impl domain::ports::RemoteWatchlistRepository for Panic {
 }
 
 #[async_trait::async_trait]
-impl domain::ports::WatchEventRepository for Panic {
+impl domain::ports::WatchEventCommand for Panic {
     async fn save(&self, _: &domain::models::WatchEvent) -> Result<(), DomainError> {
         panic!()
     }
@@ -541,6 +544,22 @@ impl domain::ports::WatchEventRepository for Panic {
     ) -> Result<(), DomainError> {
         panic!()
     }
+    async fn update_status_batch(
+        &self,
+        _: &[domain::value_objects::WatchEventId],
+        _: domain::models::WatchEventStatus,
+    ) -> Result<u64, DomainError> {
+        panic!()
+    }
+    async fn delete_non_pending_older_than(
+        &self,
+        _: chrono::NaiveDateTime,
+    ) -> Result<u64, DomainError> {
+        panic!()
+    }
+}
+#[async_trait::async_trait]
+impl domain::ports::WatchEventQuery for Panic {
     async fn list_pending(
         &self,
         _: &domain::value_objects::UserId,
@@ -559,25 +578,12 @@ impl domain::ports::WatchEventRepository for Panic {
     ) -> Result<Vec<domain::models::WatchEvent>, DomainError> {
         panic!()
     }
-    async fn update_status_batch(
-        &self,
-        _: &[domain::value_objects::WatchEventId],
-        _: domain::models::WatchEventStatus,
-    ) -> Result<u64, DomainError> {
-        panic!()
-    }
     async fn find_duplicate(
         &self,
         _: &domain::value_objects::UserId,
         _: &str,
         _: chrono::NaiveDateTime,
     ) -> Result<bool, DomainError> {
-        panic!()
-    }
-    async fn delete_non_pending_older_than(
-        &self,
-        _: chrono::NaiveDateTime,
-    ) -> Result<u64, DomainError> {
         panic!()
     }
 }
@@ -782,7 +788,8 @@ pub fn make_test_state(auth_service: Arc<dyn AuthService>) -> crate::state::AppS
     crate::state::AppState {
         app_ctx: AppContext {
             repos: Repositories {
-                movie: Arc::clone(&repo) as _,
+                movie_command: Arc::clone(&repo) as _,
+                movie_query: Arc::clone(&repo) as _,
                 review: Arc::clone(&repo) as _,
                 diary: Arc::clone(&repo) as _,
                 stats: Arc::clone(&repo) as _,
@@ -791,7 +798,8 @@ pub fn make_test_state(auth_service: Arc<dyn AuthService>) -> crate::state::AppS
                 import_profile: Arc::clone(&repo) as _,
                 movie_profile: Arc::clone(&repo) as _,
                 watchlist: Arc::clone(&repo) as _,
-                watch_event: Arc::clone(&repo) as _,
+                watch_event_command: Arc::clone(&repo) as _,
+                watch_event_query: Arc::clone(&repo) as _,
                 webhook_token: Arc::clone(&repo) as _,
                 profile_fields: Arc::clone(&repo) as _,
                 person_command: Arc::clone(&repo) as _,

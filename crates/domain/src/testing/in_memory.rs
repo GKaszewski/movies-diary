@@ -18,8 +18,9 @@ use crate::{
     },
     ports::{
         GoalRepository, ImportProfileRepository, ImportSessionRepository, MovieProfileRepository,
-        MovieRepository, RefreshSessionRepository, ReviewRepository, UserFederationSettingsQuery,
-        UserProfileFieldsRepository, UserRepository, UserSettingsRepository, WatchEventRepository,
+        MovieCommand, MovieQuery, RefreshSessionRepository, ReviewRepository,
+        UserFederationSettingsQuery, UserProfileFieldsRepository, UserRepository,
+        UserSettingsRepository, WatchEventCommand, WatchEventQuery,
         WatchlistRepository, WebhookTokenRepository,
     },
     value_objects::{
@@ -47,7 +48,23 @@ impl InMemoryMovieRepository {
 }
 
 #[async_trait]
-impl MovieRepository for InMemoryMovieRepository {
+impl MovieCommand for InMemoryMovieRepository {
+    async fn upsert_movie(&self, movie: &Movie) -> Result<(), DomainError> {
+        self.store
+            .lock()
+            .unwrap()
+            .insert(movie.id().value(), movie.clone());
+        Ok(())
+    }
+
+    async fn delete_movie(&self, movie_id: &MovieId) -> Result<(), DomainError> {
+        self.store.lock().unwrap().remove(&movie_id.value());
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl MovieQuery for InMemoryMovieRepository {
     async fn get_movie_by_external_id(
         &self,
         external_metadata_id: &ExternalMetadataId,
@@ -78,19 +95,6 @@ impl MovieRepository for InMemoryMovieRepository {
             .filter(|m| m.title() == title && m.release_year() == year)
             .cloned()
             .collect())
-    }
-
-    async fn upsert_movie(&self, movie: &Movie) -> Result<(), DomainError> {
-        self.store
-            .lock()
-            .unwrap()
-            .insert(movie.id().value(), movie.clone());
-        Ok(())
-    }
-
-    async fn delete_movie(&self, movie_id: &MovieId) -> Result<(), DomainError> {
-        self.store.lock().unwrap().remove(&movie_id.value());
-        Ok(())
     }
 
     async fn existing_external_ids(
@@ -526,7 +530,7 @@ impl InMemoryWatchEventRepository {
 }
 
 #[async_trait]
-impl WatchEventRepository for InMemoryWatchEventRepository {
+impl WatchEventCommand for InMemoryWatchEventRepository {
     async fn save(&self, event: &WatchEvent) -> Result<(), DomainError> {
         self.store.lock().unwrap().push(event.clone());
         Ok(())
@@ -540,6 +544,27 @@ impl WatchEventRepository for InMemoryWatchEventRepository {
         Ok(())
     }
 
+    async fn update_status_batch(
+        &self,
+        ids: &[WatchEventId],
+        _status: WatchEventStatus,
+    ) -> Result<u64, DomainError> {
+        Ok(ids.len() as u64)
+    }
+
+    async fn delete_non_pending_older_than(
+        &self,
+        before: NaiveDateTime,
+    ) -> Result<u64, DomainError> {
+        let mut store = self.store.lock().unwrap();
+        let before_len = store.len();
+        store.retain(|e| *e.status() == WatchEventStatus::Pending || *e.created_at() >= before);
+        Ok((before_len - store.len()) as u64)
+    }
+}
+
+#[async_trait]
+impl WatchEventQuery for InMemoryWatchEventRepository {
     async fn list_pending(&self, user_id: &UserId) -> Result<Vec<WatchEvent>, DomainError> {
         let store = self.store.lock().unwrap();
         Ok(store
@@ -566,14 +591,6 @@ impl WatchEventRepository for InMemoryWatchEventRepository {
             .collect())
     }
 
-    async fn update_status_batch(
-        &self,
-        ids: &[WatchEventId],
-        _status: WatchEventStatus,
-    ) -> Result<u64, DomainError> {
-        Ok(ids.len() as u64)
-    }
-
     async fn find_duplicate(
         &self,
         user_id: &UserId,
@@ -588,15 +605,6 @@ impl WatchEventRepository for InMemoryWatchEventRepository {
         }))
     }
 
-    async fn delete_non_pending_older_than(
-        &self,
-        before: NaiveDateTime,
-    ) -> Result<u64, DomainError> {
-        let mut store = self.store.lock().unwrap();
-        let before_len = store.len();
-        store.retain(|e| *e.status() == WatchEventStatus::Pending || *e.created_at() >= before);
-        Ok((before_len - store.len()) as u64)
-    }
 }
 
 // ── InMemoryImportSessionRepository ─────────────────────────────────────────

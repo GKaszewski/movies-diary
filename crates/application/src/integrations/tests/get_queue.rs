@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use chrono::Utc;
 use domain::models::{WatchEvent, WatchEventSource};
-use domain::ports::WatchEventRepository;
+use domain::ports::WatchEventCommand;
 use domain::testing::InMemoryWatchEventRepository;
 use domain::value_objects::UserId;
 use uuid::Uuid;
@@ -11,10 +11,10 @@ use crate::integrations::{get_queue, queries::GetWatchQueueQuery};
 
 #[tokio::test]
 async fn returns_empty_when_no_events() {
-    let events: Arc<dyn WatchEventRepository> = InMemoryWatchEventRepository::new();
+    let events = InMemoryWatchEventRepository::new();
 
     let result = get_queue::execute(
-        Arc::clone(&events),
+        Arc::clone(&events) as _,
         GetWatchQueueQuery {
             user_id: Uuid::new_v4(),
         },
@@ -27,7 +27,7 @@ async fn returns_empty_when_no_events() {
 
 #[tokio::test]
 async fn returns_pending_events() {
-    let events: Arc<dyn WatchEventRepository> = InMemoryWatchEventRepository::new();
+    let events = InMemoryWatchEventRepository::new();
 
     let user_id = Uuid::new_v4();
     let event = WatchEvent::new(
@@ -41,7 +41,7 @@ async fn returns_pending_events() {
     );
     events.save(&event).await.unwrap();
 
-    let result = get_queue::execute(Arc::clone(&events), GetWatchQueueQuery { user_id })
+    let result = get_queue::execute(Arc::clone(&events) as _, GetWatchQueueQuery { user_id })
         .await
         .unwrap();
 

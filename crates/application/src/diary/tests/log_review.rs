@@ -4,10 +4,10 @@ use chrono::Utc;
 
 use domain::{
     models::Movie,
+    ports::MovieCommand,
     value_objects::{MovieTitle, ReleaseYear},
 };
 
-use domain::ports::MovieRepository;
 use domain::testing::{InMemoryMovieRepository, InMemoryReviewRepository, NoopEventPublisher};
 
 use crate::{
@@ -23,6 +23,7 @@ fn build_logger(
     events: &Arc<NoopEventPublisher>,
 ) -> Arc<dyn crate::ports::ReviewLogger> {
     Arc::new(DefaultReviewLogger::new(
+        Arc::clone(movies) as _,
         Arc::clone(movies) as _,
         Arc::clone(reviews) as _,
         TestContextBuilder::new().watchlist_repo,

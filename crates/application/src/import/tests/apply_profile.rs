@@ -7,6 +7,7 @@ use domain::testing::{InMemoryImportProfileRepository, InMemoryImportSessionRepo
 use domain::value_objects::{ImportProfileId, UserId};
 use uuid::Uuid;
 
+use crate::import::deps::ApplyProfileDeps;
 use crate::import::{apply_profile, commands::ApplyImportProfileCommand};
 
 #[tokio::test]
@@ -14,9 +15,13 @@ async fn fails_when_profile_not_found() {
     let profiles = InMemoryImportProfileRepository::new();
     let sessions = InMemoryImportSessionRepository::new();
 
+    let deps = ApplyProfileDeps {
+        import_profile: Arc::clone(&profiles) as _,
+        import_session: Arc::clone(&sessions) as _,
+    };
+
     let result = apply_profile::execute(
-        Arc::clone(&profiles) as _,
-        Arc::clone(&sessions) as _,
+        &deps,
         ApplyImportProfileCommand {
             user_id: Uuid::new_v4(),
             session_id: Uuid::new_v4(),
@@ -44,9 +49,13 @@ async fn fails_when_session_not_found() {
     let profile_id = profile.id.clone();
     profiles.save(&profile).await.unwrap();
 
+    let deps = ApplyProfileDeps {
+        import_profile: Arc::clone(&profiles) as _,
+        import_session: Arc::clone(&sessions) as _,
+    };
+
     let result = apply_profile::execute(
-        Arc::clone(&profiles) as _,
-        Arc::clone(&sessions) as _,
+        &deps,
         ApplyImportProfileCommand {
             user_id,
             session_id: Uuid::new_v4(),
@@ -82,9 +91,13 @@ async fn applies_profile_mappings_to_session() {
     let session_id = session.id.clone();
     sessions.create(&session).await.unwrap();
 
+    let deps = ApplyProfileDeps {
+        import_profile: Arc::clone(&profiles) as _,
+        import_session: Arc::clone(&sessions) as _,
+    };
+
     apply_profile::execute(
-        Arc::clone(&profiles) as _,
-        Arc::clone(&sessions) as _,
+        &deps,
         ApplyImportProfileCommand {
             user_id,
             session_id: session_id.value(),

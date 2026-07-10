@@ -10,7 +10,7 @@ use crate::{diary::commands::SyncPosterCommand, movies::deps::SyncPosterDeps};
 pub async fn execute(deps: &SyncPosterDeps, cmd: SyncPosterCommand) -> Result<(), DomainError> {
     let movie_id = MovieId::from_uuid(cmd.movie_id);
 
-    let mut movie = match deps.movie.get_movie_by_id(&movie_id).await? {
+    let mut movie = match deps.movie_query.get_movie_by_id(&movie_id).await? {
         Some(m) => m,
         None => {
             tracing::warn!(
@@ -59,7 +59,7 @@ pub async fn execute(deps: &SyncPosterDeps, cmd: SyncPosterCommand) -> Result<()
     let poster_path = PosterPath::new(stored_path)?;
 
     movie.update_poster(poster_path);
-    deps.movie.upsert_movie(&movie).await?;
+    deps.movie_command.upsert_movie(&movie).await?;
 
     // Refresh search index so the new poster_path is reflected immediately.
     // Fetch existing profile if available for a complete index document.
