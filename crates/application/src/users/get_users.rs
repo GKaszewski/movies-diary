@@ -1,10 +1,7 @@
-use std::sync::Arc;
-
-use crate::users::queries::GetUsersQuery;
+use crate::users::{deps::GetUsersListDeps, queries::GetUsersQuery};
 use domain::{
     errors::DomainError,
     models::{RemoteActorInfo, UserSummary},
-    ports::{SocialQueryPort, UserRepository},
 };
 
 pub struct UsersListData {
@@ -13,13 +10,12 @@ pub struct UsersListData {
 }
 
 pub async fn execute(
-    user: Arc<dyn UserRepository>,
-    social_query: Arc<dyn SocialQueryPort>,
+    deps: &GetUsersListDeps,
     _query: GetUsersQuery,
 ) -> Result<UsersListData, DomainError> {
     let (users_result, actors_result) = tokio::join!(
-        user.list_with_stats(),
-        social_query.list_all_followed_remote_actors()
+        deps.user.list_with_stats(),
+        deps.social_query_legacy.list_all_followed_remote_actors()
     );
 
     Ok(UsersListData {
@@ -27,7 +23,3 @@ pub async fn execute(
         remote_actors: actors_result?,
     })
 }
-
-#[cfg(test)]
-#[path = "tests/get_users.rs"]
-mod tests;

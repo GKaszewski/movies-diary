@@ -7,7 +7,7 @@ use crate::{
         DiaryEntry, FederationFlags, PendingFollowerInfo, RemoteActorInfo, RemoteGoalEntry,
         RemoteWatchlistEntry, WatchlistWithMovie,
     },
-    value_objects::{MovieId, SocialIdentity, UserId},
+    value_objects::{MovieId, SocialActor, SocialIdentity, UserId},
 };
 
 // ── Unified social ports (ADR-0002) ─────────────────────────────────────────
@@ -62,17 +62,17 @@ pub trait SocialQuery: Send + Sync {
     async fn get_following(
         &self,
         user: &UserId,
-    ) -> Result<Vec<SocialIdentity>, DomainError>;
+    ) -> Result<Vec<SocialActor>, DomainError>;
 
     async fn get_followers(
         &self,
         user: &UserId,
-    ) -> Result<Vec<SocialIdentity>, DomainError>;
+    ) -> Result<Vec<SocialActor>, DomainError>;
 
     async fn get_pending_followers(
         &self,
         user: &UserId,
-    ) -> Result<Vec<SocialIdentity>, DomainError>;
+    ) -> Result<Vec<SocialActor>, DomainError>;
 
     async fn count_following(&self, user: &UserId) -> Result<usize, DomainError>;
 
@@ -81,13 +81,22 @@ pub trait SocialQuery: Send + Sync {
     async fn get_blocked(
         &self,
         user: &UserId,
-    ) -> Result<Vec<SocialIdentity>, DomainError>;
+    ) -> Result<Vec<SocialActor>, DomainError>;
 
     async fn is_following(
         &self,
         follower: &UserId,
         target: &SocialIdentity,
     ) -> Result<bool, DomainError>;
+
+    async fn get_accepted_following_urls(
+        &self,
+        user_id: &UserId,
+    ) -> Result<Vec<String>, DomainError>;
+
+    async fn list_all_followed_remote_actors(
+        &self,
+    ) -> Result<Vec<crate::models::RemoteActorInfo>, DomainError>;
 }
 
 // ── Legacy ports (pre-unification, still used by AP adapter + handlers) ─────

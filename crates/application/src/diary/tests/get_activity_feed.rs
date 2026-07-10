@@ -2,7 +2,8 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use domain::errors::DomainError;
-use domain::testing::{FakeDiaryQuery, NoopSocialQueryPort};
+use domain::testing::InMemorySocialRepository;
+use domain::value_objects::SocialActor;
 
 use crate::{
     config::AppConfig, diary::deps::GetActivityFeedDeps, diary::get_activity_feed,
@@ -11,8 +12,8 @@ use crate::{
 
 fn default_deps() -> GetActivityFeedDeps {
     GetActivityFeedDeps {
-        diary: FakeDiaryQuery::new() as _,
-        social_query: Arc::new(NoopSocialQueryPort),
+        diary: domain::testing::FakeDiaryQuery::new() as _,
+        social_query: InMemorySocialRepository::new() as _,
         config: TestContextBuilder::new().config,
     }
 }
@@ -59,20 +60,30 @@ async fn returns_feed_with_following_filter() {
     .await
     .unwrap();
 
-    // NoopSocialQueryPort returns empty following, so FollowingFilter
-    // contains only the viewer's id. Feed is empty but the code path is hit.
     assert!(result.items.is_empty());
 }
 
 struct FakeSocialWithFollowing(Vec<String>);
 
 #[async_trait]
-impl domain::ports::SocialQueryPort for FakeSocialWithFollowing {
-    async fn get_accepted_following_urls(
+impl domain::ports::SocialQuery for FakeSocialWithFollowing {
+    async fn get_following(
         &self,
         _: &domain::value_objects::UserId,
-    ) -> Result<Vec<String>, DomainError> {
-        Ok(self.0.clone())
+    ) -> Result<Vec<SocialActor>, DomainError> {
+        Ok(vec![])
+    }
+    async fn get_followers(
+        &self,
+        _: &domain::value_objects::UserId,
+    ) -> Result<Vec<SocialActor>, DomainError> {
+        Ok(vec![])
+    }
+    async fn get_pending_followers(
+        &self,
+        _: &domain::value_objects::UserId,
+    ) -> Result<Vec<SocialActor>, DomainError> {
+        Ok(vec![])
     }
     async fn count_following(
         &self,
@@ -80,17 +91,30 @@ impl domain::ports::SocialQueryPort for FakeSocialWithFollowing {
     ) -> Result<usize, DomainError> {
         Ok(0)
     }
-    async fn count_accepted_followers(
+    async fn count_followers(
         &self,
         _: &domain::value_objects::UserId,
     ) -> Result<usize, DomainError> {
         Ok(0)
     }
-    async fn get_pending_followers(
+    async fn get_blocked(
         &self,
         _: &domain::value_objects::UserId,
-    ) -> Result<Vec<domain::models::PendingFollowerInfo>, DomainError> {
+    ) -> Result<Vec<SocialActor>, DomainError> {
         Ok(vec![])
+    }
+    async fn is_following(
+        &self,
+        _: &domain::value_objects::UserId,
+        _: &domain::value_objects::SocialIdentity,
+    ) -> Result<bool, DomainError> {
+        Ok(false)
+    }
+    async fn get_accepted_following_urls(
+        &self,
+        _: &domain::value_objects::UserId,
+    ) -> Result<Vec<String>, DomainError> {
+        Ok(self.0.clone())
     }
     async fn list_all_followed_remote_actors(
         &self,
@@ -112,7 +136,7 @@ async fn following_filter_parses_local_and_remote_urls() {
     let social = Arc::new(FakeSocialWithFollowing(following_urls));
 
     let deps = GetActivityFeedDeps {
-        diary: FakeDiaryQuery::new() as _,
+        diary: domain::testing::FakeDiaryQuery::new() as _,
         social_query: social as _,
         config: AppConfig {
             allow_registration: true,
@@ -141,8 +165,6 @@ async fn following_filter_parses_local_and_remote_urls() {
     .await
     .unwrap();
 
-    // Feed is empty (no data seeded), but the build_following_filter code path
-    // with actual URL parsing ran without errors.
     assert!(result.items.is_empty());
 }
 
@@ -164,6 +186,5 @@ async fn following_filter_without_viewer_returns_none() {
     .await
     .unwrap();
 
-    // filter_following=true but viewer_user_id=None → build_following_filter returns None
     assert!(result.items.is_empty());
 }

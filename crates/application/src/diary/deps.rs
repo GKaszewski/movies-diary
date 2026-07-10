@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use domain::ports::{
     DiaryQuery, EventPublisher, MovieCommand, MovieProfileRepository, MovieQuery, ReviewRepository,
-    SocialQueryPort,
+    SocialQuery,
 };
 
 use crate::config::AppConfig;
@@ -27,6 +27,6 @@ pub struct GetMovieSocialPageDeps {
 
 pub struct GetActivityFeedDeps {
     pub diary: Arc<dyn DiaryQuery>,
-    pub social_query: Arc<dyn SocialQueryPort>,
+    pub social_query: Arc<dyn SocialQuery>,
     pub config: AppConfig,
 }

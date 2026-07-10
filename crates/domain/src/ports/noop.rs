@@ -2,7 +2,7 @@ use async_trait::async_trait;
 
 use crate::{
     errors::DomainError,
-    value_objects::{SocialIdentity, UserId},
+    value_objects::{SocialActor, SocialIdentity, UserId},
 };
 
 // ── NoopRemoteWatchlistRepository ─────────────────────────────────────────────
@@ -70,13 +70,13 @@ pub struct NoopSocialQuery;
 
 #[async_trait]
 impl super::SocialQuery for NoopSocialQuery {
-    async fn get_following(&self, _: &UserId) -> Result<Vec<SocialIdentity>, DomainError> {
+    async fn get_following(&self, _: &UserId) -> Result<Vec<SocialActor>, DomainError> {
         Ok(vec![])
     }
-    async fn get_followers(&self, _: &UserId) -> Result<Vec<SocialIdentity>, DomainError> {
+    async fn get_followers(&self, _: &UserId) -> Result<Vec<SocialActor>, DomainError> {
         Ok(vec![])
     }
-    async fn get_pending_followers(&self, _: &UserId) -> Result<Vec<SocialIdentity>, DomainError> {
+    async fn get_pending_followers(&self, _: &UserId) -> Result<Vec<SocialActor>, DomainError> {
         Ok(vec![])
     }
     async fn count_following(&self, _: &UserId) -> Result<usize, DomainError> {
@@ -85,11 +85,19 @@ impl super::SocialQuery for NoopSocialQuery {
     async fn count_followers(&self, _: &UserId) -> Result<usize, DomainError> {
         Ok(0)
     }
-    async fn get_blocked(&self, _: &UserId) -> Result<Vec<SocialIdentity>, DomainError> {
+    async fn get_blocked(&self, _: &UserId) -> Result<Vec<SocialActor>, DomainError> {
         Ok(vec![])
     }
     async fn is_following(&self, _: &UserId, _: &SocialIdentity) -> Result<bool, DomainError> {
         Ok(false)
+    }
+    async fn get_accepted_following_urls(&self, _: &UserId) -> Result<Vec<String>, DomainError> {
+        Ok(vec![])
+    }
+    async fn list_all_followed_remote_actors(
+        &self,
+    ) -> Result<Vec<crate::models::RemoteActorInfo>, DomainError> {
+        Ok(vec![])
     }
 }
 

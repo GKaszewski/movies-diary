@@ -176,12 +176,11 @@ pub async fn update_profile_fields_handler(
     responses((status = 200, body = UsersResponse)),
 )]
 pub async fn list_users(State(state): State<AppState>) -> Result<Json<UsersResponse>, ApiError> {
-    let result = get_users::execute(
-        state.app_ctx.repos.user.clone(),
-        state.app_ctx.repos.social_query.clone(),
-        GetUsersQuery,
-    )
-    .await?;
+    let deps = application::users::deps::GetUsersListDeps {
+        user: state.app_ctx.repos.user.clone(),
+        social_query_legacy: state.app_ctx.repos.social_query.clone(),
+    };
+    let result = get_users::execute(&deps, GetUsersQuery).await?;
     Ok(Json(UsersResponse {
         users: result
             .users
@@ -248,7 +247,7 @@ pub async fn get_user_profile(
     let get_profile_deps = GetProfileDeps {
         stats: state.app_ctx.repos.stats.clone(),
         diary: state.app_ctx.repos.diary.clone(),
-        social_query: state.app_ctx.repos.social_query.clone(),
+        social_query: state.app_ctx.repos.social_query_unified.clone(),
     };
     let profile = match get_user_profile_uc::execute(
         &get_profile_deps,
@@ -381,7 +380,7 @@ async fn build_federated_profile_response(
     let get_profile_deps = GetProfileDeps {
         stats: state.app_ctx.repos.stats.clone(),
         diary: state.app_ctx.repos.diary.clone(),
-        social_query: state.app_ctx.repos.social_query.clone(),
+        social_query: state.app_ctx.repos.social_query_unified.clone(),
     };
     let profile = match get_user_profile_uc::execute(
         &get_profile_deps,
@@ -485,9 +484,12 @@ pub async fn get_users_list(
     ctx.page_title = "Members — Movies Diary".to_string();
     ctx.canonical_url = format!("{}/users", state.app_ctx.config.base_url);
 
+    let users_deps = application::users::deps::GetUsersListDeps {
+        user: state.app_ctx.repos.user.clone(),
+        social_query_legacy: state.app_ctx.repos.social_query.clone(),
+    };
     match application::users::get_users::execute(
-        state.app_ctx.repos.user.clone(),
-        state.app_ctx.repos.social_query.clone(),
+        &users_deps,
         application::users::queries::GetUsersQuery,
     )
     .await
@@ -731,7 +733,7 @@ pub async fn get_user_profile_html(
     let html_profile_deps = GetProfileDeps {
         stats: state.app_ctx.repos.stats.clone(),
         diary: state.app_ctx.repos.diary.clone(),
-        social_query: state.app_ctx.repos.social_query.clone(),
+        social_query: state.app_ctx.repos.social_query_unified.clone(),
     };
     match application::users::get_profile::execute(&html_profile_deps, query).await {
         Ok(profile) => {

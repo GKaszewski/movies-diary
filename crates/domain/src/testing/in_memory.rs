@@ -25,7 +25,8 @@ use crate::{
     },
     value_objects::{
         Email, ExternalMetadataId, GoalId, ImportProfileId, ImportSessionId, MovieId, MovieTitle,
-        ReleaseYear, ReviewId, SocialIdentity, UserId, Username, WatchEventId, WebhookTokenId,
+        ReleaseYear, ReviewId, SocialActor, SocialIdentity, UserId, Username, WatchEventId,
+        WebhookTokenId,
     },
 };
 
@@ -875,6 +876,19 @@ impl InMemorySocialRepository {
             blocked: Mutex::new(Vec::new()),
         })
     }
+
+    fn identity_to_actor(identity: &SocialIdentity) -> SocialActor {
+        let handle = match identity {
+            SocialIdentity::Local(uid) => format!("user-{}", uid.value()),
+            SocialIdentity::Remote { actor_url } => actor_url.clone(),
+        };
+        SocialActor {
+            identity: identity.clone(),
+            handle,
+            display_name: None,
+            avatar_url: None,
+        }
+    }
 }
 
 #[async_trait]
@@ -1023,38 +1037,44 @@ impl SocialQuery for InMemorySocialRepository {
     async fn get_following(
         &self,
         user: &UserId,
-    ) -> Result<Vec<SocialIdentity>, DomainError> {
+    ) -> Result<Vec<SocialActor>, DomainError> {
         let store = self.follows.lock().unwrap();
         Ok(store
             .iter()
             .filter(|(f, _, state)| *f == user.value() && *state == FollowState::Accepted)
-            .map(|(_, t, _)| t.clone())
+            .map(|(_, t, _)| Self::identity_to_actor(t))
             .collect())
     }
 
     async fn get_followers(
         &self,
         user: &UserId,
-    ) -> Result<Vec<SocialIdentity>, DomainError> {
+    ) -> Result<Vec<SocialActor>, DomainError> {
         let store = self.follows.lock().unwrap();
         let target = SocialIdentity::Local(user.clone());
         Ok(store
             .iter()
             .filter(|(_, t, state)| *t == target && *state == FollowState::Accepted)
-            .map(|(f, _, _)| SocialIdentity::Local(UserId::from_uuid(*f)))
+            .map(|(f, _, _)| {
+                let id = SocialIdentity::Local(UserId::from_uuid(*f));
+                Self::identity_to_actor(&id)
+            })
             .collect())
     }
 
     async fn get_pending_followers(
         &self,
         user: &UserId,
-    ) -> Result<Vec<SocialIdentity>, DomainError> {
+    ) -> Result<Vec<SocialActor>, DomainError> {
         let store = self.follows.lock().unwrap();
         let target = SocialIdentity::Local(user.clone());
         Ok(store
             .iter()
             .filter(|(_, t, state)| *t == target && *state == FollowState::Pending)
-            .map(|(f, _, _)| SocialIdentity::Local(UserId::from_uuid(*f)))
+            .map(|(f, _, _)| {
+                let id = SocialIdentity::Local(UserId::from_uuid(*f));
+                Self::identity_to_actor(&id)
+            })
             .collect())
     }
 
@@ -1078,12 +1098,12 @@ impl SocialQuery for InMemorySocialRepository {
     async fn get_blocked(
         &self,
         user: &UserId,
-    ) -> Result<Vec<SocialIdentity>, DomainError> {
+    ) -> Result<Vec<SocialActor>, DomainError> {
         let store = self.blocked.lock().unwrap();
         Ok(store
             .iter()
             .filter(|(b, _)| *b == user.value())
-            .map(|(_, t)| t.clone())
+            .map(|(_, t)| Self::identity_to_actor(t))
             .collect())
     }
 
@@ -1096,5 +1116,18 @@ impl SocialQuery for InMemorySocialRepository {
         Ok(store
             .iter()
             .any(|(f, t, state)| *f == follower.value() && t == target && *state == FollowState::Accepted))
+    }
+
+    async fn get_accepted_following_urls(
+        &self,
+        _user_id: &UserId,
+    ) -> Result<Vec<String>, DomainError> {
+        Ok(vec![])
+    }
+
+    async fn list_all_followed_remote_actors(
+        &self,
+    ) -> Result<Vec<crate::models::RemoteActorInfo>, DomainError> {
+        Ok(vec![])
     }
 }

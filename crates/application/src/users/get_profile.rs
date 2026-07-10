@@ -86,7 +86,7 @@ async fn load_social_counts(
         .unwrap_or(0);
     let followers = deps
         .social_query
-        .count_accepted_followers(user_id)
+        .count_followers(user_id)
         .await
         .unwrap_or(0);
     if !is_own_profile {
@@ -98,11 +98,19 @@ async fn load_social_counts(
         .await
         .unwrap_or_default()
         .into_iter()
-        .map(|p| PendingFollowerView {
-            url: p.url,
-            handle: p.handle,
-            display_name: p.display_name,
-            avatar_url: p.avatar_url,
+        .map(|p| {
+            let url = match &p.identity {
+                domain::value_objects::SocialIdentity::Remote { actor_url } => actor_url.clone(),
+                domain::value_objects::SocialIdentity::Local(uid) => {
+                    format!("local:{}", uid.value())
+                }
+            };
+            PendingFollowerView {
+                url,
+                handle: p.handle,
+                display_name: p.display_name,
+                avatar_url: p.avatar_url,
+            }
         })
         .collect();
     (following, followers, pending)

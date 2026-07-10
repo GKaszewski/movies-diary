@@ -182,7 +182,7 @@ pub async fn get_activity_feed(
 ) -> Result<Json<ActivityFeedResponse>, ApiError> {
     let deps = GetActivityFeedDeps {
         diary: state.app_ctx.repos.diary.clone(),
-        social_query: state.app_ctx.repos.social_query.clone(),
+        social_query: state.app_ctx.repos.social_query_unified.clone(),
         config: state.app_ctx.config.clone(),
     };
     let page = get_feed_uc::execute(
@@ -338,7 +338,7 @@ pub async fn get_activity_feed_html(
 
     let deps = GetActivityFeedDeps {
         diary: state.app_ctx.repos.diary.clone(),
-        social_query: state.app_ctx.repos.social_query.clone(),
+        social_query: state.app_ctx.repos.social_query_unified.clone(),
         config: state.app_ctx.config.clone(),
     };
 

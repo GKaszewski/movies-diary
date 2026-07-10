@@ -22,7 +22,7 @@ use api_types::{
     BlockedDomainResponse, FollowRequest, RemoteActorDto,
 };
 use application::social::deps::{SocialCommandDeps, SocialQueryDeps};
-use domain::value_objects::SocialIdentity;
+use domain::value_objects::{SocialActor, SocialIdentity};
 use template_askama::{
     BlockedActorsTemplate, BlockedDomainsTemplate, FollowersTemplate, FollowingTemplate,
     RemoteActorData,
@@ -35,35 +35,36 @@ fn ap_to_domain(e: anyhow::Error) -> domain::errors::DomainError {
     domain::errors::DomainError::InfrastructureError(e.to_string())
 }
 
-fn social_identity_to_dto(id: SocialIdentity) -> RemoteActorDto {
-    match id {
-        SocialIdentity::Remote { actor_url } => RemoteActorDto {
-            url: actor_url,
-            handle: String::new(),
-            display_name: None,
-        },
-        SocialIdentity::Local(uid) => RemoteActorDto {
-            url: format!("local:{}", uid.value()),
-            handle: String::new(),
-            display_name: None,
-        },
+fn actor_url(identity: &SocialIdentity) -> String {
+    match identity {
+        SocialIdentity::Remote { actor_url } => actor_url.clone(),
+        SocialIdentity::Local(uid) => format!("local:{}", uid.value()),
     }
 }
 
-fn social_identity_to_blocked_dto(id: SocialIdentity) -> BlockedActorResponse {
-    match id {
-        SocialIdentity::Remote { actor_url } => BlockedActorResponse {
-            url: actor_url,
-            handle: String::new(),
-            display_name: None,
-            avatar_url: None,
-        },
-        SocialIdentity::Local(uid) => BlockedActorResponse {
-            url: format!("local:{}", uid.value()),
-            handle: String::new(),
-            display_name: None,
-            avatar_url: None,
-        },
+fn social_actor_to_dto(actor: SocialActor) -> RemoteActorDto {
+    RemoteActorDto {
+        url: actor_url(&actor.identity),
+        handle: actor.handle,
+        display_name: actor.display_name,
+    }
+}
+
+fn social_actor_to_blocked_dto(actor: SocialActor) -> BlockedActorResponse {
+    BlockedActorResponse {
+        url: actor_url(&actor.identity),
+        handle: actor.handle,
+        display_name: actor.display_name,
+        avatar_url: actor.avatar_url,
+    }
+}
+
+fn social_actor_to_template(actor: SocialActor) -> RemoteActorData {
+    RemoteActorData {
+        url: actor_url(&actor.identity),
+        handle: actor.handle,
+        display_name: actor.display_name,
+        avatar_url: actor.avatar_url,
     }
 }
 
@@ -234,7 +235,7 @@ pub async fn get_blocked_actors_api(
     Ok(Json(
         identities
             .into_iter()
-            .map(social_identity_to_blocked_dto)
+            .map(social_actor_to_blocked_dto)
             .collect(),
     ))
 }
@@ -264,7 +265,7 @@ pub async fn get_following(
     Ok(Json(ActorListResponse {
         actors: identities
             .into_iter()
-            .map(social_identity_to_dto)
+            .map(social_actor_to_dto)
             .collect(),
     }))
 }
@@ -294,7 +295,7 @@ pub async fn get_followers(
     Ok(Json(ActorListResponse {
         actors: identities
             .into_iter()
-            .map(social_identity_to_dto)
+            .map(social_actor_to_dto)
             .collect(),
     }))
 }
@@ -315,7 +316,7 @@ pub async fn get_user_following(
     Ok(Json(ActorListResponse {
         actors: identities
             .into_iter()
-            .map(social_identity_to_dto)
+            .map(social_actor_to_dto)
             .collect(),
     }))
 }
@@ -336,7 +337,7 @@ pub async fn get_user_followers(
     Ok(Json(ActorListResponse {
         actors: identities
             .into_iter()
-            .map(social_identity_to_dto)
+            .map(social_actor_to_dto)
             .collect(),
     }))
 }
@@ -526,7 +527,7 @@ pub async fn get_pending_followers(
     Ok(Json(ActorListResponse {
         actors: identities
             .into_iter()
-            .map(social_identity_to_dto)
+            .map(social_actor_to_dto)
             .collect(),
     }))
 }
@@ -770,16 +771,19 @@ pub async fn get_following_page(
         "{}/users/{}/following-list",
         state.app_ctx.config.base_url, profile_user_uuid
     );
-    match state.app_ctx.services.ap_service.get_following(user_id.value()).await {
+    let deps = SocialQueryDeps {
+        social_query: state.app_ctx.repos.social_query_unified.clone(),
+    };
+    match application::social::get_following::execute(
+        &deps,
+        application::social::queries::GetFollowingQuery { user_id: user_id.value() },
+    )
+    .await
+    {
         Ok(following) => {
             let actors: Vec<RemoteActorData> = following
                 .into_iter()
-                .map(|a| RemoteActorData {
-                    handle: a.handle,
-                    display_name: a.display_name,
-                    url: a.url,
-                    avatar_url: a.avatar_url.clone(),
-                })
+                .map(social_actor_to_template)
                 .collect();
             render_page(FollowingTemplate {
                 ctx,
@@ -816,20 +820,19 @@ pub async fn get_followers_page(
         "{}/users/{}/followers-list",
         state.app_ctx.config.base_url, profile_user_uuid
     );
-    match state
-        .app_ctx.services.ap_service
-        .get_accepted_followers(user_id.value())
-        .await
+    let deps = SocialQueryDeps {
+        social_query: state.app_ctx.repos.social_query_unified.clone(),
+    };
+    match application::social::get_followers::execute(
+        &deps,
+        application::social::queries::GetFollowersQuery { user_id: user_id.value() },
+    )
+    .await
     {
         Ok(followers) => {
             let actors: Vec<RemoteActorData> = followers
                 .into_iter()
-                .map(|a| RemoteActorData {
-                    handle: a.handle,
-                    display_name: a.display_name,
-                    url: a.url,
-                    avatar_url: a.avatar_url.clone(),
-                })
+                .map(social_actor_to_template)
                 .collect();
             render_page(FollowersTemplate {
                 ctx,
@@ -975,12 +978,20 @@ pub async fn get_blocked_actors_page(
     let mut ctx = build_page_context(&state, Some(user_id.clone()), csrf.0).await;
     ctx.page_title = "Blocked Users — Movies Diary".to_string();
     ctx.canonical_url = format!("{}/social/blocked", state.app_ctx.config.base_url);
-    match state.app_ctx.services.ap_service.get_blocked_actors(user_id.value()).await {
-        Ok(actors) => {
-            let entries: Vec<template_askama::BlockedActorEntry> = actors
+    let deps = SocialQueryDeps {
+        social_query: state.app_ctx.repos.social_query_unified.clone(),
+    };
+    match application::social::get_blocked::execute(
+        &deps,
+        application::social::queries::GetBlockedQuery { user_id: user_id.value() },
+    )
+    .await
+    {
+        Ok(blocked) => {
+            let entries: Vec<template_askama::BlockedActorEntry> = blocked
                 .into_iter()
                 .map(|a| template_askama::BlockedActorEntry {
-                    url: a.url,
+                    url: actor_url(&a.identity),
                     handle: a.handle,
                     display_name: a.display_name,
                     avatar_url: a.avatar_url,

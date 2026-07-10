@@ -35,7 +35,7 @@ async fn returns_profile_with_empty_stats() {
     let deps = GetProfileDeps {
         stats: b.stats_repo.clone(),
         diary: b.diary_repo.clone(),
-        social_query: b.social_query.clone(),
+        social_query: b.social_query_unified.clone(),
     };
 
     setup_user(&b, "profile@test.com", "profuser").await;
@@ -70,7 +70,7 @@ async fn returns_history_view() {
     let deps = GetProfileDeps {
         stats: b.stats_repo.clone(),
         diary: b.diary_repo.clone(),
-        social_query: b.social_query.clone(),
+        social_query: b.social_query_unified.clone(),
     };
 
     setup_user(&b, "hist@test.com", "histuser").await;
@@ -107,7 +107,7 @@ async fn returns_trends_view() {
     let deps = GetProfileDeps {
         stats: b.stats_repo.clone(),
         diary: b.diary_repo.clone(),
-        social_query: b.social_query.clone(),
+        social_query: b.social_query_unified.clone(),
     };
 
     setup_user(&b, "trends@test.com", "trendsuser").await;
@@ -144,7 +144,7 @@ async fn returns_ratings_view() {
     let deps = GetProfileDeps {
         stats: b.stats_repo.clone(),
         diary: b.diary_repo.clone(),
-        social_query: b.social_query.clone(),
+        social_query: b.social_query_unified.clone(),
     };
 
     setup_user(&b, "ratings@test.com", "ratingsuser").await;
@@ -179,7 +179,7 @@ async fn returns_recent_with_search() {
     let deps = GetProfileDeps {
         stats: b.stats_repo.clone(),
         diary: b.diary_repo.clone(),
-        social_query: b.social_query.clone(),
+        social_query: b.social_query_unified.clone(),
     };
 
     setup_user(&b, "search@test.com", "searchuser").await;
@@ -214,7 +214,7 @@ async fn non_own_profile_skips_pending_followers() {
     let deps = GetProfileDeps {
         stats: b.stats_repo.clone(),
         diary: b.diary_repo.clone(),
-        social_query: b.social_query.clone(),
+        social_query: b.social_query_unified.clone(),
     };
 
     setup_user(&b, "other@test.com", "otheruser").await;
