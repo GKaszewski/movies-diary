@@ -96,6 +96,10 @@ impl StatsRepository for SqliteStatsRepository {
         })
     }
 
+    async fn count_reviews_in_year(&self, user_id: &UserId, year: u16) -> Result<u32, DomainError> {
+        crate::goals::count_reviews_in_year(&self.pool, user_id, year).await
+    }
+
     async fn get_user_trends(&self, user_id: &UserId) -> Result<UserTrends, DomainError> {
         let uid = user_id.value().to_string();
 

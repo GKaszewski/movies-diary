@@ -6,4 +6,3 @@ edition = "2024"
 [dependencies]
 rss-feed = { package = "rss", version = "2" }
 domain = { workspace = true }
-application = { workspace = true }

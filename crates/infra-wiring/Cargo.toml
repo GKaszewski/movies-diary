@@ -1,0 +1,14 @@
+[package]
+name = "infra-wiring"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+sqlx = { workspace = true }
+anyhow = { workspace = true }
+
+[features]
+default = []
+sqlite = []
+postgres = ["sqlx/postgres"]
+nats = []

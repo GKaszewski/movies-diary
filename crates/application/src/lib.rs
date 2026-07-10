@@ -1,7 +1,6 @@
 pub mod config;
 pub mod jobs;
 pub mod ports;
-pub mod rendering;
 pub mod worker;
 
 pub mod auth;

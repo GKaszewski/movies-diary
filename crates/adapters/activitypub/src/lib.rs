@@ -51,6 +51,11 @@ pub struct ActivityPubDeps {
     pub remote_watchlist_repo: std::sync::Arc<dyn domain::ports::RemoteWatchlistRepository>,
     pub remote_goal_repo: std::sync::Arc<dyn domain::ports::RemoteGoalRepository>,
     pub local_ap_content: std::sync::Arc<dyn domain::ports::LocalApContentQuery>,
+    pub movie_repo: std::sync::Arc<dyn domain::ports::MovieRepository>,
+    pub review_repo: std::sync::Arc<dyn domain::ports::ReviewRepository>,
+    pub diary_repo: std::sync::Arc<dyn domain::ports::DiaryRepository>,
+    pub goal_repo: std::sync::Arc<dyn domain::ports::GoalRepository>,
+    pub stats_repo: std::sync::Arc<dyn domain::ports::StatsRepository>,
     pub user_repo: std::sync::Arc<dyn domain::ports::UserRepository>,
     pub federation_settings: std::sync::Arc<dyn domain::ports::UserFederationSettingsQuery>,
     pub base_url: String,
@@ -68,6 +73,11 @@ pub async fn wire(deps: ActivityPubDeps) -> anyhow::Result<ActivityPubWire> {
         remote_watchlist_repo,
         remote_goal_repo,
         local_ap_content,
+        movie_repo,
+        review_repo,
+        diary_repo,
+        goal_repo,
+        stats_repo,
         user_repo,
         federation_settings,
         base_url,
@@ -76,6 +86,8 @@ pub async fn wire(deps: ActivityPubDeps) -> anyhow::Result<ActivityPubWire> {
     } = deps;
     let review_handler = std::sync::Arc::new(ReviewObjectHandler {
         content_query: std::sync::Arc::clone(&local_ap_content),
+        movie_repo: std::sync::Arc::clone(&movie_repo),
+        diary_repo,
         review_store,
         event_publisher: std::sync::Arc::clone(&event_publisher),
         base_url: base_url.clone(),
@@ -87,7 +99,7 @@ pub async fn wire(deps: ActivityPubDeps) -> anyhow::Result<ActivityPubWire> {
     });
     let goal_handler = std::sync::Arc::new(goal_handler::GoalObjectHandler {
         remote_goal_repo,
-        content_query: std::sync::Arc::clone(&local_ap_content),
+        goal_repo: std::sync::Arc::clone(&goal_repo),
         base_url: base_url.clone(),
     });
     let composite = std::sync::Arc::new(composite_handler::CompositeObjectHandler {
@@ -136,6 +148,10 @@ pub async fn wire(deps: ActivityPubDeps) -> anyhow::Result<ActivityPubWire> {
     let event_handler = std::sync::Arc::new(ActivityPubEventHandler::new(
         std::sync::Arc::clone(&concrete),
         local_ap_content,
+        review_repo,
+        movie_repo,
+        goal_repo,
+        stats_repo,
         federation_settings,
         base_url,
     )) as std::sync::Arc<dyn domain::ports::EventHandler>;

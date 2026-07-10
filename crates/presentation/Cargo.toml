@@ -7,9 +7,9 @@ license = "MIT"
 
 [features]
 default = ["sqlite", "sqlite-federation"]
-sqlite = ["dep:sqlite", "dep:sqlite-event-queue", "dep:sqlite-search"]
-postgres = ["dep:postgres", "dep:postgres-event-queue", "dep:postgres-search"]
-nats = ["dep:nats"]
+sqlite = ["dep:sqlite", "dep:sqlite-event-queue", "dep:sqlite-search", "infra-wiring/sqlite"]
+postgres = ["dep:postgres", "dep:postgres-event-queue", "dep:postgres-search", "infra-wiring/postgres"]
+nats = ["dep:nats", "infra-wiring/nats"]
 # Meta-feature: true when any federation adapter is active — keeps all #[cfg(feature = "federation")] gates working
 federation = ["application/federation"]
 sqlite-federation = [
@@ -59,6 +59,7 @@ importer = { workspace = true }
 jellyfin = { workspace = true }
 plex = { workspace = true }
 sqlx = { workspace = true }
+infra-wiring = { workspace = true }
 utoipa = { version = "5.5.0", features = ["axum_extras", "uuid"] }
 utoipa-scalar = { version = "0.3.0", features = ["axum"], default-features = false }
 utoipa-swagger-ui = { version = "9.0.2", features = ["axum", "vendored"] }

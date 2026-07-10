@@ -378,7 +378,7 @@ impl DiaryRepository for SqliteDiaryRepository {
         .into_domain()?;
 
         let viewings = sqlx::query_as::<_, ReviewRow>(
-            "SELECT id, movie_id, user_id, rating, comment, watched_at, created_at, remote_actor_url
+            "SELECT id, movie_id, user_id, rating, comment, watched_at, created_at, remote_actor_url, watch_medium
              FROM reviews WHERE movie_id = ? ORDER BY watched_at ASC",
         )
         .bind(&id_str)

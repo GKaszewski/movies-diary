@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 async-trait = { workspace = true }
 domain = { workspace = true }
-reqwest = { workspace = true }
+infra-wiring = { workspace = true }
 uuid = { workspace = true }
 chrono = { workspace = true }
 tracing = { workspace = true }

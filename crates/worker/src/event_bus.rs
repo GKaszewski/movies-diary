@@ -5,31 +5,7 @@ use anyhow::Context;
 use domain::ports::{EventConsumer, EventPublisher};
 
 use crate::db::DbPool;
-
-#[derive(Clone, Copy)]
-pub enum EventBusBackend {
-    Db,
-    #[cfg(feature = "nats")]
-    Nats,
-}
-
-impl EventBusBackend {
-    pub fn from_env() -> anyhow::Result<Self> {
-        match std::env::var("EVENT_BUS_BACKEND")
-            .unwrap_or_else(|_| "db".to_string())
-            .as_str()
-        {
-            "db" => Ok(Self::Db),
-            #[cfg(feature = "nats")]
-            "nats" => Ok(Self::Nats),
-            #[cfg(not(feature = "nats"))]
-            "nats" => {
-                anyhow::bail!("EVENT_BUS_BACKEND=nats requires the nats feature to be compiled in")
-            }
-            other => anyhow::bail!("unknown EVENT_BUS_BACKEND={other}, expected 'db' or 'nats'"),
-        }
-    }
-}
+use infra_wiring::EventBusBackend;
 
 pub async fn create(
     db_pool: &DbPool,

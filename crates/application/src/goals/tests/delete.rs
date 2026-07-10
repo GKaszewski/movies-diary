@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use domain::testing::{InMemoryGoalRepository, NoopEventPublisher};
+use domain::testing::{FakeStatsRepository, InMemoryGoalRepository, NoopEventPublisher};
 use uuid::Uuid;
 
 use crate::goals::{
@@ -12,10 +12,12 @@ use crate::test_helpers::TestContextBuilder;
 #[tokio::test]
 async fn deletes_existing_goal() {
     let goals = InMemoryGoalRepository::new();
+    let stats = FakeStatsRepository::new();
     let events = NoopEventPublisher::new();
 
     create::execute(
         Arc::clone(&goals) as _,
+        Arc::clone(&stats) as _,
         Arc::clone(&events) as _,
         CreateGoalCommand {
             user_id: Uuid::nil(),

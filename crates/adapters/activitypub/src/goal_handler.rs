@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use chrono::DateTime;
 use domain::{
     models::RemoteGoalEntry,
-    ports::{LocalApContentQuery, RemoteGoalRepository},
+    ports::{GoalRepository, RemoteGoalRepository},
     value_objects::UserId,
 };
 use k_ap::{ApContentReader, ApObjectHandler};
@@ -15,7 +15,7 @@ use crate::urls::{actor_url, goal_url};
 
 pub struct GoalObjectHandler {
     pub remote_goal_repo: Arc<dyn RemoteGoalRepository>,
-    pub content_query: Arc<dyn LocalApContentQuery>,
+    pub goal_repo: Arc<dyn GoalRepository>,
     pub base_url: String,
 }
 
@@ -29,8 +29,8 @@ impl ApContentReader for GoalObjectHandler {
     ) -> anyhow::Result<Vec<(Url, serde_json::Value, DateTime<chrono::Utc>)>> {
         let uid = UserId::from_uuid(user_id);
         let goals = self
-            .content_query
-            .list_goals_for_user(&uid)
+            .goal_repo
+            .list_for_user(&uid)
             .await
             .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 

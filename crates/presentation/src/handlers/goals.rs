@@ -20,7 +20,7 @@ pub fn goal_with_progress_to_dto(g: &domain::models::GoalWithProgress) -> GoalDt
         current_count: g.current_count,
         percentage: g.percentage(),
         is_complete: g.is_complete(),
-        goal_type: g.goal.goal_type().as_str().to_string(),
+        goal_type: g.goal.goal_type().clone(),
     }
 }
 
@@ -40,6 +40,7 @@ pub async fn list_goals(
 ) -> Result<Json<GoalsResponse>, ApiError> {
     let goals = application::goals::list::execute(
         state.app_ctx.repos.goal.clone(),
+        state.app_ctx.repos.stats.clone(),
         application::goals::queries::ListGoalsQuery {
             user_id: user.0.value(),
         },
@@ -66,6 +67,7 @@ pub async fn create_goal(
 ) -> Result<Json<GoalDto>, ApiError> {
     let g = application::goals::create::execute(
         state.app_ctx.repos.goal.clone(),
+        state.app_ctx.repos.stats.clone(),
         state.app_ctx.services.event_publisher.clone(),
         application::goals::commands::CreateGoalCommand {
             user_id: user.0.value(),
@@ -95,6 +97,7 @@ pub async fn update_goal(
 ) -> Result<Json<GoalDto>, ApiError> {
     let g = application::goals::update::execute(
         state.app_ctx.repos.goal.clone(),
+        state.app_ctx.repos.stats.clone(),
         state.app_ctx.services.event_publisher.clone(),
         application::goals::commands::UpdateGoalCommand {
             user_id: user.0.value(),
@@ -147,6 +150,7 @@ pub async fn get_user_goals(
 ) -> Result<Json<GoalsResponse>, ApiError> {
     let goals = application::goals::list::execute(
         state.app_ctx.repos.goal.clone(),
+        state.app_ctx.repos.stats.clone(),
         application::goals::queries::ListGoalsQuery { user_id },
     )
     .await?;

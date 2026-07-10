@@ -7,3 +7,4 @@ edition = "2024"
 serde = { workspace = true }
 uuid = { workspace = true }
 utoipa = { version = "5.5.0", features = ["axum_extras", "uuid"] }
+domain = { path = "../domain" }

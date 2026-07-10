@@ -1,22 +1,18 @@
 use axum::{
     Form, Json,
-    body::Body,
     extract::{Extension, Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Redirect},
 };
-use futures::StreamExt;
 use uuid::Uuid;
 
 use application::diary::{
     commands::{DeleteReviewCommand, EditReviewCommand},
     delete_review,
     deps::{DeleteReviewDeps, EditReviewDeps, GetActivityFeedDeps},
-    edit_review, export_diary as export_diary_uc, get_activity_feed as get_feed_uc, get_diary,
-    log_review,
-    queries::{ExportQuery, GetActivityFeedQuery},
+    edit_review, get_activity_feed as get_feed_uc, get_diary, log_review,
+    queries::GetActivityFeedQuery,
 };
-use domain::models::ExportFormat;
 
 use crate::{
     csrf::CsrfToken,
@@ -32,12 +28,7 @@ use api_types::{
 };
 use template_askama::{ActivityFeedTemplate, NewReviewTemplate, build_page_items};
 
-use super::helpers::build_page_context;
-
-fn encode_error(msg: &str) -> String {
-    use percent_encoding::{NON_ALPHANUMERIC, utf8_percent_encode};
-    utf8_percent_encode(msg, NON_ALPHANUMERIC).to_string()
-}
+use super::helpers::{build_export_response, build_page_context, encode_error};
 
 // ── API ──────────────────────────────────────────────────────────────────────
 
@@ -146,22 +137,13 @@ pub async fn patch_review(
         .map(|s| domain::value_objects::parse_watched_at(&s).map_err(ApiError))
         .transpose()?;
 
-    let watch_medium = req
-        .watch_medium
-        .map(|opt| {
-            opt.map(|s| s.parse::<domain::value_objects::WatchMedium>())
-                .transpose()
-                .map_err(ApiError)
-        })
-        .transpose()?;
-
     let cmd = EditReviewCommand {
         review_id,
         requesting_user_id: user_id.value(),
         rating: req.rating,
         comment: req.comment,
         watched_at,
-        watch_medium,
+        watch_medium: req.watch_medium,
     };
     let deps = EditReviewDeps {
         review: state.app_ctx.repos.review.clone(),
@@ -186,42 +168,7 @@ pub async fn export_diary(
     user: AuthenticatedUser,
     Query(params): Query<ExportQueryParams>,
 ) -> impl IntoResponse {
-    let format = match params.format.as_str() {
-        "csv" => ExportFormat::Csv,
-        "json" => ExportFormat::Json,
-        _ => return StatusCode::BAD_REQUEST.into_response(),
-    };
-    let (content_type, filename) = match &format {
-        ExportFormat::Csv => ("text/csv; charset=utf-8", "diary.csv"),
-        ExportFormat::Json => ("application/json", "diary.json"),
-    };
-    let query = ExportQuery {
-        user_id: user.0.value(),
-        format,
-    };
-    let stream = export_diary_uc::execute(
-        &state.app_ctx.repos.diary,
-        &state.app_ctx.services.diary_exporter,
-        query,
-    );
-    let stream = stream.map(|r| {
-        if let Err(ref e) = r {
-            tracing::error!("diary export stream error: {e}");
-        }
-        r
-    });
-    (
-        StatusCode::OK,
-        [
-            (axum::http::header::CONTENT_TYPE, content_type.to_string()),
-            (
-                axum::http::header::CONTENT_DISPOSITION,
-                format!("attachment; filename=\"{}\"", filename),
-            ),
-        ],
-        Body::from_stream(stream),
-    )
-        .into_response()
+    build_export_response(&params.format, user.0.value(), &state)
 }
 
 #[utoipa::path(
@@ -352,42 +299,7 @@ pub async fn get_export_html(
     RequiredCookieUser(user_id): RequiredCookieUser,
     Query(params): Query<api_types::ExportQueryParams>,
 ) -> impl IntoResponse {
-    let format = match params.format.as_str() {
-        "csv" => ExportFormat::Csv,
-        "json" => ExportFormat::Json,
-        _ => return StatusCode::BAD_REQUEST.into_response(),
-    };
-    let (content_type, filename) = match &format {
-        ExportFormat::Csv => ("text/csv; charset=utf-8", "diary.csv"),
-        ExportFormat::Json => ("application/json", "diary.json"),
-    };
-    let query = ExportQuery {
-        user_id: user_id.value(),
-        format,
-    };
-    let stream = export_diary_uc::execute(
-        &state.app_ctx.repos.diary,
-        &state.app_ctx.services.diary_exporter,
-        query,
-    );
-    let stream = stream.map(|r| {
-        if let Err(ref e) = r {
-            tracing::error!("diary export stream error: {e}");
-        }
-        r
-    });
-    (
-        StatusCode::OK,
-        [
-            (axum::http::header::CONTENT_TYPE, content_type.to_string()),
-            (
-                axum::http::header::CONTENT_DISPOSITION,
-                format!("attachment; filename=\"{}\"", filename),
-            ),
-        ],
-        Body::from_stream(stream),
-    )
-        .into_response()
+    build_export_response(&params.format, user_id.value(), &state)
 }
 
 pub async fn get_activity_feed_html(

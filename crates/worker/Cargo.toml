@@ -5,9 +5,9 @@ edition = "2024"
 
 [features]
 default = ["sqlite", "sqlite-federation"]
-sqlite = ["dep:sqlite", "dep:sqlite-event-queue", "dep:sqlite-search"]
-postgres = ["dep:postgres", "dep:postgres-event-queue", "dep:postgres-search"]
-nats = ["dep:nats"]
+sqlite = ["dep:sqlite", "dep:sqlite-event-queue", "dep:sqlite-search", "infra-wiring/sqlite"]
+postgres = ["dep:postgres", "dep:postgres-event-queue", "dep:postgres-search", "infra-wiring/postgres"]
+nats = ["dep:nats", "infra-wiring/nats"]
 federation = ["application/federation"]
 sqlite-federation = ["sqlite", "dep:sqlite-federation", "dep:activitypub", "federation"]
 postgres-federation = ["postgres", "dep:postgres-federation", "dep:activitypub", "federation"]
@@ -31,6 +31,7 @@ importer = { workspace = true }
 image-converter = { workspace = true }
 nats = { workspace = true, optional = true }
 sqlx = { workspace = true }
+infra-wiring = { workspace = true }
 async-trait = { workspace = true }
 
 # Optional — database backends

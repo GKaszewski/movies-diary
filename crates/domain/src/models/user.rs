@@ -1,6 +1,7 @@
 use crate::value_objects::{Email, PasswordHash, UserId, Username};
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum UserRole {
     #[default]
     Standard,

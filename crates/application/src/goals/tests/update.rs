@@ -11,6 +11,7 @@ async fn updates_target_count() {
     let b = TestContextBuilder::new();
     create::execute(
         b.goal_repo.clone(),
+        b.stats_repo.clone(),
         b.event_publisher.clone(),
         CreateGoalCommand {
             user_id: Uuid::nil(),
@@ -23,6 +24,7 @@ async fn updates_target_count() {
 
     let result = update::execute(
         b.goal_repo.clone(),
+        b.stats_repo.clone(),
         b.event_publisher.clone(),
         UpdateGoalCommand {
             user_id: Uuid::nil(),
@@ -41,6 +43,7 @@ async fn fails_when_goal_not_found() {
     let b = TestContextBuilder::new();
     let result = update::execute(
         b.goal_repo.clone(),
+        b.stats_repo.clone(),
         b.event_publisher.clone(),
         UpdateGoalCommand {
             user_id: Uuid::nil(),
@@ -58,6 +61,7 @@ async fn rejects_zero_target() {
     let b = TestContextBuilder::new();
     create::execute(
         b.goal_repo.clone(),
+        b.stats_repo.clone(),
         b.event_publisher.clone(),
         CreateGoalCommand {
             user_id: Uuid::nil(),
@@ -70,6 +74,7 @@ async fn rejects_zero_target() {
 
     let result = update::execute(
         b.goal_repo.clone(),
+        b.stats_repo.clone(),
         b.event_publisher.clone(),
         UpdateGoalCommand {
             user_id: Uuid::nil(),

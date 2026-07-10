@@ -19,6 +19,16 @@ pub struct FederationFlags {
     pub watchlist: bool,
 }
 
+impl Default for FederationFlags {
+    fn default() -> Self {
+        Self {
+            goals: true,
+            reviews: true,
+            watchlist: true,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct FederatedProfile {
     pub actor_url: String,

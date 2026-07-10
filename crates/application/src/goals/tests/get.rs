@@ -8,6 +8,7 @@ async fn returns_goal_when_exists() {
     let b = TestContextBuilder::new();
     create::execute(
         b.goal_repo.clone(),
+        b.stats_repo.clone(),
         b.event_publisher.clone(),
         CreateGoalCommand {
             user_id: Uuid::nil(),
@@ -20,6 +21,7 @@ async fn returns_goal_when_exists() {
 
     let result = get::execute(
         b.goal_repo.clone(),
+        b.stats_repo.clone(),
         GetGoalQuery {
             user_id: Uuid::nil(),
             year: 2025,
@@ -37,6 +39,7 @@ async fn returns_none_when_missing() {
     let b = TestContextBuilder::new();
     let result = get::execute(
         b.goal_repo.clone(),
+        b.stats_repo.clone(),
         GetGoalQuery {
             user_id: Uuid::nil(),
             year: 2025,

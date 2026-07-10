@@ -4,7 +4,7 @@ use domain::{
     errors::DomainError,
     events::DomainEvent,
     models::{Goal, GoalType, GoalWithProgress},
-    ports::{EventPublisher, GoalRepository},
+    ports::{EventPublisher, GoalRepository, StatsRepository},
     value_objects::UserId,
 };
 
@@ -12,6 +12,7 @@ use super::commands::CreateGoalCommand;
 
 pub async fn execute(
     goal: Arc<dyn GoalRepository>,
+    stats: Arc<dyn StatsRepository>,
     event_publisher: Arc<dyn EventPublisher>,
     cmd: CreateGoalCommand,
 ) -> Result<GoalWithProgress, DomainError> {
@@ -32,7 +33,7 @@ pub async fn execute(
     )?;
     goal.save(&g).await?;
 
-    let current_count = goal.count_reviews_in_year(&user_id, cmd.year).await?;
+    let current_count = stats.count_reviews_in_year(&user_id, cmd.year).await?;
 
     event_publisher
         .publish(&DomainEvent::GoalCreated {

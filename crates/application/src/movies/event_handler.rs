@@ -6,7 +6,7 @@ use domain::{
     events::DomainEvent,
     models::MovieProfile,
     ports::{
-        EventHandler, MovieEnrichmentClient, MovieProfileRepository, MovieRepository,
+        EventHandler, ImageFetcher, MovieEnrichmentClient, MovieProfileRepository, MovieRepository,
         ObjectStorage, PersonCommand, SearchCommand,
     },
 };
@@ -22,7 +22,7 @@ pub struct MovieEnrichmentHandler {
     person_command: Arc<dyn PersonCommand>,
     search_command: Arc<dyn SearchCommand>,
     object_storage: Arc<dyn ObjectStorage>,
-    http: reqwest::Client,
+    image_fetcher: Arc<dyn ImageFetcher>,
 }
 
 impl MovieEnrichmentHandler {
@@ -33,6 +33,7 @@ impl MovieEnrichmentHandler {
         person_command: Arc<dyn PersonCommand>,
         search_command: Arc<dyn SearchCommand>,
         object_storage: Arc<dyn ObjectStorage>,
+        image_fetcher: Arc<dyn ImageFetcher>,
     ) -> Self {
         Self {
             enrichment_client,
@@ -41,7 +42,7 @@ impl MovieEnrichmentHandler {
             person_command,
             search_command,
             object_storage,
-            http: reqwest::Client::new(),
+            image_fetcher,
         }
     }
 
@@ -55,15 +56,13 @@ impl MovieEnrichmentHandler {
                 continue;
             }
             let url = format!("https://image.tmdb.org/t/p/w185{path}");
-            match self.http.get(&url).send().await {
-                Ok(resp) if resp.status().is_success() => {
-                    if let Ok(bytes) = resp.bytes().await
-                        && let Err(e) = self.object_storage.store(&key, &bytes).await
-                    {
+            match self.image_fetcher.fetch_image(&url).await {
+                Ok(bytes) => {
+                    if let Err(e) = self.object_storage.store(&key, &bytes).await {
                         tracing::debug!("cast photo store failed for {path}: {e}");
                     }
                 }
-                _ => tracing::debug!("cast photo download failed for {path}"),
+                Err(_) => tracing::debug!("cast photo download failed for {path}"),
             }
         }
     }

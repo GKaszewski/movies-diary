@@ -2,20 +2,20 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use domain::ports::{
-    ImageRefCommand, ImageRefQuery, ImportSessionRepository, LocalApContentQuery,
-    MovieDeduplicator, MovieProfileRepository, MovieRepository, PersonCommand, PersonQuery,
-    SearchCommand, UserRepository, WatchEventRepository,
+    DiaryRepository, GoalRepository, ImageRefCommand, ImageRefQuery, ImportSessionRepository,
+    LocalApContentQuery, MovieDeduplicator, MovieProfileRepository, MovieRepository, PersonCommand,
+    PersonQuery, ReviewRepository, SearchCommand, StatsRepository, UserRepository,
+    WatchEventRepository,
 };
 
-pub enum DbPool {
-    #[cfg(feature = "sqlite")]
-    Sqlite(sqlx::SqlitePool),
-    #[cfg(feature = "postgres")]
-    Postgres(sqlx::PgPool),
-}
+pub use infra_wiring::DbPool;
 
 pub struct WorkerDbOutput {
     pub movie: Arc<dyn MovieRepository>,
+    pub review: Arc<dyn ReviewRepository>,
+    pub diary: Arc<dyn DiaryRepository>,
+    pub stats: Arc<dyn StatsRepository>,
+    pub goal: Arc<dyn GoalRepository>,
     pub user: Arc<dyn UserRepository>,
     pub import_session: Arc<dyn ImportSessionRepository>,
     pub movie_profile: Arc<dyn MovieProfileRepository>,
@@ -50,6 +50,10 @@ pub async fn connect(database_url: &str, backend: &str) -> anyhow::Result<Worker
                 Arc::new(postgres::PostgresWatchEventRepository::new(w.pool.clone()));
             Ok(WorkerDbOutput {
                 movie: w.movie,
+                review: w.review,
+                diary: w.diary,
+                stats: w.stats,
+                goal: w.goal,
                 user: w.user,
                 import_session: w.import_session,
                 movie_profile: w.movie_profile,
@@ -84,6 +88,10 @@ pub async fn connect(database_url: &str, backend: &str) -> anyhow::Result<Worker
                 Arc::new(sqlite::SqliteWatchEventRepository::new(w.pool.clone()));
             Ok(WorkerDbOutput {
                 movie: w.movie,
+                review: w.review,
+                diary: w.diary,
+                stats: w.stats,
+                goal: w.goal,
                 user: w.user,
                 import_session: w.import_session,
                 movie_profile: w.movie_profile,

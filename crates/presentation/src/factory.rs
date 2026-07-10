@@ -7,12 +7,7 @@ use domain::ports::{
     WatchEventRepository, WebhookTokenRepository,
 };
 
-pub enum DbPool {
-    #[cfg(feature = "sqlite")]
-    Sqlite(sqlx::SqlitePool),
-    #[cfg(feature = "postgres")]
-    Postgres(sqlx::PgPool),
-}
+pub use infra_wiring::DbPool;
 
 pub struct DatabaseOutput {
     pub movie: Arc<dyn domain::ports::MovieRepository>,

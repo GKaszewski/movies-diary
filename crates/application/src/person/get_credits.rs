@@ -1,13 +1,10 @@
-use chrono::Utc;
 use domain::{
     errors::DomainError,
     events::DomainEvent,
-    models::{Person, PersonCredits, PersonId},
+    models::{PersonCredits, PersonId},
 };
 
-use super::deps::GetPersonDeps;
-
-const ENRICHMENT_TTL_DAYS: i64 = 90;
+use super::{deps::GetPersonDeps, should_enrich};
 
 pub async fn execute(deps: &GetPersonDeps, id: PersonId) -> Result<PersonCredits, DomainError> {
     let credits = deps.person_query.get_credits(&id).await?;
@@ -21,13 +18,6 @@ pub async fn execute(deps: &GetPersonDeps, id: PersonId) -> Result<PersonCredits
             .await;
     }
     Ok(credits)
-}
-
-fn should_enrich(p: &Person) -> bool {
-    match p.enriched_at() {
-        None => true,
-        Some(at) => (Utc::now() - at).num_days() >= ENRICHMENT_TTL_DAYS,
-    }
 }
 
 #[cfg(test)]

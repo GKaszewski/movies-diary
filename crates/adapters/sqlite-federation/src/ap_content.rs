@@ -2,16 +2,16 @@ use async_trait::async_trait;
 use domain::{
     errors::DomainError,
     models::{
-        DiaryEntry, Goal, GoalType, Movie, PersistedReview, Review, ReviewSource, WatchlistEntry,
+        DiaryEntry, Movie, PersistedReview, Review, ReviewSource, WatchlistEntry,
         WatchlistWithMovie,
     },
     ports::LocalApContentQuery,
     value_objects::{
-        Comment, ExternalMetadataId, GoalId, MovieId, MovieTitle, PosterPath, Rating, ReleaseYear,
+        Comment, ExternalMetadataId, MovieId, MovieTitle, PosterPath, Rating, ReleaseYear,
         ReviewId, UserId, WatchlistEntryId,
     },
 };
-use sqlx::{Row, SqlitePool};
+use sqlx::SqlitePool;
 use uuid::Uuid;
 
 pub struct SqliteApContentQuery {
@@ -82,6 +82,7 @@ struct ReviewRow {
     watched_at: String,
     created_at: String,
     remote_actor_url: Option<String>,
+    watch_medium: Option<String>,
 }
 
 impl ReviewRow {
@@ -97,6 +98,7 @@ impl ReviewRow {
             None => ReviewSource::Local,
             Some(url) => ReviewSource::Remote { actor_url: url },
         };
+        let watch_medium = self.watch_medium.map(|s| s.parse()).transpose()?;
         Ok(Review::from_persistence(PersistedReview {
             id,
             movie_id,
@@ -106,7 +108,7 @@ impl ReviewRow {
             watched_at,
             created_at,
             source,
-            watch_medium: None,
+            watch_medium,
         }))
     }
 }
@@ -127,6 +129,7 @@ struct DiaryRow {
     watched_at: String,
     created_at: String,
     remote_actor_url: Option<String>,
+    watch_medium: Option<String>,
 }
 
 impl DiaryRow {
@@ -149,6 +152,7 @@ impl DiaryRow {
             watched_at: self.watched_at,
             created_at: self.created_at,
             remote_actor_url: self.remote_actor_url,
+            watch_medium: self.watch_medium,
         }
         .into_domain()?;
         Ok(DiaryEntry::new(movie, review))
@@ -190,100 +194,10 @@ impl WatchlistRow {
     }
 }
 
-fn row_to_goal(r: &sqlx::sqlite::SqliteRow) -> Result<Goal, DomainError> {
-    let id_str: String = r
-        .try_get("id")
-        .map_err(|e| DomainError::InfrastructureError(format!("Failed to read goal id: {e}")))?;
-    let user_id_str: String = r
-        .try_get("user_id")
-        .map_err(|e| DomainError::InfrastructureError(format!("Failed to read user_id: {e}")))?;
-    let year: i64 = r
-        .try_get("year")
-        .map_err(|e| DomainError::InfrastructureError(format!("Failed to read year: {e}")))?;
-    let target: i64 = r.try_get("target_count").map_err(|e| {
-        DomainError::InfrastructureError(format!("Failed to read target_count: {e}"))
-    })?;
-    let goal_type_str: String = r
-        .try_get("goal_type")
-        .map_err(|e| DomainError::InfrastructureError(format!("Failed to read goal_type: {e}")))?;
-    let created_at_str: String = r
-        .try_get("created_at")
-        .map_err(|e| DomainError::InfrastructureError(format!("Failed to read created_at: {e}")))?;
-
-    let id = GoalId::from_uuid(
-        Uuid::parse_str(&id_str)
-            .map_err(|e| DomainError::InfrastructureError(format!("Invalid goal UUID: {e}")))?,
-    );
-    let user_id = UserId::from_uuid(
-        Uuid::parse_str(&user_id_str)
-            .map_err(|e| DomainError::InfrastructureError(format!("Invalid user UUID: {e}")))?,
-    );
-    let goal_type: GoalType = goal_type_str.parse()?;
-    let created_at = parse_datetime(&created_at_str)?;
-
-    Ok(Goal::from_persistence(
-        id,
-        user_id,
-        year as u16,
-        target as u32,
-        goal_type,
-        created_at,
-    ))
-}
-
-async fn count_reviews_in_year(
-    pool: &SqlitePool,
-    user_id: &UserId,
-    year: u16,
-) -> Result<u32, DomainError> {
-    let uid = user_id.value().to_string();
-    let start = format!("{year}-01-01 00:00:00");
-    let end = format!("{}-01-01 00:00:00", year + 1);
-
-    let count: i64 = sqlx::query(
-        "SELECT COUNT(*) FROM reviews \
-         WHERE user_id = ? AND watched_at >= ? AND watched_at < ? \
-         AND remote_actor_url IS NULL",
-    )
-    .bind(&uid)
-    .bind(&start)
-    .bind(&end)
-    .fetch_one(pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Database error: {:?}", e);
-        DomainError::InfrastructureError("Database operation failed".into())
-    })?
-    .try_get(0)
-    .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
-
-    Ok(count as u32)
-}
-
 // ── LocalApContentQuery impl ─────────────────────────────────────────────────
 
 #[async_trait]
 impl LocalApContentQuery for SqliteApContentQuery {
-    async fn get_local_reviews_for_user(
-        &self,
-        user_id: &UserId,
-    ) -> Result<Vec<DiaryEntry>, DomainError> {
-        let uid = user_id.value().to_string();
-        let rows = sqlx::query_as::<_, DiaryRow>(
-            "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
-                    r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url
-             FROM reviews r
-             INNER JOIN movies m ON m.id = r.movie_id
-             WHERE r.user_id = ? AND r.remote_actor_url IS NULL
-             ORDER BY r.created_at DESC",
-        )
-        .bind(&uid)
-        .fetch_all(&self.pool)
-        .await
-        .map_err(Self::map_err)?;
-        rows.into_iter().map(DiaryRow::into_domain).collect()
-    }
-
     async fn get_local_watchlist_for_user(
         &self,
         user_id: &UserId,
@@ -312,7 +226,7 @@ impl LocalApContentQuery for SqliteApContentQuery {
         let mid = movie_id.value().to_string();
         let rows = sqlx::query_as::<_, DiaryRow>(
             "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
-                    r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url
+                    r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url, r.watch_medium
              FROM reviews r
              INNER JOIN movies m ON m.id = r.movie_id
              WHERE r.movie_id = ? AND r.remote_actor_url IS NULL
@@ -323,59 +237,6 @@ impl LocalApContentQuery for SqliteApContentQuery {
         .await
         .map_err(Self::map_err)?;
         rows.into_iter().map(DiaryRow::into_domain).collect()
-    }
-
-    async fn get_review_by_id(&self, review_id: &ReviewId) -> Result<Option<Review>, DomainError> {
-        let id = review_id.value().to_string();
-        sqlx::query_as::<_, ReviewRow>(
-            "SELECT id, movie_id, user_id, rating, comment, watched_at, created_at, remote_actor_url
-             FROM reviews WHERE id = ?",
-        )
-        .bind(&id)
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(Self::map_err)?
-        .map(ReviewRow::into_domain)
-        .transpose()
-    }
-
-    async fn get_movie_by_id(&self, movie_id: &MovieId) -> Result<Option<Movie>, DomainError> {
-        let id = movie_id.value().to_string();
-        sqlx::query_as::<_, MovieRow>(
-            "SELECT id, external_metadata_id, title, release_year, director, poster_path
-             FROM movies WHERE id = ?",
-        )
-        .bind(&id)
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(Self::map_err)?
-        .map(MovieRow::into_domain)
-        .transpose()
-    }
-
-    async fn get_movie_by_external_metadata_id(
-        &self,
-        external_id: &str,
-    ) -> Result<Option<Movie>, DomainError> {
-        sqlx::query_as::<_, MovieRow>(
-            "SELECT id, external_metadata_id, title, release_year, director, poster_path
-             FROM movies WHERE external_metadata_id = ?",
-        )
-        .bind(external_id)
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(Self::map_err)?
-        .map(MovieRow::into_domain)
-        .transpose()
-    }
-
-    async fn count_local_posts(&self) -> Result<u64, DomainError> {
-        let count: i64 =
-            sqlx::query_scalar("SELECT COUNT(*) FROM reviews WHERE remote_actor_url IS NULL")
-                .fetch_one(&self.pool)
-                .await
-                .map_err(Self::map_err)?;
-        Ok(count as u64)
     }
 
     async fn get_local_reviews_page(
@@ -391,7 +252,7 @@ impl LocalApContentQuery for SqliteApContentQuery {
             let ts = before_ts.format("%Y-%m-%d %H:%M:%S").to_string();
             sqlx::query_as::<_, DiaryRow>(
                 "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
-                        r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url
+                        r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url, r.watch_medium
                  FROM reviews r
                  INNER JOIN movies m ON m.id = r.movie_id
                  WHERE r.user_id = ? AND r.remote_actor_url IS NULL AND r.watched_at < ?
@@ -407,7 +268,7 @@ impl LocalApContentQuery for SqliteApContentQuery {
         } else {
             sqlx::query_as::<_, DiaryRow>(
                 "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
-                        r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url
+                        r.id AS review_id, r.movie_id, r.user_id, r.rating, r.comment, r.watched_at, r.created_at, r.remote_actor_url, r.watch_medium
                  FROM reviews r
                  INNER JOIN movies m ON m.id = r.movie_id
                  WHERE r.user_id = ? AND r.remote_actor_url IS NULL
@@ -421,44 +282,5 @@ impl LocalApContentQuery for SqliteApContentQuery {
             .map_err(Self::map_err)?
         };
         rows.into_iter().map(DiaryRow::into_domain).collect()
-    }
-
-    async fn get_goal_with_progress(
-        &self,
-        user_id: &UserId,
-        year: u16,
-    ) -> Result<Option<(Goal, u32)>, DomainError> {
-        let uid = user_id.value().to_string();
-        let y = year as i64;
-
-        let row = sqlx::query(
-            "SELECT id, user_id, year, target_count, goal_type, created_at \
-             FROM goals WHERE user_id = ? AND year = ?",
-        )
-        .bind(&uid)
-        .bind(y)
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(Self::map_err)?;
-
-        let Some(r) = row else { return Ok(None) };
-
-        let goal = row_to_goal(&r)?;
-        let count = count_reviews_in_year(&self.pool, user_id, year).await?;
-
-        Ok(Some((goal, count)))
-    }
-
-    async fn list_goals_for_user(&self, user_id: &UserId) -> Result<Vec<Goal>, DomainError> {
-        let uid = user_id.value().to_string();
-        let rows = sqlx::query(
-            "SELECT id, user_id, year, target_count, goal_type, created_at \
-             FROM goals WHERE user_id = ? ORDER BY created_at DESC",
-        )
-        .bind(&uid)
-        .fetch_all(&self.pool)
-        .await
-        .map_err(Self::map_err)?;
-        rows.iter().map(row_to_goal).collect()
     }
 }

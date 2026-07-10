@@ -240,7 +240,8 @@ pub enum Action {
         entries: Vec<DiaryEntryDto>,
         total: u64,
     },
-    DiaryLoadFailed(String),
+    ShowError(String),
+    AuthExpired,
     HistoryLoaded(ReviewHistoryResponse),
     HistoryLoadFailed(String),
     ReviewCreated,
@@ -371,6 +372,35 @@ pub fn parse_csv(content: &str) -> Vec<ParsedRow> {
     rows
 }
 
+/// Returns a mutable reference to whichever text field currently has focus,
+/// or `None` if the active widget is non-textual (e.g. a rating spinner).
+fn focused_input(app: &mut App) -> Option<&mut String> {
+    match &mut app.screen {
+        Screen::Setup(s) => Some(&mut s.api_url),
+        Screen::Login(s) => match s.focused {
+            LoginField::Email => Some(&mut s.email),
+            LoginField::Password => Some(&mut s.password),
+        },
+        Screen::Main(m) => match m.tab {
+            Tab::AddReview => match m.add_review.focused {
+                AddReviewField::ExternalId => Some(&mut m.add_review.external_id),
+                AddReviewField::Title => Some(&mut m.add_review.title),
+                AddReviewField::Year => Some(&mut m.add_review.year),
+                AddReviewField::WatchedAt => Some(&mut m.add_review.watched_at),
+                AddReviewField::Comment => Some(&mut m.add_review.comment),
+                _ => None,
+            },
+            Tab::BulkImport if matches!(m.bulk_import.stage, BulkImportStage::EnterPath) => {
+                Some(&mut m.bulk_import.file_path)
+            }
+            Tab::Settings if matches!(m.settings.focused, SettingsField::ApiUrl) => {
+                Some(&mut m.settings.api_url)
+            }
+            _ => None,
+        },
+    }
+}
+
 pub fn update(app: &mut App, action: Action) -> Vec<Command> {
     match action {
         // ── Global ───────────────────────────────────────────────────────────
@@ -435,77 +465,15 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
 
         // ── Shared text input ────────────────────────────────────────────────
         Action::InputChar(c) => {
-            match &mut app.screen {
-                Screen::Setup(s) => s.api_url.push(c),
-                Screen::Login(s) => match s.focused {
-                    LoginField::Email => s.email.push(c),
-                    LoginField::Password => s.password.push(c),
-                },
-                Screen::Main(m) => match m.tab {
-                    Tab::AddReview => match m.add_review.focused {
-                        AddReviewField::ExternalId => m.add_review.external_id.push(c),
-                        AddReviewField::Title => m.add_review.title.push(c),
-                        AddReviewField::Year => m.add_review.year.push(c),
-                        AddReviewField::WatchedAt => m.add_review.watched_at.push(c),
-                        AddReviewField::Comment => m.add_review.comment.push(c),
-                        _ => {}
-                    },
-                    Tab::BulkImport
-                        if matches!(m.bulk_import.stage, BulkImportStage::EnterPath) =>
-                    {
-                        m.bulk_import.file_path.push(c);
-                    }
-                    Tab::Settings if matches!(m.settings.focused, SettingsField::ApiUrl) => {
-                        m.settings.api_url.push(c);
-                    }
-                    _ => {}
-                },
+            if let Some(field) = focused_input(app) {
+                field.push(c);
             }
             vec![]
         }
 
         Action::Backspace => {
-            match &mut app.screen {
-                Screen::Setup(s) => {
-                    s.api_url.pop();
-                }
-                Screen::Login(s) => match s.focused {
-                    LoginField::Email => {
-                        s.email.pop();
-                    }
-                    LoginField::Password => {
-                        s.password.pop();
-                    }
-                },
-                Screen::Main(m) => match m.tab {
-                    Tab::AddReview => match m.add_review.focused {
-                        AddReviewField::ExternalId => {
-                            m.add_review.external_id.pop();
-                        }
-                        AddReviewField::Title => {
-                            m.add_review.title.pop();
-                        }
-                        AddReviewField::Year => {
-                            m.add_review.year.pop();
-                        }
-                        AddReviewField::WatchedAt => {
-                            m.add_review.watched_at.pop();
-                        }
-                        AddReviewField::Comment => {
-                            m.add_review.comment.pop();
-                        }
-                        _ => {}
-                    },
-                    Tab::BulkImport
-                        if matches!(m.bulk_import.stage, BulkImportStage::EnterPath) =>
-                    {
-                        m.bulk_import.file_path.pop();
-                    }
-                    Tab::Settings if matches!(m.settings.focused, SettingsField::ApiUrl) => {
-                        m.settings.api_url.pop();
-                    }
-                    _ => {}
-                },
+            if let Some(field) = focused_input(app) {
+                field.pop();
             }
             vec![]
         }
@@ -705,22 +673,24 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
             vec![]
         }
 
-        Action::DiaryLoadFailed(msg) => {
+        Action::ShowError(msg) => {
             app.loading = false;
-            if msg.contains("unauthorized") || msg.contains("Unauthorized") {
-                app.token = None;
-                app.screen = Screen::Login(LoginState::default());
-                app.status = Some(StatusMsg {
-                    text: "Session expired. Please log in again.".into(),
-                    is_error: true,
-                });
-                return vec![Command::ClearToken];
-            }
             app.status = Some(StatusMsg {
                 text: msg,
                 is_error: true,
             });
             vec![]
+        }
+
+        Action::AuthExpired => {
+            app.loading = false;
+            app.token = None;
+            app.screen = Screen::Login(LoginState::default());
+            app.status = Some(StatusMsg {
+                text: "Session expired. Please log in again.".into(),
+                is_error: true,
+            });
+            vec![Command::ClearToken]
         }
 
         Action::HistoryLoaded(h) => {

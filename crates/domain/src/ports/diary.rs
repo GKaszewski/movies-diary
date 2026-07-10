@@ -2,7 +2,6 @@ use async_trait::async_trait;
 
 use crate::{
     errors::DomainError,
-    events::DomainEvent,
     models::{
         DiaryEntry, DiaryFilter, ExportFormat, FeedEntry, FeedSortBy, FollowingFilter, MovieStats,
         Review, ReviewHistory, UserStats, UserTrends,
@@ -43,7 +42,7 @@ pub trait DiaryRepository: Send + Sync {
 
 #[async_trait]
 pub trait ReviewRepository: Send + Sync {
-    async fn save_review(&self, review: &Review) -> Result<DomainEvent, DomainError>;
+    async fn save_review(&self, review: &Review) -> Result<(), DomainError>;
     async fn get_review_by_id(&self, review_id: &ReviewId) -> Result<Option<Review>, DomainError>;
     async fn update_review(&self, review: &Review) -> Result<(), DomainError>;
     async fn delete_review(&self, review_id: &ReviewId) -> Result<(), DomainError>;
@@ -54,6 +53,7 @@ pub trait ReviewRepository: Send + Sync {
 pub trait StatsRepository: Send + Sync {
     async fn get_user_stats(&self, user_id: &UserId) -> Result<UserStats, DomainError>;
     async fn get_user_trends(&self, user_id: &UserId) -> Result<UserTrends, DomainError>;
+    async fn count_reviews_in_year(&self, user_id: &UserId, year: u16) -> Result<u32, DomainError>;
 }
 
 pub trait DiaryExporter: Send + Sync {

@@ -4,24 +4,24 @@ use chrono::NaiveDateTime;
 use crate::{
     errors::DomainError,
     models::{
-        DiaryEntry, FederationFlags, Goal, Movie, PendingFollowerInfo, RemoteActorInfo,
-        RemoteGoalEntry, RemoteWatchlistEntry, Review, WatchlistWithMovie,
+        DiaryEntry, FederationFlags, PendingFollowerInfo, RemoteActorInfo, RemoteGoalEntry,
+        RemoteWatchlistEntry, WatchlistWithMovie,
     },
-    value_objects::{MovieId, ReviewId, UserId},
+    value_objects::{MovieId, UserId},
 };
 
 #[async_trait]
 pub trait SocialQueryPort: Send + Sync {
     async fn get_accepted_following_urls(
         &self,
-        user_id: uuid::Uuid,
+        user_id: &UserId,
     ) -> Result<Vec<String>, DomainError>;
     async fn list_all_followed_remote_actors(&self) -> Result<Vec<RemoteActorInfo>, DomainError>;
-    async fn count_following(&self, user_id: uuid::Uuid) -> Result<usize, DomainError>;
-    async fn count_accepted_followers(&self, user_id: uuid::Uuid) -> Result<usize, DomainError>;
+    async fn count_following(&self, user_id: &UserId) -> Result<usize, DomainError>;
+    async fn count_accepted_followers(&self, user_id: &UserId) -> Result<usize, DomainError>;
     async fn get_pending_followers(
         &self,
-        user_id: uuid::Uuid,
+        user_id: &UserId,
     ) -> Result<Vec<PendingFollowerInfo>, DomainError>;
 }
 
@@ -60,25 +60,16 @@ pub trait RemoteGoalRepository: Send + Sync {
     async fn get_by_actor_url(&self, actor_url: &str) -> Result<Vec<RemoteGoalEntry>, DomainError>;
 }
 
-/// Read-only query port used exclusively by the ActivityPub adapter.
-/// Consolidates all reads the AP adapter needs so it never touches write repositories.
+/// Federation-specific read-only queries that have no equivalent on the
+/// standard domain ports (e.g. unpaginated watchlist, local-only review
+/// listings). Generic lookups (get_movie_by_id, get_review_by_id, etc.)
+/// live on MovieRepository, ReviewRepository, and the other domain ports.
 #[async_trait]
 pub trait LocalApContentQuery: Send + Sync {
-    async fn get_local_reviews_for_user(
-        &self,
-        user_id: &UserId,
-    ) -> Result<Vec<DiaryEntry>, DomainError>;
     async fn get_local_watchlist_for_user(
         &self,
         user_id: &UserId,
     ) -> Result<Vec<WatchlistWithMovie>, DomainError>;
-    async fn get_review_by_id(&self, review_id: &ReviewId) -> Result<Option<Review>, DomainError>;
-    async fn get_movie_by_id(&self, movie_id: &MovieId) -> Result<Option<Movie>, DomainError>;
-    async fn get_movie_by_external_metadata_id(
-        &self,
-        external_id: &str,
-    ) -> Result<Option<Movie>, DomainError>;
-    async fn count_local_posts(&self) -> Result<u64, DomainError>;
     async fn get_local_reviews_for_movie(
         &self,
         movie_id: &MovieId,
@@ -89,10 +80,4 @@ pub trait LocalApContentQuery: Send + Sync {
         before: Option<NaiveDateTime>,
         limit: usize,
     ) -> Result<Vec<DiaryEntry>, DomainError>;
-    async fn get_goal_with_progress(
-        &self,
-        user_id: &UserId,
-        year: u16,
-    ) -> Result<Option<(Goal, u32)>, DomainError>;
-    async fn list_goals_for_user(&self, user_id: &UserId) -> Result<Vec<Goal>, DomainError>;
 }

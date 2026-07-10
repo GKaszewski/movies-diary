@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use domain::{
     events::DomainEvent,
     models::ReviewSource,
-    ports::{EventPublisher, LocalApContentQuery},
+    ports::{DiaryRepository, EventPublisher, LocalApContentQuery, MovieRepository},
     value_objects::{Comment, ExternalMetadataId, MovieId, Rating, ReviewId, UserId},
 };
 use k_ap::{ApContentReader, ApObjectHandler};
@@ -16,6 +16,8 @@ use crate::urls::{actor_url, review_url};
 
 pub struct ReviewObjectHandler {
     pub content_query: Arc<dyn LocalApContentQuery>,
+    pub movie_repo: Arc<dyn MovieRepository>,
+    pub diary_repo: Arc<dyn DiaryRepository>,
     pub review_store: Arc<dyn RemoteReviewRepository>,
     pub event_publisher: Arc<dyn EventPublisher>,
     pub base_url: String,
@@ -69,7 +71,7 @@ impl ApContentReader for ReviewObjectHandler {
     }
 
     async fn count_local_posts(&self) -> anyhow::Result<u64> {
-        self.content_query
+        self.diary_repo
             .count_local_posts()
             .await
             .map_err(|e| anyhow::anyhow!(e.to_string()))
@@ -97,13 +99,18 @@ impl ApObjectHandler for ReviewObjectHandler {
         let actor_url_str = obj.attributed_to.to_string();
         let review_id = ReviewId::generate();
         let movie_id = if let Some(ref ext_id) = obj.external_metadata_id {
-            match self
-                .content_query
-                .get_movie_by_external_metadata_id(ext_id)
-                .await
-            {
-                Ok(Some(movie)) => movie.id().clone(),
-                _ => MovieId::from_uuid(uuid::Uuid::new_v5(
+            let found = if let Ok(ext_meta_id) = ExternalMetadataId::new(ext_id.clone()) {
+                self.movie_repo
+                    .get_movie_by_external_id(&ext_meta_id)
+                    .await
+                    .ok()
+                    .flatten()
+            } else {
+                None
+            };
+            match found {
+                Some(movie) => movie.id().clone(),
+                None => MovieId::from_uuid(uuid::Uuid::new_v5(
                     &uuid::Uuid::NAMESPACE_URL,
                     ext_id.as_bytes(),
                 )),

@@ -67,13 +67,23 @@ pub struct UserTrendsDto {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
-pub struct UserProfileResponse {
-    pub user_id: Uuid,
+pub struct UserProfileBase {
     pub username: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub display_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bio: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub avatar_url: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub banner_url: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct UserProfileResponse {
+    pub user_id: Uuid,
+    #[serde(flatten)]
+    pub profile: UserProfileBase,
     pub stats: UserStatsDto,
     pub following_count: usize,
     pub followers_count: usize,
@@ -90,23 +100,17 @@ pub struct UserProfileResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub handle: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub display_name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub bio: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub actor_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct ProfileResponse {
-    pub username: String,
-    pub display_name: Option<String>,
-    pub bio: Option<String>,
-    pub avatar_url: Option<String>,
-    pub banner_url: Option<String>,
+    #[serde(flatten)]
+    pub profile: UserProfileBase,
     pub also_known_as: Option<String>,
     pub fields: Vec<ProfileFieldDto>,
-    pub role: String,
+    #[schema(value_type = String)]
+    pub role: domain::models::UserRole,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
@@ -118,4 +122,18 @@ pub struct ProfileFieldDto {
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct UpdateProfileFieldsRequest {
     pub fields: Vec<ProfileFieldDto>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct UserSettingsDto {
+    pub federate_goals: bool,
+    pub federate_reviews: bool,
+    pub federate_watchlist: bool,
+}
+
+#[derive(Debug, Clone, Deserialize, utoipa::ToSchema)]
+pub struct UpdateUserSettingsRequest {
+    pub federate_goals: bool,
+    pub federate_reviews: bool,
+    pub federate_watchlist: bool,
 }

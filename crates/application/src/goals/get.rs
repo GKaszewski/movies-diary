@@ -1,13 +1,17 @@
 use std::sync::Arc;
 
 use domain::{
-    errors::DomainError, models::GoalWithProgress, ports::GoalRepository, value_objects::UserId,
+    errors::DomainError,
+    models::GoalWithProgress,
+    ports::{GoalRepository, StatsRepository},
+    value_objects::UserId,
 };
 
 use super::queries::GetGoalQuery;
 
 pub async fn execute(
     goal: Arc<dyn GoalRepository>,
+    stats: Arc<dyn StatsRepository>,
     query: GetGoalQuery,
 ) -> Result<Option<GoalWithProgress>, DomainError> {
     let user_id = UserId::from_uuid(query.user_id);
@@ -16,7 +20,7 @@ pub async fn execute(
 
     let Some(g) = found else { return Ok(None) };
 
-    let current_count = goal.count_reviews_in_year(&user_id, query.year).await?;
+    let current_count = stats.count_reviews_in_year(&user_id, query.year).await?;
 
     Ok(Some(GoalWithProgress {
         goal: g,

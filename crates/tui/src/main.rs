@@ -5,8 +5,16 @@ use tokio::sync::mpsc;
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyModifiers};
 
 use tui::app::{self, Action, App, BulkImportStage, Command, Screen, SettingsField, Tab};
-use tui::client::ApiClient;
+use tui::client::{ApiClient, ApiError};
 use tui::config::Config;
+
+/// Convert an API error into either `AuthExpired` (for 401s) or a `ShowError`.
+fn api_err_action(e: ApiError) -> Action {
+    match e {
+        ApiError::Unauthorized => Action::AuthExpired,
+        other => Action::ShowError(other.to_string()),
+    }
+}
 
 fn main() -> anyhow::Result<()> {
     Config::init_keyring()?;
@@ -53,7 +61,7 @@ async fn run() -> anyhow::Result<()> {
                     entries: r.items,
                     total: r.total_count,
                 },
-                Err(e) => Action::DiaryLoadFailed(e.to_string()),
+                Err(e) => api_err_action(e),
             };
             let _ = tx2.send(action).await;
         });
@@ -109,7 +117,7 @@ fn handle_command(cmd: Command, app: &App, client: &Arc<ApiClient>, tx: &mpsc::S
                 let tx2 = tx.clone();
                 let msg = format!("Failed to save config: {e}");
                 tokio::spawn(async move {
-                    let _ = tx2.send(Action::DiaryLoadFailed(msg)).await;
+                    let _ = tx2.send(Action::ShowError(msg)).await;
                 });
             }
             client.update_url(&url);
@@ -123,7 +131,7 @@ fn handle_command(cmd: Command, app: &App, client: &Arc<ApiClient>, tx: &mpsc::S
                     .unwrap_or_else(|e| Err(anyhow::anyhow!(e)))
                 {
                     let msg = format!("Token not saved to keychain: {e}");
-                    let _ = tx2.send(Action::DiaryLoadFailed(msg)).await;
+                    let _ = tx2.send(Action::ShowError(msg)).await;
                 }
             });
         }
@@ -158,7 +166,7 @@ fn handle_command(cmd: Command, app: &App, client: &Arc<ApiClient>, tx: &mpsc::S
                         entries: r.items,
                         total: r.total_count,
                     },
-                    Err(e) => Action::DiaryLoadFailed(e.to_string()),
+                    Err(e) => api_err_action(e),
                 };
                 let _ = tx.send(action).await;
             });
@@ -173,6 +181,7 @@ fn handle_command(cmd: Command, app: &App, client: &Arc<ApiClient>, tx: &mpsc::S
             tokio::spawn(async move {
                 let action = match c.get_movie_history(&token, movie_id).await {
                     Ok(r) => Action::HistoryLoaded(r),
+                    Err(ApiError::Unauthorized) => Action::AuthExpired,
                     Err(e) => Action::HistoryLoadFailed(e.to_string()),
                 };
                 let _ = tx.send(action).await;
@@ -188,6 +197,7 @@ fn handle_command(cmd: Command, app: &App, client: &Arc<ApiClient>, tx: &mpsc::S
             tokio::spawn(async move {
                 let action = match c.create_review(&token, &req).await {
                     Ok(()) => Action::ReviewCreated,
+                    Err(ApiError::Unauthorized) => Action::AuthExpired,
                     Err(e) => Action::ReviewCreateFailed(e.to_string()),
                 };
                 let _ = tx.send(action).await;
@@ -203,6 +213,7 @@ fn handle_command(cmd: Command, app: &App, client: &Arc<ApiClient>, tx: &mpsc::S
             tokio::spawn(async move {
                 let action = match c.delete_review(&token, id).await {
                     Ok(()) => Action::ReviewDeleted(id),
+                    Err(ApiError::Unauthorized) => Action::AuthExpired,
                     Err(e) => Action::ReviewDeleteFailed(e.to_string()),
                 };
                 let _ = tx.send(action).await;

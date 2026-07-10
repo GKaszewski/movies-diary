@@ -38,8 +38,23 @@ async fn main() -> anyhow::Result<()> {
     let image_ref_query = Arc::clone(&db.image_ref_query);
 
     #[cfg(feature = "federation")]
-    let (fed_ap_content, fed_user_repo, base_url, allow_registration) = (
+    let (
+        fed_ap_content,
+        fed_movie_repo,
+        fed_review_repo,
+        fed_diary_repo,
+        fed_goal_repo,
+        fed_stats_repo,
+        fed_user_repo,
+        base_url,
+        allow_registration,
+    ) = (
         Arc::clone(&db.ap_content),
+        Arc::clone(&db.movie),
+        Arc::clone(&db.review),
+        Arc::clone(&db.diary),
+        Arc::clone(&db.goal),
+        Arc::clone(&db.stats),
         Arc::clone(&db.user),
         app_config.base_url.clone(),
         app_config.allow_registration,
@@ -93,6 +108,7 @@ async fn main() -> anyhow::Result<()> {
             Ok(client) => {
                 tracing::info!("TMDb enrichment enabled");
                 let client = Arc::new(client);
+                let image_fetcher = poster_fetcher::create_image_fetcher()?;
                 let handler = Arc::new(application::movies::MovieEnrichmentHandler::new(
                     Arc::clone(&client) as Arc<dyn MovieEnrichmentClient>,
                     Arc::clone(&movie),
@@ -100,6 +116,7 @@ async fn main() -> anyhow::Result<()> {
                     Arc::clone(&person_command),
                     Arc::clone(&search_command),
                     Arc::clone(&object_storage),
+                    image_fetcher,
                 )) as Arc<dyn EventHandler>;
                 let person_enrichment_arc = Arc::clone(&client) as Arc<dyn PersonEnrichmentClient>;
                 let person_handler = Arc::new(application::person::PersonEnrichmentHandler::new(
@@ -189,48 +206,38 @@ async fn main() -> anyhow::Result<()> {
             &object_storage,
         ))) as Arc<dyn EventHandler>;
 
-        #[cfg(not(feature = "federation"))]
-        {
-            let search_cleanup = Arc::new(SearchCleanupHandler::new(
-                Arc::clone(&search_command),
-                Arc::clone(&person_query),
-            )) as Arc<dyn EventHandler>;
-            let discovery_indexer = Arc::new(MovieDiscoveryIndexer::new(
-                Arc::clone(&movie),
-                Arc::clone(&search_command),
-            )) as Arc<dyn EventHandler>;
-            let wrapup_handler =
-                Arc::new(application::wrapup::event_handler::WrapUpEventHandler::new(
-                    Arc::clone(&wrapup_repo),
-                    Arc::clone(&event_publisher),
-                    Arc::clone(&wrapup_stats),
-                )) as Arc<dyn EventHandler>;
-            let reindex_handler = Arc::new(SearchReindexHandler::new(ReindexSearchDeps {
-                movie: Arc::clone(&movie),
-                movie_profile: Arc::clone(&movie_profile),
-                search_command: Arc::clone(&search_command),
-                person_command: Arc::clone(&person_command),
-                person_query: Arc::clone(&person_query),
-            })) as Arc<dyn EventHandler>;
-            let mut h = vec![
-                poster,
-                cleanup,
-                search_cleanup,
-                discovery_indexer,
-                wrapup_handler,
-                reindex_handler,
-            ];
-            if let Some(e) = enrichment_handler {
-                h.push(e);
-            }
-            if let Some(e) = person_enrichment_handler {
-                h.push(e);
-            }
-            if let Some((ref conv_handler, _)) = conversion {
-                h.push(Arc::clone(conv_handler));
-            }
-            h
-        }
+        let search_cleanup = Arc::new(SearchCleanupHandler::new(
+            Arc::clone(&search_command),
+            Arc::clone(&person_query),
+        )) as Arc<dyn EventHandler>;
+
+        let discovery_indexer = Arc::new(MovieDiscoveryIndexer::new(
+            Arc::clone(&movie),
+            Arc::clone(&search_command),
+        )) as Arc<dyn EventHandler>;
+
+        let wrapup_handler = Arc::new(application::wrapup::event_handler::WrapUpEventHandler::new(
+            Arc::clone(&wrapup_repo),
+            Arc::clone(&event_publisher),
+            Arc::clone(&wrapup_stats),
+        )) as Arc<dyn EventHandler>;
+
+        let reindex_handler = Arc::new(SearchReindexHandler::new(ReindexSearchDeps {
+            movie: Arc::clone(&movie),
+            movie_profile: Arc::clone(&movie_profile),
+            search_command: Arc::clone(&search_command),
+            person_command: Arc::clone(&person_command),
+            person_query: Arc::clone(&person_query),
+        })) as Arc<dyn EventHandler>;
+
+        let mut h = vec![
+            poster,
+            cleanup,
+            search_cleanup,
+            discovery_indexer,
+            wrapup_handler,
+            reindex_handler,
+        ];
 
         #[cfg(feature = "federation")]
         {
@@ -243,6 +250,11 @@ async fn main() -> anyhow::Result<()> {
                 remote_watchlist_repo: fed_remote_watchlist_repo,
                 remote_goal_repo: Arc::clone(&remote_goal),
                 local_ap_content: fed_ap_content,
+                movie_repo: fed_movie_repo,
+                review_repo: fed_review_repo,
+                diary_repo: fed_diary_repo,
+                goal_repo: fed_goal_repo,
+                stats_repo: fed_stats_repo,
                 user_repo: fed_user_repo,
                 base_url,
                 allow_registration,
@@ -251,54 +263,24 @@ async fn main() -> anyhow::Result<()> {
             })
             .await?;
 
-            let ap_event_handler = ap_wire.event_handler;
-            let backfill = Arc::new(follow_backfill_handler::FollowBackfillHandler {
-                ap_service: ap_wire.service,
-            }) as Arc<dyn EventHandler>;
-
-            let search_cleanup = Arc::new(SearchCleanupHandler::new(
-                Arc::clone(&search_command),
-                Arc::clone(&person_query),
-            )) as Arc<dyn EventHandler>;
-            let discovery_indexer = Arc::new(MovieDiscoveryIndexer::new(
-                Arc::clone(&movie),
-                Arc::clone(&search_command),
-            )) as Arc<dyn EventHandler>;
             tracing::info!("federation event handler registered");
-            let wrapup_handler =
-                Arc::new(application::wrapup::event_handler::WrapUpEventHandler::new(
-                    Arc::clone(&wrapup_repo),
-                    Arc::clone(&event_publisher),
-                    Arc::clone(&wrapup_stats),
-                )) as Arc<dyn EventHandler>;
-            let reindex_handler = Arc::new(SearchReindexHandler::new(ReindexSearchDeps {
-                movie: Arc::clone(&movie),
-                movie_profile: Arc::clone(&movie_profile),
-                search_command: Arc::clone(&search_command),
-                person_command: Arc::clone(&person_command),
-                person_query: Arc::clone(&person_query),
-            })) as Arc<dyn EventHandler>;
-            let mut h = vec![
-                poster,
-                cleanup,
-                ap_event_handler,
-                backfill,
-                search_cleanup,
-                discovery_indexer,
-                wrapup_handler,
-                reindex_handler,
-            ];
-            if let Some(e) = enrichment_handler {
-                h.push(e);
-            }
-            if let Some(e) = person_enrichment_handler {
-                h.push(e);
-            }
-            if let Some((ref conv_handler, _)) = conversion {
-                h.push(Arc::clone(conv_handler));
-            }
-            h
+            h.push(ap_wire.event_handler);
+            h.push(Arc::new(follow_backfill_handler::FollowBackfillHandler {
+                ap_service: ap_wire.service,
+            }) as Arc<dyn EventHandler>);
         }
+
+        if let Some(e) = enrichment_handler {
+            h.push(e);
+        }
+        if let Some(e) = person_enrichment_handler {
+            h.push(e);
+        }
+        if let Some((ref conv_handler, _)) = conversion {
+            h.push(Arc::clone(conv_handler));
+        }
+
+        h
     };
 
     // ── Run ───────────────────────────────────────────────────────────────────

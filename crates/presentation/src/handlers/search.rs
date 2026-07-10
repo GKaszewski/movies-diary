@@ -13,7 +13,7 @@ use domain::models::{PersonId, collections::PageParams};
 use crate::state::AppState;
 use api_types::search::{
     CastCreditDto, CrewCreditDto, MovieSearchHitDto, PaginatedMovieHits, PaginatedPersonHits,
-    PersonCreditsDto, PersonDto, PersonSearchHitDto, SearchQueryParams, SearchResponse,
+    PersonCreditsDto, PersonSearchHitDto, SearchQueryParams, SearchResponse,
 };
 
 // ── API ──────────────────────────────────────────────────────────────────────
@@ -106,24 +106,9 @@ pub async fn get_person_handler(
         event_publisher: state.app_ctx.services.event_publisher.clone(),
     };
     match get_person::execute(&deps, PersonId::from_uuid(id)).await {
-        Ok(Some(person)) => axum::Json(PersonDto {
-            id: person.id().value(),
-            external_id: person.external_id().value().to_string(),
-            name: person.name().to_string(),
-            known_for_department: person.known_for_department().map(str::to_string),
-            profile_path: person.profile_path().map(str::to_string),
-            biography: person.biography().map(str::to_string),
-            birthday: person.birthday().map(|d| d.to_string()),
-            deathday: person.deathday().map(|d| d.to_string()),
-            place_of_birth: person.place_of_birth().map(str::to_string),
-            also_known_as: person.also_known_as().to_vec(),
-            homepage: person.homepage().map(str::to_string),
-            imdb_url: person
-                .imdb_id()
-                .map(|id| format!("https://www.imdb.com/name/{id}")),
-            enriched: person.enriched_at().is_some(),
-        })
-        .into_response(),
+        Ok(Some(person)) => {
+            axum::Json(crate::mappers::search::person_to_dto(&person)).into_response()
+        }
         Ok(None) => StatusCode::NOT_FOUND.into_response(),
         Err(e) => crate::errors::domain_error_response(e),
     }
@@ -148,24 +133,7 @@ pub async fn get_person_credits_handler(
     };
     match get_person_credits::execute(&deps, PersonId::from_uuid(id)).await {
         Ok(credits) => axum::Json(PersonCreditsDto {
-            person: PersonDto {
-                id: credits.person.id().value(),
-                external_id: credits.person.external_id().value().to_string(),
-                name: credits.person.name().to_string(),
-                known_for_department: credits.person.known_for_department().map(str::to_string),
-                profile_path: credits.person.profile_path().map(str::to_string),
-                biography: credits.person.biography().map(str::to_string),
-                birthday: credits.person.birthday().map(|d| d.to_string()),
-                deathday: credits.person.deathday().map(|d| d.to_string()),
-                place_of_birth: credits.person.place_of_birth().map(str::to_string),
-                also_known_as: credits.person.also_known_as().to_vec(),
-                homepage: credits.person.homepage().map(str::to_string),
-                imdb_url: credits
-                    .person
-                    .imdb_id()
-                    .map(|id| format!("https://www.imdb.com/name/{id}")),
-                enriched: credits.person.enriched_at().is_some(),
-            },
+            person: crate::mappers::search::person_to_dto(&credits.person),
             cast: credits
                 .cast
                 .iter()

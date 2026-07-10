@@ -68,18 +68,27 @@ struct FakeSocialWithFollowing(Vec<String>);
 
 #[async_trait]
 impl domain::ports::SocialQueryPort for FakeSocialWithFollowing {
-    async fn get_accepted_following_urls(&self, _: uuid::Uuid) -> Result<Vec<String>, DomainError> {
+    async fn get_accepted_following_urls(
+        &self,
+        _: &domain::value_objects::UserId,
+    ) -> Result<Vec<String>, DomainError> {
         Ok(self.0.clone())
     }
-    async fn count_following(&self, _: uuid::Uuid) -> Result<usize, DomainError> {
+    async fn count_following(
+        &self,
+        _: &domain::value_objects::UserId,
+    ) -> Result<usize, DomainError> {
         Ok(0)
     }
-    async fn count_accepted_followers(&self, _: uuid::Uuid) -> Result<usize, DomainError> {
+    async fn count_accepted_followers(
+        &self,
+        _: &domain::value_objects::UserId,
+    ) -> Result<usize, DomainError> {
         Ok(0)
     }
     async fn get_pending_followers(
         &self,
-        _: uuid::Uuid,
+        _: &domain::value_objects::UserId,
     ) -> Result<Vec<domain::models::PendingFollowerInfo>, DomainError> {
         Ok(vec![])
     }

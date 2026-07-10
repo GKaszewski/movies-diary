@@ -37,7 +37,7 @@ pub fn review_to_dto(review: &Review) -> ReviewDto {
         rating: review.rating().value(),
         comment: review.comment().map(|c| c.value().to_string()),
         watched_at: domain::value_objects::format_watched_at(review.watched_at()),
-        watch_medium: review.watch_medium().map(|wm| wm.to_string()),
+        watch_medium: review.watch_medium().copied(),
     }
 }
 

@@ -17,7 +17,7 @@ pub struct CurrentProfileData {
     pub banner_path: Option<String>,
     pub also_known_as: Option<String>,
     pub fields: Vec<ProfileFieldData>,
-    pub role: String,
+    pub role: domain::models::UserRole,
 }
 
 pub async fn execute(
@@ -47,7 +47,7 @@ pub async fn execute(
         banner_path: found.banner_path().map(|s| s.to_string()),
         also_known_as: found.also_known_as().map(|s| s.to_string()),
         fields,
-        role: found.role().as_str().into(),
+        role: found.role().clone(),
     })
 }
 

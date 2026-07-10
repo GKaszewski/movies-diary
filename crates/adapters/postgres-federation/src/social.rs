@@ -3,6 +3,7 @@ use domain::{
     errors::DomainError,
     models::{PendingFollowerInfo, RemoteActorInfo},
     ports::SocialQueryPort,
+    value_objects::UserId,
 };
 
 use super::PostgresFederationRepository;
@@ -11,9 +12,9 @@ use super::PostgresFederationRepository;
 impl SocialQueryPort for PostgresFederationRepository {
     async fn get_accepted_following_urls(
         &self,
-        user_id: uuid::Uuid,
+        user_id: &UserId,
     ) -> Result<Vec<String>, DomainError> {
-        let user_id_str = user_id.to_string();
+        let user_id_str = user_id.value().to_string();
         sqlx::query_scalar::<_, String>(
             "SELECT remote_actor_url FROM ap_following WHERE local_user_id = $1 AND status = 'accepted'",
         ).bind(&user_id_str).fetch_all(&self.pool).await
@@ -34,8 +35,8 @@ impl SocialQueryPort for PostgresFederationRepository {
             .collect())
     }
 
-    async fn count_following(&self, user_id: uuid::Uuid) -> Result<usize, DomainError> {
-        let uid = user_id.to_string();
+    async fn count_following(&self, user_id: &UserId) -> Result<usize, DomainError> {
+        let uid = user_id.value().to_string();
         let count: i64 = sqlx::query_scalar(
             "SELECT COUNT(*) FROM ap_following WHERE local_user_id = $1 AND status = 'accepted'",
         )
@@ -46,8 +47,8 @@ impl SocialQueryPort for PostgresFederationRepository {
         Ok(count as usize)
     }
 
-    async fn count_accepted_followers(&self, user_id: uuid::Uuid) -> Result<usize, DomainError> {
-        let uid = user_id.to_string();
+    async fn count_accepted_followers(&self, user_id: &UserId) -> Result<usize, DomainError> {
+        let uid = user_id.value().to_string();
         let count: i64 = sqlx::query_scalar(
             "SELECT COUNT(*) FROM ap_followers WHERE local_user_id = $1 AND status = 'accepted'",
         )
@@ -60,9 +61,9 @@ impl SocialQueryPort for PostgresFederationRepository {
 
     async fn get_pending_followers(
         &self,
-        user_id: uuid::Uuid,
+        user_id: &UserId,
     ) -> Result<Vec<PendingFollowerInfo>, DomainError> {
-        let uid = user_id.to_string();
+        let uid = user_id.value().to_string();
         let rows = sqlx::query_as::<_, (String, String, Option<String>, Option<String>)>(
             "SELECT ar.url, ar.handle, ar.display_name, ar.avatar_url FROM ap_followers f JOIN ap_remote_actors ar ON ar.url = f.remote_actor_url WHERE f.local_user_id = $1 AND f.status = 'pending'",
         ).bind(&uid).fetch_all(&self.pool).await.map_err(|e| DomainError::InfrastructureError(e.to_string()))?;

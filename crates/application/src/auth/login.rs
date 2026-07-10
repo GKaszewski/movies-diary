@@ -11,7 +11,7 @@ pub struct LoginResult {
     pub user_id: Uuid,
     pub email: String,
     pub expires_at: DateTime<Utc>,
-    pub role: String,
+    pub role: domain::models::UserRole,
 }
 
 pub async fn execute(deps: &LoginDeps, query: LoginQuery) -> Result<LoginResult, DomainError> {
@@ -49,7 +49,7 @@ pub async fn execute(deps: &LoginDeps, query: LoginQuery) -> Result<LoginResult,
         user_id: user.id().value(),
         email: user.email().value().to_string(),
         expires_at: generated.expires_at,
-        role: user.role().as_str().into(),
+        role: user.role().clone(),
     })
 }
 

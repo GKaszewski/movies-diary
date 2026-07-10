@@ -61,15 +61,17 @@ pub async fn get_profile(
     .await?;
     let base_url = &state.app_ctx.config.base_url;
     Ok(Json(ProfileResponse {
-        username: profile.username,
-        display_name: profile.display_name,
-        bio: profile.bio,
-        avatar_url: profile
-            .avatar_path
-            .map(|p| format!("{}/images/{}", base_url, p)),
-        banner_url: profile
-            .banner_path
-            .map(|p| format!("{}/images/{}", base_url, p)),
+        profile: api_types::UserProfileBase {
+            username: profile.username,
+            display_name: profile.display_name,
+            bio: profile.bio,
+            avatar_url: profile
+                .avatar_path
+                .map(|p| format!("{}/images/{}", base_url, p)),
+            banner_url: profile
+                .banner_path
+                .map(|p| format!("{}/images/{}", base_url, p)),
+        },
         also_known_as: profile.also_known_as,
         fields: profile
             .fields
@@ -96,65 +98,19 @@ pub async fn get_profile(
 pub async fn update_profile_handler(
     State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
-    mut multipart: Multipart,
+    multipart: Multipart,
 ) -> impl IntoResponse {
-    let mut display_name: Option<String> = None;
-    let mut bio: Option<String> = None;
-    let mut avatar_bytes: Option<Vec<u8>> = None;
-    let mut avatar_content_type: Option<String> = None;
-    let mut banner_bytes: Option<Vec<u8>> = None;
-    let mut banner_content_type: Option<String> = None;
-    let mut also_known_as: Option<String> = None;
-
-    while let Ok(Some(field)) = multipart.next_field().await {
-        let name = field.name().unwrap_or("").to_string();
-        match name.as_str() {
-            "display_name" => {
-                if let Ok(text) = field.text().await {
-                    display_name = Some(text).filter(|s| !s.is_empty());
-                }
-            }
-            "bio" => {
-                if let Ok(text) = field.text().await {
-                    bio = Some(text);
-                }
-            }
-            "also_known_as" => {
-                if let Ok(text) = field.text().await {
-                    also_known_as = Some(text).filter(|s| !s.is_empty());
-                }
-            }
-            "avatar" => {
-                let ct = field.content_type().map(|s| s.to_string());
-                if let Ok(bytes) = field.bytes().await
-                    && !bytes.is_empty()
-                {
-                    avatar_bytes = Some(bytes.to_vec());
-                    avatar_content_type = ct;
-                }
-            }
-            "banner" => {
-                let ct = field.content_type().map(|s| s.to_string());
-                if let Ok(bytes) = field.bytes().await
-                    && !bytes.is_empty()
-                {
-                    banner_bytes = Some(bytes.to_vec());
-                    banner_content_type = ct;
-                }
-            }
-            _ => {}
-        }
-    }
+    let data = super::helpers::parse_profile_multipart(multipart).await;
 
     let cmd = application::users::commands::UpdateProfileCommand {
         user_id: user_id.value(),
-        display_name,
-        bio,
-        avatar_bytes,
-        avatar_content_type,
-        banner_bytes,
-        banner_content_type,
-        also_known_as,
+        display_name: data.display_name,
+        bio: data.bio,
+        avatar_bytes: data.avatar_bytes,
+        avatar_content_type: data.avatar_content_type,
+        banner_bytes: data.banner_bytes,
+        banner_content_type: data.banner_content_type,
+        also_known_as: data.also_known_as,
     };
 
     let deps = UpdateProfileDeps {
@@ -325,7 +281,7 @@ pub async fn get_user_profile(
     });
 
     let history = profile.history.map(|entries| {
-        crate::mappers::users::group_by_month(entries)
+        application::users::group_by_month(entries)
             .into_iter()
             .map(|m| MonthActivityDto {
                 year_month: m.year_month,
@@ -364,13 +320,17 @@ pub async fn get_user_profile(
 
     Json(UserProfileResponse {
         user_id,
-        username: user.username().value().to_string(),
-        avatar_url: user
-            .avatar_path()
-            .map(|p| format!("{}/images/{}", state.app_ctx.config.base_url, p)),
-        banner_url: user
-            .banner_path()
-            .map(|p| format!("{}/images/{}", state.app_ctx.config.base_url, p)),
+        profile: api_types::UserProfileBase {
+            username: user.username().value().to_string(),
+            avatar_url: user
+                .avatar_path()
+                .map(|p| format!("{}/images/{}", state.app_ctx.config.base_url, p)),
+            banner_url: user
+                .banner_path()
+                .map(|p| format!("{}/images/{}", state.app_ctx.config.base_url, p)),
+            display_name: None,
+            bio: None,
+        },
         stats: UserStatsDto {
             total_movies: profile.stats.total_movies,
             avg_rating: profile.stats.avg_rating,
@@ -385,6 +345,7 @@ pub async fn get_user_profile(
         goals: {
             let goals_list = application::goals::list::execute(
                 state.app_ctx.repos.goal.clone(),
+                state.app_ctx.repos.stats.clone(),
                 application::goals::queries::ListGoalsQuery { user_id },
             )
             .await
@@ -397,8 +358,6 @@ pub async fn get_user_profile(
         },
         is_federated: false,
         handle: None,
-        display_name: None,
-        bio: None,
         actor_url: None,
     })
     .into_response()
@@ -475,9 +434,13 @@ async fn build_federated_profile_response(
 
     Json(UserProfileResponse {
         user_id,
-        username,
-        avatar_url: fed.avatar_url,
-        banner_url: fed.banner_url,
+        profile: api_types::UserProfileBase {
+            username,
+            avatar_url: fed.avatar_url,
+            banner_url: fed.banner_url,
+            display_name: fed.display_name,
+            bio: fed.bio,
+        },
         stats: UserStatsDto {
             total_movies: profile.stats.total_movies,
             avg_rating: profile.stats.avg_rating,
@@ -492,8 +455,6 @@ async fn build_federated_profile_response(
         goals: None,
         is_federated: true,
         handle: Some(fed.handle),
-        display_name: fed.display_name,
-        bio: fed.bio,
         actor_url: Some(fed.actor_url),
     })
     .into_response()
@@ -687,7 +648,7 @@ pub async fn get_user_profile_html(
                 .most_active_month
                 .clone()
                 .unwrap_or_else(|| "\u{2014}".to_string());
-            let history = profile.history.map(crate::mappers::users::group_by_month);
+            let history = profile.history.map(application::users::group_by_month);
             let heatmap = history.as_deref().map(build_heatmap).unwrap_or_default();
             let monthly_rating_rows: Vec<MonthlyRatingRow<'_>> = profile
                 .trends
@@ -775,6 +736,7 @@ pub async fn get_user_profile_html(
                     goals: {
                         let goals_list = application::goals::list::execute(
                             state.app_ctx.repos.goal.clone(),
+                            state.app_ctx.repos.stats.clone(),
                             application::goals::queries::ListGoalsQuery {
                                 user_id: profile_user_uuid,
                             },
@@ -865,100 +827,45 @@ pub async fn get_profile_settings(
 pub async fn post_profile_settings(
     RequiredCookieUser(user_id): RequiredCookieUser,
     State(state): State<AppState>,
-    mut multipart: Multipart,
+    multipart: Multipart,
 ) -> impl IntoResponse {
-    let mut display_name: Option<String> = None;
-    let mut bio: Option<String> = None;
-    let mut avatar_bytes: Option<Vec<u8>> = None;
-    let mut avatar_content_type: Option<String> = None;
-    let mut banner_bytes: Option<Vec<u8>> = None;
-    let mut banner_content_type: Option<String> = None;
-    let mut also_known_as: Option<String> = None;
-    let mut field_names: std::collections::HashMap<usize, String> =
-        std::collections::HashMap::new();
-    let mut field_values: std::collections::HashMap<usize, String> =
-        std::collections::HashMap::new();
-
-    while let Ok(Some(field)) = multipart.next_field().await {
-        let name = field.name().unwrap_or("").to_string();
-        match name.as_str() {
-            "display_name" => {
-                if let Ok(text) = field.text().await {
-                    display_name = Some(text).filter(|s| !s.is_empty());
-                }
-            }
-            "bio" => {
-                if let Ok(text) = field.text().await {
-                    bio = Some(text);
-                }
-            }
-            "also_known_as" => {
-                if let Ok(text) = field.text().await {
-                    also_known_as = Some(text).filter(|s| !s.is_empty());
-                }
-            }
-            "avatar" => {
-                let ct = field.content_type().map(|s| s.to_string());
-                if let Ok(bytes) = field.bytes().await
-                    && !bytes.is_empty()
-                {
-                    avatar_bytes = Some(bytes.to_vec());
-                    avatar_content_type = ct;
-                }
-            }
-            "banner" => {
-                let ct = field.content_type().map(|s| s.to_string());
-                if let Ok(bytes) = field.bytes().await
-                    && !bytes.is_empty()
-                {
-                    banner_bytes = Some(bytes.to_vec());
-                    banner_content_type = ct;
-                }
-            }
-            n if n.starts_with("field_name_") => {
-                if let Ok(idx) = n["field_name_".len()..].parse::<usize>()
-                    && let Ok(text) = field.text().await
-                    && !text.is_empty()
-                {
-                    field_names.insert(idx, text);
-                }
-            }
-            n if n.starts_with("field_value_") => {
-                if let Ok(idx) = n["field_value_".len()..].parse::<usize>()
-                    && let Ok(text) = field.text().await
-                    && !text.is_empty()
-                {
-                    field_values.insert(idx, text);
-                }
-            }
-            _ => {}
-        }
-    }
+    let data = super::helpers::parse_profile_multipart(multipart).await;
 
     let cmd = application::users::commands::UpdateProfileCommand {
         user_id: user_id.value(),
-        display_name,
-        bio,
-        avatar_bytes,
-        avatar_content_type,
-        banner_bytes,
-        banner_content_type,
-        also_known_as,
+        display_name: data.display_name,
+        bio: data.bio,
+        avatar_bytes: data.avatar_bytes,
+        avatar_content_type: data.avatar_content_type,
+        banner_bytes: data.banner_bytes,
+        banner_content_type: data.banner_content_type,
+        also_known_as: data.also_known_as,
     };
     let update_deps = UpdateProfileDeps {
         user: state.app_ctx.repos.user.clone(),
         object_storage: state.app_ctx.services.object_storage.clone(),
         event_publisher: state.app_ctx.services.event_publisher.clone(),
     };
-    let _ = update_profile::execute(&update_deps, cmd).await;
+    if let Err(e) = update_profile::execute(&update_deps, cmd).await {
+        tracing::error!("update_profile error: {:?}", e);
+        return axum::response::Redirect::to(&format!(
+            "/settings/profile?error={}",
+            super::helpers::encode_error(&e.to_string())
+        ))
+        .into_response();
+    }
 
     let fields: Vec<domain::models::ProfileField> = (0..4)
         .filter_map(|i| {
-            field_names
+            data.profile_field_names
                 .get(&i)
                 .map(|name| domain::models::ProfileField {
                     name: name.clone(),
-                    value: field_values.get(&i).cloned().unwrap_or_default(),
+                    value: data
+                        .profile_field_values
+                        .get(&i)
+                        .cloned()
+                        .unwrap_or_default(),
                 })
         })
         .collect();
@@ -967,12 +874,20 @@ pub async fn post_profile_settings(
         user_id: user_id.value(),
         fields,
     };
-    let _ = update_profile_fields::execute(
+    if let Err(e) = update_profile_fields::execute(
         state.app_ctx.repos.profile_fields.clone(),
         state.app_ctx.services.event_publisher.clone(),
         fields_cmd,
     )
-    .await;
+    .await
+    {
+        tracing::error!("update_profile_fields error: {:?}", e);
+        return axum::response::Redirect::to(&format!(
+            "/settings/profile?error={}",
+            super::helpers::encode_error(&e.to_string())
+        ))
+        .into_response();
+    }
 
     axum::response::Redirect::to("/settings/profile?saved=1").into_response()
 }

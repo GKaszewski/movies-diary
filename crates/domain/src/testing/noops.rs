@@ -97,7 +97,10 @@ pub struct NoopSocialQueryPort;
 
 #[async_trait]
 impl crate::ports::SocialQueryPort for NoopSocialQueryPort {
-    async fn get_accepted_following_urls(&self, _: uuid::Uuid) -> Result<Vec<String>, DomainError> {
+    async fn get_accepted_following_urls(
+        &self,
+        _: &crate::value_objects::UserId,
+    ) -> Result<Vec<String>, DomainError> {
         Ok(vec![])
     }
     async fn list_all_followed_remote_actors(
@@ -105,15 +108,21 @@ impl crate::ports::SocialQueryPort for NoopSocialQueryPort {
     ) -> Result<Vec<crate::models::RemoteActorInfo>, DomainError> {
         Ok(vec![])
     }
-    async fn count_following(&self, _: uuid::Uuid) -> Result<usize, DomainError> {
+    async fn count_following(
+        &self,
+        _: &crate::value_objects::UserId,
+    ) -> Result<usize, DomainError> {
         Ok(0)
     }
-    async fn count_accepted_followers(&self, _: uuid::Uuid) -> Result<usize, DomainError> {
+    async fn count_accepted_followers(
+        &self,
+        _: &crate::value_objects::UserId,
+    ) -> Result<usize, DomainError> {
         Ok(0)
     }
     async fn get_pending_followers(
         &self,
-        _: uuid::Uuid,
+        _: &crate::value_objects::UserId,
     ) -> Result<Vec<crate::models::PendingFollowerInfo>, DomainError> {
         Ok(vec![])
     }
@@ -147,9 +156,6 @@ impl crate::ports::GoalRepository for NoopGoalRepository {
     }
     async fn list_for_user(&self, _: &UserId) -> Result<Vec<crate::models::Goal>, DomainError> {
         Ok(vec![])
-    }
-    async fn count_reviews_in_year(&self, _: &UserId, _: u16) -> Result<u32, DomainError> {
-        Ok(0)
     }
 }
 

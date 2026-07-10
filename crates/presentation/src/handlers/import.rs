@@ -22,6 +22,7 @@ use application::import::{
     execute as execute_import, list_profiles as list_import_profiles,
     save_profile as save_import_profile,
 };
+use domain::errors::DomainError;
 use domain::models::{
     AnnotatedRow, FieldMapping, FileFormat,
     import::{DomainField, Transform},
@@ -39,10 +40,7 @@ use crate::{
     state::AppState,
 };
 
-fn encode_error(msg: &str) -> String {
-    use percent_encoding::{NON_ALPHANUMERIC, utf8_percent_encode};
-    utf8_percent_encode(msg, NON_ALPHANUMERIC).to_string()
-}
+use super::helpers::encode_error;
 
 fn str_to_domain_field(field: &str) -> Option<DomainField> {
     match field {
@@ -461,7 +459,7 @@ pub async fn api_post_session(
     State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
     mut multipart: Multipart,
-) -> impl IntoResponse {
+) -> Result<impl IntoResponse, ApiError> {
     let mut file_bytes: Option<Vec<u8>> = None;
     let mut format_str = "csv".to_string();
     while let Ok(Some(field)) = multipart.next_field().await {
@@ -481,20 +479,14 @@ pub async fn api_post_session(
     }
     let bytes = match file_bytes {
         Some(b) if !b.is_empty() => b,
-        _ => {
-            return (
-                StatusCode::BAD_REQUEST,
-                axum::Json(serde_json::json!({"error": "no file"})),
-            )
-                .into_response();
-        }
+        _ => return Err(DomainError::ValidationError("no file".into()).into()),
     };
     let format = match format_str.as_str() {
         "json" => FileFormat::Json,
         "xlsx" => FileFormat::Xlsx,
         _ => FileFormat::Csv,
     };
-    match create_import_session::execute(
+    let r = create_import_session::execute(
         state.app_ctx.repos.import_session.clone(),
         state.app_ctx.services.document_parser.clone(),
         CreateImportSessionCommand {
@@ -503,20 +495,12 @@ pub async fn api_post_session(
             format,
         },
     )
-    .await
-    {
-        Ok(r) => axum::Json(SessionCreatedResponse {
-            session_id: r.session_id.value().to_string(),
-            columns: r.columns,
-            sample_rows: r.sample_rows,
-        })
-        .into_response(),
-        Err(e) => (
-            StatusCode::UNPROCESSABLE_ENTITY,
-            axum::Json(serde_json::json!({"error": e.to_string()})),
-        )
-            .into_response(),
-    }
+    .await?;
+    Ok(axum::Json(SessionCreatedResponse {
+        session_id: r.session_id.value().to_string(),
+        columns: r.columns,
+        sample_rows: r.sample_rows,
+    }))
 }
 
 #[utoipa::path(
@@ -533,46 +517,26 @@ pub async fn api_get_session(
     State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
     Path(session_id_str): Path<String>,
-) -> impl IntoResponse {
-    let Ok(session_id) = session_id_str
+) -> Result<impl IntoResponse, ApiError> {
+    let session_id = session_id_str
         .parse::<uuid::Uuid>()
         .map(ImportSessionId::from_uuid)
-    else {
-        return (
-            StatusCode::BAD_REQUEST,
-            axum::Json(serde_json::json!({"error": "invalid session id"})),
-        )
-            .into_response();
-    };
-    match state
+        .map_err(|_| DomainError::ValidationError("invalid session id".into()))?;
+    let session = state
         .app_ctx
         .repos
         .import_session
         .get(&session_id, &user_id)
-        .await
-    {
-        Ok(Some(session)) => {
-            let parsed = session.parsed_file.unwrap_or_default();
-            let row_count = parsed.rows.len();
-            axum::Json(SessionStateResponse {
-                session_id: session_id_str,
-                columns: parsed.columns,
-                has_mappings: session.field_mappings.is_some(),
-                row_count,
-            })
-            .into_response()
-        }
-        Ok(None) => (
-            StatusCode::NOT_FOUND,
-            axum::Json(serde_json::json!({"error": "session not found"})),
-        )
-            .into_response(),
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            axum::Json(serde_json::json!({"error": e.to_string()})),
-        )
-            .into_response(),
-    }
+        .await?
+        .ok_or(DomainError::NotFound("session not found".into()))?;
+    let parsed = session.parsed_file.unwrap_or_default();
+    let row_count = parsed.rows.len();
+    Ok(axum::Json(SessionStateResponse {
+        session_id: session_id_str,
+        columns: parsed.columns,
+        has_mappings: session.field_mappings.is_some(),
+        row_count,
+    }))
 }
 
 #[utoipa::path(
@@ -591,17 +555,11 @@ pub async fn api_put_mapping(
     AuthenticatedUser(user_id): AuthenticatedUser,
     Path(session_id_str): Path<String>,
     axum::Json(body): axum::Json<ApplyMappingRequest>,
-) -> impl IntoResponse {
-    let Ok(session_id) = session_id_str
+) -> Result<impl IntoResponse, ApiError> {
+    let session_id = session_id_str
         .parse::<uuid::Uuid>()
         .map(ImportSessionId::from_uuid)
-    else {
-        return (
-            StatusCode::BAD_REQUEST,
-            axum::Json(serde_json::json!({"error": "invalid session id"})),
-        )
-            .into_response();
-    };
+        .map_err(|_| DomainError::ValidationError("invalid session id".into()))?;
     let mappings: Vec<FieldMapping> = body
         .mappings
         .into_iter()
@@ -624,7 +582,7 @@ pub async fn api_put_mapping(
         })
         .collect();
 
-    match apply_import_mapping::execute(
+    let rows = apply_import_mapping::execute(
         state.app_ctx.repos.import_session.clone(),
         state.app_ctx.services.document_parser.clone(),
         state.app_ctx.repos.movie.clone(),
@@ -634,15 +592,8 @@ pub async fn api_put_mapping(
             mappings,
         },
     )
-    .await
-    {
-        Ok(rows) => axum::Json(serde_json::json!({"row_count": rows.len()})).into_response(),
-        Err(e) => (
-            StatusCode::UNPROCESSABLE_ENTITY,
-            axum::Json(serde_json::json!({"error": e.to_string()})),
-        )
-            .into_response(),
-    }
+    .await?;
+    Ok(axum::Json(serde_json::json!({"row_count": rows.len()})))
 }
 
 pub async fn api_get_preview(
@@ -653,11 +604,7 @@ pub async fn api_get_preview(
     let session_id = session_id_str
         .parse::<uuid::Uuid>()
         .map(ImportSessionId::from_uuid)
-        .map_err(|_| {
-            ApiError(domain::errors::DomainError::ValidationError(
-                "invalid session id".into(),
-            ))
-        })?;
+        .map_err(|_| DomainError::ValidationError("invalid session id".into()))?;
 
     let session = state
         .app_ctx
@@ -665,11 +612,7 @@ pub async fn api_get_preview(
         .import_session
         .get(&session_id, &user_id)
         .await?
-        .ok_or_else(|| {
-            ApiError(domain::errors::DomainError::NotFound(
-                "session not found".into(),
-            ))
-        })?;
+        .ok_or(DomainError::NotFound("session not found".into()))?;
 
     let annotated: Vec<AnnotatedRow> = session.row_results.unwrap_or_default();
     let rows = annotated
@@ -678,7 +621,18 @@ pub async fn api_get_preview(
         .map(|(i, a)| {
             use domain::models::import::RowResult;
             match &a.result {
-                RowResult::Valid(row) if a.is_duplicate => PreviewRowDto::Duplicate {
+                RowResult::Valid(row) if a.is_duplicate => {
+                    PreviewRowDto::Duplicate(api_types::PreviewRowData {
+                        index: i,
+                        title: row.title.clone(),
+                        release_year: row.release_year.clone(),
+                        director: row.director.clone(),
+                        rating: row.rating.clone(),
+                        watched_at: row.watched_at.clone(),
+                        comment: row.comment.clone(),
+                    })
+                }
+                RowResult::Valid(row) => PreviewRowDto::Valid(api_types::PreviewRowData {
                     index: i,
                     title: row.title.clone(),
                     release_year: row.release_year.clone(),
@@ -686,16 +640,7 @@ pub async fn api_get_preview(
                     rating: row.rating.clone(),
                     watched_at: row.watched_at.clone(),
                     comment: row.comment.clone(),
-                },
-                RowResult::Valid(row) => PreviewRowDto::Valid {
-                    index: i,
-                    title: row.title.clone(),
-                    release_year: row.release_year.clone(),
-                    director: row.director.clone(),
-                    rating: row.rating.clone(),
-                    watched_at: row.watched_at.clone(),
-                    comment: row.comment.clone(),
-                },
+                }),
                 RowResult::Invalid { errors, .. } => PreviewRowDto::Invalid {
                     index: i,
                     errors: errors.clone(),
@@ -723,32 +668,26 @@ pub async fn api_post_confirm(
     AuthenticatedUser(user_id): AuthenticatedUser,
     Path(session_id_str): Path<String>,
     axum::Json(body): axum::Json<ConfirmRequest>,
-) -> impl IntoResponse {
-    let Ok(session_id) = session_id_str
+) -> Result<impl IntoResponse, ApiError> {
+    let session_id = session_id_str
         .parse::<uuid::Uuid>()
         .map(ImportSessionId::from_uuid)
-    else {
-        return (
-            StatusCode::BAD_REQUEST,
-            axum::Json(serde_json::json!({"error": "invalid session id"})),
-        )
-            .into_response();
-    };
-    match execute_import::execute(state.app_ctx.repos.import_session.clone(), state.app_ctx.services.review_logger.clone(), ExecuteImportCommand { user_id: user_id.value(), session_id: session_id.value(), confirmed_indices: body.confirmed_indices }).await {
-        Ok(s) => axum::Json(serde_json::json!({
-            "imported": s.imported,
-            "skipped_duplicates": s.skipped_duplicates,
-            "failed": s.failed.iter().map(|(i, e)| serde_json::json!({"index": i, "error": e})).collect::<Vec<_>>(),
-        })).into_response(),
-        Err(e) => {
-            let status = if matches!(e, domain::errors::DomainError::NotFound(_)) {
-                StatusCode::NOT_FOUND
-            } else {
-                StatusCode::INTERNAL_SERVER_ERROR
-            };
-            (status, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response()
-        }
-    }
+        .map_err(|_| DomainError::ValidationError("invalid session id".into()))?;
+    let s = execute_import::execute(
+        state.app_ctx.repos.import_session.clone(),
+        state.app_ctx.services.review_logger.clone(),
+        ExecuteImportCommand {
+            user_id: user_id.value(),
+            session_id: session_id.value(),
+            confirmed_indices: body.confirmed_indices,
+        },
+    )
+    .await?;
+    Ok(axum::Json(serde_json::json!({
+        "imported": s.imported,
+        "skipped_duplicates": s.skipped_duplicates,
+        "failed": s.failed.iter().map(|(i, e)| serde_json::json!({"index": i, "error": e})).collect::<Vec<_>>(),
+    })))
 }
 
 #[utoipa::path(
@@ -762,28 +701,21 @@ pub async fn api_post_confirm(
 pub async fn api_get_profiles(
     State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
-) -> impl IntoResponse {
-    match list_import_profiles::execute(state.app_ctx.repos.import_profile.clone(), &user_id).await
-    {
-        Ok(profiles) => axum::Json(
-            profiles
-                .into_iter()
-                .map(|p| {
-                    serde_json::json!({
-                        "id": p.id.value().to_string(),
-                        "name": p.name,
-                        "created_at": p.created_at.to_string(),
-                    })
+) -> Result<impl IntoResponse, ApiError> {
+    let profiles =
+        list_import_profiles::execute(state.app_ctx.repos.import_profile.clone(), &user_id).await?;
+    Ok(axum::Json(
+        profiles
+            .into_iter()
+            .map(|p| {
+                serde_json::json!({
+                    "id": p.id.value().to_string(),
+                    "name": p.name,
+                    "created_at": p.created_at.to_string(),
                 })
-                .collect::<Vec<_>>(),
-        )
-        .into_response(),
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            axum::Json(serde_json::json!({"error": e.to_string()})),
-        )
-            .into_response(),
-    }
+            })
+            .collect::<Vec<_>>(),
+    ))
 }
 
 #[utoipa::path(
@@ -800,19 +732,13 @@ pub async fn api_post_profile(
     State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
     axum::Json(body): axum::Json<SaveProfileRequest>,
-) -> impl IntoResponse {
-    let Ok(session_id) = body
+) -> Result<impl IntoResponse, ApiError> {
+    let session_id = body
         .session_id
         .parse::<uuid::Uuid>()
         .map(ImportSessionId::from_uuid)
-    else {
-        return (
-            StatusCode::BAD_REQUEST,
-            axum::Json(serde_json::json!({"error": "invalid session id"})),
-        )
-            .into_response();
-    };
-    match save_import_profile::execute(
+        .map_err(|_| DomainError::ValidationError("invalid session id".into()))?;
+    let id = save_import_profile::execute(
         state.app_ctx.repos.import_session.clone(),
         state.app_ctx.repos.import_profile.clone(),
         SaveImportProfileCommand {
@@ -821,15 +747,10 @@ pub async fn api_post_profile(
             name: body.name,
         },
     )
-    .await
-    {
-        Ok(id) => axum::Json(serde_json::json!({"id": id.value().to_string()})).into_response(),
-        Err(e) => (
-            StatusCode::UNPROCESSABLE_ENTITY,
-            axum::Json(serde_json::json!({"error": e.to_string()})),
-        )
-            .into_response(),
-    }
+    .await?;
+    Ok(axum::Json(
+        serde_json::json!({"id": id.value().to_string()}),
+    ))
 }
 
 #[utoipa::path(
@@ -846,29 +767,19 @@ pub async fn api_delete_profile(
     State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
     Path(profile_id_str): Path<String>,
-) -> impl IntoResponse {
-    let Ok(profile_id) = profile_id_str.parse::<uuid::Uuid>() else {
-        return StatusCode::BAD_REQUEST.into_response();
-    };
-    match delete_import_profile::execute(
+) -> Result<impl IntoResponse, ApiError> {
+    let profile_id = profile_id_str
+        .parse::<uuid::Uuid>()
+        .map_err(|_| DomainError::ValidationError("invalid profile id".into()))?;
+    delete_import_profile::execute(
         state.app_ctx.repos.import_profile.clone(),
         DeleteImportProfileCommand {
             user_id: user_id.value(),
             profile_id,
         },
     )
-    .await
-    {
-        Ok(_) => StatusCode::NO_CONTENT.into_response(),
-        Err(e) => {
-            let status = if matches!(e, domain::errors::DomainError::NotFound(_)) {
-                StatusCode::NOT_FOUND
-            } else {
-                StatusCode::INTERNAL_SERVER_ERROR
-            };
-            status.into_response()
-        }
-    }
+    .await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 #[utoipa::path(
@@ -890,23 +801,15 @@ pub async fn api_apply_profile(
     State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
     Path((session_id_str, profile_id_str)): Path<(String, String)>,
-) -> impl IntoResponse {
-    let Ok(session_id) = session_id_str.parse::<uuid::Uuid>() else {
-        return (
-            StatusCode::BAD_REQUEST,
-            axum::Json(serde_json::json!({"error": "invalid session id"})),
-        )
-            .into_response();
-    };
-    let Ok(profile_id) = profile_id_str.parse::<uuid::Uuid>() else {
-        return (
-            StatusCode::BAD_REQUEST,
-            axum::Json(serde_json::json!({"error": "invalid profile id"})),
-        )
-            .into_response();
-    };
+) -> Result<impl IntoResponse, ApiError> {
+    let session_id = session_id_str
+        .parse::<uuid::Uuid>()
+        .map_err(|_| DomainError::ValidationError("invalid session id".into()))?;
+    let profile_id = profile_id_str
+        .parse::<uuid::Uuid>()
+        .map_err(|_| DomainError::ValidationError("invalid profile id".into()))?;
 
-    if let Err(e) = apply_import_profile::execute(
+    apply_import_profile::execute(
         state.app_ctx.repos.import_profile.clone(),
         state.app_ctx.repos.import_session.clone(),
         ApplyImportProfileCommand {
@@ -915,39 +818,20 @@ pub async fn api_apply_profile(
             profile_id,
         },
     )
-    .await
-    {
-        let status = if matches!(e, domain::errors::DomainError::NotFound(_)) {
-            StatusCode::NOT_FOUND
-        } else {
-            StatusCode::UNPROCESSABLE_ENTITY
-        };
-        return (
-            status,
-            axum::Json(serde_json::json!({"error": e.to_string()})),
-        )
-            .into_response();
-    }
+    .await?;
 
-    let session = match state
+    let session = state
         .app_ctx
         .repos
         .import_session
         .get(&ImportSessionId::from_uuid(session_id), &user_id)
-        .await
-    {
-        Ok(Some(s)) => s,
-        _ => {
-            return (
-                StatusCode::NOT_FOUND,
-                axum::Json(serde_json::json!({"error": "session not found after profile apply"})),
-            )
-                .into_response();
-        }
-    };
+        .await?
+        .ok_or(DomainError::NotFound(
+            "session not found after profile apply".into(),
+        ))?;
 
     let mappings = session.field_mappings.unwrap_or_default();
-    match apply_import_mapping::execute(
+    let rows = apply_import_mapping::execute(
         state.app_ctx.repos.import_session.clone(),
         state.app_ctx.services.document_parser.clone(),
         state.app_ctx.repos.movie.clone(),
@@ -957,13 +841,6 @@ pub async fn api_apply_profile(
             mappings,
         },
     )
-    .await
-    {
-        Ok(rows) => axum::Json(serde_json::json!({"row_count": rows.len()})).into_response(),
-        Err(e) => (
-            StatusCode::UNPROCESSABLE_ENTITY,
-            axum::Json(serde_json::json!({"error": e.to_string()})),
-        )
-            .into_response(),
-    }
+    .await?;
+    Ok(axum::Json(serde_json::json!({"row_count": rows.len()})))
 }

@@ -86,7 +86,7 @@ impl MovieRepository for Panic {
 }
 #[async_trait::async_trait]
 impl ReviewRepository for Panic {
-    async fn save_review(&self, _: &Review) -> Result<DomainEvent, DomainError> {
+    async fn save_review(&self, _: &Review) -> Result<(), DomainError> {
         panic!()
     }
     async fn get_review_by_id(&self, _: &ReviewId) -> Result<Option<Review>, DomainError> {
@@ -154,7 +154,7 @@ impl DiaryRepository for Panic {
 #[cfg(feature = "federation")]
 #[async_trait::async_trait]
 impl domain::ports::SocialQueryPort for Panic {
-    async fn get_accepted_following_urls(&self, _: uuid::Uuid) -> Result<Vec<String>, DomainError> {
+    async fn get_accepted_following_urls(&self, _: &UserId) -> Result<Vec<String>, DomainError> {
         panic!()
     }
     async fn list_all_followed_remote_actors(
@@ -162,15 +162,15 @@ impl domain::ports::SocialQueryPort for Panic {
     ) -> Result<Vec<domain::models::RemoteActorInfo>, DomainError> {
         panic!()
     }
-    async fn count_following(&self, _: uuid::Uuid) -> Result<usize, DomainError> {
+    async fn count_following(&self, _: &UserId) -> Result<usize, DomainError> {
         panic!()
     }
-    async fn count_accepted_followers(&self, _: uuid::Uuid) -> Result<usize, DomainError> {
+    async fn count_accepted_followers(&self, _: &UserId) -> Result<usize, DomainError> {
         panic!()
     }
     async fn get_pending_followers(
         &self,
-        _: uuid::Uuid,
+        _: &UserId,
     ) -> Result<Vec<domain::models::PendingFollowerInfo>, DomainError> {
         panic!()
     }
@@ -181,6 +181,9 @@ impl StatsRepository for Panic {
         panic!()
     }
     async fn get_user_trends(&self, _: &UserId) -> Result<UserTrends, DomainError> {
+        panic!()
+    }
+    async fn count_reviews_in_year(&self, _: &UserId, _: u16) -> Result<u32, DomainError> {
         panic!()
     }
 }
@@ -424,7 +427,7 @@ impl domain::ports::DocumentParser for Panic {
     }
 }
 
-impl application::ports::RssFeedRenderer for Panic {
+impl domain::ports::RssFeedRenderer for Panic {
     fn render_feed(&self, _: &[DiaryEntry], _: &str) -> Result<String, String> {
         panic!()
     }
@@ -698,13 +701,6 @@ impl domain::ports::GoalRepository for Panic {
         &self,
         _: &domain::value_objects::UserId,
     ) -> Result<Vec<domain::models::Goal>, DomainError> {
-        panic!()
-    }
-    async fn count_reviews_in_year(
-        &self,
-        _: &domain::value_objects::UserId,
-        _: u16,
-    ) -> Result<u32, DomainError> {
         panic!()
     }
 }

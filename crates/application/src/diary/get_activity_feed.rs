@@ -6,6 +6,7 @@ use domain::{
         FeedEntry,
         collections::{PageParams, Paginated},
     },
+    value_objects::UserId,
 };
 
 pub async fn execute(
@@ -34,9 +35,10 @@ async fn build_following_filter(
         return None;
     }
     let viewer_id = query.viewer_user_id?;
+    let viewer = UserId::from_uuid(viewer_id);
     let urls = deps
         .social_query
-        .get_accepted_following_urls(viewer_id)
+        .get_accepted_following_urls(&viewer)
         .await
         .unwrap_or_default();
     if urls.is_empty() {

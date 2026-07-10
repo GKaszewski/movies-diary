@@ -1,7 +1,6 @@
 use async_trait::async_trait;
 use domain::{
     errors::DomainError,
-    events::DomainEvent,
     models::{Review, ReviewSource},
     ports::ReviewRepository,
     value_objects::{ReviewId, UserId},
@@ -27,7 +26,7 @@ impl SqliteReviewRepository {
 
 #[async_trait]
 impl ReviewRepository for SqliteReviewRepository {
-    async fn save_review(&self, review: &Review) -> Result<DomainEvent, DomainError> {
+    async fn save_review(&self, review: &Review) -> Result<(), DomainError> {
         let id = review.id().value().to_string();
         let movie_id = review.movie_id().value().to_string();
         let user_id = review.user_id().value().to_string();
@@ -57,13 +56,7 @@ impl ReviewRepository for SqliteReviewRepository {
         .await
         .map_err(Self::map_err)?;
 
-        Ok(DomainEvent::ReviewLogged {
-            review_id: review.id().clone(),
-            movie_id: review.movie_id().clone(),
-            user_id: review.user_id().clone(),
-            rating: review.rating().clone(),
-            watched_at: *review.watched_at(),
-        })
+        Ok(())
     }
 
     async fn get_review_by_id(&self, review_id: &ReviewId) -> Result<Option<Review>, DomainError> {

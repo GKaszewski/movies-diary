@@ -4,15 +4,15 @@ use async_trait::async_trait;
 use domain::{
     errors::DomainError,
     events::DomainEvent,
-    models::{Movie, Review},
+    models::Review,
     ports::{
         EventPublisher, MetadataClient, MovieRepository, ReviewRepository, WatchlistRepository,
     },
-    value_objects::{Comment, MovieId, Rating, UserId},
+    value_objects::{Comment, Rating, UserId},
 };
 
 use crate::diary::commands::LogReviewCommand;
-use crate::diary::movie_resolver::{MovieResolver, MovieResolverDeps};
+use crate::movies::resolve::resolve_and_persist_movie;
 use crate::ports::ReviewLogger;
 
 pub struct DefaultReviewLogger {
@@ -48,25 +48,18 @@ impl ReviewLogger for DefaultReviewLogger {
         let user_id = UserId::from_uuid(cmd.user_id);
         let comment = cmd.comment.clone().map(Comment::new).transpose()?;
 
-        let (movie, is_new_movie) = if let Some(id) = cmd.input.movie_id {
-            let movie_id = MovieId::from_uuid(id);
-            let movie = self
-                .movie_repo
-                .get_movie_by_id(&movie_id)
-                .await?
-                .ok_or_else(|| DomainError::NotFound(format!("Movie {id}")))?;
-            (movie, false)
-        } else {
-            let deps = MovieResolverDeps {
-                repository: self.movie_repo.as_ref(),
-                metadata_client: self.metadata_client.as_ref(),
-            };
-            MovieResolver::default_pipeline()
-                .resolve(&cmd.input, &deps)
-                .await?
-        };
+        let (movie, is_new_movie) = resolve_and_persist_movie(
+            &cmd.input,
+            self.movie_repo.as_ref(),
+            self.metadata_client.as_ref(),
+            self.event_publisher.as_ref(),
+        )
+        .await?;
 
-        self.movie_repo.upsert_movie(&movie).await?;
+        // Always upsert: even existing movies may have updated metadata
+        if !is_new_movie {
+            self.movie_repo.upsert_movie(&movie).await?;
+        }
 
         let review = Review::new(
             movie.id().clone(),
@@ -76,7 +69,14 @@ impl ReviewLogger for DefaultReviewLogger {
             cmd.watched_at,
             cmd.watch_medium,
         )?;
-        let review_event = self.review_repo.save_review(&review).await?;
+        self.review_repo.save_review(&review).await?;
+        let review_event = DomainEvent::ReviewLogged {
+            review_id: review.id().clone(),
+            movie_id: review.movie_id().clone(),
+            user_id: review.user_id().clone(),
+            rating: review.rating().clone(),
+            watched_at: *review.watched_at(),
+        };
 
         let was_on_watchlist = self
             .watchlist_repo
@@ -92,35 +92,17 @@ impl ReviewLogger for DefaultReviewLogger {
                 .await;
         }
 
-        publish_events(&self.event_publisher, &movie, is_new_movie, review_event).await
-    }
-}
+        if let Some(ext_id) = movie.external_metadata_id() {
+            self.event_publisher
+                .publish(&DomainEvent::MovieEnrichmentRequested {
+                    movie_id: movie.id().clone(),
+                    external_metadata_id: ext_id.clone(),
+                })
+                .await?;
+        }
 
-async fn publish_events(
-    publisher: &Arc<dyn EventPublisher>,
-    movie: &Movie,
-    is_new_movie: bool,
-    review_event: DomainEvent,
-) -> Result<(), DomainError> {
-    if is_new_movie && let Some(ext_id) = movie.external_metadata_id() {
-        publisher
-            .publish(&DomainEvent::MovieDiscovered {
-                movie_id: movie.id().clone(),
-                external_metadata_id: ext_id.clone(),
-            })
-            .await?;
+        self.event_publisher.publish(&review_event).await
     }
-
-    if let Some(ext_id) = movie.external_metadata_id() {
-        publisher
-            .publish(&DomainEvent::MovieEnrichmentRequested {
-                movie_id: movie.id().clone(),
-                external_metadata_id: ext_id.clone(),
-            })
-            .await?;
-    }
-
-    publisher.publish(&review_event).await
 }
 
 #[cfg(test)]

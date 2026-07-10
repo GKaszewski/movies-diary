@@ -221,7 +221,6 @@ impl TryFrom<LogReviewRequest> for LogReviewData {
 
     fn try_from(req: LogReviewRequest) -> Result<Self, Self::Error> {
         let watched_at = domain::value_objects::parse_watched_at(&req.watched_at)?;
-        let watch_medium = req.watch_medium.map(|s| s.parse()).transpose()?;
         Ok(Self {
             external_metadata_id: req.external_metadata_id.filter(|s| !s.trim().is_empty()),
             manual_title: req.manual_title,
@@ -230,7 +229,7 @@ impl TryFrom<LogReviewRequest> for LogReviewData {
             rating: req.rating,
             comment: req.comment,
             watched_at,
-            watch_medium,
+            watch_medium: req.watch_medium,
         })
     }
 }

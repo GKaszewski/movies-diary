@@ -80,6 +80,9 @@ impl StatsRepository for PanicStatsRepository {
     async fn get_user_trends(&self, _: &UserId) -> Result<UserTrends, DomainError> {
         panic!("PanicStatsRepository called")
     }
+    async fn count_reviews_in_year(&self, _: &UserId, _: u16) -> Result<u32, DomainError> {
+        panic!("PanicStatsRepository called")
+    }
 }
 
 pub struct PanicImportSessionRepository;
@@ -327,21 +330,30 @@ pub struct PanicSocialQueryPort;
 
 #[async_trait]
 impl crate::ports::SocialQueryPort for PanicSocialQueryPort {
-    async fn get_accepted_following_urls(&self, _: uuid::Uuid) -> Result<Vec<String>, DomainError> {
+    async fn get_accepted_following_urls(
+        &self,
+        _: &crate::value_objects::UserId,
+    ) -> Result<Vec<String>, DomainError> {
         panic!("PanicSocialQueryPort called")
     }
     async fn list_all_followed_remote_actors(&self) -> Result<Vec<RemoteActorInfo>, DomainError> {
         panic!("PanicSocialQueryPort called")
     }
-    async fn count_following(&self, _: uuid::Uuid) -> Result<usize, DomainError> {
+    async fn count_following(
+        &self,
+        _: &crate::value_objects::UserId,
+    ) -> Result<usize, DomainError> {
         panic!("PanicSocialQueryPort called")
     }
-    async fn count_accepted_followers(&self, _: uuid::Uuid) -> Result<usize, DomainError> {
+    async fn count_accepted_followers(
+        &self,
+        _: &crate::value_objects::UserId,
+    ) -> Result<usize, DomainError> {
         panic!("PanicSocialQueryPort called")
     }
     async fn get_pending_followers(
         &self,
-        _: uuid::Uuid,
+        _: &crate::value_objects::UserId,
     ) -> Result<Vec<PendingFollowerInfo>, DomainError> {
         panic!("PanicSocialQueryPort called")
     }

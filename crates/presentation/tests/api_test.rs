@@ -405,7 +405,10 @@ impl domain::ports::RemoteWatchlistRepository for PanicRemoteWatchlist {
 #[cfg(feature = "federation")]
 #[async_trait::async_trait]
 impl domain::ports::SocialQueryPort for PanicSocialQuery {
-    async fn get_accepted_following_urls(&self, _: uuid::Uuid) -> Result<Vec<String>, DomainError> {
+    async fn get_accepted_following_urls(
+        &self,
+        _: &domain::value_objects::UserId,
+    ) -> Result<Vec<String>, DomainError> {
         panic!()
     }
     async fn list_all_followed_remote_actors(
@@ -413,15 +416,21 @@ impl domain::ports::SocialQueryPort for PanicSocialQuery {
     ) -> Result<Vec<domain::models::RemoteActorInfo>, DomainError> {
         panic!()
     }
-    async fn count_following(&self, _: uuid::Uuid) -> Result<usize, DomainError> {
+    async fn count_following(
+        &self,
+        _: &domain::value_objects::UserId,
+    ) -> Result<usize, DomainError> {
         panic!()
     }
-    async fn count_accepted_followers(&self, _: uuid::Uuid) -> Result<usize, DomainError> {
+    async fn count_accepted_followers(
+        &self,
+        _: &domain::value_objects::UserId,
+    ) -> Result<usize, DomainError> {
         panic!()
     }
     async fn get_pending_followers(
         &self,
-        _: uuid::Uuid,
+        _: &domain::value_objects::UserId,
     ) -> Result<Vec<domain::models::PendingFollowerInfo>, DomainError> {
         panic!()
     }

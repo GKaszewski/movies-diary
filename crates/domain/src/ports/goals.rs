@@ -17,5 +17,4 @@ pub trait GoalRepository: Send + Sync {
         year: u16,
     ) -> Result<Option<Goal>, DomainError>;
     async fn list_for_user(&self, user_id: &UserId) -> Result<Vec<Goal>, DomainError>;
-    async fn count_reviews_in_year(&self, user_id: &UserId, year: u16) -> Result<u32, DomainError>;
 }

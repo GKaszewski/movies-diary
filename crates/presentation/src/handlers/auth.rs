@@ -21,10 +21,10 @@ use crate::{
     render::render_page,
     state::AppState,
 };
+use api_types::HtmlPageContext;
 use api_types::{
     LoginRequest, LoginResponse, LogoutRequest, RefreshRequest, RefreshResponse, RegisterRequest,
 };
-use application::rendering::HtmlPageContext;
 use template_askama::{LoginTemplate, RegisterTemplate};
 
 // ── HTML helpers ─────────────────────────────────────────────────────────────

@@ -3,10 +3,12 @@ use std::str::FromStr;
 
 use crate::errors::DomainError;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum WatchMedium {
     Cinema,
     Streaming,
+    #[serde(rename = "tv")]
     TV,
     PhysicalMedia,
     Download,

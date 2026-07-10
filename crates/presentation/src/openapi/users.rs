@@ -1,6 +1,6 @@
 use api_types::{
-    ProfileFieldDto, ProfileResponse, UpdateProfileFieldsRequest, UserProfileResponse,
-    UserStatsDto, UserSummaryDto, UsersResponse,
+    ProfileFieldDto, ProfileResponse, UpdateProfileFieldsRequest, UserProfileBase,
+    UserProfileResponse, UserStatsDto, UserSummaryDto, UsersResponse,
 };
 use utoipa::OpenApi;
 
@@ -16,6 +16,7 @@ use utoipa::OpenApi;
     components(schemas(
         UsersResponse,
         UserSummaryDto,
+        UserProfileBase,
         UserProfileResponse,
         UserStatsDto,
         ProfileResponse,

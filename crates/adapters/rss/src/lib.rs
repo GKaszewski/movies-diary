@@ -1,5 +1,5 @@
-use application::ports::RssFeedRenderer;
 use domain::models::DiaryEntry;
+use domain::ports::RssFeedRenderer;
 use rss_feed::{ChannelBuilder, GuidBuilder, ItemBuilder};
 
 pub struct RssAdapter {

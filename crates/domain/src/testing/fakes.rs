@@ -191,7 +191,24 @@ impl DiaryRepository for FakeDiaryRepository {
 
 // ── FakeStatsRepository ─────────────────────────────────────────────────────
 
-pub struct FakeStatsRepository;
+pub struct FakeStatsRepository {
+    review_counts: Mutex<HashMap<(Uuid, u16), u32>>,
+}
+
+impl FakeStatsRepository {
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self {
+            review_counts: Mutex::new(HashMap::new()),
+        })
+    }
+
+    pub fn set_review_count(&self, user_id: Uuid, year: u16, count: u32) {
+        self.review_counts
+            .lock()
+            .unwrap()
+            .insert((user_id, year), count);
+    }
+}
 
 #[async_trait]
 impl StatsRepository for FakeStatsRepository {
@@ -210,6 +227,11 @@ impl StatsRepository for FakeStatsRepository {
             top_directors: vec![],
             max_director_count: 0,
         })
+    }
+
+    async fn count_reviews_in_year(&self, user_id: &UserId, year: u16) -> Result<u32, DomainError> {
+        let counts = self.review_counts.lock().unwrap();
+        Ok(counts.get(&(user_id.value(), year)).copied().unwrap_or(0))
     }
 }
 

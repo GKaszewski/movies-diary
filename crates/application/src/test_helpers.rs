@@ -88,7 +88,7 @@ impl TestContextBuilder {
             diary_repo: FakeDiaryRepository::new(),
             diary_exporter: Arc::new(PanicDiaryExporter),
             document_parser: Arc::new(FakeDocumentParser),
-            stats_repo: Arc::new(FakeStatsRepository),
+            stats_repo: FakeStatsRepository::new(),
             metadata_client: Arc::new(FakeMetadataClient),
             poster_fetcher: Arc::new(FakePosterFetcher),
             object_storage: Arc::new(NoopObjectStorage),

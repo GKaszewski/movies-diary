@@ -37,7 +37,7 @@ pub async fn execute(
     let stats = deps.stats.get_user_stats(&user_id).await?;
 
     let (following_count, followers_count, pending_followers) =
-        load_social_counts(deps, query.user_id, query.is_own_profile).await;
+        load_social_counts(deps, &user_id, query.is_own_profile).await;
 
     let base = |entries, history, trends| UserProfileData {
         stats,
@@ -76,7 +76,7 @@ pub async fn execute(
 
 async fn load_social_counts(
     deps: &GetProfileDeps,
-    user_id: uuid::Uuid,
+    user_id: &UserId,
     is_own_profile: bool,
 ) -> (usize, usize, Vec<PendingFollowerView>) {
     let following = deps

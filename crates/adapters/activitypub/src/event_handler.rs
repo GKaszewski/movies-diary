@@ -4,7 +4,10 @@ use domain::ports::EventHandler;
 use domain::{
     errors::DomainError,
     events::DomainEvent,
-    ports::{LocalApContentQuery, UserFederationSettingsQuery},
+    ports::{
+        GoalRepository, LocalApContentQuery, MovieRepository, ReviewRepository, StatsRepository,
+        UserFederationSettingsQuery,
+    },
     value_objects::{MovieId, ReviewId, UserId},
 };
 use std::sync::Arc;
@@ -17,20 +20,33 @@ use crate::urls::{actor_url, goal_url, review_url};
 pub struct ActivityPubEventHandler {
     ap_service: Arc<ActivityPubService>,
     content_query: Arc<dyn LocalApContentQuery>,
+    review_repo: Arc<dyn ReviewRepository>,
+    movie_repo: Arc<dyn MovieRepository>,
+    goal_repo: Arc<dyn GoalRepository>,
+    stats_repo: Arc<dyn StatsRepository>,
     federation_settings: Arc<dyn UserFederationSettingsQuery>,
     base_url: String,
 }
 
 impl ActivityPubEventHandler {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         ap_service: Arc<ActivityPubService>,
         content_query: Arc<dyn LocalApContentQuery>,
+        review_repo: Arc<dyn ReviewRepository>,
+        movie_repo: Arc<dyn MovieRepository>,
+        goal_repo: Arc<dyn GoalRepository>,
+        stats_repo: Arc<dyn StatsRepository>,
         federation_settings: Arc<dyn UserFederationSettingsQuery>,
         base_url: String,
     ) -> Self {
         Self {
             ap_service,
             content_query,
+            review_repo,
+            movie_repo,
+            goal_repo,
+            stats_repo,
             federation_settings,
             base_url,
         }
@@ -157,16 +173,12 @@ impl ActivityPubEventHandler {
             .federation_settings
             .get_federation_flags(user_id)
             .await
-            .unwrap_or(domain::models::FederationFlags {
-                goals: true,
-                reviews: true,
-                watchlist: true,
-            });
+            .unwrap_or_default();
         if !flags.reviews {
             return Ok(());
         }
 
-        let review = match self.content_query.get_review_by_id(review_id).await? {
+        let review = match self.review_repo.get_review_by_id(review_id).await? {
             Some(r) => r,
             None => return Ok(()),
         };
@@ -175,7 +187,7 @@ impl ActivityPubEventHandler {
         let actor = actor_url(&self.base_url, user_id.value());
 
         let movie = self
-            .content_query
+            .movie_repo
             .get_movie_by_id(review.movie_id())
             .await
             .ok()
@@ -227,16 +239,12 @@ impl ActivityPubEventHandler {
             .federation_settings
             .get_federation_flags(user_id)
             .await
-            .unwrap_or(domain::models::FederationFlags {
-                goals: true,
-                reviews: true,
-                watchlist: true,
-            });
+            .unwrap_or_default();
         if !flags.reviews {
             return Ok(());
         }
 
-        let review = match self.content_query.get_review_by_id(review_id).await? {
+        let review = match self.review_repo.get_review_by_id(review_id).await? {
             Some(r) => r,
             None => return Ok(()),
         };
@@ -245,7 +253,7 @@ impl ActivityPubEventHandler {
         let actor = actor_url(&self.base_url, user_id.value());
 
         let movie = self
-            .content_query
+            .movie_repo
             .get_movie_by_id(review.movie_id())
             .await
             .ok()
@@ -310,11 +318,7 @@ impl ActivityPubEventHandler {
             .federation_settings
             .get_federation_flags(user_id)
             .await
-            .unwrap_or(domain::models::FederationFlags {
-                goals: true,
-                reviews: true,
-                watchlist: true,
-            });
+            .unwrap_or_default();
         if !flags.watchlist {
             return Ok(());
         }
@@ -324,7 +328,7 @@ impl ActivityPubEventHandler {
         let actor = actor_url(&self.base_url, user_id.value());
 
         let poster_url = self
-            .content_query
+            .movie_repo
             .get_movie_by_id(movie_id)
             .await
             .ok()
@@ -373,7 +377,7 @@ impl ActivityPubEventHandler {
             .get_local_reviews_for_movie(movie_id)
             .await?;
 
-        let movie = self.content_query.get_movie_by_id(movie_id).await?;
+        let movie = self.movie_repo.get_movie_by_id(movie_id).await?;
         let movie = match movie {
             Some(m) => m,
             None => return Ok(()),
@@ -393,11 +397,7 @@ impl ActivityPubEventHandler {
                 .federation_settings
                 .get_federation_flags(user_id)
                 .await
-                .unwrap_or(domain::models::FederationFlags {
-                    goals: true,
-                    reviews: true,
-                    watchlist: true,
-                });
+                .unwrap_or_default();
             if !flags.reviews {
                 continue;
             }
@@ -436,23 +436,24 @@ impl ActivityPubEventHandler {
             .federation_settings
             .get_federation_flags(user_id)
             .await
-            .unwrap_or(domain::models::FederationFlags {
-                goals: true,
-                reviews: true,
-                watchlist: true,
-            });
+            .unwrap_or_default();
         if !flags.goals {
             return Ok(());
         }
-        let Some((goal, current)) = self
-            .content_query
-            .get_goal_with_progress(user_id, year)
+        let Some(goal) = self
+            .goal_repo
+            .find_by_user_and_year(user_id, year)
             .await
             .ok()
             .flatten()
         else {
             return Ok(());
         };
+        let current = self
+            .stats_repo
+            .count_reviews_in_year(user_id, year)
+            .await
+            .unwrap_or(0);
         let ap_id = goal_url(&self.base_url, user_id.value(), year);
         let actor = actor_url(&self.base_url, user_id.value());
         let obj = goal_to_ap_object(
@@ -481,21 +482,14 @@ impl ActivityPubEventHandler {
             .federation_settings
             .get_federation_flags(user_id)
             .await
-            .unwrap_or(domain::models::FederationFlags {
-                goals: true,
-                reviews: true,
-                watchlist: true,
-            });
+            .unwrap_or_default();
         if !flags.goals {
             return Ok(());
         }
         let current = self
-            .content_query
-            .get_goal_with_progress(user_id, year)
+            .stats_repo
+            .count_reviews_in_year(user_id, year)
             .await
-            .ok()
-            .flatten()
-            .map(|(_, c)| c)
             .unwrap_or(0);
 
         let ap_id = goal_url(&self.base_url, user_id.value(), year);
@@ -519,11 +513,7 @@ impl ActivityPubEventHandler {
             .federation_settings
             .get_federation_flags(user_id)
             .await
-            .unwrap_or(domain::models::FederationFlags {
-                goals: true,
-                reviews: true,
-                watchlist: true,
-            });
+            .unwrap_or_default();
         if !flags.goals {
             return Ok(());
         }

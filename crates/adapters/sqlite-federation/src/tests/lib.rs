@@ -97,7 +97,8 @@ async fn test_get_accepted_following_urls_returns_only_accepted() {
     .await
     .unwrap();
 
-    let urls = repo.get_accepted_following_urls(user_id).await.unwrap();
+    let uid = domain::value_objects::UserId::from_uuid(user_id);
+    let urls = repo.get_accepted_following_urls(&uid).await.unwrap();
     assert_eq!(urls.len(), 1);
     assert_eq!(urls[0], "https://other.social/users/alice");
 }

@@ -47,28 +47,23 @@ pub struct SaveProfileRequest {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct PreviewRowData {
+    pub index: usize,
+    pub title: Option<String>,
+    pub release_year: Option<String>,
+    pub director: Option<String>,
+    pub rating: Option<String>,
+    pub watched_at: Option<String>,
+    pub comment: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(tag = "status")]
 pub enum PreviewRowDto {
     #[serde(rename = "valid")]
-    Valid {
-        index: usize,
-        title: Option<String>,
-        release_year: Option<String>,
-        director: Option<String>,
-        rating: Option<String>,
-        watched_at: Option<String>,
-        comment: Option<String>,
-    },
+    Valid(PreviewRowData),
     #[serde(rename = "duplicate")]
-    Duplicate {
-        index: usize,
-        title: Option<String>,
-        release_year: Option<String>,
-        director: Option<String>,
-        rating: Option<String>,
-        watched_at: Option<String>,
-        comment: Option<String>,
-    },
+    Duplicate(PreviewRowData),
     #[serde(rename = "invalid")]
     Invalid { index: usize, errors: Vec<String> },
 }

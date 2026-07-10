@@ -10,7 +10,6 @@ use chrono::Utc;
 
 use crate::{
     errors::DomainError,
-    events::DomainEvent,
     models::{
         FederationFlags, Goal, ImportProfile, ImportSession, Movie, MovieFilter, MovieProfile,
         MovieSummary, ProfileField, RefreshSession, Review, User, UserSettings, UserSummary,
@@ -171,18 +170,12 @@ impl InMemoryReviewRepository {
 
 #[async_trait]
 impl ReviewRepository for InMemoryReviewRepository {
-    async fn save_review(&self, review: &Review) -> Result<DomainEvent, DomainError> {
+    async fn save_review(&self, review: &Review) -> Result<(), DomainError> {
         self.store
             .lock()
             .unwrap()
             .insert(review.id().value(), review.clone());
-        Ok(DomainEvent::ReviewLogged {
-            review_id: review.id().clone(),
-            movie_id: review.movie_id().clone(),
-            user_id: review.user_id().clone(),
-            rating: review.rating().clone(),
-            watched_at: *review.watched_at(),
-        })
+        Ok(())
     }
 
     async fn get_review_by_id(&self, review_id: &ReviewId) -> Result<Option<Review>, DomainError> {
@@ -345,26 +338,17 @@ impl WatchlistRepository for InMemoryWatchlistRepository {
 
 pub struct InMemoryGoalRepository {
     store: Mutex<HashMap<Uuid, Goal>>,
-    review_counts: Mutex<HashMap<(Uuid, u16), u32>>,
 }
 
 impl InMemoryGoalRepository {
     pub fn new() -> Arc<Self> {
         Arc::new(Self {
             store: Mutex::new(HashMap::new()),
-            review_counts: Mutex::new(HashMap::new()),
         })
     }
 
     pub fn count(&self) -> usize {
         self.store.lock().unwrap().len()
-    }
-
-    pub fn set_review_count(&self, user_id: Uuid, year: u16, count: u32) {
-        self.review_counts
-            .lock()
-            .unwrap()
-            .insert((user_id, year), count);
     }
 }
 
@@ -415,11 +399,6 @@ impl GoalRepository for InMemoryGoalRepository {
             .filter(|g| g.user_id().value() == user_id.value())
             .cloned()
             .collect())
-    }
-
-    async fn count_reviews_in_year(&self, user_id: &UserId, year: u16) -> Result<u32, DomainError> {
-        let counts = self.review_counts.lock().unwrap();
-        Ok(counts.get(&(user_id.value(), year)).copied().unwrap_or(0))
     }
 }
 

@@ -185,7 +185,7 @@ pub async fn get_movie_detail(
                     comment: e.review().comment().map(|c| c.value().to_string()),
                     watched_at: domain::value_objects::format_watched_at(e.review().watched_at()),
                     is_federated: e.review().is_remote(),
-                    watch_medium: e.review().watch_medium().map(|wm| wm.to_string()),
+                    watch_medium: e.review().watch_medium().copied(),
                 })
                 .collect(),
             total_count: result.reviews.total_count,

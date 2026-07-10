@@ -10,4 +10,4 @@ chrono = { workspace = true }
 uuid = { workspace = true }
 
 domain = { workspace = true }
-application = { workspace = true }
+api-types = { workspace = true }

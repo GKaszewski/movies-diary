@@ -1,12 +1,9 @@
 use domain::{
-    errors::DomainError,
-    events::DomainEvent,
-    models::WatchlistEntry,
-    value_objects::{MovieId, UserId},
+    errors::DomainError, events::DomainEvent, models::WatchlistEntry, value_objects::UserId,
 };
 
 use crate::{
-    diary::movie_resolver::{MovieResolver, MovieResolverDeps},
+    movies::resolve::resolve_and_persist_movie,
     watchlist::{commands::AddToWatchlistCommand, deps::WatchlistAddDeps},
 };
 
@@ -16,34 +13,13 @@ pub async fn execute(
 ) -> Result<(), DomainError> {
     let user_id = UserId::from_uuid(cmd.user_id);
 
-    let movie = if let Some(id) = cmd.input.movie_id {
-        let movie_id = MovieId::from_uuid(id);
-        deps.movie
-            .get_movie_by_id(&movie_id)
-            .await?
-            .ok_or_else(|| DomainError::NotFound(format!("Movie {id}")))?
-    } else {
-        let resolver_deps = MovieResolverDeps {
-            repository: deps.movie.as_ref(),
-            metadata_client: deps.metadata.as_ref(),
-        };
-        let (movie, is_new) = MovieResolver::default_pipeline()
-            .resolve(&cmd.input, &resolver_deps)
-            .await?;
-        if is_new {
-            deps.movie.upsert_movie(&movie).await?;
-            if let Some(ext_id) = movie.external_metadata_id() {
-                let _ = deps
-                    .event_publisher
-                    .publish(&DomainEvent::MovieDiscovered {
-                        movie_id: movie.id().clone(),
-                        external_metadata_id: ext_id.clone(),
-                    })
-                    .await;
-            }
-        }
-        movie
-    };
+    let (movie, _is_new) = resolve_and_persist_movie(
+        &cmd.input,
+        deps.movie.as_ref(),
+        deps.metadata.as_ref(),
+        deps.event_publisher.as_ref(),
+    )
+    .await?;
 
     let entry = WatchlistEntry::new(user_id.clone(), movie.id().clone());
     deps.watchlist.add(&entry).await?;

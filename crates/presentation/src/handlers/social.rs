@@ -9,7 +9,7 @@ use uuid::Uuid;
 use crate::{
     csrf::CsrfToken,
     errors::ApiError,
-    extractors::{AuthenticatedUser, RequiredCookieUser},
+    extractors::{AdminApiUser, AuthenticatedUser, RequiredCookieUser},
     forms::{
         ActorUrlForm, BlockDomainForm, FollowForm, FollowerActionForm, RemoveDomainForm,
         UnfollowForm,
@@ -19,24 +19,14 @@ use crate::{
 };
 use api_types::{
     ActorListResponse, ActorUrlRequest, AddBlockedDomainRequest, BlockedActorResponse,
-    BlockedDomainResponse, FollowRequest, RemoteActorDto,
+    BlockedDomainResponse, FollowRequest,
 };
 use template_askama::{
     BlockedActorsTemplate, BlockedDomainsTemplate, FollowersTemplate, FollowingTemplate,
     RemoteActorData,
 };
 
-use super::helpers::build_page_context;
-
-fn encode_error(msg: &str) -> String {
-    use percent_encoding::{NON_ALPHANUMERIC, utf8_percent_encode};
-    utf8_percent_encode(msg, NON_ALPHANUMERIC).to_string()
-}
-
-fn ap_err(e: anyhow::Error) -> impl IntoResponse {
-    tracing::error!("ActivityPub error: {:?}", e);
-    StatusCode::INTERNAL_SERVER_ERROR
-}
+use super::helpers::{build_page_context, encode_error};
 
 fn ap_to_domain(e: anyhow::Error) -> domain::errors::DomainError {
     tracing::error!("ActivityPub error: {:?}", e);
@@ -56,22 +46,23 @@ fn ap_to_domain(e: anyhow::Error) -> domain::errors::DomainError {
 )]
 pub async fn get_blocked_domains_admin(
     State(state): State<AppState>,
-    _admin: crate::extractors::AdminUser,
-) -> impl IntoResponse {
-    match state.ap_service.get_blocked_domains().await {
-        Ok(domains) => {
-            let response: Vec<BlockedDomainResponse> = domains
-                .into_iter()
-                .map(|d| BlockedDomainResponse {
-                    domain: d.domain,
-                    reason: d.reason,
-                    blocked_at: d.blocked_at,
-                })
-                .collect();
-            axum::Json(response).into_response()
-        }
-        Err(e) => ap_err(e).into_response(),
-    }
+    _admin: AdminApiUser,
+) -> Result<Json<Vec<BlockedDomainResponse>>, ApiError> {
+    let domains = state
+        .ap_service
+        .get_blocked_domains()
+        .await
+        .map_err(ap_to_domain)?;
+    Ok(Json(
+        domains
+            .into_iter()
+            .map(|d| BlockedDomainResponse {
+                domain: d.domain,
+                reason: d.reason,
+                blocked_at: d.blocked_at,
+            })
+            .collect(),
+    ))
 }
 
 #[utoipa::path(
@@ -86,17 +77,15 @@ pub async fn get_blocked_domains_admin(
 )]
 pub async fn add_blocked_domain_admin(
     State(state): State<AppState>,
-    _admin: crate::extractors::AdminUser,
+    _admin: AdminApiUser,
     axum::Json(body): axum::Json<AddBlockedDomainRequest>,
-) -> impl IntoResponse {
-    match state
+) -> Result<impl IntoResponse, ApiError> {
+    state
         .ap_service
         .add_blocked_domain(&body.domain, body.reason.as_deref())
         .await
-    {
-        Ok(()) => StatusCode::CREATED.into_response(),
-        Err(e) => ap_err(e).into_response(),
-    }
+        .map_err(ap_to_domain)?;
+    Ok(StatusCode::CREATED)
 }
 
 #[utoipa::path(
@@ -111,13 +100,15 @@ pub async fn add_blocked_domain_admin(
 )]
 pub async fn remove_blocked_domain_admin(
     State(state): State<AppState>,
-    _admin: crate::extractors::AdminUser,
+    _admin: AdminApiUser,
     axum::extract::Path(domain): axum::extract::Path<String>,
-) -> impl IntoResponse {
-    match state.ap_service.remove_blocked_domain(&domain).await {
-        Ok(()) => StatusCode::NO_CONTENT.into_response(),
-        Err(e) => ap_err(e).into_response(),
-    }
+) -> Result<impl IntoResponse, ApiError> {
+    state
+        .ap_service
+        .remove_blocked_domain(&domain)
+        .await
+        .map_err(ap_to_domain)?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 #[utoipa::path(
@@ -133,15 +124,13 @@ pub async fn block_actor_api(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     axum::Json(body): axum::Json<ActorUrlRequest>,
-) -> impl IntoResponse {
-    match state
+) -> Result<impl IntoResponse, ApiError> {
+    state
         .ap_service
         .block_actor(user.0.value(), &body.actor_url)
         .await
-    {
-        Ok(()) => StatusCode::NO_CONTENT.into_response(),
-        Err(e) => ap_err(e).into_response(),
-    }
+        .map_err(ap_to_domain)?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 #[utoipa::path(
@@ -157,15 +146,13 @@ pub async fn unblock_actor_api(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     axum::Json(body): axum::Json<ActorUrlRequest>,
-) -> impl IntoResponse {
-    match state
+) -> Result<impl IntoResponse, ApiError> {
+    state
         .ap_service
         .unblock_actor(user.0.value(), &body.actor_url)
         .await
-    {
-        Ok(()) => StatusCode::NO_CONTENT.into_response(),
-        Err(e) => ap_err(e).into_response(),
-    }
+        .map_err(ap_to_domain)?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 #[utoipa::path(
@@ -179,22 +166,23 @@ pub async fn unblock_actor_api(
 pub async fn get_blocked_actors_api(
     State(state): State<AppState>,
     user: AuthenticatedUser,
-) -> impl IntoResponse {
-    match state.ap_service.get_blocked_actors(user.0.value()).await {
-        Ok(actors) => {
-            let response: Vec<BlockedActorResponse> = actors
-                .into_iter()
-                .map(|a| BlockedActorResponse {
-                    url: a.url,
-                    handle: a.handle,
-                    display_name: a.display_name,
-                    avatar_url: a.avatar_url,
-                })
-                .collect();
-            axum::Json(response).into_response()
-        }
-        Err(e) => ap_err(e).into_response(),
-    }
+) -> Result<Json<Vec<BlockedActorResponse>>, ApiError> {
+    let actors = state
+        .ap_service
+        .get_blocked_actors(user.0.value())
+        .await
+        .map_err(ap_to_domain)?;
+    Ok(Json(
+        actors
+            .into_iter()
+            .map(|a| BlockedActorResponse {
+                url: a.url,
+                handle: a.handle,
+                display_name: a.display_name,
+                avatar_url: a.avatar_url,
+            })
+            .collect(),
+    ))
 }
 
 #[utoipa::path(
@@ -208,21 +196,18 @@ pub async fn get_blocked_actors_api(
 pub async fn get_following(
     State(state): State<AppState>,
     user: AuthenticatedUser,
-) -> impl IntoResponse {
-    match state.ap_service.get_following(user.0.value()).await {
-        Ok(actors) => Json(ActorListResponse {
-            actors: actors
-                .into_iter()
-                .map(|a| RemoteActorDto {
-                    handle: a.handle,
-                    display_name: a.display_name,
-                    url: a.url,
-                })
-                .collect(),
-        })
-        .into_response(),
-        Err(e) => ap_err(e).into_response(),
-    }
+) -> Result<Json<ActorListResponse>, ApiError> {
+    let actors = state
+        .ap_service
+        .get_following(user.0.value())
+        .await
+        .map_err(ap_to_domain)?;
+    Ok(Json(ActorListResponse {
+        actors: actors
+            .into_iter()
+            .map(crate::mappers::social::remote_actor_to_dto)
+            .collect(),
+    }))
 }
 
 #[utoipa::path(
@@ -236,25 +221,18 @@ pub async fn get_following(
 pub async fn get_followers(
     State(state): State<AppState>,
     user: AuthenticatedUser,
-) -> impl IntoResponse {
-    match state
+) -> Result<Json<ActorListResponse>, ApiError> {
+    let actors = state
         .ap_service
         .get_accepted_followers(user.0.value())
         .await
-    {
-        Ok(actors) => Json(ActorListResponse {
-            actors: actors
-                .into_iter()
-                .map(|a| RemoteActorDto {
-                    handle: a.handle,
-                    display_name: a.display_name,
-                    url: a.url,
-                })
-                .collect(),
-        })
-        .into_response(),
-        Err(e) => ap_err(e).into_response(),
-    }
+        .map_err(ap_to_domain)?;
+    Ok(Json(ActorListResponse {
+        actors: actors
+            .into_iter()
+            .map(crate::mappers::social::remote_actor_to_dto)
+            .collect(),
+    }))
 }
 
 pub async fn get_user_following(
@@ -270,11 +248,7 @@ pub async fn get_user_following(
     Ok(Json(ActorListResponse {
         actors: actors
             .into_iter()
-            .map(|a| RemoteActorDto {
-                handle: a.handle,
-                display_name: a.display_name,
-                url: a.url,
-            })
+            .map(crate::mappers::social::remote_actor_to_dto)
             .collect(),
     }))
 }
@@ -292,11 +266,7 @@ pub async fn get_user_followers(
     Ok(Json(ActorListResponse {
         actors: actors
             .into_iter()
-            .map(|a| RemoteActorDto {
-                handle: a.handle,
-                display_name: a.display_name,
-                url: a.url,
-            })
+            .map(crate::mappers::social::remote_actor_to_dto)
             .collect(),
     }))
 }
@@ -314,11 +284,13 @@ pub async fn follow(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(body): Json<FollowRequest>,
-) -> impl IntoResponse {
-    match state.ap_service.follow(user.0.value(), &body.handle).await {
-        Ok(()) => StatusCode::OK.into_response(),
-        Err(e) => ap_err(e).into_response(),
-    }
+) -> Result<impl IntoResponse, ApiError> {
+    state
+        .ap_service
+        .follow(user.0.value(), &body.handle)
+        .await
+        .map_err(ap_to_domain)?;
+    Ok(StatusCode::OK)
 }
 
 #[utoipa::path(
@@ -334,15 +306,13 @@ pub async fn unfollow(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(body): Json<ActorUrlRequest>,
-) -> impl IntoResponse {
-    match state
+) -> Result<impl IntoResponse, ApiError> {
+    state
         .ap_service
         .unfollow(user.0.value(), &body.actor_url)
         .await
-    {
-        Ok(()) => StatusCode::OK.into_response(),
-        Err(e) => ap_err(e).into_response(),
-    }
+        .map_err(ap_to_domain)?;
+    Ok(StatusCode::OK)
 }
 
 #[utoipa::path(
@@ -358,15 +328,13 @@ pub async fn accept_follower(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(body): Json<ActorUrlRequest>,
-) -> impl IntoResponse {
-    match state
+) -> Result<impl IntoResponse, ApiError> {
+    state
         .ap_service
         .accept_follower(user.0.value(), &body.actor_url)
         .await
-    {
-        Ok(()) => StatusCode::OK.into_response(),
-        Err(e) => ap_err(e).into_response(),
-    }
+        .map_err(ap_to_domain)?;
+    Ok(StatusCode::OK)
 }
 
 #[utoipa::path(
@@ -382,15 +350,13 @@ pub async fn reject_follower(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(body): Json<ActorUrlRequest>,
-) -> impl IntoResponse {
-    match state
+) -> Result<impl IntoResponse, ApiError> {
+    state
         .ap_service
         .reject_follower(user.0.value(), &body.actor_url)
         .await
-    {
-        Ok(()) => StatusCode::OK.into_response(),
-        Err(e) => ap_err(e).into_response(),
-    }
+        .map_err(ap_to_domain)?;
+    Ok(StatusCode::OK)
 }
 
 #[utoipa::path(
@@ -406,15 +372,13 @@ pub async fn remove_follower(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(body): Json<ActorUrlRequest>,
-) -> impl IntoResponse {
-    match state
+) -> Result<impl IntoResponse, ApiError> {
+    state
         .ap_service
         .remove_follower(user.0.value(), &body.actor_url)
         .await
-    {
-        Ok(()) => StatusCode::OK.into_response(),
-        Err(e) => ap_err(e).into_response(),
-    }
+        .map_err(ap_to_domain)?;
+    Ok(StatusCode::OK)
 }
 
 #[utoipa::path(
@@ -428,21 +392,18 @@ pub async fn remove_follower(
 pub async fn get_pending_followers(
     State(state): State<AppState>,
     user: AuthenticatedUser,
-) -> impl IntoResponse {
-    match state.ap_service.get_pending_followers(user.0.value()).await {
-        Ok(actors) => Json(ActorListResponse {
-            actors: actors
-                .into_iter()
-                .map(|a| RemoteActorDto {
-                    handle: a.handle,
-                    display_name: a.display_name,
-                    url: a.url,
-                })
-                .collect(),
-        })
-        .into_response(),
-        Err(e) => ap_err(e).into_response(),
-    }
+) -> Result<Json<ActorListResponse>, ApiError> {
+    let actors = state
+        .ap_service
+        .get_pending_followers(user.0.value())
+        .await
+        .map_err(ap_to_domain)?;
+    Ok(Json(ActorListResponse {
+        actors: actors
+            .into_iter()
+            .map(crate::mappers::social::remote_actor_to_dto)
+            .collect(),
+    }))
 }
 
 // ── HTML ─────────────────────────────────────────────────────────────────────

@@ -122,10 +122,6 @@ impl GoalRepository for PostgresGoalRepository {
 
         rows.iter().map(row_to_goal).collect()
     }
-
-    async fn count_reviews_in_year(&self, user_id: &UserId, year: u16) -> Result<u32, DomainError> {
-        count_reviews_in_year(&self.pool, user_id, year).await
-    }
 }
 
 pub(crate) async fn count_reviews_in_year(

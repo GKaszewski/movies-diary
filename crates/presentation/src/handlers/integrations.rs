@@ -24,12 +24,7 @@ use crate::{
 };
 use template_askama::{IntegrationsTemplate, WatchQueueTemplate};
 
-use super::helpers::build_page_context;
-
-fn encode_error(msg: &str) -> String {
-    use percent_encoding::{NON_ALPHANUMERIC, utf8_percent_encode};
-    utf8_percent_encode(msg, NON_ALPHANUMERIC).to_string()
-}
+use super::helpers::{build_page_context, encode_error};
 
 // ── HTML ─────────────────────────────────────────────────────────────────────
 

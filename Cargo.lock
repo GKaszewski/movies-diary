@@ -293,6 +293,7 @@ checksum = "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
 name = "api-types"
 version = "0.1.0"
 dependencies = [
+ "domain",
  "serde",
  "utoipa",
  "uuid",
@@ -319,8 +320,8 @@ dependencies = [
  "domain",
  "futures",
  "hex",
+ "infra-wiring",
  "rand 0.9.4",
- "reqwest 0.13.3",
  "serde_json",
  "sha2",
  "tokio",
@@ -2702,6 +2703,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "infra-wiring"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "sqlx",
+]
+
+[[package]]
 name = "inout"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3982,6 +3991,7 @@ dependencies = [
  "http-body-util",
  "importer",
  "infer",
+ "infra-wiring",
  "jellyfin",
  "metadata",
  "nats",
@@ -4587,7 +4597,6 @@ dependencies = [
 name = "rss"
 version = "0.1.0"
 dependencies = [
- "application",
  "domain",
  "rss 2.0.13",
 ]
@@ -5597,7 +5606,7 @@ dependencies = [
 name = "template-askama"
 version = "0.1.0"
 dependencies = [
- "application",
+ "api-types",
  "askama",
  "chrono",
  "domain",
@@ -7127,6 +7136,7 @@ dependencies = [
  "export",
  "image-converter",
  "importer",
+ "infra-wiring",
  "metadata",
  "nats",
  "object-storage",
