@@ -8,6 +8,4 @@ use domain::ports::RssFeedRenderer;
 pub struct AppState {
     pub app_ctx: AppContext,
     pub rss_renderer: Arc<dyn RssFeedRenderer>,
-    #[cfg(feature = "federation")]
-    pub ap_service: Arc<dyn activitypub::ActivityPubPort>,
 }

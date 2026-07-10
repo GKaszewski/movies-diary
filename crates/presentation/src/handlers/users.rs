@@ -647,6 +647,8 @@ pub async fn get_user_profile_html(
             .unwrap_or("");
         if accept.contains("application/activity+json") || accept.contains("application/ld+json") {
             return match state
+                .app_ctx
+                .services
                 .ap_service
                 .actor_json(&profile_user_uuid.to_string())
                 .await

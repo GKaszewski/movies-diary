@@ -487,6 +487,8 @@ async fn test_app() -> Router {
                 document_parser: Arc::new(PanicDocumentParser),
                 review_logger: Arc::new(PanicReviewLogger),
                 person_enrichment: None,
+                #[cfg(feature = "federation")]
+                ap_service: Arc::new(activitypub::NoopActivityPubService),
             },
             config: AppConfig {
                 allow_registration: false,
@@ -501,8 +503,6 @@ async fn test_app() -> Router {
             },
         },
         rss_renderer: Arc::new(RssAdapter::new("http://localhost:3000".into())),
-        #[cfg(feature = "federation")]
-        ap_service: Arc::new(activitypub::NoopActivityPubService),
     };
 
     routes::build_router(state, axum::Router::new())

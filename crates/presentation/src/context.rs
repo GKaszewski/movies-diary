@@ -60,6 +60,8 @@ pub struct Services {
     pub document_parser: Arc<dyn DocumentParser>,
     pub review_logger: Arc<dyn ReviewLogger>,
     pub person_enrichment: Option<Arc<dyn PersonEnrichmentClient>>,
+    #[cfg(feature = "federation")]
+    pub ap_service: Arc<dyn activitypub::ActivityPubPort>,
 }
 
 #[derive(Clone)]

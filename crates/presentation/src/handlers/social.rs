@@ -83,7 +83,7 @@ pub async fn get_blocked_domains_admin(
     _admin: AdminApiUser,
 ) -> Result<Json<Vec<BlockedDomainResponse>>, ApiError> {
     let domains = state
-        .ap_service
+        .app_ctx.services.ap_service
         .get_blocked_domains()
         .await
         .map_err(ap_to_domain)?;
@@ -115,7 +115,7 @@ pub async fn add_blocked_domain_admin(
     axum::Json(body): axum::Json<AddBlockedDomainRequest>,
 ) -> Result<impl IntoResponse, ApiError> {
     state
-        .ap_service
+        .app_ctx.services.ap_service
         .add_blocked_domain(&body.domain, body.reason.as_deref())
         .await
         .map_err(ap_to_domain)?;
@@ -138,7 +138,7 @@ pub async fn remove_blocked_domain_admin(
     axum::extract::Path(domain): axum::extract::Path<String>,
 ) -> Result<impl IntoResponse, ApiError> {
     state
-        .ap_service
+        .app_ctx.services.ap_service
         .remove_blocked_domain(&domain)
         .await
         .map_err(ap_to_domain)?;
@@ -705,7 +705,7 @@ pub async fn get_followers_collection(
     if accept.contains("application/activity+json") || accept.contains("application/ld+json") {
         let page = params.get("page").and_then(|p| p.parse::<u32>().ok());
         return match state
-            .ap_service
+            .app_ctx.services.ap_service
             .followers_collection_json(user_id, page)
             .await
         {
@@ -736,7 +736,7 @@ pub async fn get_following_collection(
     if accept.contains("application/activity+json") || accept.contains("application/ld+json") {
         let page = params.get("page").and_then(|p| p.parse::<u32>().ok());
         return match state
-            .ap_service
+            .app_ctx.services.ap_service
             .following_collection_json(user_id, page)
             .await
         {
@@ -770,7 +770,7 @@ pub async fn get_following_page(
         "{}/users/{}/following-list",
         state.app_ctx.config.base_url, profile_user_uuid
     );
-    match state.ap_service.get_following(user_id.value()).await {
+    match state.app_ctx.services.ap_service.get_following(user_id.value()).await {
         Ok(following) => {
             let actors: Vec<RemoteActorData> = following
                 .into_iter()
@@ -817,7 +817,7 @@ pub async fn get_followers_page(
         state.app_ctx.config.base_url, profile_user_uuid
     );
     match state
-        .ap_service
+        .app_ctx.services.ap_service
         .get_accepted_followers(user_id.value())
         .await
     {
@@ -899,7 +899,7 @@ pub async fn get_blocked_domains_page(
     let mut ctx = build_page_context(&state, Some(user_id), csrf.0).await;
     ctx.page_title = "Blocked Domains — Movies Diary".to_string();
     ctx.canonical_url = format!("{}/admin/blocked-domains", state.app_ctx.config.base_url);
-    match state.ap_service.get_blocked_domains().await {
+    match state.app_ctx.services.ap_service.get_blocked_domains().await {
         Ok(domains) => {
             let entries: Vec<template_askama::BlockedDomainEntry> = domains
                 .into_iter()
@@ -937,7 +937,7 @@ pub async fn post_blocked_domain(
     }
     let reason = form.reason.as_deref().filter(|s| !s.trim().is_empty());
     match state
-        .ap_service
+        .app_ctx.services.ap_service
         .add_blocked_domain(&form.domain, reason)
         .await
     {
@@ -958,7 +958,7 @@ pub async fn post_remove_blocked_domain(
     if crate::csrf::mismatch(&csrf, &form.csrf_token) {
         return StatusCode::FORBIDDEN.into_response();
     }
-    match state.ap_service.remove_blocked_domain(&form.domain).await {
+    match state.app_ctx.services.ap_service.remove_blocked_domain(&form.domain).await {
         Ok(()) => Redirect::to("/admin/blocked-domains").into_response(),
         Err(e) => {
             tracing::error!("remove_blocked_domain error: {:?}", e);
@@ -975,7 +975,7 @@ pub async fn get_blocked_actors_page(
     let mut ctx = build_page_context(&state, Some(user_id.clone()), csrf.0).await;
     ctx.page_title = "Blocked Users — Movies Diary".to_string();
     ctx.canonical_url = format!("{}/social/blocked", state.app_ctx.config.base_url);
-    match state.ap_service.get_blocked_actors(user_id.value()).await {
+    match state.app_ctx.services.ap_service.get_blocked_actors(user_id.value()).await {
         Ok(actors) => {
             let entries: Vec<template_askama::BlockedActorEntry> = actors
                 .into_iter()

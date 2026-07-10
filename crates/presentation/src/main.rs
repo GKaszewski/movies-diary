@@ -215,6 +215,8 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
             document_parser: Arc::new(ImporterDocumentParser) as Arc<dyn DocumentParser>,
             review_logger,
             person_enrichment: None,
+            #[cfg(feature = "federation")]
+            ap_service,
         },
         config: app_config,
     };
@@ -224,8 +226,6 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
         rss_renderer: Arc::new(RssAdapter::new(
             std::env::var("BASE_URL").unwrap_or_else(|_| "http://localhost:3000".into()),
         )),
-        #[cfg(feature = "federation")]
-        ap_service,
     };
     Ok((state, ap_router))
 }

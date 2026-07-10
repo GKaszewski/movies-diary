@@ -834,6 +834,8 @@ pub fn make_test_state(auth_service: Arc<dyn AuthService>) -> crate::state::AppS
                 document_parser: Arc::clone(&repo) as _,
                 review_logger: Arc::clone(&repo) as _,
                 person_enrichment: None,
+                #[cfg(feature = "federation")]
+                ap_service: Arc::new(activitypub::NoopActivityPubService),
             },
             config: AppConfig {
                 allow_registration: false,
@@ -848,8 +850,6 @@ pub fn make_test_state(auth_service: Arc<dyn AuthService>) -> crate::state::AppS
             },
         },
         rss_renderer: Arc::new(Panic),
-        #[cfg(feature = "federation")]
-        ap_service: Arc::new(activitypub::NoopActivityPubService),
     }
 }
 
