@@ -47,7 +47,7 @@ Open `http://localhost:3000`. The HTTP server and background worker start togeth
 
 ## Features
 
-- Log movies with a TMDB/OMDb ID or manual title/year/director, with a 0–5 rating and optional watch medium (cinema, streaming, TV, physical media, download, media server)
+- Log movies with a TMDB/OMDb ID or manual title/year/director, with a 1–5 rating and optional watch medium (cinema, streaming, TV, physical media, download, media server)
 - Edit reviews after the fact — update rating, comment, date, or watch medium via partial PATCH; each watch is still a separate record (re-watches tracked)
 - Background poster fetching and storage (local filesystem or S3-compatible)
 - Movie enrichment via TMDb — full cast, crew, genres, keywords, runtime, budget/revenue, ratings; fetched automatically on movie discovery and refreshed every 30 days; exposed via `GET /api/v1/movies/{id}/profile`
@@ -60,8 +60,9 @@ Open `http://localhost:3000`. The HTTP server and background worker start togeth
 - Watchlist — add movies to watch later, per-user; federated watchlist entries visible for remote actors
 - User profiles — display name, bio, avatar, banner, custom profile fields; editable via HTML settings page or REST API; account deletion broadcasts AP `Delete` actor activity; `alsoKnownAs` change triggers AP `Move` for account migration
 - Jellyfin/Plex auto-import — media server sends a webhook on playback stop, movies land in a watch queue; review and confirm with a rating to create diary entries; per-user webhook tokens with SHA-256 auth; setup UI at `/settings/integrations`
-- Annual Wrap-Up — Spotify Wrapped for movies: per-user and instance-wide year-in-review with stats (top directors, actors, genres, rating distribution, watch time, rewatches, budget analysis), shareable HTML page at `/wrapups/{user_id}/{year}`; admin-triggered or auto-generated in January
+- Annual Wrap-Up — Spotify Wrapped for movies: per-user and instance-wide year-in-review with stats (top directors, actors, genres, rating distribution, watch time, watch medium breakdown, rewatches, budget analysis); directors/actors filtered by minimum watch count for statistical relevance; shareable HTML page at `/wrapups/{user_id}/{year}`; admin-triggered or auto-generated in January
 - Goals — set a "watch N movies in YEAR" target with a progress bar; progress computed from existing reviews (backwards compatible); per-user federation toggle in settings; displayed on profile (SPA: interactive with create/edit/delete, classic HTML: read-only glassmorphic card)
+- Profile trends — top directors, genre breakdown, rating distribution histogram, watch medium breakdown, monthly activity chart; all computed from the user's review history
 - CSV and JSON diary export
 - File importer: upload CSV, TSV, JSON, or XLSX from any source (Letterboxd, IMDb, etc.), map columns to domain fields via a step-by-step wizard or REST API, save mapping profiles for repeat imports
 - REST API v1 (`/api/v1/`) with full feature parity with the HTML interface
@@ -90,8 +91,8 @@ Hexagonal (Ports & Adapters) with Domain-Driven Design:
 ```
 api-types           — shared REST API request/response DTOs (Serialize/Deserialize + utoipa schemas) + HtmlPageContext; used by presentation, tui, and template adapters
 infra-wiring        — shared infrastructure types (DbPool, EventBusBackend, AppConfig) used by both presentation and worker binaries
-domain              — pure types and CQRS port traits (MovieCommand/MovieQuery, WatchEventCommand/WatchEventQuery, GoalCommand/GoalQuery, DiaryQuery, PersonCommand/PersonQuery, SearchCommand/SearchPort, ImageFetcher, RssFeedRenderer), no external deps except serde
-application         — use cases (commands + queries), business logic orchestration; handlers delegate here for all domain logic
+domain              — pure types and CQRS port traits (MovieCommand/MovieQuery, WatchEventCommand/WatchEventQuery, GoalCommand/GoalQuery, DiaryQuery, PersonCommand/PersonQuery, SearchCommand/SearchPort, SocialCommand/SocialQuery, ImageFetcher, RssFeedRenderer), no external deps except serde
+application         — use cases (commands + queries), business logic orchestration; handlers delegate here for all domain logic; modules: auth, diary, goals, import, integrations, movies, person, search, social, users, watchlist, wrapup
 presentation        — Axum HTTP router, OpenAPI spec assembly, Swagger UI + Scalar serving, composition root for the HTTP process
 worker              — standalone worker binary (event consumer, poster sync, federation)
 adapters/
@@ -101,7 +102,7 @@ adapters/
   postgres             — PostgreSQL repository + connection factory
   metadata             — TMDB / OMDb HTTP client
   poster-fetcher       — downloads poster images
-  image-storage        — stores images (posters + user avatars) on local filesystem or S3-compatible storage
+  object-storage       — stores images (posters + user avatars) on local filesystem or S3-compatible storage
   poster-sync          — event handler: triggers poster fetch+store on MovieDiscovered
   image-converter      — optional background worker: converts stored images to AVIF or WebP; backfills existing images via a 24h periodic job
   tmdb-enrichment      — TMDb HTTP client implementing MovieEnrichmentClient and PersonEnrichmentClient; event handlers (MovieEnrichmentHandler, PersonEnrichmentHandler) live in the application layer
@@ -114,6 +115,7 @@ adapters/
   event-payload        — shared event serialization DTOs (used by all event bus adapters)
   sqlite-event-queue   — durable polling event queue backed by SQLite
   postgres-event-queue — durable polling event queue backed by PostgreSQL
+  event-publisher      — in-memory event channel (used in tests)
   nats                 — NATS Core / JetStream event publisher and consumer
   event-publisher      — in-memory event channel (used in tests)
   activitypub          — ActivityPub federation adapter (follow, inbox/outbox, actor); delegates to k-ap for protocol internals

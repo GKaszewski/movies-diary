@@ -24,6 +24,7 @@ graph TB
             UC_INTEGRATIONS["integrations<br/>webhooks, watch_queue,<br/>confirm, dismiss"]
             UC_SEARCH["search<br/>execute"]
             UC_PERSON["person<br/>get, get_credits"]
+            UC_SOCIAL["social<br/>follow, unfollow,<br/>accept, reject, block"]
         end
         subgraph EventHandlers["Event Handlers"]
             EH_MOVIE["MovieEnrichmentHandler<br/><i>on MovieEnrichmentRequested</i>"]
@@ -59,10 +60,10 @@ graph TB
             M_SEARCH["SearchQuery,<br/>SearchResults"]
         end
         subgraph Ports["Port Traits (Interfaces)"]
-            P_REPOS["MovieCommand / MovieQuery<br/>ReviewRepository<br/>DiaryQuery / StatsRepository<br/>UserRepository<br/>WatchlistRepository<br/>WatchEventCommand / WatchEventQuery<br/>WebhookTokenRepository<br/>ImportSessionRepository<br/>MovieProfileRepository<br/>WrapUpRepository<br/>GoalCommand / GoalQuery<br/>UserSettingsRepository<br/>MovieDeduplicator"]
-            P_SERVICES["AuthService<br/>MetadataClient<br/>PosterFetcherClient<br/>ImageFetcher<br/>ObjectStorage<br/>EventPublisher<br/>EventConsumer<br/>PasswordHasher<br/>DiaryExporter<br/>DocumentParser<br/>RssFeedRenderer"]
-            P_SEARCH["SearchPort<br/>SearchCommand<br/>PersonQuery<br/>PersonCommand"]
-            P_FEDERATION["SocialQueryPort<br/>LocalApContentQuery<br/>RemoteWatchlistRepository<br/>RemoteGoalRepository"]
+            P_REPOS["MovieCommand / MovieQuery<br/>ReviewRepository<br/>DiaryQuery / StatsRepository<br/>UserRepository / UserProfileFieldsRepository<br/>WatchlistRepository<br/>WatchEventCommand / WatchEventQuery<br/>WebhookTokenRepository<br/>ImportSessionRepository / ImportProfileRepository<br/>MovieProfileRepository<br/>WrapUpRepository / WrapUpStatsQuery<br/>GoalCommand / GoalQuery<br/>UserSettingsRepository / RefreshSessionRepository<br/>MovieDeduplicator"]
+            P_SERVICES["AuthService<br/>MetadataClient / MovieEnrichmentClient<br/>PersonEnrichmentClient<br/>PosterFetcherClient<br/>ImageFetcher / ObjectStorage<br/>EventPublisher / EventConsumer<br/>PasswordHasher<br/>DiaryExporter / DocumentParser<br/>RssFeedRenderer / MediaServerParser"]
+            P_SEARCH["SearchPort / SearchCommand<br/>PersonQuery / PersonCommand<br/>FederatedProfileQuery"]
+            P_FEDERATION["SocialCommand / SocialQuery<br/>FederationAdminQuery<br/>LocalApContentQuery<br/>RemoteWatchlistRepository<br/>RemoteGoalRepository"]
         end
         subgraph DomainServices["Services (pure, no I/O)"]
             DS_WRAPUP["WrapUpAnalyzer<br/><i>build_report, compute_*</i>"]
@@ -92,7 +93,9 @@ graph TB
         end
         subgraph Messaging["Messaging"]
             A_NATS["nats<br/><i>JetStream / Core</i>"]
+            A_SQLITE_QUEUE["sqlite-event-queue<br/><i>Polling, dead-letter</i>"]
             A_PG_QUEUE["postgres-event-queue<br/><i>Polling, dead-letter</i>"]
+            A_EVT_PUB["event-publisher<br/><i>In-memory (tests)</i>"]
             A_PAYLOAD["event-payload<br/><i>Serde (de)serialization</i>"]
         end
         subgraph External["External Services"]
