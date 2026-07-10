@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use domain::errors::DomainError;
-use domain::testing::{FakeDiaryRepository, NoopSocialQueryPort};
+use domain::testing::{FakeDiaryQuery, NoopSocialQueryPort};
 
 use crate::{
     config::AppConfig, diary::deps::GetActivityFeedDeps, diary::get_activity_feed,
@@ -11,7 +11,7 @@ use crate::{
 
 fn default_deps() -> GetActivityFeedDeps {
     GetActivityFeedDeps {
-        diary: FakeDiaryRepository::new() as _,
+        diary: FakeDiaryQuery::new() as _,
         social_query: Arc::new(NoopSocialQueryPort),
         config: TestContextBuilder::new().config,
     }
@@ -112,7 +112,7 @@ async fn following_filter_parses_local_and_remote_urls() {
     let social = Arc::new(FakeSocialWithFollowing(following_urls));
 
     let deps = GetActivityFeedDeps {
-        diary: FakeDiaryRepository::new() as _,
+        diary: FakeDiaryQuery::new() as _,
         social_query: social as _,
         config: AppConfig {
             allow_registration: true,

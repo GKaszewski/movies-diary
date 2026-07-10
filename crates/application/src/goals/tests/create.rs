@@ -14,7 +14,8 @@ async fn creates_goal_and_returns_progress() {
     let stats = FakeStatsRepository::new();
     let events = NoopEventPublisher::new();
     let deps = GoalCommandDeps {
-        goal: Arc::clone(&goals) as _,
+        goal_command: Arc::clone(&goals) as _,
+        goal_query: Arc::clone(&goals) as _,
         stats: Arc::clone(&stats) as _,
         event_publisher: Arc::clone(&events) as _,
     };
@@ -43,7 +44,8 @@ async fn creates_goal_with_review_count() {
     stats.set_review_count(Uuid::nil(), 2025, 5);
     let events = NoopEventPublisher::new();
     let deps = GoalCommandDeps {
-        goal: Arc::clone(&goals) as _,
+        goal_command: Arc::clone(&goals) as _,
+        goal_query: Arc::clone(&goals) as _,
         stats: Arc::clone(&stats) as _,
         event_publisher: Arc::clone(&events) as _,
     };
@@ -68,7 +70,8 @@ async fn emits_goal_created_event() {
     let b = TestContextBuilder::new();
     let events = NoopEventPublisher::new();
     let deps = GoalCommandDeps {
-        goal: b.goal_repo.clone(),
+        goal_command: b.goal_command.clone(),
+        goal_query: b.goal_query.clone(),
         stats: b.stats_repo.clone(),
         event_publisher: Arc::clone(&events) as _,
     };
@@ -96,7 +99,8 @@ async fn emits_goal_created_event() {
 async fn rejects_duplicate_year() {
     let b = TestContextBuilder::new();
     let deps = GoalCommandDeps {
-        goal: b.goal_repo.clone(),
+        goal_command: b.goal_command.clone(),
+        goal_query: b.goal_query.clone(),
         stats: b.stats_repo.clone(),
         event_publisher: b.event_publisher.clone(),
     };
@@ -125,7 +129,8 @@ async fn rejects_duplicate_year() {
 async fn rejects_year_before_2020() {
     let b = TestContextBuilder::new();
     let deps = GoalCommandDeps {
-        goal: b.goal_repo.clone(),
+        goal_command: b.goal_command.clone(),
+        goal_query: b.goal_query.clone(),
         stats: b.stats_repo.clone(),
         event_publisher: b.event_publisher.clone(),
     };
@@ -146,7 +151,8 @@ async fn rejects_year_before_2020() {
 async fn rejects_zero_target() {
     let b = TestContextBuilder::new();
     let deps = GoalCommandDeps {
-        goal: b.goal_repo.clone(),
+        goal_command: b.goal_command.clone(),
+        goal_query: b.goal_query.clone(),
         stats: b.stats_repo.clone(),
         event_publisher: b.event_publisher.clone(),
     };

@@ -6,14 +6,14 @@ use domain::{
         DiaryEntry, DiaryFilter, ReviewSortBy,
         collections::{PageParams, Paginated},
     },
-    ports::DiaryRepository,
+    ports::DiaryQuery,
     value_objects::{MovieId, UserId},
 };
 
 use crate::diary::queries::GetDiaryQuery;
 
 pub async fn execute(
-    diary: &Arc<dyn DiaryRepository>,
+    diary: &Arc<dyn DiaryQuery>,
     query: GetDiaryQuery,
 ) -> Result<Paginated<DiaryEntry>, DomainError> {
     let page = PageParams::new(query.limit, query.offset)?;

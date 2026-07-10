@@ -16,7 +16,7 @@ use crate::{
         collections::{PageParams, Paginated},
     },
     ports::{
-        AuthService, DiaryRepository, DocumentParser, MetadataClient, MovieEnrichmentClient,
+        AuthService, DiaryQuery, DocumentParser, MetadataClient, MovieEnrichmentClient,
         PasswordHasher, PersonQuery, PosterFetcherClient, SearchCommand, SearchPort,
         StatsRepository,
     },
@@ -81,13 +81,13 @@ impl MetadataClient for FakeMetadataClient {
     }
 }
 
-// ── FakeDiaryRepository ───────────────────────────────────────────────────────
+// ── FakeDiaryQuery ────────────────────────────────────────────────────────────
 
-pub struct FakeDiaryRepository {
+pub struct FakeDiaryQuery {
     histories: Mutex<HashMap<Uuid, (Movie, Vec<Review>)>>,
 }
 
-impl FakeDiaryRepository {
+impl FakeDiaryQuery {
     pub fn new() -> Arc<Self> {
         Arc::new(Self {
             histories: Mutex::new(HashMap::new()),
@@ -103,7 +103,7 @@ impl FakeDiaryRepository {
 }
 
 #[async_trait]
-impl DiaryRepository for FakeDiaryRepository {
+impl DiaryQuery for FakeDiaryQuery {
     async fn query_diary(
         &self,
         _filter: &DiaryFilter,

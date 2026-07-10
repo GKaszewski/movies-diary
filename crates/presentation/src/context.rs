@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use domain::ports::{
-    AuthService, DiaryExporter, DiaryRepository, DocumentParser, EventPublisher,
-    FederatedProfileQuery, GoalRepository, ImportProfileRepository, ImportSessionRepository,
+    AuthService, DiaryExporter, DiaryQuery, DocumentParser, EventPublisher,
+    FederatedProfileQuery, GoalCommand, GoalQuery, ImportProfileRepository, ImportSessionRepository,
     MetadataClient, MovieCommand, MovieProfileRepository, MovieQuery, ObjectStorage,
     PasswordHasher, PersonCommand, PersonEnrichmentClient, PersonQuery, PosterFetcherClient,
     RefreshSessionRepository, RemoteGoalRepository, RemoteWatchlistRepository, ReviewRepository,
@@ -19,7 +19,7 @@ pub struct Repositories {
     pub movie_command: Arc<dyn MovieCommand>,
     pub movie_query: Arc<dyn MovieQuery>,
     pub review: Arc<dyn ReviewRepository>,
-    pub diary: Arc<dyn DiaryRepository>,
+    pub diary: Arc<dyn DiaryQuery>,
     pub stats: Arc<dyn StatsRepository>,
     pub user: Arc<dyn UserRepository>,
     pub import_session: Arc<dyn ImportSessionRepository>,
@@ -38,7 +38,8 @@ pub struct Repositories {
     pub social_query: Arc<dyn SocialQueryPort>,
     pub wrapup_stats: Arc<dyn WrapUpStatsQuery>,
     pub wrapup_repo: Arc<dyn WrapUpRepository>,
-    pub goal: Arc<dyn GoalRepository>,
+    pub goal_command: Arc<dyn GoalCommand>,
+    pub goal_query: Arc<dyn GoalQuery>,
     pub user_settings: Arc<dyn UserSettingsRepository>,
     pub remote_goal: Arc<dyn RemoteGoalRepository>,
     pub refresh_session: Arc<dyn RefreshSessionRepository>,

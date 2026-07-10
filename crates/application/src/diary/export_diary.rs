@@ -3,7 +3,7 @@ use std::sync::Arc;
 use bytes::Bytes;
 use domain::{
     errors::DomainError,
-    ports::{DiaryExporter, DiaryRepository},
+    ports::{DiaryExporter, DiaryQuery},
     value_objects::UserId,
 };
 use futures::stream::BoxStream;
@@ -11,7 +11,7 @@ use futures::stream::BoxStream;
 use crate::diary::queries::ExportQuery;
 
 pub fn execute(
-    diary: &Arc<dyn DiaryRepository>,
+    diary: &Arc<dyn DiaryQuery>,
     diary_exporter: &Arc<dyn DiaryExporter>,
     query: ExportQuery,
 ) -> BoxStream<'static, Result<Bytes, DomainError>> {

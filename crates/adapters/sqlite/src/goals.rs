@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use domain::{
     errors::DomainError,
     models::{Goal, GoalType},
-    ports::GoalRepository,
+    ports::{GoalCommand, GoalQuery},
     value_objects::{GoalId, UserId},
 };
 use sqlx::{Row, SqlitePool};
@@ -23,7 +23,7 @@ impl SqliteGoalRepository {
 }
 
 #[async_trait]
-impl GoalRepository for SqliteGoalRepository {
+impl GoalCommand for SqliteGoalRepository {
     async fn save(&self, goal: &Goal) -> Result<(), DomainError> {
         let id = goal.id().value().to_string();
         let user_id = goal.user_id().value().to_string();
@@ -82,7 +82,10 @@ impl GoalRepository for SqliteGoalRepository {
         }
         Ok(())
     }
+}
 
+#[async_trait]
+impl GoalQuery for SqliteGoalRepository {
     async fn find_by_user_and_year(
         &self,
         user_id: &UserId,

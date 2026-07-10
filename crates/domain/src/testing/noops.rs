@@ -62,78 +62,17 @@ impl ObjectStorage for NoopObjectStorage {
     }
 }
 
-// ── NoopRemoteWatchlistRepository ─────────────────────────────────────────────
+// Re-export production noop types so test code that imports from
+// `domain::testing` keeps compiling without changes.
+pub use crate::ports::noop::NoopRemoteWatchlistRepository;
+pub use crate::ports::noop::NoopSocialQueryPort;
 
-pub struct NoopRemoteWatchlistRepository;
+// ── NoopGoalCommand ───────────────────────────────────────────────────────────
 
-#[async_trait]
-impl crate::ports::RemoteWatchlistRepository for NoopRemoteWatchlistRepository {
-    async fn save(&self, _: crate::models::RemoteWatchlistEntry) -> Result<(), DomainError> {
-        Ok(())
-    }
-    async fn remove_by_ap_id(&self, _: &str, _: &str) -> Result<(), DomainError> {
-        Ok(())
-    }
-    async fn get_by_actor_url(
-        &self,
-        _: &str,
-    ) -> Result<Vec<crate::models::RemoteWatchlistEntry>, DomainError> {
-        Ok(vec![])
-    }
-    async fn remove_all_by_actor(&self, _: &str) -> Result<(), DomainError> {
-        Ok(())
-    }
-    async fn get_by_derived_uuid(
-        &self,
-        _: uuid::Uuid,
-    ) -> Result<Vec<crate::models::RemoteWatchlistEntry>, DomainError> {
-        Ok(vec![])
-    }
-}
-
-// ── NoopSocialQueryPort ───────────────────────────────────────────────────────
-
-pub struct NoopSocialQueryPort;
+pub struct NoopGoalCommand;
 
 #[async_trait]
-impl crate::ports::SocialQueryPort for NoopSocialQueryPort {
-    async fn get_accepted_following_urls(
-        &self,
-        _: &crate::value_objects::UserId,
-    ) -> Result<Vec<String>, DomainError> {
-        Ok(vec![])
-    }
-    async fn list_all_followed_remote_actors(
-        &self,
-    ) -> Result<Vec<crate::models::RemoteActorInfo>, DomainError> {
-        Ok(vec![])
-    }
-    async fn count_following(
-        &self,
-        _: &crate::value_objects::UserId,
-    ) -> Result<usize, DomainError> {
-        Ok(0)
-    }
-    async fn count_accepted_followers(
-        &self,
-        _: &crate::value_objects::UserId,
-    ) -> Result<usize, DomainError> {
-        Ok(0)
-    }
-    async fn get_pending_followers(
-        &self,
-        _: &crate::value_objects::UserId,
-    ) -> Result<Vec<crate::models::PendingFollowerInfo>, DomainError> {
-        Ok(vec![])
-    }
-}
-
-// ── NoopGoalRepository ────────────────────────────────────────────────────────
-
-pub struct NoopGoalRepository;
-
-#[async_trait]
-impl crate::ports::GoalRepository for NoopGoalRepository {
+impl crate::ports::GoalCommand for NoopGoalCommand {
     async fn save(&self, _: &crate::models::Goal) -> Result<(), DomainError> {
         Ok(())
     }
@@ -147,6 +86,14 @@ impl crate::ports::GoalRepository for NoopGoalRepository {
     ) -> Result<(), DomainError> {
         Ok(())
     }
+}
+
+// ── NoopGoalQuery ─────────────────────────────────────────────────────────────
+
+pub struct NoopGoalQuery;
+
+#[async_trait]
+impl crate::ports::GoalQuery for NoopGoalQuery {
     async fn find_by_user_and_year(
         &self,
         _: &UserId,

@@ -5,8 +5,8 @@ use domain::testing::{
 };
 use domain::{
     ports::{
-        AuthService, DiaryExporter, DiaryRepository, DocumentParser, EventPublisher,
-        GoalRepository, ImportProfileRepository, ImportSessionRepository, MetadataClient,
+        AuthService, DiaryExporter, DiaryQuery, DocumentParser, EventPublisher,
+        GoalCommand, GoalQuery, ImportProfileRepository, ImportSessionRepository, MetadataClient,
         MovieCommand, MovieProfileRepository, MovieQuery, ObjectStorage, PasswordHasher,
         PersonCommand, PersonQuery, PosterFetcherClient, RefreshSessionRepository,
         ReviewRepository, SearchCommand, SearchPort, StatsRepository, UserProfileFieldsRepository,
@@ -14,7 +14,7 @@ use domain::{
         WatchlistRepository, WebhookTokenRepository, WrapUpRepository, WrapUpStatsQuery,
     },
     testing::{
-        FakeAuthService, FakeDiaryRepository, FakeDocumentParser, FakeMetadataClient,
+        FakeAuthService, FakeDiaryQuery, FakeDocumentParser, FakeMetadataClient,
         FakePasswordHasher, FakePersonQuery, FakePosterFetcher, FakeSearchCommand, FakeSearchPort,
         FakeStatsRepository, InMemoryImportProfileRepository, InMemoryImportSessionRepository,
         InMemoryMovieProfileRepository, InMemoryMovieRepository, InMemoryProfileFieldsRepo,
@@ -43,7 +43,7 @@ pub struct TestContextBuilder {
     pub movie_command: Arc<dyn MovieCommand>,
     pub movie_query: Arc<dyn MovieQuery>,
     pub review_repo: Arc<dyn ReviewRepository>,
-    pub diary_repo: Arc<dyn DiaryRepository>,
+    pub diary_repo: Arc<dyn DiaryQuery>,
     pub diary_exporter: Arc<dyn DiaryExporter>,
     pub document_parser: Arc<dyn DocumentParser>,
     pub stats_repo: Arc<dyn StatsRepository>,
@@ -68,7 +68,8 @@ pub struct TestContextBuilder {
     pub search_command: Arc<dyn SearchCommand>,
     pub wrapup_stats: Arc<dyn WrapUpStatsQuery>,
     pub wrapup_repo: Arc<dyn WrapUpRepository>,
-    pub goal_repo: Arc<dyn GoalRepository>,
+    pub goal_command: Arc<dyn GoalCommand>,
+    pub goal_query: Arc<dyn GoalQuery>,
     pub user_settings_repo: Arc<dyn UserSettingsRepository>,
     pub review_logger: Arc<dyn ReviewLogger>,
     pub social_query: Arc<dyn domain::ports::SocialQueryPort>,
@@ -84,11 +85,14 @@ impl Default for TestContextBuilder {
 
 impl TestContextBuilder {
     pub fn new() -> Self {
+        let movies = InMemoryMovieRepository::new();
+        let watch_events = InMemoryWatchEventRepository::new();
+        let goals = InMemoryGoalRepository::new();
         Self {
-            movie_command: InMemoryMovieRepository::new(),
-            movie_query: InMemoryMovieRepository::new(),
+            movie_command: Arc::clone(&movies) as _,
+            movie_query: movies as _,
             review_repo: InMemoryReviewRepository::new(),
-            diary_repo: FakeDiaryRepository::new(),
+            diary_repo: FakeDiaryQuery::new(),
             diary_exporter: Arc::new(PanicDiaryExporter),
             document_parser: Arc::new(FakeDocumentParser),
             stats_repo: FakeStatsRepository::new(),
@@ -103,8 +107,8 @@ impl TestContextBuilder {
             import_profile_repo: InMemoryImportProfileRepository::new(),
             movie_profile_repo: InMemoryMovieProfileRepository::new(),
             watchlist_repo: InMemoryWatchlistRepository::new(),
-            watch_event_command: InMemoryWatchEventRepository::new(),
-            watch_event_query: InMemoryWatchEventRepository::new(),
+            watch_event_command: Arc::clone(&watch_events) as _,
+            watch_event_query: watch_events as _,
             webhook_token_repo: InMemoryWebhookTokenRepository::new(),
             profile_fields_repo: InMemoryProfileFieldsRepo::new(),
             person_command: Arc::new(PanicPersonCommand),
@@ -113,7 +117,8 @@ impl TestContextBuilder {
             search_command: Arc::new(FakeSearchCommand),
             wrapup_stats: InMemoryWrapUpStatsQuery::new(),
             wrapup_repo: InMemoryWrapUpRepository::new(),
-            goal_repo: InMemoryGoalRepository::new(),
+            goal_command: Arc::clone(&goals) as _,
+            goal_query: goals as _,
             user_settings_repo: InMemoryUserSettingsRepository::new(),
             review_logger: Arc::new(NoopReviewLogger),
             social_query: Arc::new(NoopSocialQueryPort),
@@ -157,7 +162,7 @@ impl TestContextBuilder {
         self
     }
 
-    pub fn with_diary(mut self, r: Arc<dyn DiaryRepository>) -> Self {
+    pub fn with_diary(mut self, r: Arc<dyn DiaryQuery>) -> Self {
         self.diary_repo = r;
         self
     }
@@ -172,8 +177,13 @@ impl TestContextBuilder {
         self
     }
 
-    pub fn with_goal(mut self, r: Arc<dyn GoalRepository>) -> Self {
-        self.goal_repo = r;
+    pub fn with_goal_command(mut self, r: Arc<dyn GoalCommand>) -> Self {
+        self.goal_command = r;
+        self
+    }
+
+    pub fn with_goal_query(mut self, r: Arc<dyn GoalQuery>) -> Self {
+        self.goal_query = r;
         self
     }
 

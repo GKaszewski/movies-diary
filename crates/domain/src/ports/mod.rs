@@ -9,6 +9,7 @@ pub mod import;
 pub mod jobs;
 pub mod media_server;
 pub mod movie;
+pub mod noop;
 pub mod person;
 pub mod rss;
 pub mod search;

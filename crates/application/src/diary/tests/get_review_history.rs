@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use domain::{
     models::Movie,
-    ports::DiaryRepository,
+    ports::DiaryQuery,
     services::review_history::Trend,
     value_objects::{MovieTitle, ReleaseYear},
 };
@@ -20,9 +20,9 @@ async fn returns_empty_history() {
     );
     let movie_id = movie.id().value();
 
-    let diary = domain::testing::FakeDiaryRepository::new();
+    let diary = domain::testing::FakeDiaryQuery::new();
     diary.seed_history(movie, vec![]);
-    let diary: Arc<dyn DiaryRepository> = diary;
+    let diary: Arc<dyn DiaryQuery> = diary;
 
     let (history, trend) = get_review_history::execute(&diary, GetReviewHistoryQuery { movie_id })
         .await

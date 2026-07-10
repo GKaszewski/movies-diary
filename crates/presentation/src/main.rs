@@ -100,7 +100,7 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
             movie_repo: Arc::clone(&db.movie_query),
             review_repo: Arc::clone(&db.review),
             diary_repo: Arc::clone(&db.diary),
-            goal_repo: Arc::clone(&db.goal),
+            goal_repo: Arc::clone(&db.goal_query),
             stats_repo: Arc::clone(&db.stats),
             user_repo: Arc::clone(&db.user),
             federation_settings: std::sync::Arc::clone(&db.federation_settings),
@@ -158,14 +158,15 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
             #[cfg(feature = "federation")]
             remote_watchlist: remote_watchlist_repo,
             #[cfg(not(feature = "federation"))]
-            remote_watchlist: Arc::new(domain::testing::NoopRemoteWatchlistRepository),
+            remote_watchlist: Arc::new(domain::ports::noop::NoopRemoteWatchlistRepository),
             #[cfg(feature = "federation")]
             social_query: social_query.clone(),
             #[cfg(not(feature = "federation"))]
-            social_query: Arc::new(domain::testing::NoopSocialQueryPort),
+            social_query: Arc::new(domain::ports::noop::NoopSocialQueryPort),
             wrapup_stats: db.wrapup_stats,
             wrapup_repo: db.wrapup_repo,
-            goal: db.goal,
+            goal_command: db.goal_command,
+            goal_query: db.goal_query,
             user_settings: db.user_settings,
             remote_goal: db.remote_goal,
             refresh_session: db.refresh_session,

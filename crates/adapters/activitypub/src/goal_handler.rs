@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use chrono::DateTime;
 use domain::{
     models::RemoteGoalEntry,
-    ports::{GoalRepository, RemoteGoalRepository},
+    ports::{GoalQuery, RemoteGoalRepository},
     value_objects::UserId,
 };
 use k_ap::{ApContentReader, ApObjectHandler};
@@ -15,7 +15,7 @@ use crate::urls::{actor_url, goal_url};
 
 pub struct GoalObjectHandler {
     pub remote_goal_repo: Arc<dyn RemoteGoalRepository>,
-    pub goal_repo: Arc<dyn GoalRepository>,
+    pub goal_repo: Arc<dyn GoalQuery>,
     pub base_url: String,
 }
 

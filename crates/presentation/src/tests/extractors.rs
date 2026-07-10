@@ -17,7 +17,7 @@ use domain::{
         collections::{PageParams, Paginated},
     },
     ports::{
-        AuthService, DiaryRepository, EventPublisher, MetadataClient, MovieCommand, MovieQuery,
+        AuthService, DiaryQuery, EventPublisher, MetadataClient, MovieCommand, MovieQuery,
         ObjectStorage, PasswordHasher, PersonCommand, PersonQuery, PosterFetcherClient,
         ReviewRepository, SearchCommand, SearchPort, StatsRepository, UserRepository,
         WatchlistRepository,
@@ -106,7 +106,7 @@ impl ReviewRepository for Panic {
     }
 }
 #[async_trait::async_trait]
-impl DiaryRepository for Panic {
+impl DiaryQuery for Panic {
     async fn query_diary(&self, _: &DiaryFilter) -> Result<Paginated<DiaryEntry>, DomainError> {
         panic!()
     }
@@ -682,7 +682,7 @@ impl domain::ports::WrapUpRepository for Panic {
 }
 
 #[async_trait::async_trait]
-impl domain::ports::GoalRepository for Panic {
+impl domain::ports::GoalCommand for Panic {
     async fn save(&self, _: &domain::models::Goal) -> Result<(), DomainError> {
         panic!()
     }
@@ -696,6 +696,10 @@ impl domain::ports::GoalRepository for Panic {
     ) -> Result<(), DomainError> {
         panic!()
     }
+}
+
+#[async_trait::async_trait]
+impl domain::ports::GoalQuery for Panic {
     async fn find_by_user_and_year(
         &self,
         _: &domain::value_objects::UserId,
@@ -810,7 +814,8 @@ pub fn make_test_state(auth_service: Arc<dyn AuthService>) -> crate::state::AppS
                 social_query: Arc::clone(&repo) as _,
                 wrapup_stats: Arc::clone(&repo) as _,
                 wrapup_repo: Arc::clone(&repo) as _,
-                goal: Arc::clone(&repo) as _,
+                goal_command: Arc::clone(&repo) as _,
+                goal_query: Arc::clone(&repo) as _,
                 user_settings: Arc::clone(&repo) as _,
                 remote_goal: Arc::clone(&repo) as _,
                 refresh_session: Arc::clone(&repo) as _,

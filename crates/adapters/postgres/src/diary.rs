@@ -5,7 +5,7 @@ use domain::{
         DiaryEntry, DiaryFilter, FeedEntry, MovieStats, ReviewHistory, ReviewSortBy,
         collections::{PageParams, Paginated},
     },
-    ports::DiaryRepository,
+    ports::DiaryQuery,
     value_objects::{MovieId, UserId},
 };
 use futures::stream::BoxStream;
@@ -202,7 +202,7 @@ impl PostgresDiaryRepository {
 }
 
 #[async_trait]
-impl DiaryRepository for PostgresDiaryRepository {
+impl DiaryQuery for PostgresDiaryRepository {
     async fn query_diary(
         &self,
         filter: &DiaryFilter,

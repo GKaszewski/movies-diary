@@ -17,7 +17,7 @@ use crate::{
         collections::{PageParams, Paginated},
     },
     ports::{
-        GoalRepository, ImportProfileRepository, ImportSessionRepository, MovieCommand,
+        GoalCommand, GoalQuery, ImportProfileRepository, ImportSessionRepository, MovieCommand,
         MovieProfileRepository, MovieQuery, RefreshSessionRepository, ReviewRepository,
         UserFederationSettingsQuery, UserProfileFieldsRepository, UserRepository,
         UserSettingsRepository, WatchEventCommand, WatchEventQuery, WatchlistRepository,
@@ -357,7 +357,7 @@ impl InMemoryGoalRepository {
 }
 
 #[async_trait]
-impl GoalRepository for InMemoryGoalRepository {
+impl GoalCommand for InMemoryGoalRepository {
     async fn save(&self, goal: &Goal) -> Result<(), DomainError> {
         self.store
             .lock()
@@ -383,7 +383,10 @@ impl GoalRepository for InMemoryGoalRepository {
         self.store.lock().unwrap().remove(&id.value());
         Ok(())
     }
+}
 
+#[async_trait]
+impl GoalQuery for InMemoryGoalRepository {
     async fn find_by_user_and_year(
         &self,
         user_id: &UserId,

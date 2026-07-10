@@ -8,12 +8,13 @@ use crate::test_helpers::TestContextBuilder;
 async fn returns_goal_when_exists() {
     let b = TestContextBuilder::new();
     let cmd_deps = GoalCommandDeps {
-        goal: b.goal_repo.clone(),
+        goal_command: b.goal_command.clone(),
+        goal_query: b.goal_query.clone(),
         stats: b.stats_repo.clone(),
         event_publisher: b.event_publisher.clone(),
     };
     let query_deps = GoalQueryDeps {
-        goal: b.goal_repo.clone(),
+        goal_query: b.goal_query.clone(),
         stats: b.stats_repo.clone(),
     };
 
@@ -46,7 +47,7 @@ async fn returns_goal_when_exists() {
 async fn returns_none_when_missing() {
     let b = TestContextBuilder::new();
     let query_deps = GoalQueryDeps {
-        goal: b.goal_repo.clone(),
+        goal_query: b.goal_query.clone(),
         stats: b.stats_repo.clone(),
     };
     let result = get::execute(

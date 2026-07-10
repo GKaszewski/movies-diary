@@ -45,7 +45,7 @@ async-trait = { workspace = true }
 futures = { workspace = true }
 
 api-types = { workspace = true }
-domain = { workspace = true, features = ["test-helpers"] }
+domain = { workspace = true }
 application = { workspace = true }
 auth = { workspace = true }
 metadata = { workspace = true }

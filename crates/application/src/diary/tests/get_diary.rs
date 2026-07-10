@@ -1,11 +1,11 @@
-use domain::testing::FakeDiaryRepository;
+use domain::testing::FakeDiaryQuery;
 use std::sync::Arc;
 
 use crate::{diary::get_diary, diary::queries::GetDiaryQuery};
 
 #[tokio::test]
 async fn returns_empty_page() {
-    let diary = FakeDiaryRepository::new() as Arc<dyn domain::ports::DiaryRepository>;
+    let diary = FakeDiaryQuery::new() as Arc<dyn domain::ports::DiaryQuery>;
 
     let result = get_diary::execute(
         &diary,

@@ -53,7 +53,7 @@ async fn main() -> anyhow::Result<()> {
         Arc::clone(&db.movie_query),
         Arc::clone(&db.review),
         Arc::clone(&db.diary),
-        Arc::clone(&db.goal),
+        Arc::clone(&db.goal_query),
         Arc::clone(&db.stats),
         Arc::clone(&db.user),
         app_config.base_url.clone(),

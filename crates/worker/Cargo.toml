@@ -13,7 +13,7 @@ sqlite-federation = ["sqlite", "dep:sqlite-federation", "dep:activitypub", "fede
 postgres-federation = ["postgres", "dep:postgres-federation", "dep:activitypub", "federation"]
 
 [dependencies]
-domain = { workspace = true, features = ["test-helpers"] }
+domain = { workspace = true }
 application = { workspace = true }
 tokio = { workspace = true }
 anyhow = { workspace = true }

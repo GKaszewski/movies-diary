@@ -16,7 +16,8 @@ async fn deletes_existing_goal() {
     let stats = FakeStatsRepository::new();
     let events = NoopEventPublisher::new();
     let deps = GoalCommandDeps {
-        goal: Arc::clone(&goals) as _,
+        goal_command: Arc::clone(&goals) as _,
+        goal_query: Arc::clone(&goals) as _,
         stats: Arc::clone(&stats) as _,
         event_publisher: Arc::clone(&events) as _,
     };
@@ -50,7 +51,8 @@ async fn deletes_existing_goal() {
 async fn fails_when_not_found() {
     let b = TestContextBuilder::new();
     let deps = GoalCommandDeps {
-        goal: b.goal_repo.clone(),
+        goal_command: b.goal_command.clone(),
+        goal_query: b.goal_query.clone(),
         stats: b.stats_repo.clone(),
         event_publisher: b.event_publisher.clone(),
     };

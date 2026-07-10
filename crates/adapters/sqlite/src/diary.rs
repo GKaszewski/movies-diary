@@ -5,7 +5,7 @@ use domain::{
         DiaryEntry, DiaryFilter, FeedEntry, MovieStats, ReviewHistory, ReviewSortBy,
         collections::{PageParams, Paginated},
     },
-    ports::DiaryRepository,
+    ports::DiaryQuery,
     value_objects::{MovieId, UserId},
 };
 use futures::stream::BoxStream;
@@ -181,7 +181,7 @@ impl SqliteDiaryRepository {
 }
 
 #[async_trait]
-impl DiaryRepository for SqliteDiaryRepository {
+impl DiaryQuery for SqliteDiaryRepository {
     async fn query_diary(
         &self,
         filter: &DiaryFilter,

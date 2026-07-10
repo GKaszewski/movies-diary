@@ -351,7 +351,7 @@ pub async fn get_user_profile(
         goals: {
             let goals_list = application::goals::list::execute(
                 &application::goals::deps::GoalQueryDeps {
-                    goal: state.app_ctx.repos.goal.clone(),
+                    goal_query: state.app_ctx.repos.goal_query.clone(),
                     stats: state.app_ctx.repos.stats.clone(),
                 },
                 application::goals::queries::ListGoalsQuery { user_id },
@@ -531,6 +531,107 @@ pub async fn get_user_by_username(
     }
 }
 
+// ── Profile helpers (private) ───────────────────────────────────────────────
+
+struct PaginationInfo {
+    offset: u32,
+    has_more: bool,
+    limit: u32,
+    page_items: Vec<template_askama::PageItem>,
+}
+
+fn compute_pagination(
+    entries: Option<&domain::models::collections::Paginated<domain::models::DiaryEntry>>,
+) -> PaginationInfo {
+    let (offset, has_more, limit) = entries
+        .map(|e| {
+            let has_more = (e.offset as u64).saturating_add(e.limit as u64) < e.total_count;
+            (e.offset, has_more, e.limit)
+        })
+        .unwrap_or((0, false, super::DEFAULT_PAGE_LIMIT));
+    let total = entries.map(|e| e.total_count as u32).unwrap_or(0);
+    let total_pages = total
+        .saturating_add(limit.saturating_sub(1))
+        .checked_div(limit)
+        .unwrap_or(1);
+    let current_page = offset.checked_div(limit).unwrap_or(0);
+    let page_items = build_page_items(total_pages, current_page);
+    PaginationInfo {
+        offset,
+        has_more,
+        limit,
+        page_items,
+    }
+}
+
+struct StatsDisplay {
+    avg_rating: String,
+    favorite_director: String,
+    most_active_month: String,
+}
+
+fn build_stats_display(stats: &domain::models::UserStats) -> StatsDisplay {
+    StatsDisplay {
+        avg_rating: stats
+            .avg_rating
+            .map(|r| format!("{:.1}", r))
+            .unwrap_or_else(|| "\u{2014}".to_string()),
+        favorite_director: stats
+            .favorite_director
+            .clone()
+            .unwrap_or_else(|| "\u{2014}".to_string()),
+        most_active_month: stats
+            .most_active_month
+            .clone()
+            .unwrap_or_else(|| "\u{2014}".to_string()),
+    }
+}
+
+fn build_monthly_rating_rows<'a>(
+    trends: Option<&'a domain::models::UserTrends>,
+) -> Vec<MonthlyRatingRow<'a>> {
+    trends
+        .map(|t| {
+            t.monthly_ratings
+                .iter()
+                .map(|r| MonthlyRatingRow {
+                    rating: r,
+                    bar_height_px: bar_height_px(r.avg_rating),
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+async fn fetch_profile_goals(
+    state: &AppState,
+    user_id: Uuid,
+) -> Vec<template_askama::GoalViewData> {
+    let goals_list = application::goals::list::execute(
+        &application::goals::deps::GoalQueryDeps {
+            goal_query: state.app_ctx.repos.goal_query.clone(),
+            stats: state.app_ctx.repos.stats.clone(),
+        },
+        application::goals::queries::ListGoalsQuery {
+            user_id,
+        },
+    )
+    .await
+    .unwrap_or_default();
+    goals_list
+        .iter()
+        .map(|g| template_askama::GoalViewData {
+            year: g.goal.year(),
+            target_count: g.goal.target_count(),
+            current_count: g.current_count,
+            percentage: g.percentage().round(),
+            is_complete: g.is_complete(),
+        })
+        .collect()
+}
+
+// ── Handler ─────────────────────────────────────────────────────────────────
+
 pub async fn get_user_profile_html(
     OptionalCookieUser(user_id): OptionalCookieUser,
     State(state): State<AppState>,
@@ -634,60 +735,16 @@ pub async fn get_user_profile_html(
     };
     match application::users::get_profile::execute(&html_profile_deps, query).await {
         Ok(profile) => {
-            let (offset, has_more, limit) = profile
-                .entries
-                .as_ref()
-                .map(|e| {
-                    let has_more = (e.offset as u64).saturating_add(e.limit as u64) < e.total_count;
-                    (e.offset, has_more, e.limit)
-                })
-                .unwrap_or((0, false, super::DEFAULT_PAGE_LIMIT));
+            let pag = compute_pagination(profile.entries.as_ref());
             if !is_own_profile {
                 ctx.page_rss_url = Some(format!("/users/{}/feed.rss", profile_user_uuid));
             }
             let email = profile_user.email().value().to_string();
             let display_name = email.split('@').next().unwrap_or("?").to_string();
-            let avg_rating_display = profile
-                .stats
-                .avg_rating
-                .map(|r| format!("{:.1}", r))
-                .unwrap_or_else(|| "\u{2014}".to_string());
-            let favorite_director_display = profile
-                .stats
-                .favorite_director
-                .clone()
-                .unwrap_or_else(|| "\u{2014}".to_string());
-            let most_active_month_display = profile
-                .stats
-                .most_active_month
-                .clone()
-                .unwrap_or_else(|| "\u{2014}".to_string());
+            let stats_disp = build_stats_display(&profile.stats);
             let history = profile.history.map(application::users::group_by_month);
             let heatmap = history.as_deref().map(build_heatmap).unwrap_or_default();
-            let monthly_rating_rows: Vec<MonthlyRatingRow<'_>> = profile
-                .trends
-                .as_ref()
-                .map(|t| {
-                    t.monthly_ratings
-                        .iter()
-                        .map(|r| MonthlyRatingRow {
-                            rating: r,
-                            bar_height_px: bar_height_px(r.avg_rating),
-                        })
-                        .collect()
-                })
-                .unwrap_or_default();
-            let total = profile
-                .entries
-                .as_ref()
-                .map(|e| e.total_count as u32)
-                .unwrap_or(0);
-            let total_pages = total
-                .saturating_add(limit.saturating_sub(1))
-                .checked_div(limit)
-                .unwrap_or(1);
-            let current_page = offset.checked_div(limit).unwrap_or(0);
-            let page_items = build_page_items(total_pages, current_page);
+            let monthly_rating_rows = build_monthly_rating_rows(profile.trends.as_ref());
             let pending_followers: Vec<RemoteActorData> = profile
                 .pending_followers
                 .iter()
@@ -703,43 +760,44 @@ pub async fn get_user_profile_html(
                     profile_user_id: profile_user_uuid,
                     profile_url,
                     stats: &profile.stats,
-                    avg_rating_display,
-                    favorite_director_display,
-                    most_active_month_display,
+                    avg_rating_display: stats_disp.avg_rating,
+                    favorite_director_display: stats_disp.favorite_director,
+                    most_active_month_display: stats_disp.most_active_month,
                     view: profile_view.as_str(),
                     entries: profile.entries.as_ref(),
-                    current_offset: offset,
-                    has_more,
-                    limit,
+                    current_offset: pag.offset,
+                    has_more: pag.has_more,
+                    limit: pag.limit,
                     history: history.as_ref(),
                     trends: profile.trends.as_ref(),
                     monthly_rating_rows,
                     heatmap,
-                    page_items,
+                    page_items: pag.page_items,
                     sort_by: sort_by_str.to_string(),
                 });
                 let mut resp = response.into_response();
                 resp.headers_mut().remove("x-frame-options");
                 resp
             } else {
+                let goals = fetch_profile_goals(&state, profile_user_uuid).await;
                 render_page(ProfileTemplate {
                     ctx: &ctx,
                     profile_display_name: display_name,
                     profile_user_id: profile_user_uuid,
                     stats: &profile.stats,
-                    avg_rating_display,
-                    favorite_director_display,
-                    most_active_month_display,
+                    avg_rating_display: stats_disp.avg_rating,
+                    favorite_director_display: stats_disp.favorite_director,
+                    most_active_month_display: stats_disp.most_active_month,
                     view: profile_view.as_str(),
                     entries: profile.entries.as_ref(),
-                    current_offset: offset,
-                    has_more,
-                    limit,
+                    current_offset: pag.offset,
+                    has_more: pag.has_more,
+                    limit: pag.limit,
                     history: history.as_ref(),
                     trends: profile.trends.as_ref(),
                     monthly_rating_rows,
                     heatmap,
-                    page_items,
+                    page_items: pag.page_items,
                     is_own_profile,
                     error: params.error,
                     following_count: profile.following_count,
@@ -747,29 +805,7 @@ pub async fn get_user_profile_html(
                     pending_followers,
                     sort_by: sort_by_str.to_string(),
                     search: params.search.clone(),
-                    goals: {
-                        let goals_list = application::goals::list::execute(
-                            &application::goals::deps::GoalQueryDeps {
-                                goal: state.app_ctx.repos.goal.clone(),
-                                stats: state.app_ctx.repos.stats.clone(),
-                            },
-                            application::goals::queries::ListGoalsQuery {
-                                user_id: profile_user_uuid,
-                            },
-                        )
-                        .await
-                        .unwrap_or_default();
-                        goals_list
-                            .iter()
-                            .map(|g| template_askama::GoalViewData {
-                                year: g.goal.year(),
-                                target_count: g.goal.target_count(),
-                                current_count: g.current_count,
-                                percentage: g.percentage().round(),
-                                is_complete: g.is_complete(),
-                            })
-                            .collect()
-                    },
+                    goals,
                 })
                 .into_response()
             }

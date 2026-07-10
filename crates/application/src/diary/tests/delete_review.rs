@@ -6,7 +6,7 @@ use domain::{
     models::{Movie, Review},
     ports::{MovieCommand, MovieQuery, ReviewRepository},
     testing::{
-        FakeDiaryRepository, InMemoryMovieRepository, InMemoryReviewRepository, NoopEventPublisher,
+        FakeDiaryQuery, InMemoryMovieRepository, InMemoryReviewRepository, NoopEventPublisher,
     },
     value_objects::{MovieId, MovieTitle, Rating, ReleaseYear, UserId},
 };
@@ -41,7 +41,7 @@ fn make_review(movie_id: MovieId, user_id: UserId) -> Review {
 async fn test_delete_review_removes_it() {
     let movies = InMemoryMovieRepository::new();
     let reviews = InMemoryReviewRepository::new();
-    let diary = FakeDiaryRepository::new();
+    let diary = FakeDiaryQuery::new();
     let events = NoopEventPublisher::new();
 
     let movie = make_movie();
@@ -79,7 +79,7 @@ async fn test_delete_review_removes_it() {
 #[tokio::test]
 async fn test_delete_review_wrong_user_is_unauthorized() {
     let reviews = InMemoryReviewRepository::new();
-    let diary = FakeDiaryRepository::new();
+    let diary = FakeDiaryQuery::new();
     let movies = InMemoryMovieRepository::new();
     let events = NoopEventPublisher::new();
 

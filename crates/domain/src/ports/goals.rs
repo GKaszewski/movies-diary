@@ -7,10 +7,14 @@ use crate::{
 };
 
 #[async_trait]
-pub trait GoalRepository: Send + Sync {
+pub trait GoalCommand: Send + Sync {
     async fn save(&self, goal: &Goal) -> Result<(), DomainError>;
     async fn update(&self, goal: &Goal) -> Result<(), DomainError>;
     async fn delete(&self, id: &GoalId, user_id: &UserId) -> Result<(), DomainError>;
+}
+
+#[async_trait]
+pub trait GoalQuery: Send + Sync {
     async fn find_by_user_and_year(
         &self,
         user_id: &UserId,

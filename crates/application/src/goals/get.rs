@@ -9,7 +9,7 @@ pub async fn execute(
     let user_id = UserId::from_uuid(query.user_id);
 
     let found = deps
-        .goal
+        .goal_query
         .find_by_user_and_year(&user_id, query.year)
         .await?;
 

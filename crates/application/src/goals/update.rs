@@ -11,13 +11,13 @@ pub async fn execute(
     let user_id = UserId::from_uuid(cmd.user_id);
 
     let mut g = deps
-        .goal
+        .goal_query
         .find_by_user_and_year(&user_id, cmd.year)
         .await?
         .ok_or_else(|| DomainError::NotFound(format!("Goal for year {}", cmd.year)))?;
 
     g.update_target(cmd.target_count)?;
-    deps.goal.update(&g).await?;
+    deps.goal_command.update(&g).await?;
 
     let current_count = deps.stats.count_reviews_in_year(&user_id, cmd.year).await?;
 

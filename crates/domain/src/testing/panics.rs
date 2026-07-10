@@ -11,7 +11,7 @@ use crate::{
         collections::{PageParams, Paginated},
     },
     ports::{
-        DiaryExporter, DiaryRepository, DocumentParser, ImportProfileRepository,
+        DiaryExporter, DiaryQuery, DocumentParser, ImportProfileRepository,
         ImportSessionRepository, MovieProfileRepository, PersonCommand, PersonQuery,
         PosterFetcherClient, RefreshSessionRepository, SearchCommand, SearchPort, StatsRepository,
         UserProfileFieldsRepository,
@@ -19,20 +19,20 @@ use crate::{
     value_objects::{ImportProfileId, ImportSessionId, MovieId, PosterUrl, UserId},
 };
 
-// ── PanicDiaryRepository ──────────────────────────────────────────────────────
+// ── PanicDiaryQuery ───────────────────────────────────────────────────────────
 
-pub struct PanicDiaryRepository;
+pub struct PanicDiaryQuery;
 
 #[async_trait]
-impl DiaryRepository for PanicDiaryRepository {
+impl DiaryQuery for PanicDiaryQuery {
     async fn query_diary(&self, _: &DiaryFilter) -> Result<Paginated<DiaryEntry>, DomainError> {
-        panic!("PanicDiaryRepository called")
+        panic!("PanicDiaryQuery called")
     }
     async fn query_activity_feed(
         &self,
         _: &PageParams,
     ) -> Result<Paginated<FeedEntry>, DomainError> {
-        panic!("PanicDiaryRepository called")
+        panic!("PanicDiaryQuery called")
     }
     async fn query_activity_feed_filtered(
         &self,
@@ -41,32 +41,32 @@ impl DiaryRepository for PanicDiaryRepository {
         _: Option<&str>,
         _: Option<&FollowingFilter>,
     ) -> Result<Paginated<FeedEntry>, DomainError> {
-        panic!("PanicDiaryRepository called")
+        panic!("PanicDiaryQuery called")
     }
     async fn get_review_history(&self, _: &MovieId) -> Result<ReviewHistory, DomainError> {
-        panic!("PanicDiaryRepository called")
+        panic!("PanicDiaryQuery called")
     }
     async fn get_user_history(&self, _: &UserId) -> Result<Vec<DiaryEntry>, DomainError> {
-        panic!("PanicDiaryRepository called")
+        panic!("PanicDiaryQuery called")
     }
     fn stream_user_history(
         &self,
         _: UserId,
     ) -> futures::stream::BoxStream<'static, Result<DiaryEntry, DomainError>> {
-        panic!("PanicDiaryRepository called")
+        panic!("PanicDiaryQuery called")
     }
     async fn get_movie_stats(&self, _: &MovieId) -> Result<MovieStats, DomainError> {
-        panic!("PanicDiaryRepository called")
+        panic!("PanicDiaryQuery called")
     }
     async fn get_movie_social_feed(
         &self,
         _: &MovieId,
         _: &PageParams,
     ) -> Result<Paginated<FeedEntry>, DomainError> {
-        panic!("PanicDiaryRepository called")
+        panic!("PanicDiaryQuery called")
     }
     async fn count_local_posts(&self) -> Result<u64, DomainError> {
-        panic!("PanicDiaryRepository called")
+        panic!("PanicDiaryQuery called")
     }
 }
 

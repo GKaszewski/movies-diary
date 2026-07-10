@@ -11,7 +11,8 @@ use crate::test_helpers::TestContextBuilder;
 async fn updates_target_count() {
     let b = TestContextBuilder::new();
     let deps = GoalCommandDeps {
-        goal: b.goal_repo.clone(),
+        goal_command: b.goal_command.clone(),
+        goal_query: b.goal_query.clone(),
         stats: b.stats_repo.clone(),
         event_publisher: b.event_publisher.clone(),
     };
@@ -45,7 +46,8 @@ async fn updates_target_count() {
 async fn fails_when_goal_not_found() {
     let b = TestContextBuilder::new();
     let deps = GoalCommandDeps {
-        goal: b.goal_repo.clone(),
+        goal_command: b.goal_command.clone(),
+        goal_query: b.goal_query.clone(),
         stats: b.stats_repo.clone(),
         event_publisher: b.event_publisher.clone(),
     };
@@ -66,7 +68,8 @@ async fn fails_when_goal_not_found() {
 async fn rejects_zero_target() {
     let b = TestContextBuilder::new();
     let deps = GoalCommandDeps {
-        goal: b.goal_repo.clone(),
+        goal_command: b.goal_command.clone(),
+        goal_query: b.goal_query.clone(),
         stats: b.stats_repo.clone(),
         event_publisher: b.event_publisher.clone(),
     };

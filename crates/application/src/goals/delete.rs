@@ -6,12 +6,12 @@ pub async fn execute(deps: &GoalCommandDeps, cmd: DeleteGoalCommand) -> Result<(
     let user_id = UserId::from_uuid(cmd.user_id);
 
     let g = deps
-        .goal
+        .goal_query
         .find_by_user_and_year(&user_id, cmd.year)
         .await?
         .ok_or_else(|| DomainError::NotFound(format!("Goal for year {}", cmd.year)))?;
 
-    deps.goal.delete(g.id(), &user_id).await?;
+    deps.goal_command.delete(g.id(), &user_id).await?;
 
     deps.event_publisher
         .publish(&DomainEvent::GoalDeleted {

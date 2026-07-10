@@ -40,7 +40,7 @@ pub async fn list_goals(
     user: AuthenticatedUser,
 ) -> Result<Json<GoalsResponse>, ApiError> {
     let deps = GoalQueryDeps {
-        goal: state.app_ctx.repos.goal.clone(),
+        goal_query: state.app_ctx.repos.goal_query.clone(),
         stats: state.app_ctx.repos.stats.clone(),
     };
     let goals = application::goals::list::execute(
@@ -70,7 +70,8 @@ pub async fn create_goal(
     Json(req): Json<CreateGoalRequest>,
 ) -> Result<Json<GoalDto>, ApiError> {
     let deps = GoalCommandDeps {
-        goal: state.app_ctx.repos.goal.clone(),
+        goal_command: state.app_ctx.repos.goal_command.clone(),
+        goal_query: state.app_ctx.repos.goal_query.clone(),
         stats: state.app_ctx.repos.stats.clone(),
         event_publisher: state.app_ctx.services.event_publisher.clone(),
     };
@@ -103,7 +104,8 @@ pub async fn update_goal(
     Json(req): Json<UpdateGoalRequest>,
 ) -> Result<Json<GoalDto>, ApiError> {
     let deps = GoalCommandDeps {
-        goal: state.app_ctx.repos.goal.clone(),
+        goal_command: state.app_ctx.repos.goal_command.clone(),
+        goal_query: state.app_ctx.repos.goal_query.clone(),
         stats: state.app_ctx.repos.stats.clone(),
         event_publisher: state.app_ctx.services.event_publisher.clone(),
     };
@@ -134,7 +136,8 @@ pub async fn delete_goal(
     Path(year): Path<u16>,
 ) -> Result<StatusCode, ApiError> {
     let deps = GoalCommandDeps {
-        goal: state.app_ctx.repos.goal.clone(),
+        goal_command: state.app_ctx.repos.goal_command.clone(),
+        goal_query: state.app_ctx.repos.goal_query.clone(),
         stats: state.app_ctx.repos.stats.clone(),
         event_publisher: state.app_ctx.services.event_publisher.clone(),
     };
@@ -163,7 +166,7 @@ pub async fn get_user_goals(
     Path(user_id): Path<Uuid>,
 ) -> Result<Json<GoalsResponse>, ApiError> {
     let deps = GoalQueryDeps {
-        goal: state.app_ctx.repos.goal.clone(),
+        goal_query: state.app_ctx.repos.goal_query.clone(),
         stats: state.app_ctx.repos.stats.clone(),
     };
     let goals = application::goals::list::execute(

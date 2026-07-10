@@ -7,7 +7,7 @@ pub async fn execute(
     query: ListGoalsQuery,
 ) -> Result<Vec<GoalWithProgress>, DomainError> {
     let user_id = UserId::from_uuid(query.user_id);
-    let goals = deps.goal.list_for_user(&user_id).await?;
+    let goals = deps.goal_query.list_for_user(&user_id).await?;
 
     let mut result = Vec::with_capacity(goals.len());
     for g in goals {

@@ -11,7 +11,7 @@ use crate::{
 };
 
 #[async_trait]
-pub trait DiaryRepository: Send + Sync {
+pub trait DiaryQuery: Send + Sync {
     async fn query_diary(&self, filter: &DiaryFilter)
     -> Result<Paginated<DiaryEntry>, DomainError>;
     async fn query_activity_feed(

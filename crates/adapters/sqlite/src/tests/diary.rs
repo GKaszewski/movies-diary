@@ -2,7 +2,7 @@ use super::*;
 use domain::{
     models::collections::PageParams,
     models::{FeedSortBy, FollowingFilter},
-    ports::DiaryRepository,
+    ports::DiaryQuery,
 };
 use sqlx::SqlitePool;
 

@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use domain::{
     errors::DomainError,
     models::{Goal, GoalType},
-    ports::GoalRepository,
+    ports::{GoalCommand, GoalQuery},
     value_objects::{GoalId, UserId},
 };
 use sqlx::{PgPool, Row};
@@ -25,7 +25,7 @@ impl PostgresGoalRepository {
 }
 
 #[async_trait]
-impl GoalRepository for PostgresGoalRepository {
+impl GoalCommand for PostgresGoalRepository {
     async fn save(&self, goal: &Goal) -> Result<(), DomainError> {
         let id = goal.id().value().to_string();
         let user_id = goal.user_id().value().to_string();
@@ -84,7 +84,10 @@ impl GoalRepository for PostgresGoalRepository {
         }
         Ok(())
     }
+}
 
+#[async_trait]
+impl GoalQuery for PostgresGoalRepository {
     async fn find_by_user_and_year(
         &self,
         user_id: &UserId,
