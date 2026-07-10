@@ -17,7 +17,6 @@ impl PostgresGoalRepository {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
-
 }
 
 #[async_trait]

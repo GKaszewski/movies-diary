@@ -16,7 +16,6 @@ impl PostgresRefreshSessionAdapter {
     }
 }
 
-
 #[async_trait]
 impl RefreshSessionRepository for PostgresRefreshSessionAdapter {
     async fn create(&self, session: &RefreshSession) -> Result<(), DomainError> {

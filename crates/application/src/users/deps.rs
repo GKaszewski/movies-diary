@@ -1,8 +1,7 @@
 use std::sync::Arc;
 
 use domain::ports::{
-    DiaryQuery, EventPublisher, ObjectStorage, SocialQueryPort, StatsRepository,
-    UserRepository,
+    DiaryQuery, EventPublisher, ObjectStorage, SocialQueryPort, StatsRepository, UserRepository,
 };
 
 pub struct GetProfileDeps {

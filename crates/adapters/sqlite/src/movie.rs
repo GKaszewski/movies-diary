@@ -20,7 +20,6 @@ impl SqliteMovieRepository {
     pub fn new(pool: SqlitePool) -> Self {
         Self { pool }
     }
-
 }
 
 #[async_trait]
@@ -137,7 +136,10 @@ impl MovieQuery for SqliteMovieRepository {
         for id in ids {
             q = q.bind(id.value().to_string());
         }
-        let rows = q.fetch_all(&self.pool).await.map_err(adapter_common::map_sqlx_error)?;
+        let rows = q
+            .fetch_all(&self.pool)
+            .await
+            .map_err(adapter_common::map_sqlx_error)?;
         Ok(rows.into_iter().collect())
     }
 
@@ -161,7 +163,10 @@ impl MovieQuery for SqliteMovieRepository {
         for (t, y) in pairs {
             q = q.bind(t.value().to_string()).bind(y.value() as i64);
         }
-        let rows = q.fetch_all(&self.pool).await.map_err(adapter_common::map_sqlx_error)?;
+        let rows = q
+            .fetch_all(&self.pool)
+            .await
+            .map_err(adapter_common::map_sqlx_error)?;
         Ok(rows
             .into_iter()
             .map(|r| {

@@ -4,8 +4,8 @@ use chrono::Utc;
 use k_ap::{ActorRepository, RemoteActor};
 use sqlx::Row;
 
-use adapter_common::datetime_to_str;
 use super::{PG_ACTOR_COLS, PostgresFederationRepository, pg_remote_actor};
+use adapter_common::datetime_to_str;
 
 #[async_trait]
 impl ActorRepository for PostgresFederationRepository {

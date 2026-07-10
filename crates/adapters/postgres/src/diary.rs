@@ -22,7 +22,6 @@ impl PostgresDiaryRepository {
         Self { pool }
     }
 
-
     async fn count_diary_entries(&self, movie_id: Option<&str>) -> Result<i64, DomainError> {
         match movie_id {
             None => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM reviews")
@@ -134,7 +133,9 @@ impl PostgresDiaryRepository {
         if has_search {
             q = q.bind(search.unwrap());
         }
-        q.fetch_one(&self.pool).await.map_err(adapter_common::map_sqlx_error)
+        q.fetch_one(&self.pool)
+            .await
+            .map_err(adapter_common::map_sqlx_error)
     }
 
     async fn fetch_user_diary_rows(
@@ -371,7 +372,10 @@ impl DiaryQuery for PostgresDiaryRepository {
         }
 
         let count_q = bind_filter_params!(sqlx::query_scalar::<_, i64>(&count_sql));
-        let total = count_q.fetch_one(&self.pool).await.map_err(adapter_common::map_sqlx_error)?;
+        let total = count_q
+            .fetch_one(&self.pool)
+            .await
+            .map_err(adapter_common::map_sqlx_error)?;
 
         let rows_q = bind_filter_params!(sqlx::query_as::<_, FeedRow>(&select_sql));
         let rows = rows_q

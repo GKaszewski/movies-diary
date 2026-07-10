@@ -7,8 +7,8 @@ use domain::{
 };
 use sqlx::PgPool;
 
-use adapter_common::datetime_to_str;
 use crate::models::ReviewRow;
+use adapter_common::datetime_to_str;
 
 pub struct PostgresReviewRepository {
     pool: PgPool,
@@ -18,7 +18,6 @@ impl PostgresReviewRepository {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
-
 }
 
 #[async_trait]

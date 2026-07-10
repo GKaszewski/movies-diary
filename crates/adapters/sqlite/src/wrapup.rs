@@ -226,14 +226,30 @@ impl WrapUpRepository for SqliteWrapUpRepository {
 
 fn row_to_record(row: &sqlx::sqlite::SqliteRow) -> Result<WrapUpRecord, DomainError> {
     let id_str: String = row.try_get("id").map_err(adapter_common::map_sqlx_error)?;
-    let user_id_str: Option<String> = row.try_get("user_id").map_err(adapter_common::map_sqlx_error)?;
-    let start_date_str: String = row.try_get("start_date").map_err(adapter_common::map_sqlx_error)?;
-    let end_date_str: String = row.try_get("end_date").map_err(adapter_common::map_sqlx_error)?;
-    let status_str: String = row.try_get("status").map_err(adapter_common::map_sqlx_error)?;
-    let report_json: Option<String> = row.try_get("report_json").map_err(adapter_common::map_sqlx_error)?;
-    let error_message: Option<String> = row.try_get("error_message").map_err(adapter_common::map_sqlx_error)?;
-    let created_at_str: String = row.try_get("created_at").map_err(adapter_common::map_sqlx_error)?;
-    let completed_at_str: Option<String> = row.try_get("completed_at").map_err(adapter_common::map_sqlx_error)?;
+    let user_id_str: Option<String> = row
+        .try_get("user_id")
+        .map_err(adapter_common::map_sqlx_error)?;
+    let start_date_str: String = row
+        .try_get("start_date")
+        .map_err(adapter_common::map_sqlx_error)?;
+    let end_date_str: String = row
+        .try_get("end_date")
+        .map_err(adapter_common::map_sqlx_error)?;
+    let status_str: String = row
+        .try_get("status")
+        .map_err(adapter_common::map_sqlx_error)?;
+    let report_json: Option<String> = row
+        .try_get("report_json")
+        .map_err(adapter_common::map_sqlx_error)?;
+    let error_message: Option<String> = row
+        .try_get("error_message")
+        .map_err(adapter_common::map_sqlx_error)?;
+    let created_at_str: String = row
+        .try_get("created_at")
+        .map_err(adapter_common::map_sqlx_error)?;
+    let completed_at_str: Option<String> = row
+        .try_get("completed_at")
+        .map_err(adapter_common::map_sqlx_error)?;
 
     let user_id = user_id_str.as_deref().map(parse_uuid).transpose()?;
 
@@ -299,7 +315,10 @@ impl WrapUpStatsQuery for SqliteWrapUpStatsQuery {
             q = q.bind(uid);
         }
 
-        let rows = q.fetch_all(&self.pool).await.map_err(adapter_common::map_sqlx_error)?;
+        let rows = q
+            .fetch_all(&self.pool)
+            .await
+            .map_err(adapter_common::map_sqlx_error)?;
 
         if rows.is_empty() {
             return Ok(vec![]);
@@ -309,7 +328,9 @@ impl WrapUpStatsQuery for SqliteWrapUpStatsQuery {
         let mut movie_ids: Vec<String> = Vec::new();
         let mut seen = std::collections::HashSet::new();
         for row in &rows {
-            let mid: String = row.try_get("movie_id").map_err(adapter_common::map_sqlx_error)?;
+            let mid: String = row
+                .try_get("movie_id")
+                .map_err(adapter_common::map_sqlx_error)?;
             if seen.insert(mid.clone()) {
                 movie_ids.push(mid);
             }
@@ -325,18 +346,39 @@ impl WrapUpStatsQuery for SqliteWrapUpStatsQuery {
         // 3) Build result
         let mut result = Vec::with_capacity(rows.len());
         for row in &rows {
-            let movie_id_str: String = row.try_get("movie_id").map_err(adapter_common::map_sqlx_error)?;
-            let title: String = row.try_get("title").map_err(adapter_common::map_sqlx_error)?;
-            let release_year: i64 = row.try_get("release_year").map_err(adapter_common::map_sqlx_error)?;
-            let director: Option<String> = row.try_get("director").map_err(adapter_common::map_sqlx_error)?;
-            let poster_path: Option<String> = row.try_get("poster_path").map_err(adapter_common::map_sqlx_error)?;
-            let rating: i64 = row.try_get("rating").map_err(adapter_common::map_sqlx_error)?;
-            let watched_at_str: String = row.try_get("watched_at").map_err(adapter_common::map_sqlx_error)?;
-            let user_id_str: String = row.try_get("user_id").map_err(adapter_common::map_sqlx_error)?;
-            let runtime_minutes: Option<i32> = row.try_get("runtime_minutes").map_err(adapter_common::map_sqlx_error)?;
-            let budget_usd: Option<i64> = row.try_get("budget_usd").map_err(adapter_common::map_sqlx_error)?;
-            let original_language: Option<String> =
-                row.try_get("original_language").map_err(adapter_common::map_sqlx_error)?;
+            let movie_id_str: String = row
+                .try_get("movie_id")
+                .map_err(adapter_common::map_sqlx_error)?;
+            let title: String = row
+                .try_get("title")
+                .map_err(adapter_common::map_sqlx_error)?;
+            let release_year: i64 = row
+                .try_get("release_year")
+                .map_err(adapter_common::map_sqlx_error)?;
+            let director: Option<String> = row
+                .try_get("director")
+                .map_err(adapter_common::map_sqlx_error)?;
+            let poster_path: Option<String> = row
+                .try_get("poster_path")
+                .map_err(adapter_common::map_sqlx_error)?;
+            let rating: i64 = row
+                .try_get("rating")
+                .map_err(adapter_common::map_sqlx_error)?;
+            let watched_at_str: String = row
+                .try_get("watched_at")
+                .map_err(adapter_common::map_sqlx_error)?;
+            let user_id_str: String = row
+                .try_get("user_id")
+                .map_err(adapter_common::map_sqlx_error)?;
+            let runtime_minutes: Option<i32> = row
+                .try_get("runtime_minutes")
+                .map_err(adapter_common::map_sqlx_error)?;
+            let budget_usd: Option<i64> = row
+                .try_get("budget_usd")
+                .map_err(adapter_common::map_sqlx_error)?;
+            let original_language: Option<String> = row
+                .try_get("original_language")
+                .map_err(adapter_common::map_sqlx_error)?;
 
             let genres = genres_map.get(&movie_id_str).cloned().unwrap_or_default();
             let keywords = keywords_map.get(&movie_id_str).cloned().unwrap_or_default();
@@ -406,12 +448,19 @@ async fn fetch_genres_sqlite(
     for id in movie_ids {
         q = q.bind(id);
     }
-    let rows = q.fetch_all(pool).await.map_err(adapter_common::map_sqlx_error)?;
+    let rows = q
+        .fetch_all(pool)
+        .await
+        .map_err(adapter_common::map_sqlx_error)?;
 
     let mut map: HashMap<String, Vec<String>> = HashMap::new();
     for row in rows {
-        let mid: String = row.try_get("movie_id").map_err(adapter_common::map_sqlx_error)?;
-        let name: String = row.try_get("name").map_err(adapter_common::map_sqlx_error)?;
+        let mid: String = row
+            .try_get("movie_id")
+            .map_err(adapter_common::map_sqlx_error)?;
+        let name: String = row
+            .try_get("name")
+            .map_err(adapter_common::map_sqlx_error)?;
         map.entry(mid).or_default().push(name);
     }
     Ok(map)
@@ -432,12 +481,19 @@ async fn fetch_keywords_sqlite(
     for id in movie_ids {
         q = q.bind(id);
     }
-    let rows = q.fetch_all(pool).await.map_err(adapter_common::map_sqlx_error)?;
+    let rows = q
+        .fetch_all(pool)
+        .await
+        .map_err(adapter_common::map_sqlx_error)?;
 
     let mut map: HashMap<String, Vec<String>> = HashMap::new();
     for row in rows {
-        let mid: String = row.try_get("movie_id").map_err(adapter_common::map_sqlx_error)?;
-        let name: String = row.try_get("name").map_err(adapter_common::map_sqlx_error)?;
+        let mid: String = row
+            .try_get("movie_id")
+            .map_err(adapter_common::map_sqlx_error)?;
+        let name: String = row
+            .try_get("name")
+            .map_err(adapter_common::map_sqlx_error)?;
         map.entry(mid).or_default().push(name);
     }
     Ok(map)
@@ -461,15 +517,28 @@ async fn fetch_cast_sqlite(
     for id in movie_ids {
         q = q.bind(id);
     }
-    let rows = q.fetch_all(pool).await.map_err(adapter_common::map_sqlx_error)?;
+    let rows = q
+        .fetch_all(pool)
+        .await
+        .map_err(adapter_common::map_sqlx_error)?;
 
     let mut map: HashMap<String, Vec<CastEntry>> = HashMap::new();
     for row in rows {
-        let mid: String = row.try_get("movie_id").map_err(adapter_common::map_sqlx_error)?;
-        let name: String = row.try_get("name").map_err(adapter_common::map_sqlx_error)?;
-        let billing_order: i32 = row.try_get("billing_order").map_err(adapter_common::map_sqlx_error)?;
-        let tmdb_person_id: i64 = row.try_get("tmdb_person_id").map_err(adapter_common::map_sqlx_error)?;
-        let profile_path: Option<String> = row.try_get("profile_path").map_err(adapter_common::map_sqlx_error)?;
+        let mid: String = row
+            .try_get("movie_id")
+            .map_err(adapter_common::map_sqlx_error)?;
+        let name: String = row
+            .try_get("name")
+            .map_err(adapter_common::map_sqlx_error)?;
+        let billing_order: i32 = row
+            .try_get("billing_order")
+            .map_err(adapter_common::map_sqlx_error)?;
+        let tmdb_person_id: i64 = row
+            .try_get("tmdb_person_id")
+            .map_err(adapter_common::map_sqlx_error)?;
+        let profile_path: Option<String> = row
+            .try_get("profile_path")
+            .map_err(adapter_common::map_sqlx_error)?;
         map.entry(mid).or_default().push(CastEntry {
             name,
             billing_order: billing_order as u32,

@@ -215,9 +215,6 @@ pub fn watchlist_entry_to_domain(
 /// Convert raw watchlist+movie row fields into a [`WatchlistWithMovie`].
 ///
 /// Takes the watchlist entry fields and a pre-converted [`Movie`].
-pub fn watchlist_with_movie_to_domain(
-    entry: WatchlistEntry,
-    movie: Movie,
-) -> WatchlistWithMovie {
+pub fn watchlist_with_movie_to_domain(entry: WatchlistEntry, movie: Movie) -> WatchlistWithMovie {
     WatchlistWithMovie { entry, movie }
 }

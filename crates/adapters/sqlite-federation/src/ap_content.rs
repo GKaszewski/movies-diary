@@ -21,12 +21,11 @@ impl SqliteApContentQuery {
     pub fn new(pool: SqlitePool) -> Self {
         Self { pool }
     }
-
 }
 
 // ── Local row types ──────────────────────────────────────────────────────────
 
-use adapter_common::{parse_uuid, parse_datetime};
+use adapter_common::{parse_datetime, parse_uuid};
 
 #[derive(sqlx::FromRow)]
 struct MovieRow {

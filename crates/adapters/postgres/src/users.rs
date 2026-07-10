@@ -20,7 +20,6 @@ impl PostgresUserRepository {
         Self { pool }
     }
 
-
     fn parse_role(s: &str) -> UserRole {
         match s {
             "admin" => UserRole::Admin,

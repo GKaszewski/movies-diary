@@ -1,10 +1,10 @@
-use domain::{
-    errors::DomainError,
-    models::{DiaryEntry, FeedEntry, Movie, MovieSummary, Review},
-};
 use adapter_common::{
     movie_row_to_domain, movie_stats_to_domain, movie_summary_to_domain, review_row_to_domain,
     user_summary_to_domain,
+};
+use domain::{
+    errors::DomainError,
+    models::{DiaryEntry, FeedEntry, Movie, MovieSummary, Review},
 };
 
 #[derive(sqlx::FromRow)]

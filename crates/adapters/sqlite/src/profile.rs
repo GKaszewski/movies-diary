@@ -16,7 +16,6 @@ impl SqliteMovieProfileRepository {
     pub fn new(pool: SqlitePool) -> Self {
         Self { pool }
     }
-
 }
 
 #[async_trait]
@@ -25,7 +24,11 @@ impl MovieProfileRepository for SqliteMovieProfileRepository {
         let movie_id = p.movie_id.value().to_string();
         let enriched_at = p.enriched_at.to_rfc3339();
 
-        let mut tx = self.pool.begin().await.map_err(adapter_common::map_sqlx_error)?;
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(adapter_common::map_sqlx_error)?;
 
         sqlx::query(
             r#"INSERT INTO movie_profiles

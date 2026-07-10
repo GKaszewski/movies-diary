@@ -29,7 +29,6 @@ pub fn create_person_adapter(pool: PgPool) -> (Arc<dyn PersonCommand>, Arc<dyn P
     )
 }
 
-
 #[async_trait]
 impl PersonCommand for PostgresPersonAdapter {
     async fn upsert_batch(&self, persons: &[Person]) -> Result<(), DomainError> {

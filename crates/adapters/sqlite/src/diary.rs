@@ -125,7 +125,9 @@ impl SqliteDiaryRepository {
         if has_search {
             q = q.bind(search.unwrap());
         }
-        q.fetch_one(&self.pool).await.map_err(adapter_common::map_sqlx_error)
+        q.fetch_one(&self.pool)
+            .await
+            .map_err(adapter_common::map_sqlx_error)
     }
 
     async fn fetch_user_diary_rows(
@@ -335,7 +337,10 @@ impl DiaryQuery for SqliteDiaryRepository {
         }
 
         let count_q = bind_filter_params!(sqlx::query_scalar::<_, i64>(&count_sql));
-        let total = count_q.fetch_one(&self.pool).await.map_err(adapter_common::map_sqlx_error)?;
+        let total = count_q
+            .fetch_one(&self.pool)
+            .await
+            .map_err(adapter_common::map_sqlx_error)?;
 
         let rows_q = bind_filter_params!(sqlx::query_as::<_, FeedRow>(&select_sql));
         let rows = rows_q

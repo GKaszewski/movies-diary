@@ -10,8 +10,8 @@ use domain::{
 };
 use sqlx::{Row, SqlitePool};
 
-use adapter_common::datetime_to_str;
 use crate::models::WatchlistRow;
+use adapter_common::datetime_to_str;
 
 pub struct SqliteWatchlistRepository {
     pool: SqlitePool,
@@ -21,7 +21,6 @@ impl SqliteWatchlistRepository {
     pub fn new(pool: SqlitePool) -> Self {
         Self { pool }
     }
-
 }
 
 #[async_trait]

@@ -15,7 +15,6 @@ impl SqliteGoalRepository {
     pub fn new(pool: SqlitePool) -> Self {
         Self { pool }
     }
-
 }
 
 #[async_trait]

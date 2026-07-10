@@ -12,7 +12,6 @@ impl PostgresMovieDeduplicator {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
-
 }
 
 #[async_trait]
@@ -32,7 +31,11 @@ impl MovieDeduplicator for PostgresMovieDeduplicator {
         let director = canonical.director().map(str::to_string);
         let poster = canonical.poster_path().map(|p| p.value().to_string());
 
-        let mut tx = self.pool.begin().await.map_err(adapter_common::map_sqlx_error)?;
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(adapter_common::map_sqlx_error)?;
 
         // 1. Upsert canonical movie record
         sqlx::query(

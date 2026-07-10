@@ -10,8 +10,8 @@ use domain::{
 };
 use sqlx::{PgPool, Row};
 
-use adapter_common::{parse_datetime, parse_uuid};
 use crate::models::MovieRow;
+use adapter_common::{parse_datetime, parse_uuid};
 
 pub struct PostgresWatchlistRepository {
     pool: PgPool,
@@ -21,7 +21,6 @@ impl PostgresWatchlistRepository {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
-
 }
 
 #[async_trait]

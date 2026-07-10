@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use domain::ports::{
-    DiaryQuery, EventPublisher, MovieCommand, MovieProfileRepository, MovieQuery,
-    ReviewRepository, SocialQueryPort,
+    DiaryQuery, EventPublisher, MovieCommand, MovieProfileRepository, MovieQuery, ReviewRepository,
+    SocialQueryPort,
 };
 
 use crate::config::AppConfig;

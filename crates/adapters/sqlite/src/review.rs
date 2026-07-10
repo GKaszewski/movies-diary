@@ -7,8 +7,8 @@ use domain::{
 };
 use sqlx::SqlitePool;
 
-use adapter_common::datetime_to_str;
 use crate::models::ReviewRow;
+use adapter_common::datetime_to_str;
 
 pub struct SqliteReviewRepository {
     pool: SqlitePool,
@@ -18,7 +18,6 @@ impl SqliteReviewRepository {
     pub fn new(pool: SqlitePool) -> Self {
         Self { pool }
     }
-
 }
 
 #[async_trait]

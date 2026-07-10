@@ -202,7 +202,6 @@ impl PostgresImportSessionRepository {
         Self { pool }
     }
 
-
     fn serialize_session(
         s: &ImportSession,
     ) -> Result<(String, Option<String>, Option<String>), DomainError> {

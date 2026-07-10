@@ -40,6 +40,7 @@ pub use watch_event::{
 pub use watchlist::{WatchlistEntry, WatchlistWithMovie};
 pub use wrapup::*;
 
+pub use crate::value_objects::PersonId;
 pub use import::{
     AnnotatedRow, DomainField, FieldMapping, FileFormat, ImportError, ImportRow, ParsedFile,
     RowResult, Transform,
@@ -49,7 +50,6 @@ pub use import_session::ImportSession;
 pub use person::{
     CastCredit, CrewCredit, ExternalPersonId, Person, PersonCredits, PersonEnrichmentData,
 };
-pub use crate::value_objects::PersonId;
 pub use refresh_session::{GeneratedToken, RefreshSession};
 pub use search::{
     EntityType, IndexableDocument, MovieSearchHit, PersonSearchHit, SearchFilters, SearchQuery,

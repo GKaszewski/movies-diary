@@ -100,7 +100,10 @@ impl WatchEventCommand for SqliteWatchEventRepository {
         for id in ids {
             q = q.bind(id.value().to_string());
         }
-        let result = q.execute(&self.pool).await.map_err(adapter_common::map_sqlx_error)?;
+        let result = q
+            .execute(&self.pool)
+            .await
+            .map_err(adapter_common::map_sqlx_error)?;
         Ok(result.rows_affected())
     }
 
@@ -170,7 +173,10 @@ impl WatchEventQuery for SqliteWatchEventRepository {
         for id in ids {
             q = q.bind(id.value().to_string());
         }
-        let rows = q.fetch_all(&self.pool).await.map_err(adapter_common::map_sqlx_error)?;
+        let rows = q
+            .fetch_all(&self.pool)
+            .await
+            .map_err(adapter_common::map_sqlx_error)?;
         rows.iter().map(row_to_watch_event).collect()
     }
 
@@ -202,15 +208,33 @@ impl WatchEventQuery for SqliteWatchEventRepository {
 
 fn row_to_watch_event(row: &sqlx::sqlite::SqliteRow) -> Result<WatchEvent, DomainError> {
     let id_str: &str = row.try_get("id").map_err(adapter_common::map_sqlx_error)?;
-    let user_id_str: &str = row.try_get("user_id").map_err(adapter_common::map_sqlx_error)?;
-    let movie_id_str: Option<&str> = row.try_get("movie_id").map_err(adapter_common::map_sqlx_error)?;
-    let title: String = row.try_get("title").map_err(adapter_common::map_sqlx_error)?;
-    let year: Option<i64> = row.try_get("year").map_err(adapter_common::map_sqlx_error)?;
-    let ext_id: Option<String> = row.try_get("external_metadata_id").map_err(adapter_common::map_sqlx_error)?;
-    let source_str: String = row.try_get("source").map_err(adapter_common::map_sqlx_error)?;
-    let watched_at_str: String = row.try_get("watched_at").map_err(adapter_common::map_sqlx_error)?;
-    let status_str: String = row.try_get("status").map_err(adapter_common::map_sqlx_error)?;
-    let created_at_str: String = row.try_get("created_at").map_err(adapter_common::map_sqlx_error)?;
+    let user_id_str: &str = row
+        .try_get("user_id")
+        .map_err(adapter_common::map_sqlx_error)?;
+    let movie_id_str: Option<&str> = row
+        .try_get("movie_id")
+        .map_err(adapter_common::map_sqlx_error)?;
+    let title: String = row
+        .try_get("title")
+        .map_err(adapter_common::map_sqlx_error)?;
+    let year: Option<i64> = row
+        .try_get("year")
+        .map_err(adapter_common::map_sqlx_error)?;
+    let ext_id: Option<String> = row
+        .try_get("external_metadata_id")
+        .map_err(adapter_common::map_sqlx_error)?;
+    let source_str: String = row
+        .try_get("source")
+        .map_err(adapter_common::map_sqlx_error)?;
+    let watched_at_str: String = row
+        .try_get("watched_at")
+        .map_err(adapter_common::map_sqlx_error)?;
+    let status_str: String = row
+        .try_get("status")
+        .map_err(adapter_common::map_sqlx_error)?;
+    let created_at_str: String = row
+        .try_get("created_at")
+        .map_err(adapter_common::map_sqlx_error)?;
 
     let source: WatchEventSource = source_str
         .parse()
@@ -340,12 +364,24 @@ impl WebhookTokenRepository for SqliteWebhookTokenRepository {
 
 fn row_to_webhook_token(row: &sqlx::sqlite::SqliteRow) -> Result<WebhookToken, DomainError> {
     let id_str: &str = row.try_get("id").map_err(adapter_common::map_sqlx_error)?;
-    let user_id_str: &str = row.try_get("user_id").map_err(adapter_common::map_sqlx_error)?;
-    let token_hash: String = row.try_get("token_hash").map_err(adapter_common::map_sqlx_error)?;
-    let provider_str: String = row.try_get("provider").map_err(adapter_common::map_sqlx_error)?;
-    let label: Option<String> = row.try_get("label").map_err(adapter_common::map_sqlx_error)?;
-    let created_at_str: String = row.try_get("created_at").map_err(adapter_common::map_sqlx_error)?;
-    let last_used_str: Option<String> = row.try_get("last_used_at").map_err(adapter_common::map_sqlx_error)?;
+    let user_id_str: &str = row
+        .try_get("user_id")
+        .map_err(adapter_common::map_sqlx_error)?;
+    let token_hash: String = row
+        .try_get("token_hash")
+        .map_err(adapter_common::map_sqlx_error)?;
+    let provider_str: String = row
+        .try_get("provider")
+        .map_err(adapter_common::map_sqlx_error)?;
+    let label: Option<String> = row
+        .try_get("label")
+        .map_err(adapter_common::map_sqlx_error)?;
+    let created_at_str: String = row
+        .try_get("created_at")
+        .map_err(adapter_common::map_sqlx_error)?;
+    let last_used_str: Option<String> = row
+        .try_get("last_used_at")
+        .map_err(adapter_common::map_sqlx_error)?;
 
     let provider: WatchEventSource = provider_str
         .parse()

@@ -3,8 +3,8 @@ use async_trait::async_trait;
 use chrono::Utc;
 use k_ap::ActivityRepository;
 
-use adapter_common::datetime_to_str;
 use super::SqliteFederationRepository;
+use adapter_common::datetime_to_str;
 
 #[async_trait]
 impl ActivityRepository for SqliteFederationRepository {

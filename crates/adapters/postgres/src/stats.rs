@@ -7,8 +7,8 @@ use domain::{
 };
 use sqlx::PgPool;
 
-use adapter_common::format_year_month;
 use crate::models::{DirectorCountRow, MonthlyRatingRow, UserTotalsRow};
+use adapter_common::format_year_month;
 
 pub struct PostgresStatsRepository {
     pool: PgPool,
@@ -18,7 +18,6 @@ impl PostgresStatsRepository {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
-
 
     async fn fetch_user_totals(&self, user_id: &str) -> Result<UserTotalsRow, DomainError> {
         sqlx::query_as::<_, UserTotalsRow>(

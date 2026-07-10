@@ -612,9 +612,7 @@ async fn fetch_profile_goals(
             goal_query: state.app_ctx.repos.goal_query.clone(),
             stats: state.app_ctx.repos.stats.clone(),
         },
-        application::goals::queries::ListGoalsQuery {
-            user_id,
-        },
+        application::goals::queries::ListGoalsQuery { user_id },
     )
     .await
     .unwrap_or_default();

@@ -1,10 +1,10 @@
-use domain::{
-    errors::DomainError,
-    models::{DiaryEntry, FeedEntry, Movie, MovieSummary, Review, WatchlistWithMovie},
-};
 use adapter_common::{
     movie_row_to_domain, movie_stats_to_domain, movie_summary_to_domain, review_row_to_domain,
     user_summary_to_domain, watchlist_entry_to_domain, watchlist_with_movie_to_domain,
+};
+use domain::{
+    errors::DomainError,
+    models::{DiaryEntry, FeedEntry, Movie, MovieSummary, Review, WatchlistWithMovie},
 };
 
 #[derive(sqlx::FromRow)]
@@ -280,12 +280,7 @@ pub(crate) struct WatchlistRow {
 
 impl WatchlistRow {
     pub fn into_domain(self) -> Result<WatchlistWithMovie, DomainError> {
-        let entry = watchlist_entry_to_domain(
-            self.id,
-            self.user_id,
-            self.movie_id,
-            self.added_at,
-        )?;
+        let entry = watchlist_entry_to_domain(self.id, self.user_id, self.movie_id, self.added_at)?;
         let movie = movie_row_to_domain(
             self.m_id,
             self.external_metadata_id,

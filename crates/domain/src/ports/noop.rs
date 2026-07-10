@@ -39,10 +39,7 @@ pub struct NoopSocialQueryPort;
 
 #[async_trait]
 impl super::SocialQueryPort for NoopSocialQueryPort {
-    async fn get_accepted_following_urls(
-        &self,
-        _: &UserId,
-    ) -> Result<Vec<String>, DomainError> {
+    async fn get_accepted_following_urls(&self, _: &UserId) -> Result<Vec<String>, DomainError> {
         Ok(vec![])
     }
     async fn list_all_followed_remote_actors(

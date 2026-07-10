@@ -6,11 +6,8 @@ use k_ap::{
 };
 use sqlx::Row;
 
+use super::{SqliteFederationRepository, remote_actor_from_row, status_to_str, str_to_status};
 use adapter_common::datetime_to_str;
-use super::{
-    SqliteFederationRepository, remote_actor_from_row, status_to_str,
-    str_to_status,
-};
 
 #[async_trait]
 impl FollowRepository for SqliteFederationRepository {

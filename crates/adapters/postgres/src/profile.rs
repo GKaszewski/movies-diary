@@ -16,7 +16,6 @@ impl PostgresMovieProfileRepository {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
-
 }
 
 #[async_trait]
@@ -24,7 +23,11 @@ impl MovieProfileRepository for PostgresMovieProfileRepository {
     async fn upsert(&self, p: &MovieProfile) -> Result<(), DomainError> {
         let movie_id = p.movie_id.value().to_string();
 
-        let mut tx = self.pool.begin().await.map_err(adapter_common::map_sqlx_error)?;
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(adapter_common::map_sqlx_error)?;
 
         sqlx::query(
             r#"INSERT INTO movie_profiles
