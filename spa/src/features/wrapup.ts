@@ -99,6 +99,7 @@ export type WrapUpReport = {
   lowest_rated_movie?: MovieRef
   first_movie_of_period?: MovieRef
   last_movie_of_period?: MovieRef
+  watch_medium_distribution: { medium: string; count: number }[]
   poster_paths: string[]
   top_cast_profile_paths: string[]
 }

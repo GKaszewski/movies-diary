@@ -31,10 +31,25 @@ pub struct DirectorStat {
 }
 
 #[derive(Clone, Debug)]
+pub struct GenreStat {
+    pub genre: String,
+    pub count: i64,
+}
+
+#[derive(Clone, Debug)]
+pub struct WatchMediumStat {
+    pub medium: String,
+    pub count: i64,
+}
+
+#[derive(Clone, Debug)]
 pub struct UserTrends {
     pub monthly_ratings: Vec<MonthlyRating>,
     pub top_directors: Vec<DirectorStat>,
     pub max_director_count: i64,
+    pub top_genres: Vec<GenreStat>,
+    pub rating_distribution: [i64; 5],
+    pub watch_medium_distribution: Vec<WatchMediumStat>,
 }
 
 #[derive(Clone, Debug)]

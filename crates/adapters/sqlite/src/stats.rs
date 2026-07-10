@@ -7,7 +7,10 @@ use domain::{
 };
 use sqlx::SqlitePool;
 
-use crate::models::{DirectorCountRow, MonthlyRatingRow, UserTotalsRow};
+use crate::models::{
+    DirectorCountRow, GenreCountRow, MonthlyRatingRow, RatingDistRow, UserTotalsRow,
+    WatchMediumCountRow,
+};
 
 pub struct SqliteStatsRepository {
     pool: SqlitePool,
@@ -98,20 +101,21 @@ impl StatsRepository for SqliteStatsRepository {
     async fn get_user_trends(&self, user_id: &UserId) -> Result<UserTrends, DomainError> {
         let uid = user_id.value().to_string();
 
-        let (rating_rows, director_rows) = tokio::try_join!(
-            sqlx::query_as::<_, MonthlyRatingRow>(
-                "SELECT strftime('%Y-%m', watched_at) AS month,
+        let (rating_rows, director_rows, genre_rows, rating_dist_rows, medium_rows) =
+            tokio::try_join!(
+                sqlx::query_as::<_, MonthlyRatingRow>(
+                    "SELECT strftime('%Y-%m', watched_at) AS month,
                         AVG(CAST(rating AS REAL)) AS avg_rating,
                         COUNT(*) AS count
                  FROM reviews
                  WHERE user_id = ? AND watched_at >= datetime('now', '-12 months')
                  GROUP BY month
                  ORDER BY month ASC",
-            )
-            .bind(&uid)
-            .fetch_all(&self.pool),
-            sqlx::query_as::<_, DirectorCountRow>(
-                "SELECT m.director,
+                )
+                .bind(&uid)
+                .fetch_all(&self.pool),
+                sqlx::query_as::<_, DirectorCountRow>(
+                    "SELECT m.director,
                         COUNT(*) AS count
                  FROM reviews r
                  INNER JOIN movies m ON m.id = r.movie_id
@@ -119,11 +123,40 @@ impl StatsRepository for SqliteStatsRepository {
                  GROUP BY m.director
                  ORDER BY COUNT(*) DESC
                  LIMIT 5",
+                )
+                .bind(&uid)
+                .fetch_all(&self.pool),
+                sqlx::query_as::<_, GenreCountRow>(
+                    "SELECT mg.name AS genre, COUNT(*) AS count
+                 FROM reviews r
+                 INNER JOIN movie_genres mg ON mg.movie_id = r.movie_id
+                 WHERE r.user_id = ?
+                 GROUP BY mg.name
+                 ORDER BY COUNT(*) DESC
+                 LIMIT 5",
+                )
+                .bind(&uid)
+                .fetch_all(&self.pool),
+                sqlx::query_as::<_, RatingDistRow>(
+                    "SELECT rating, COUNT(*) AS count
+                 FROM reviews
+                 WHERE user_id = ?
+                 GROUP BY rating
+                 ORDER BY rating ASC",
+                )
+                .bind(&uid)
+                .fetch_all(&self.pool),
+                sqlx::query_as::<_, WatchMediumCountRow>(
+                    "SELECT watch_medium, COUNT(*) AS count
+                 FROM reviews
+                 WHERE user_id = ? AND watch_medium IS NOT NULL
+                 GROUP BY watch_medium
+                 ORDER BY COUNT(*) DESC",
+                )
+                .bind(&uid)
+                .fetch_all(&self.pool)
             )
-            .bind(&uid)
-            .fetch_all(&self.pool)
-        )
-        .map_err(adapter_common::map_sqlx_error)?;
+            .map_err(adapter_common::map_sqlx_error)?;
 
         let max_director_count = director_rows.iter().map(|d| d.count).max().unwrap_or(1);
 
@@ -145,10 +178,38 @@ impl StatsRepository for SqliteStatsRepository {
             })
             .collect();
 
+        let top_genres = genre_rows
+            .into_iter()
+            .map(|g| domain::models::stats::GenreStat {
+                genre: g.genre,
+                count: g.count,
+            })
+            .collect();
+
+        let rating_distribution = {
+            let mut dist = [0i64; 5];
+            for r in &rating_dist_rows {
+                let idx = (r.rating as usize).saturating_sub(1).min(4);
+                dist[idx] = r.count;
+            }
+            dist
+        };
+
+        let watch_medium_distribution = medium_rows
+            .into_iter()
+            .map(|m| domain::models::stats::WatchMediumStat {
+                medium: m.watch_medium,
+                count: m.count,
+            })
+            .collect();
+
         Ok(UserTrends {
             monthly_ratings,
             top_directors,
             max_director_count,
+            top_genres,
+            rating_distribution,
+            watch_medium_distribution,
         })
     }
 }

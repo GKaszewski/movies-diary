@@ -265,6 +265,24 @@ pub(crate) struct MonthlyRatingRow {
 }
 
 #[derive(sqlx::FromRow)]
+pub(crate) struct GenreCountRow {
+    pub genre: String,
+    pub count: i64,
+}
+
+#[derive(sqlx::FromRow)]
+pub(crate) struct RatingDistRow {
+    pub rating: i64,
+    pub count: i64,
+}
+
+#[derive(sqlx::FromRow)]
+pub(crate) struct WatchMediumCountRow {
+    pub watch_medium: String,
+    pub count: i64,
+}
+
+#[derive(sqlx::FromRow)]
 pub(crate) struct WatchlistRow {
     pub id: String,
     pub user_id: String,

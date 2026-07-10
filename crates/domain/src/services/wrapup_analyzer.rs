@@ -7,6 +7,8 @@ use crate::models::WrapUpMovieRow;
 use crate::models::wrapup::*;
 use crate::models::{ExternalPersonId, PersonId};
 
+const MIN_PERSON_COUNT: u32 = 2;
+
 pub fn build_report(
     scope: WrapUpScope,
     date_range: DateRange,
@@ -53,6 +55,7 @@ pub fn build_report(
 
     let (total_budget_watched, avg_budget) = compute_budget_stats(rows);
     let language_distribution = compute_language_stats(rows);
+    let watch_medium_distribution = compute_watch_medium_stats(rows);
 
     let (total_rewatches, most_rewatched_movie, avg_rating_change_on_rewatch) =
         compute_rewatch_stats(rows);
@@ -91,6 +94,7 @@ pub fn build_report(
         total_budget_watched,
         avg_budget,
         language_distribution,
+        watch_medium_distribution,
         oldest_movie,
         newest_movie,
         total_rewatches,
@@ -226,6 +230,7 @@ fn compute_director_stats(rows: &[WrapUpMovieRow]) -> (Vec<PersonStat>, u32) {
             }
         })
         .collect();
+    stats.retain(|s| s.count >= MIN_PERSON_COUNT);
     stats.sort_by(|a, b| {
         b.count
             .cmp(&a.count)
@@ -270,6 +275,7 @@ fn compute_actor_stats(rows: &[WrapUpMovieRow]) -> (Vec<PersonStat>, u32, Vec<St
             }
         })
         .collect();
+    stats.retain(|s| s.count >= MIN_PERSON_COUNT);
     stats.sort_by(|a, b| {
         b.count
             .cmp(&a.count)
@@ -362,6 +368,21 @@ fn compute_language_stats(rows: &[WrapUpMovieRow]) -> Vec<LangStat> {
     let mut stats: Vec<LangStat> = lang_counts
         .into_iter()
         .map(|(language, count)| LangStat { language, count })
+        .collect();
+    stats.sort_by_key(|s| std::cmp::Reverse(s.count));
+    stats
+}
+
+fn compute_watch_medium_stats(rows: &[WrapUpMovieRow]) -> Vec<WatchMediumStat> {
+    let mut counts: HashMap<String, u32> = HashMap::new();
+    for r in rows {
+        if let Some(ref medium) = r.watch_medium {
+            *counts.entry(medium.clone()).or_default() += 1;
+        }
+    }
+    let mut stats: Vec<WatchMediumStat> = counts
+        .into_iter()
+        .map(|(medium, count)| WatchMediumStat { medium, count })
         .collect();
     stats.sort_by_key(|s| std::cmp::Reverse(s.count));
     stats

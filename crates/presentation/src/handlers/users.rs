@@ -24,9 +24,9 @@ use crate::{
     state::AppState,
 };
 use api_types::{
-    DiaryResponse, DirectorStatDto, MonthActivityDto, MonthlyRatingDto, ProfileResponse,
-    UserProfileQueryParams, UserProfileResponse, UserStatsDto, UserSummaryDto, UserTrendsDto,
-    UsersResponse,
+    DiaryResponse, DirectorStatDto, GenreStatDto, MonthActivityDto, MonthlyRatingDto,
+    ProfileResponse, UserProfileQueryParams, UserProfileResponse, UserStatsDto, UserSummaryDto,
+    UserTrendsDto, UsersResponse, WatchMediumStatDto,
 };
 use template_askama::{
     EmbedProfileTemplate, MonthlyRatingRow, ProfileSettingsTemplate, ProfileTemplate,
@@ -297,32 +297,10 @@ pub async fn get_user_profile(
                 })
                 .collect(),
         })
-    } else if let Some(t) = profile.trends {
-        Some(api_types::ProfileViewData::Trends {
-            trends: UserTrendsDto {
-                monthly_ratings: t
-                    .monthly_ratings
-                    .into_iter()
-                    .map(|r| MonthlyRatingDto {
-                        year_month: r.year_month,
-                        month_label: r.month_label,
-                        avg_rating: r.avg_rating,
-                        count: r.count,
-                    })
-                    .collect(),
-                top_directors: t
-                    .top_directors
-                    .into_iter()
-                    .map(|d| DirectorStatDto {
-                        director: d.director,
-                        count: d.count,
-                    })
-                    .collect(),
-                max_director_count: t.max_director_count,
-            },
-        })
     } else {
-        None
+        profile.trends.map(|t| api_types::ProfileViewData::Trends {
+            trends: trends_to_dto(t),
+        })
     };
 
     Json(UserProfileResponse {
@@ -414,32 +392,10 @@ async fn build_federated_profile_response(
                 offset: p.offset,
             },
         })
-    } else if let Some(t) = profile.trends {
-        Some(api_types::ProfileViewData::Trends {
-            trends: UserTrendsDto {
-                monthly_ratings: t
-                    .monthly_ratings
-                    .into_iter()
-                    .map(|r| MonthlyRatingDto {
-                        year_month: r.year_month,
-                        month_label: r.month_label,
-                        avg_rating: r.avg_rating,
-                        count: r.count,
-                    })
-                    .collect(),
-                top_directors: t
-                    .top_directors
-                    .into_iter()
-                    .map(|d| DirectorStatDto {
-                        director: d.director,
-                        count: d.count,
-                    })
-                    .collect(),
-                max_director_count: t.max_director_count,
-            },
-        })
     } else {
-        None
+        profile.trends.map(|t| api_types::ProfileViewData::Trends {
+            trends: trends_to_dto(t),
+        })
     };
 
     let username = fed
@@ -471,6 +427,47 @@ async fn build_federated_profile_response(
         actor_url: Some(fed.actor_url),
     })
     .into_response()
+}
+
+fn trends_to_dto(t: domain::models::UserTrends) -> UserTrendsDto {
+    UserTrendsDto {
+        monthly_ratings: t
+            .monthly_ratings
+            .into_iter()
+            .map(|r| MonthlyRatingDto {
+                year_month: r.year_month,
+                month_label: r.month_label,
+                avg_rating: r.avg_rating,
+                count: r.count,
+            })
+            .collect(),
+        top_directors: t
+            .top_directors
+            .into_iter()
+            .map(|d| DirectorStatDto {
+                director: d.director,
+                count: d.count,
+            })
+            .collect(),
+        max_director_count: t.max_director_count,
+        top_genres: t
+            .top_genres
+            .into_iter()
+            .map(|g| GenreStatDto {
+                genre: g.genre,
+                count: g.count,
+            })
+            .collect(),
+        rating_distribution: t.rating_distribution,
+        watch_medium_distribution: t
+            .watch_medium_distribution
+            .into_iter()
+            .map(|m| WatchMediumStatDto {
+                medium: m.medium,
+                count: m.count,
+            })
+            .collect(),
+    }
 }
 
 // ── HTML ─────────────────────────────────────────────────────────────────────

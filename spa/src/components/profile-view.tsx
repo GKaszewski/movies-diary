@@ -9,11 +9,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Input } from "@/components/ui/input"
 import { MovieCard } from "@/components/movie-card"
+import { RatingHistogram } from "@/components/rating-histogram"
 import { EmptyState } from "@/components/empty-state"
 import { SwipeTabs } from "@/components/swipe-tabs"
 import { VirtualList } from "@/components/virtual-list"
 import { useInfiniteDiary } from "@/features/diary"
 import { TimeAgo } from "@/components/time-ago"
+import { WATCH_MEDIUMS } from "@/lib/watch-mediums"
 import type { UserProfileResponse } from "@/features/users"
 
 type ProfileViewProps = {
@@ -191,6 +193,9 @@ function TrendsView({
         avg_rating: number
         count: number
       }[]
+      top_genres: { genre: string; count: number }[]
+      rating_distribution: number[]
+      watch_medium_distribution: { medium: string; count: number }[]
     }
   }
 }) {
@@ -200,7 +205,7 @@ function TrendsView({
 
   return (
     <div className="space-y-3">
-      {data.trends.top_directors.length > 0 && (
+      {data.trends.top_directors.some((d) => d.count >= 2) && (
         <Card size="sm">
           <CardHeader>
             <CardTitle className="text-sm">{t("profile.topDirectors")}</CardTitle>
@@ -217,6 +222,56 @@ function TrendsView({
                 </span>
               </div>
             ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {data.trends.top_genres.length > 0 && (
+        <Card size="sm">
+          <CardHeader>
+            <CardTitle className="text-sm">{t("profile.topGenres", { defaultValue: "Top Genres" })}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {data.trends.top_genres.map((g) => (
+              <div key={g.genre} className="flex items-center justify-between py-1 text-sm">
+                <span>{g.genre}</span>
+                <span className="text-xs text-muted-foreground">{t("common.films", { count: g.count })}</span>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {data.trends.rating_distribution.length > 0 && (
+        <Card size="sm">
+          <CardHeader>
+            <CardTitle className="text-sm">{t("profile.ratingDistribution", { defaultValue: "Rating Distribution" })}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RatingHistogram histogram={data.trends.rating_distribution} />
+          </CardContent>
+        </Card>
+      )}
+
+      {data.trends.watch_medium_distribution.length > 0 && (
+        <Card size="sm">
+          <CardHeader>
+            <CardTitle className="text-sm">{t("profile.howYouWatch", { defaultValue: "How You Watch" })}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {data.trends.watch_medium_distribution.map((wm) => {
+              const def = WATCH_MEDIUMS.find((d) => d.value === wm.medium)
+              const Icon = def?.icon
+              return (
+                <div key={wm.medium} className="flex items-center justify-between py-1 text-sm">
+                  <span className="flex items-center gap-2">
+                    {Icon && <Icon className="size-4 text-muted-foreground" />}
+                    {def ? t(def.labelKey) : wm.medium}
+                  </span>
+                  <span className="text-xs text-muted-foreground">{t("common.films", { count: wm.count })}</span>
+                </div>
+              )
+            })}
           </CardContent>
         </Card>
       )}

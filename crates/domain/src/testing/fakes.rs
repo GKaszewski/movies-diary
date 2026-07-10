@@ -226,6 +226,9 @@ impl StatsRepository for FakeStatsRepository {
             monthly_ratings: vec![],
             top_directors: vec![],
             max_director_count: 0,
+            top_genres: vec![],
+            rating_distribution: [0; 5],
+            watch_medium_distribution: vec![],
         })
     }
 

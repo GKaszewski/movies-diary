@@ -61,10 +61,25 @@ pub struct DirectorStatDto {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct GenreStatDto {
+    pub genre: String,
+    pub count: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct WatchMediumStatDto {
+    pub medium: String,
+    pub count: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct UserTrendsDto {
     pub monthly_ratings: Vec<MonthlyRatingDto>,
     pub top_directors: Vec<DirectorStatDto>,
     pub max_director_count: i64,
+    pub top_genres: Vec<GenreStatDto>,
+    pub rating_distribution: [i64; 5],
+    pub watch_medium_distribution: Vec<WatchMediumStatDto>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]

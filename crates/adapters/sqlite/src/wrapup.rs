@@ -301,7 +301,7 @@ impl WrapUpStatsQuery for SqliteWrapUpStatsQuery {
 
         let sql = format!(
             "SELECT r.movie_id, m.title, m.release_year, m.director, m.poster_path, \
-                    r.rating, r.watched_at, r.user_id, \
+                    r.rating, r.watched_at, r.user_id, r.watch_medium, \
                     p.runtime_minutes, p.budget_usd, p.original_language \
              FROM reviews r \
              INNER JOIN movies m ON m.id = r.movie_id \
@@ -379,6 +379,9 @@ impl WrapUpStatsQuery for SqliteWrapUpStatsQuery {
             let original_language: Option<String> = row
                 .try_get("original_language")
                 .map_err(adapter_common::map_sqlx_error)?;
+            let watch_medium: Option<String> = row
+                .try_get("watch_medium")
+                .map_err(adapter_common::map_sqlx_error)?;
 
             let genres = genres_map.get(&movie_id_str).cloned().unwrap_or_default();
             let keywords = keywords_map.get(&movie_id_str).cloned().unwrap_or_default();
@@ -403,6 +406,7 @@ impl WrapUpStatsQuery for SqliteWrapUpStatsQuery {
                 runtime_minutes: runtime_minutes.map(|v| v as u32),
                 budget_usd,
                 original_language,
+                watch_medium,
                 genres,
                 keywords,
                 cast_names,

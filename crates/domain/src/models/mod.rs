@@ -4,7 +4,7 @@ mod feed;
 mod movie;
 mod refresh_session;
 mod review;
-mod stats;
+pub mod stats;
 mod user;
 
 pub mod collections;
@@ -26,7 +26,7 @@ pub use federation::*;
 pub use feed::*;
 pub use movie::*;
 pub use review::*;
-pub use stats::*;
+pub use stats::{DirectorStat, MonthActivity, MonthlyRating, MovieStats, UserStats, UserTrends};
 pub use user::*;
 
 pub use goal::{Goal, GoalWithProgress};

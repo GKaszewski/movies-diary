@@ -17,6 +17,7 @@ pub struct WrapUpMovieRow {
     pub runtime_minutes: Option<u32>,
     pub budget_usd: Option<i64>,
     pub original_language: Option<String>,
+    pub watch_medium: Option<String>,
     pub genres: Vec<String>,
     pub keywords: Vec<String>,
     pub cast_names: Vec<(String, u32, i64)>,
@@ -96,6 +97,12 @@ pub struct LangStat {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct WatchMediumStat {
+    pub medium: String,
+    pub count: u32,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MonthCount {
     pub year_month: String,
     pub label: String,
@@ -142,6 +149,7 @@ pub struct WrapUpReport {
     pub total_budget_watched: Option<i64>,
     pub avg_budget: Option<i64>,
     pub language_distribution: Vec<LangStat>,
+    pub watch_medium_distribution: Vec<WatchMediumStat>,
     pub oldest_movie: Option<MovieRef>,
     pub newest_movie: Option<MovieRef>,
 

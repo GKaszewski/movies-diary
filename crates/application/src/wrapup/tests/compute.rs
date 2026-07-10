@@ -27,6 +27,7 @@ fn make_row(title: &str, rating: u8, watched_at: &str) -> WrapUpMovieRow {
         keywords: vec!["heist".to_string()],
         cast_names: vec![("Actor A".to_string(), 1, 12345)],
         cast_profile_paths: vec![None],
+        watch_medium: None,
     }
 }
 

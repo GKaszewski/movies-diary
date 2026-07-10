@@ -23,6 +23,7 @@ fn row(title: &str, rating: u8, ym: &str) -> WrapUpMovieRow {
         runtime_minutes: Some(100),
         budget_usd: None,
         original_language: Some("en".to_string()),
+        watch_medium: None,
         genres: vec!["Action".to_string()],
         keywords: vec![],
         cast_names: vec![],

@@ -16,6 +16,7 @@ import { FunFacts } from "@/components/wrapup-fun-facts"
 import { RankCard } from "@/components/wrapup-rank-card"
 import { posterUrl } from "@/lib/api/client"
 import { fmtUsd } from "@/lib/format"
+import { WATCH_MEDIUMS } from "@/lib/watch-mediums"
 import { useWrapUpReport } from "@/features/wrapup"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import type { MovieRef } from "@/features/wrapup"
@@ -139,6 +140,34 @@ function WrapUpReportPage() {
                   <Badge variant="secondary">{t("wrapup.lowestRated", { genre: report.lowest_rated_genre })}</Badge>
                 )}
               </div>
+            </CardContent>
+          </Card>
+        </RevealCard>
+      )}
+
+      {/* Watch Medium Distribution */}
+      {report.watch_medium_distribution && report.watch_medium_distribution.length > 0 && (
+        <RevealCard>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-sm">
+                {t("wrapup.howYouWatched", { defaultValue: "How You Watched" })}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {report.watch_medium_distribution.map((wm) => {
+                const def = WATCH_MEDIUMS.find((d) => d.value === wm.medium)
+                const Icon = def?.icon
+                return (
+                  <div key={wm.medium} className="flex items-center justify-between py-1.5 text-sm">
+                    <span className="flex items-center gap-2">
+                      {Icon && <Icon className="size-4 text-muted-foreground" />}
+                      {def ? t(def.labelKey) : wm.medium}
+                    </span>
+                    <span className="text-muted-foreground">{wm.count} {t("common.films", { count: wm.count })}</span>
+                  </div>
+                )
+              })}
             </CardContent>
           </Card>
         </RevealCard>
