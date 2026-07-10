@@ -1,6 +1,6 @@
 use super::*;
 use chrono::Utc;
-use domain::ports::SocialQueryPort;
+use domain::ports::FederationAdminQuery;
 use k_ap::ActorRepository;
 use sqlx::SqlitePool;
 
@@ -77,30 +77,6 @@ async fn setup_db(pool: &SqlitePool) {
     .execute(pool)
     .await
     .unwrap();
-}
-
-#[tokio::test]
-async fn test_get_accepted_following_urls_returns_only_accepted() {
-    let pool = SqlitePool::connect(":memory:").await.unwrap();
-    setup_db(&pool).await;
-    let repo = SqliteFederationRepository::new(pool.clone());
-    let user_id = uuid::Uuid::new_v4();
-
-    sqlx::query(
-        "INSERT INTO ap_following (local_user_id, remote_actor_url, follow_activity_id, status)
-         VALUES (?, 'https://other.social/users/alice', 'act1', 'accepted'),
-                (?, 'https://other.social/users/bob', 'act2', 'pending')",
-    )
-    .bind(user_id.to_string())
-    .bind(user_id.to_string())
-    .execute(&pool)
-    .await
-    .unwrap();
-
-    let uid = domain::value_objects::UserId::from_uuid(user_id);
-    let urls = repo.get_accepted_following_urls(&uid).await.unwrap();
-    assert_eq!(urls.len(), 1);
-    assert_eq!(urls[0], "https://other.social/users/alice");
 }
 
 #[tokio::test]

@@ -154,30 +154,6 @@ impl DiaryQuery for Panic {
         panic!()
     }
 }
-#[cfg(feature = "federation")]
-#[async_trait::async_trait]
-impl domain::ports::SocialQueryPort for Panic {
-    async fn get_accepted_following_urls(&self, _: &UserId) -> Result<Vec<String>, DomainError> {
-        panic!()
-    }
-    async fn list_all_followed_remote_actors(
-        &self,
-    ) -> Result<Vec<domain::models::RemoteActorInfo>, DomainError> {
-        panic!()
-    }
-    async fn count_following(&self, _: &UserId) -> Result<usize, DomainError> {
-        panic!()
-    }
-    async fn count_accepted_followers(&self, _: &UserId) -> Result<usize, DomainError> {
-        panic!()
-    }
-    async fn get_pending_followers(
-        &self,
-        _: &UserId,
-    ) -> Result<Vec<domain::models::PendingFollowerInfo>, DomainError> {
-        panic!()
-    }
-}
 #[async_trait::async_trait]
 impl StatsRepository for Panic {
     async fn get_user_stats(&self, _: &UserId) -> Result<UserStats, DomainError> {
@@ -813,7 +789,7 @@ pub fn make_test_state(auth_service: Arc<dyn AuthService>) -> crate::state::AppS
                 remote_watchlist: Arc::clone(&repo) as _,
                 social_command: Arc::new(domain::ports::noop::NoopSocialCommand) as _,
                 social_query_unified: Arc::new(domain::ports::noop::NoopSocialQuery) as _,
-                social_query: Arc::clone(&repo) as _,
+                federation_admin: Arc::new(domain::ports::noop::NoopFederationAdminQuery) as _,
                 wrapup_stats: Arc::clone(&repo) as _,
                 wrapup_repo: Arc::clone(&repo) as _,
                 goal_command: Arc::clone(&repo) as _,

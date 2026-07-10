@@ -275,10 +275,4 @@ impl SocialQuery for CompositeSocialAdapter {
             .map_err(ap_err)?;
         Ok(actors.into_iter().map(|a| a.url).collect())
     }
-
-    async fn list_all_followed_remote_actors(
-        &self,
-    ) -> Result<Vec<domain::models::RemoteActorInfo>, DomainError> {
-        Ok(vec![])
-    }
 }

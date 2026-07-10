@@ -1124,10 +1124,4 @@ impl SocialQuery for InMemorySocialRepository {
     ) -> Result<Vec<String>, DomainError> {
         Ok(vec![])
     }
-
-    async fn list_all_followed_remote_actors(
-        &self,
-    ) -> Result<Vec<crate::models::RemoteActorInfo>, DomainError> {
-        Ok(vec![])
-    }
 }

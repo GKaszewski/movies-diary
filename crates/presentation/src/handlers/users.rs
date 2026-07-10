@@ -178,7 +178,7 @@ pub async fn update_profile_fields_handler(
 pub async fn list_users(State(state): State<AppState>) -> Result<Json<UsersResponse>, ApiError> {
     let deps = application::users::deps::GetUsersListDeps {
         user: state.app_ctx.repos.user.clone(),
-        social_query_legacy: state.app_ctx.repos.social_query.clone(),
+        federation_admin: state.app_ctx.repos.federation_admin.clone(),
     };
     let result = get_users::execute(&deps, GetUsersQuery).await?;
     Ok(Json(UsersResponse {
@@ -486,7 +486,7 @@ pub async fn get_users_list(
 
     let users_deps = application::users::deps::GetUsersListDeps {
         user: state.app_ctx.repos.user.clone(),
-        social_query_legacy: state.app_ctx.repos.social_query.clone(),
+        federation_admin: state.app_ctx.repos.federation_admin.clone(),
     };
     match application::users::get_users::execute(
         &users_deps,

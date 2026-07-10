@@ -4,7 +4,7 @@ use chrono::NaiveDateTime;
 use crate::{
     errors::DomainError,
     models::{
-        DiaryEntry, FederationFlags, PendingFollowerInfo, RemoteActorInfo, RemoteGoalEntry,
+        DiaryEntry, FederationFlags, RemoteActorInfo, RemoteGoalEntry,
         RemoteWatchlistEntry, WatchlistWithMovie,
     },
     value_objects::{MovieId, SocialActor, SocialIdentity, UserId},
@@ -94,26 +94,11 @@ pub trait SocialQuery: Send + Sync {
         user_id: &UserId,
     ) -> Result<Vec<String>, DomainError>;
 
-    async fn list_all_followed_remote_actors(
-        &self,
-    ) -> Result<Vec<crate::models::RemoteActorInfo>, DomainError>;
 }
 
-// ── Legacy ports (pre-unification, still used by AP adapter + handlers) ─────
-
 #[async_trait]
-pub trait SocialQueryPort: Send + Sync {
-    async fn get_accepted_following_urls(
-        &self,
-        user_id: &UserId,
-    ) -> Result<Vec<String>, DomainError>;
+pub trait FederationAdminQuery: Send + Sync {
     async fn list_all_followed_remote_actors(&self) -> Result<Vec<RemoteActorInfo>, DomainError>;
-    async fn count_following(&self, user_id: &UserId) -> Result<usize, DomainError>;
-    async fn count_accepted_followers(&self, user_id: &UserId) -> Result<usize, DomainError>;
-    async fn get_pending_followers(
-        &self,
-        user_id: &UserId,
-    ) -> Result<Vec<PendingFollowerInfo>, DomainError>;
 }
 
 #[async_trait]

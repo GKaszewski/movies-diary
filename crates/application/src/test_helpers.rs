@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use domain::testing::{
     InMemoryGoalRepository, InMemorySocialRepository, InMemoryWrapUpRepository,
-    InMemoryWrapUpStatsQuery, NoopSocialQueryPort,
+    InMemoryWrapUpStatsQuery, NoopFederationAdminQuery,
 };
 use domain::{
     ports::{
@@ -75,7 +75,7 @@ pub struct TestContextBuilder {
     pub review_logger: Arc<dyn ReviewLogger>,
     pub social_command: Arc<dyn domain::ports::SocialCommand>,
     pub social_query_unified: Arc<dyn domain::ports::SocialQuery>,
-    pub social_query: Arc<dyn domain::ports::SocialQueryPort>,
+    pub federation_admin: Arc<dyn domain::ports::FederationAdminQuery>,
     pub refresh_session_repo: Arc<dyn RefreshSessionRepository>,
     pub config: AppConfig,
 }
@@ -127,7 +127,7 @@ impl TestContextBuilder {
             review_logger: Arc::new(NoopReviewLogger),
             social_command: Arc::clone(&social) as _,
             social_query_unified: Arc::clone(&social) as _,
-            social_query: Arc::new(NoopSocialQueryPort),
+            federation_admin: Arc::new(NoopFederationAdminQuery),
             refresh_session_repo: InMemoryRefreshSessionRepository::new(),
             config: AppConfig {
                 allow_registration: true,
@@ -270,11 +270,6 @@ impl TestContextBuilder {
 
     pub fn with_metadata_client(mut self, r: Arc<dyn MetadataClient>) -> Self {
         self.metadata_client = r;
-        self
-    }
-
-    pub fn with_social_query(mut self, r: Arc<dyn domain::ports::SocialQueryPort>) -> Self {
-        self.social_query = r;
         self
     }
 

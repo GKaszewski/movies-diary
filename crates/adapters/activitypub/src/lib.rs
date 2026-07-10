@@ -33,7 +33,7 @@ pub type FederationRepos = (
     std::sync::Arc<dyn FollowRepository>,
     std::sync::Arc<dyn ActorRepository>,
     std::sync::Arc<dyn BlocklistRepository>,
-    std::sync::Arc<dyn domain::ports::SocialQueryPort>,
+    std::sync::Arc<dyn domain::ports::FederationAdminQuery>,
     std::sync::Arc<dyn RemoteReviewRepository>,
     std::sync::Arc<dyn domain::ports::RemoteWatchlistRepository>,
 );

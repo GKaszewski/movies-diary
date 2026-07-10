@@ -116,11 +116,6 @@ impl domain::ports::SocialQuery for FakeSocialWithFollowing {
     ) -> Result<Vec<String>, DomainError> {
         Ok(self.0.clone())
     }
-    async fn list_all_followed_remote_actors(
-        &self,
-    ) -> Result<Vec<domain::models::RemoteActorInfo>, DomainError> {
-        Ok(vec![])
-    }
 }
 
 #[tokio::test]

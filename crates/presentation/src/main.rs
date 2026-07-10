@@ -176,9 +176,9 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
             social_command: social_command_arc,
             social_query_unified: social_query_unified_arc,
             #[cfg(feature = "federation")]
-            social_query: social_query.clone(),
+            federation_admin: social_query.clone(),
             #[cfg(not(feature = "federation"))]
-            social_query: Arc::new(domain::ports::noop::NoopSocialQueryPort),
+            federation_admin: Arc::new(domain::ports::noop::NoopFederationAdminQuery),
             wrapup_stats: db.wrapup_stats,
             wrapup_repo: db.wrapup_repo,
             goal_command: db.goal_command,

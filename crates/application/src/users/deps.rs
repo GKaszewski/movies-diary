@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use domain::ports::{
-    DiaryQuery, EventPublisher, ObjectStorage, SocialQuery, SocialQueryPort, StatsRepository,
+    DiaryQuery, EventPublisher, FederationAdminQuery, ObjectStorage, SocialQuery, StatsRepository,
     UserRepository,
 };
 
@@ -13,7 +13,7 @@ pub struct GetProfileDeps {
 
 pub struct GetUsersListDeps {
     pub user: Arc<dyn UserRepository>,
-    pub social_query_legacy: Arc<dyn SocialQueryPort>,
+    pub federation_admin: Arc<dyn FederationAdminQuery>,
 }
 
 pub struct UpdateProfileDeps {

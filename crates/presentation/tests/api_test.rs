@@ -373,9 +373,6 @@ impl SearchCommand for PanicSearchCommand {
 }
 
 #[cfg(feature = "federation")]
-struct PanicSocialQuery;
-
-#[cfg(feature = "federation")]
 struct PanicRemoteWatchlist;
 #[cfg(feature = "federation")]
 #[async_trait::async_trait]
@@ -402,40 +399,6 @@ impl domain::ports::RemoteWatchlistRepository for PanicRemoteWatchlist {
         Ok(vec![])
     }
 }
-#[cfg(feature = "federation")]
-#[async_trait::async_trait]
-impl domain::ports::SocialQueryPort for PanicSocialQuery {
-    async fn get_accepted_following_urls(
-        &self,
-        _: &domain::value_objects::UserId,
-    ) -> Result<Vec<String>, DomainError> {
-        panic!()
-    }
-    async fn list_all_followed_remote_actors(
-        &self,
-    ) -> Result<Vec<domain::models::RemoteActorInfo>, DomainError> {
-        panic!()
-    }
-    async fn count_following(
-        &self,
-        _: &domain::value_objects::UserId,
-    ) -> Result<usize, DomainError> {
-        panic!()
-    }
-    async fn count_accepted_followers(
-        &self,
-        _: &domain::value_objects::UserId,
-    ) -> Result<usize, DomainError> {
-        panic!()
-    }
-    async fn get_pending_followers(
-        &self,
-        _: &domain::value_objects::UserId,
-    ) -> Result<Vec<domain::models::PendingFollowerInfo>, DomainError> {
-        panic!()
-    }
-}
-
 async fn test_app() -> Router {
     let pool = SqlitePool::connect("sqlite::memory:")
         .await
@@ -466,7 +429,7 @@ async fn test_app() -> Router {
                 remote_watchlist: Arc::new(PanicRemoteWatchlist),
                 social_command: Arc::new(domain::ports::noop::NoopSocialCommand),
                 social_query_unified: Arc::new(domain::ports::noop::NoopSocialQuery),
-                social_query: Arc::new(PanicSocialQuery),
+                federation_admin: Arc::new(domain::ports::noop::NoopFederationAdminQuery) as _,
                 wrapup_stats: Arc::new(domain::testing::PanicWrapUpStatsQuery) as _,
                 wrapup_repo: Arc::new(domain::testing::PanicWrapUpRepository) as _,
                 goal_command: Arc::new(domain::testing::NoopGoalCommand),

@@ -6,7 +6,7 @@ use crate::{
         AnnotatedRow, DiaryEntry, DiaryFilter, EntityType, ExportFormat, ExternalPersonId,
         FeedEntry, FeedSortBy, FieldMapping, FileFormat, FollowingFilter, ImportError,
         ImportProfile, ImportSession, IndexableDocument, MovieProfile, MovieStats, ParsedFile,
-        PendingFollowerInfo, Person, PersonCredits, PersonEnrichmentData, PersonId, RefreshSession,
+        Person, PersonCredits, PersonEnrichmentData, PersonId, RefreshSession,
         RemoteActorInfo, ReviewHistory, SearchQuery, SearchResults, UserStats, UserTrends,
         collections::{PageParams, Paginated},
     },
@@ -326,36 +326,12 @@ impl UserProfileFieldsRepository for PanicProfileFieldsRepo {
     }
 }
 
-pub struct PanicSocialQueryPort;
+pub struct PanicFederationAdminQuery;
 
 #[async_trait]
-impl crate::ports::SocialQueryPort for PanicSocialQueryPort {
-    async fn get_accepted_following_urls(
-        &self,
-        _: &crate::value_objects::UserId,
-    ) -> Result<Vec<String>, DomainError> {
-        panic!("PanicSocialQueryPort called")
-    }
+impl crate::ports::FederationAdminQuery for PanicFederationAdminQuery {
     async fn list_all_followed_remote_actors(&self) -> Result<Vec<RemoteActorInfo>, DomainError> {
-        panic!("PanicSocialQueryPort called")
-    }
-    async fn count_following(
-        &self,
-        _: &crate::value_objects::UserId,
-    ) -> Result<usize, DomainError> {
-        panic!("PanicSocialQueryPort called")
-    }
-    async fn count_accepted_followers(
-        &self,
-        _: &crate::value_objects::UserId,
-    ) -> Result<usize, DomainError> {
-        panic!("PanicSocialQueryPort called")
-    }
-    async fn get_pending_followers(
-        &self,
-        _: &crate::value_objects::UserId,
-    ) -> Result<Vec<PendingFollowerInfo>, DomainError> {
-        panic!("PanicSocialQueryPort called")
+        panic!("PanicFederationAdminQuery called")
     }
 }
 

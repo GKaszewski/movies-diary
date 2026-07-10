@@ -6,7 +6,7 @@ use domain::ports::{
     MovieCommand, MovieProfileRepository, MovieQuery, ObjectStorage, PasswordHasher, PersonCommand,
     PersonEnrichmentClient, PersonQuery, PosterFetcherClient, RefreshSessionRepository,
     RemoteGoalRepository, RemoteWatchlistRepository, ReviewRepository, SearchCommand, SearchPort,
-    SocialCommand, SocialQuery, SocialQueryPort, StatsRepository, UserProfileFieldsRepository,
+    FederationAdminQuery, SocialCommand, SocialQuery, StatsRepository, UserProfileFieldsRepository,
     UserRepository, UserSettingsRepository, WatchEventCommand, WatchEventQuery,
     WatchlistRepository, WebhookTokenRepository, WrapUpRepository, WrapUpStatsQuery,
 };
@@ -37,7 +37,7 @@ pub struct Repositories {
     pub remote_watchlist: Arc<dyn RemoteWatchlistRepository>,
     pub social_command: Arc<dyn SocialCommand>,
     pub social_query_unified: Arc<dyn SocialQuery>,
-    pub social_query: Arc<dyn SocialQueryPort>,
+    pub federation_admin: Arc<dyn FederationAdminQuery>,
     pub wrapup_stats: Arc<dyn WrapUpStatsQuery>,
     pub wrapup_repo: Arc<dyn WrapUpRepository>,
     pub goal_command: Arc<dyn GoalCommand>,

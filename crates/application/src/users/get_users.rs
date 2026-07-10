@@ -15,7 +15,7 @@ pub async fn execute(
 ) -> Result<UsersListData, DomainError> {
     let (users_result, actors_result) = tokio::join!(
         deps.user.list_with_stats(),
-        deps.social_query_legacy.list_all_followed_remote_actors()
+        deps.federation_admin.list_all_followed_remote_actors()
     );
 
     Ok(UsersListData {
