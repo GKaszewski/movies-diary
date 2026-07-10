@@ -40,6 +40,10 @@ _Avoid_: Stats page, recap, summary
 A registered account with a username, email, and profile (display name, bio, avatar, banner). Can be Standard or Admin.
 _Avoid_: Account, member, profile (as a synonym for the whole User)
 
+**SocialIdentity**:
+The uniform identifier for anyone involved in a social interaction — either a local User or a remote federated actor. Social commands and queries operate on SocialIdentity so the domain never branches on local vs remote.
+_Avoid_: Actor, participant, social user
+
 **Follow**:
 A social relationship where one user subscribes to another's activity. Always requires acceptance by the target user. Works identically for local and federated (ActivityPub) users. Once accepted, the followed user's reviews appear in the follower's Feed.
 _Avoid_: Subscribe, connect, friend
