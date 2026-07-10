@@ -230,7 +230,7 @@ fn compute_director_stats(rows: &[WrapUpMovieRow]) -> (Vec<PersonStat>, u32) {
             }
         })
         .collect();
-    stats.retain(|s| s.count >= MIN_PERSON_COUNT);
+    stats.retain(|s| s.count > MIN_PERSON_COUNT);
     stats.sort_by(|a, b| {
         b.count
             .cmp(&a.count)
@@ -275,7 +275,7 @@ fn compute_actor_stats(rows: &[WrapUpMovieRow]) -> (Vec<PersonStat>, u32, Vec<St
             }
         })
         .collect();
-    stats.retain(|s| s.count >= MIN_PERSON_COUNT);
+    stats.retain(|s| s.count > MIN_PERSON_COUNT);
     stats.sort_by(|a, b| {
         b.count
             .cmp(&a.count)
@@ -321,7 +321,7 @@ fn compute_genre_stats(
         .map(|g| g.genre.clone());
     let lowest = stats
         .iter()
-        .filter(|g| g.count >= 3)
+        .filter(|g| g.count > 3)
         .min_by(|a, b| a.avg_rating.total_cmp(&b.avg_rating))
         .map(|g| g.genre.clone());
     stats.truncate(5);
