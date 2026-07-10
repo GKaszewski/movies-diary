@@ -3,7 +3,7 @@ use std::sync::Arc;
 use domain::{
     errors::DomainError,
     models::{
-        DiaryEntry, DiaryFilter, SortDirection,
+        DiaryEntry, DiaryFilter, ReviewSortBy,
         collections::{PageParams, Paginated},
     },
     ports::DiaryRepository,
@@ -21,7 +21,7 @@ pub async fn execute(
     let user_id = query.user_id.map(UserId::from_uuid);
 
     let filter = DiaryFilter {
-        sort_by: query.sort_by.unwrap_or(SortDirection::Descending),
+        sort_by: query.sort_by.unwrap_or(ReviewSortBy::Descending),
         page,
         movie_id,
         user_id: user_id.clone(),

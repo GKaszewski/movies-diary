@@ -3,7 +3,7 @@ use uuid::Uuid;
 
 use domain::{errors::DomainError, models::RefreshSession, value_objects::Email};
 
-use crate::auth::{deps::LoginDeps, queries::LoginQuery};
+use crate::auth::{deps::LoginDeps, queries::LoginCommand};
 
 pub struct LoginResult {
     pub token: String,
@@ -14,7 +14,7 @@ pub struct LoginResult {
     pub role: domain::models::UserRole,
 }
 
-pub async fn execute(deps: &LoginDeps, query: LoginQuery) -> Result<LoginResult, DomainError> {
+pub async fn execute(deps: &LoginDeps, query: LoginCommand) -> Result<LoginResult, DomainError> {
     let email = Email::new(query.email)?;
     let user = deps
         .user

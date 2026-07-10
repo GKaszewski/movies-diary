@@ -209,8 +209,6 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
         )),
         #[cfg(feature = "federation")]
         ap_service,
-        #[cfg(feature = "federation")]
-        social_query,
     };
     Ok((state, ap_router))
 }

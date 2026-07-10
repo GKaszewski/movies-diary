@@ -4,7 +4,7 @@ use crate::auth::{
     commands::{RegisterAndLoginCommand, RegisterCommand},
     deps::{LoginDeps, RegisterAndLoginDeps, RegisterDeps},
     login::{self, LoginResult},
-    queries::LoginQuery,
+    queries::LoginCommand,
     register,
 };
 
@@ -37,7 +37,7 @@ pub async fn execute(
     };
     login::execute(
         &log_deps,
-        LoginQuery {
+        LoginCommand {
             email: cmd.email,
             password: cmd.password,
         },

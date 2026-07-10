@@ -1,8 +1,8 @@
 use domain::{errors::DomainError, events::DomainEvent, value_objects::UserId};
 
-use crate::users::deps::UpdateProfileDeps;
+use crate::users::deps::DeleteAccountDeps;
 
-pub async fn execute(deps: &UpdateProfileDeps, user_id: uuid::Uuid) -> Result<(), DomainError> {
+pub async fn execute(deps: &DeleteAccountDeps, user_id: uuid::Uuid) -> Result<(), DomainError> {
     let uid = UserId::from_uuid(user_id);
 
     deps.user

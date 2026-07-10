@@ -6,7 +6,7 @@ use application::diary::{
     commands::{LogReviewCommand, MovieInput},
     queries::GetDiaryQuery,
 };
-use domain::{errors::DomainError, models::SortDirection};
+use domain::{errors::DomainError, models::ReviewSortBy};
 
 use api_types::{DiaryQueryParams, LogReviewRequest};
 
@@ -258,10 +258,10 @@ pub fn to_diary_query(p: DiaryQueryParams) -> GetDiaryQuery {
         limit: p.limit,
         offset: p.offset,
         sort_by: p.sort_by.as_deref().map(|s| match s {
-            "date_asc" | "asc" => SortDirection::Ascending,
-            "rating_desc" => SortDirection::ByRatingDesc,
-            "rating_asc" => SortDirection::ByRatingAsc,
-            _ => SortDirection::Descending,
+            "date_asc" | "asc" => ReviewSortBy::Ascending,
+            "rating_desc" => ReviewSortBy::ByRatingDesc,
+            "rating_asc" => ReviewSortBy::ByRatingAsc,
+            _ => ReviewSortBy::Descending,
         }),
         movie_id: p.movie_id,
         user_id: p.user_id,

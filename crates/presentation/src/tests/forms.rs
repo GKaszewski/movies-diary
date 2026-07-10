@@ -89,7 +89,7 @@ fn sort_by_asc_string_becomes_ascending() {
     let query = to_diary_query(params);
     assert!(matches!(
         query.sort_by,
-        Some(domain::models::SortDirection::Ascending)
+        Some(domain::models::ReviewSortBy::Ascending)
     ));
 }
 
@@ -105,7 +105,7 @@ fn sort_by_other_string_becomes_descending() {
     let query = to_diary_query(params);
     assert!(matches!(
         query.sort_by,
-        Some(domain::models::SortDirection::Descending)
+        Some(domain::models::ReviewSortBy::Descending)
     ));
 }
 

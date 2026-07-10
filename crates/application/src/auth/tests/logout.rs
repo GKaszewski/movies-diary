@@ -8,7 +8,7 @@ use crate::{
         commands::RegisterCommand,
         deps::{LoginDeps, RefreshDeps, RegisterDeps},
         login, logout,
-        queries::LoginQuery,
+        queries::LoginCommand,
         refresh, register,
     },
     test_helpers::TestContextBuilder,
@@ -45,7 +45,7 @@ async fn logout_revokes_refresh_token() {
     };
     let login_result = login::execute(
         &login_deps,
-        LoginQuery {
+        LoginCommand {
             email: "bob@example.com".into(),
             password: "password123".into(),
         },

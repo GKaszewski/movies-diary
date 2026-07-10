@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::diary::{DiaryEntryDto, DiaryResponse};
+use crate::common::DiaryResponse;
+use crate::diary::DiaryEntryDto;
 use crate::goals::GoalDto;
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]

@@ -6,7 +6,7 @@ use domain::{
     errors::DomainError,
     models::FeedSortBy,
     models::{
-        DiaryEntry, DiaryFilter, SortDirection, UserStats, UserTrends,
+        DiaryEntry, DiaryFilter, ReviewSortBy, UserStats, UserTrends,
         collections::{PageParams, Paginated},
     },
     value_objects::UserId,
@@ -108,18 +108,18 @@ async fn load_social_counts(
     (following, followers, pending)
 }
 
-fn feed_sort_to_direction(sort_by: FeedSortBy) -> SortDirection {
+fn feed_sort_to_direction(sort_by: FeedSortBy) -> ReviewSortBy {
     match sort_by {
-        FeedSortBy::Date => SortDirection::Descending,
-        FeedSortBy::DateAsc => SortDirection::Ascending,
-        FeedSortBy::Rating => SortDirection::ByRatingDesc,
-        FeedSortBy::RatingAsc => SortDirection::ByRatingAsc,
+        FeedSortBy::Date => ReviewSortBy::Descending,
+        FeedSortBy::DateAsc => ReviewSortBy::Ascending,
+        FeedSortBy::Rating => ReviewSortBy::ByRatingDesc,
+        FeedSortBy::RatingAsc => ReviewSortBy::ByRatingAsc,
     }
 }
 
 fn paged_user_filter(
     user_id: UserId,
-    sort_by: SortDirection,
+    sort_by: ReviewSortBy,
     limit: Option<u32>,
     offset: Option<u32>,
     search: Option<String>,
@@ -149,19 +149,19 @@ mod helper_tests {
         use domain::models::FeedSortBy;
         assert!(matches!(
             feed_sort_to_direction(FeedSortBy::Date),
-            SortDirection::Descending
+            ReviewSortBy::Descending
         ));
         assert!(matches!(
             feed_sort_to_direction(FeedSortBy::DateAsc),
-            SortDirection::Ascending
+            ReviewSortBy::Ascending
         ));
         assert!(matches!(
             feed_sort_to_direction(FeedSortBy::Rating),
-            SortDirection::ByRatingDesc
+            ReviewSortBy::ByRatingDesc
         ));
         assert!(matches!(
             feed_sort_to_direction(FeedSortBy::RatingAsc),
-            SortDirection::ByRatingAsc
+            ReviewSortBy::ByRatingAsc
         ));
     }
 
@@ -170,7 +170,7 @@ mod helper_tests {
         let uid = UserId::from_uuid(uuid::Uuid::new_v4());
         let filter = paged_user_filter(
             uid.clone(),
-            SortDirection::Descending,
+            ReviewSortBy::Descending,
             Some(20),
             Some(5),
             Some("blade".into()),

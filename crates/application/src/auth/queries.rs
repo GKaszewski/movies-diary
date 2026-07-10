@@ -1,4 +1,4 @@
-pub struct LoginQuery {
+pub struct LoginCommand {
     pub email: String,
     pub password: String,
 }

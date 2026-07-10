@@ -10,12 +10,12 @@ use application::auth::{
     commands::RegisterCommand,
     deps::{LoginDeps, RefreshDeps, RegisterAndLoginDeps, RegisterDeps},
     login as login_uc,
-    queries::LoginQuery,
+    queries::LoginCommand,
     register as register_uc,
 };
 
 use crate::{
-    csrf::CsrfToken,
+    csrf::{CsrfToken, secure_flag},
     errors::ApiError,
     forms::{ErrorQuery, LoginForm, RegisterForm},
     render::render_page,
@@ -28,14 +28,6 @@ use api_types::{
 use template_askama::{LoginTemplate, RegisterTemplate};
 
 // ── HTML helpers ─────────────────────────────────────────────────────────────
-
-fn secure_flag() -> &'static str {
-    if std::env::var("SECURE_COOKIES").as_deref() == Ok("true") {
-        "; Secure"
-    } else {
-        ""
-    }
-}
 
 fn set_cookie_header(token: &str, max_age: i64) -> (axum::http::HeaderName, HeaderValue) {
     let val = format!(
@@ -73,7 +65,7 @@ pub async fn login(
     };
     let result = login_uc::execute(
         &deps,
-        LoginQuery {
+        LoginCommand {
             email: req.email,
             password: req.password,
         },
@@ -204,7 +196,7 @@ pub async fn post_login(
     };
     match login_uc::execute(
         &deps,
-        LoginQuery {
+        LoginCommand {
             email: form.email,
             password: form.password,
         },

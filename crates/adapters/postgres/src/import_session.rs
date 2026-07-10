@@ -5,7 +5,6 @@ use domain::{
     models::{
         AnnotatedRow, FieldMapping, ImportSession, ParsedFile,
         import::{DomainField, ImportRow, RowResult, Transform},
-        import_session::PersistedImportSession,
     },
     ports::ImportSessionRepository,
     value_objects::{ImportSessionId, UserId},
@@ -267,7 +266,7 @@ impl PostgresImportSessionRepository {
                 Ok(js.into_iter().map(annotated_from_json).collect())
             })
             .transpose()?;
-        Ok(ImportSession::from_persistence(PersistedImportSession {
+        Ok(ImportSession {
             id: ImportSessionId::from_uuid(
                 id.parse::<uuid::Uuid>()
                     .map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
@@ -282,7 +281,7 @@ impl PostgresImportSessionRepository {
             row_results,
             created_at,
             expires_at,
-        }))
+        })
     }
 }
 

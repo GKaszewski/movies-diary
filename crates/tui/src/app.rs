@@ -248,6 +248,8 @@ pub enum Action {
     ReviewCreateFailed(String),
     ReviewDeleted(Uuid),
     ReviewDeleteFailed(String),
+    FileRead(String),
+    FileReadFailed(String),
     BulkItemDone {
         index: usize,
         error: Option<String>,
@@ -265,6 +267,7 @@ pub enum Command {
     SaveConfig(String),
     SaveToken(String),
     ClearToken,
+    ReadFile { path: String },
 }
 
 // Matches the export CSV column order:
@@ -863,19 +866,31 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
                 && m.bulk_import.stage == BulkImportStage::EnterPath
             {
                 let path = m.bulk_import.file_path.trim().to_string();
-                match std::fs::read_to_string(&path) {
-                    Ok(content) => {
-                        m.bulk_import.parsed = parse_csv(&content);
-                        m.bulk_import.stage = BulkImportStage::Preview;
-                    }
-                    Err(e) => {
-                        app.status = Some(StatusMsg {
-                            text: format!("Cannot read file: {e}"),
-                            is_error: true,
-                        });
-                    }
+                if path.is_empty() {
+                    app.status = Some(StatusMsg {
+                        text: "File path required".into(),
+                        is_error: true,
+                    });
+                    return vec![];
                 }
+                return vec![Command::ReadFile { path }];
             }
+            vec![]
+        }
+
+        Action::FileRead(content) => {
+            if let Screen::Main(m) = &mut app.screen {
+                m.bulk_import.parsed = parse_csv(&content);
+                m.bulk_import.stage = BulkImportStage::Preview;
+            }
+            vec![]
+        }
+
+        Action::FileReadFailed(msg) => {
+            app.status = Some(StatusMsg {
+                text: format!("Cannot read file: {msg}"),
+                is_error: true,
+            });
             vec![]
         }
 

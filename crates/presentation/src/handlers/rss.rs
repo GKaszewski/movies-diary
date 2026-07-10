@@ -6,7 +6,7 @@ use axum::{
 use uuid::Uuid;
 
 use application::{diary::get_diary, diary::queries::GetDiaryQuery};
-use domain::{errors::DomainError, models::SortDirection, value_objects::UserId};
+use domain::{errors::DomainError, models::ReviewSortBy, value_objects::UserId};
 
 use crate::{errors::ApiError, state::AppState};
 
@@ -14,7 +14,7 @@ pub async fn get_feed(State(state): State<AppState>) -> Result<impl IntoResponse
     let query = GetDiaryQuery {
         limit: Some(super::RSS_FEED_LIMIT),
         offset: Some(0),
-        sort_by: Some(SortDirection::Descending),
+        sort_by: Some(ReviewSortBy::Descending),
         movie_id: None,
         user_id: None,
     };
@@ -45,7 +45,7 @@ pub async fn get_user_feed(
     let query = GetDiaryQuery {
         limit: Some(super::RSS_FEED_LIMIT),
         offset: Some(0),
-        sort_by: Some(SortDirection::Descending),
+        sort_by: Some(ReviewSortBy::Descending),
         movie_id: None,
         user_id: Some(user_id),
     };

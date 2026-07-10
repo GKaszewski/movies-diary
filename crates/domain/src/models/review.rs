@@ -165,7 +165,7 @@ impl DiaryEntry {
 
 #[derive(Clone, Debug, Default)]
 pub struct DiaryFilter {
-    pub sort_by: super::SortDirection,
+    pub sort_by: super::ReviewSortBy,
     pub page: crate::models::collections::PageParams,
     pub movie_id: Option<MovieId>,
     pub user_id: Option<UserId>,

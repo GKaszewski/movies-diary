@@ -1,25 +1,4 @@
-use uuid::Uuid;
-
-use crate::value_objects::MovieId;
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct PersonId(Uuid);
-
-impl PersonId {
-    pub fn from_uuid(uuid: Uuid) -> Self {
-        Self(uuid)
-    }
-
-    /// Deterministic UUIDv5 from an external person ID string.
-    /// "tmdb:12345" always maps to the same PersonId.
-    pub fn from_external(external_id: &ExternalPersonId) -> Self {
-        Self(Uuid::new_v5(&Uuid::NAMESPACE_URL, external_id.0.as_bytes()))
-    }
-
-    pub fn value(&self) -> Uuid {
-        self.0
-    }
-}
+use crate::value_objects::{MovieId, PersonId};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ExternalPersonId(String);

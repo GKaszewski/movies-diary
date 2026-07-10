@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::common::SocialFeedResponse;
+
 // ── Movie list ────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Deserialize, utoipa::IntoParams)]
@@ -14,14 +16,6 @@ pub struct MoviesQueryParams {
     pub genre: Option<String>,
     /// Filter by ISO language code (e.g. "en")
     pub language: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
-pub struct MoviesResponse {
-    pub items: Vec<MovieDto>,
-    pub total_count: u64,
-    pub limit: u32,
-    pub offset: u32,
 }
 
 // ── Movie profile (enrichment) ────────────────────────────────────────────────
@@ -128,14 +122,6 @@ pub struct SocialReviewDto {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(value_type = Option<String>)]
     pub watch_medium: Option<domain::value_objects::WatchMedium>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
-pub struct SocialFeedResponse {
-    pub items: Vec<SocialReviewDto>,
-    pub total_count: u64,
-    pub limit: u32,
-    pub offset: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]

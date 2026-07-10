@@ -220,6 +220,21 @@ fn handle_command(cmd: Command, app: &App, client: &Arc<ApiClient>, tx: &mpsc::S
             });
         }
 
+        Command::ReadFile { path } => {
+            let tx = tx.clone();
+            tokio::spawn(async move {
+                let action =
+                    match tokio::task::spawn_blocking(move || std::fs::read_to_string(&path))
+                        .await
+                        .unwrap_or_else(|e| Err(std::io::Error::other(e)))
+                    {
+                        Ok(content) => Action::FileRead(content),
+                        Err(e) => Action::FileReadFailed(e.to_string()),
+                    };
+                let _ = tx.send(action).await;
+            });
+        }
+
         Command::ImportNext(index) => {
             let Some(token) = app.token.clone() else {
                 return;

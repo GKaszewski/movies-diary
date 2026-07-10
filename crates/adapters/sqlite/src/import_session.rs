@@ -5,7 +5,6 @@ use domain::{
     models::{
         AnnotatedRow, FieldMapping, ImportSession, ParsedFile,
         import::{DomainField, ImportRow, RowResult, Transform},
-        import_session::PersistedImportSession,
     },
     ports::ImportSessionRepository,
     value_objects::{ImportSessionId, UserId},
@@ -276,7 +275,7 @@ impl SqliteImportSessionRepository {
             })
             .transpose()?;
 
-        Ok(ImportSession::from_persistence(PersistedImportSession {
+        Ok(ImportSession {
             id: ImportSessionId::from_uuid(
                 id.parse::<uuid::Uuid>()
                     .map_err(|e| DomainError::InfrastructureError(e.to_string()))?,
@@ -291,7 +290,7 @@ impl SqliteImportSessionRepository {
             row_results,
             created_at: Self::parse_dt(created_at)?,
             expires_at: Self::parse_dt(expires_at)?,
-        }))
+        })
     }
 }
 

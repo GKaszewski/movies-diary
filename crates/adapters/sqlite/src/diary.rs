@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use domain::{
     errors::DomainError,
     models::{
-        DiaryEntry, DiaryFilter, FeedEntry, MovieStats, ReviewHistory, SortDirection,
+        DiaryEntry, DiaryFilter, FeedEntry, MovieStats, ReviewHistory, ReviewSortBy,
         collections::{PageParams, Paginated},
     },
     ports::DiaryRepository,
@@ -45,15 +45,15 @@ impl SqliteDiaryRepository {
 
     async fn fetch_all_diary_rows(
         &self,
-        sort: &SortDirection,
+        sort: &ReviewSortBy,
         limit: i64,
         offset: i64,
     ) -> Result<Vec<DiaryRow>, DomainError> {
         let order_clause = match sort {
-            SortDirection::ByRatingDesc => "r.rating DESC, r.watched_at DESC",
-            SortDirection::ByRatingAsc => "r.rating ASC, r.watched_at ASC",
-            SortDirection::Ascending => "r.watched_at ASC",
-            SortDirection::Descending => "r.watched_at DESC",
+            ReviewSortBy::ByRatingDesc => "r.rating DESC, r.watched_at DESC",
+            ReviewSortBy::ByRatingAsc => "r.rating ASC, r.watched_at ASC",
+            ReviewSortBy::Ascending => "r.watched_at ASC",
+            ReviewSortBy::Descending => "r.watched_at DESC",
         };
         let sql = format!(
             "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
@@ -75,15 +75,15 @@ impl SqliteDiaryRepository {
     async fn fetch_movie_diary_rows(
         &self,
         movie_id: &str,
-        sort: &SortDirection,
+        sort: &ReviewSortBy,
         limit: i64,
         offset: i64,
     ) -> Result<Vec<DiaryRow>, DomainError> {
         let order_clause = match sort {
-            SortDirection::ByRatingDesc => "r.rating DESC, r.watched_at DESC",
-            SortDirection::ByRatingAsc => "r.rating ASC, r.watched_at ASC",
-            SortDirection::Ascending => "r.watched_at ASC",
-            SortDirection::Descending => "r.watched_at DESC",
+            ReviewSortBy::ByRatingDesc => "r.rating DESC, r.watched_at DESC",
+            ReviewSortBy::ByRatingAsc => "r.rating ASC, r.watched_at ASC",
+            ReviewSortBy::Ascending => "r.watched_at ASC",
+            ReviewSortBy::Descending => "r.watched_at DESC",
         };
         let sql = format!(
             "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
@@ -136,7 +136,7 @@ impl SqliteDiaryRepository {
     async fn fetch_user_diary_rows(
         &self,
         user_id: &str,
-        sort: &SortDirection,
+        sort: &ReviewSortBy,
         search: Option<&str>,
         include_remote: bool,
         limit: i64,
@@ -154,10 +154,10 @@ impl SqliteDiaryRepository {
             ""
         };
         let order_clause = match sort {
-            SortDirection::ByRatingDesc => "r.rating DESC, r.watched_at DESC",
-            SortDirection::ByRatingAsc => "r.rating ASC, r.watched_at ASC",
-            SortDirection::Ascending => "r.watched_at ASC",
-            SortDirection::Descending => "r.watched_at DESC",
+            ReviewSortBy::ByRatingDesc => "r.rating DESC, r.watched_at DESC",
+            ReviewSortBy::ByRatingAsc => "r.rating ASC, r.watched_at ASC",
+            ReviewSortBy::Ascending => "r.watched_at ASC",
+            ReviewSortBy::Descending => "r.watched_at DESC",
         };
         let sql = format!(
             "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,

@@ -10,14 +10,6 @@ pub struct WatchlistEntryDto {
     pub added_at: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
-pub struct WatchlistResponse {
-    pub items: Vec<WatchlistEntryDto>,
-    pub total_count: u64,
-    pub limit: u32,
-    pub offset: u32,
-}
-
 #[derive(Debug, Clone, Deserialize, utoipa::ToSchema)]
 pub struct AddToWatchlistRequest {
     #[serde(skip_serializing_if = "Option::is_none")]

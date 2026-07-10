@@ -8,7 +8,7 @@ use crate::{
         commands::RegisterCommand,
         deps::{LoginDeps, RegisterDeps},
         login,
-        queries::LoginQuery,
+        queries::LoginCommand,
         register,
     },
     test_helpers::TestContextBuilder,
@@ -48,7 +48,7 @@ async fn test_login_valid_credentials_returns_token() {
     };
     let result = login::execute(
         &deps,
-        LoginQuery {
+        LoginCommand {
             email: "carol@example.com".into(),
             password: "secret123".into(),
         },
@@ -76,7 +76,7 @@ async fn test_login_wrong_password_fails() {
     };
     let result = login::execute(
         &deps,
-        LoginQuery {
+        LoginCommand {
             email: "dave@example.com".into(),
             password: "wrong_password".into(),
         },
@@ -98,7 +98,7 @@ async fn test_login_unknown_email_fails() {
     };
     let result = login::execute(
         &deps,
-        LoginQuery {
+        LoginCommand {
             email: "nobody@example.com".into(),
             password: "anything".into(),
         },

@@ -19,7 +19,7 @@ pub fn extract_from_cookie(headers: &axum::http::HeaderMap) -> Option<String> {
         })
 }
 
-fn secure_flag() -> &'static str {
+pub(crate) fn secure_flag() -> &'static str {
     if std::env::var("SECURE_COOKIES").as_deref() == Ok("true") {
         "; Secure"
     } else {

@@ -8,7 +8,7 @@ use crate::{
         commands::RegisterCommand,
         deps::{LoginDeps, RefreshDeps, RegisterDeps},
         login,
-        queries::LoginQuery,
+        queries::LoginCommand,
         refresh, register,
     },
     test_helpers::TestContextBuilder,
@@ -41,7 +41,7 @@ async fn login_user(b: &TestContextBuilder) -> login::LoginResult {
     };
     login::execute(
         &login_deps,
-        LoginQuery {
+        LoginCommand {
             email: "alice@example.com".into(),
             password: "password123".into(),
         },

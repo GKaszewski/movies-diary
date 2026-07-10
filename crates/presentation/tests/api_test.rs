@@ -500,8 +500,6 @@ async fn test_app() -> Router {
         rss_renderer: Arc::new(RssAdapter::new("http://localhost:3000".into())),
         #[cfg(feature = "federation")]
         ap_service: Arc::new(activitypub::NoopActivityPubService),
-        #[cfg(feature = "federation")]
-        social_query: Arc::new(PanicSocialQuery),
     };
 
     routes::build_router(state, axum::Router::new())

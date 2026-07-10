@@ -1,10 +1,10 @@
-use domain::models::SortDirection;
+use domain::models::ReviewSortBy;
 use uuid::Uuid;
 
 pub struct GetDiaryQuery {
     pub limit: Option<u32>,
     pub offset: Option<u32>,
-    pub sort_by: Option<SortDirection>,
+    pub sort_by: Option<ReviewSortBy>,
     pub movie_id: Option<Uuid>,
     pub user_id: Option<Uuid>,
 }

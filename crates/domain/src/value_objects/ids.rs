@@ -42,3 +42,12 @@ uuid_id!(WatchEventId);
 uuid_id!(WebhookTokenId);
 uuid_id!(WrapUpId);
 uuid_id!(GoalId);
+uuid_id!(PersonId);
+
+impl PersonId {
+    /// Deterministic UUIDv5 from an external person ID string.
+    /// "tmdb:12345" always maps to the same PersonId.
+    pub fn from_external(external_id: &crate::models::person::ExternalPersonId) -> Self {
+        Self(Uuid::new_v5(&Uuid::NAMESPACE_URL, external_id.value().as_bytes()))
+    }
+}

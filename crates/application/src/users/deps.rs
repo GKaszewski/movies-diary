@@ -16,3 +16,8 @@ pub struct UpdateProfileDeps {
     pub object_storage: Arc<dyn ObjectStorage>,
     pub event_publisher: Arc<dyn EventPublisher>,
 }
+
+pub struct DeleteAccountDeps {
+    pub user: Arc<dyn UserRepository>,
+    pub event_publisher: Arc<dyn EventPublisher>,
+}

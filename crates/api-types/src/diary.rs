@@ -28,14 +28,6 @@ pub struct DiaryEntryDto {
     pub review: ReviewDto,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
-pub struct DiaryResponse {
-    pub items: Vec<DiaryEntryDto>,
-    pub total_count: u64,
-    pub limit: u32,
-    pub offset: u32,
-}
-
 #[derive(Debug, Clone, Deserialize, utoipa::IntoParams)]
 #[into_params(parameter_in = Query)]
 pub struct DiaryQueryParams {
@@ -63,14 +55,6 @@ pub struct FeedEntryDto {
     pub is_federated: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub actor_url: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
-pub struct ActivityFeedResponse {
-    pub items: Vec<FeedEntryDto>,
-    pub total_count: u64,
-    pub limit: u32,
-    pub offset: u32,
 }
 
 #[derive(Debug, Clone, Deserialize, utoipa::IntoParams)]

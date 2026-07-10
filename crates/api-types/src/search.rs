@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
+pub use crate::common::{PaginatedMovieHits, PaginatedPersonHits};
+
 #[derive(Debug, Deserialize, IntoParams)]
 pub struct SearchQueryParams {
     /// Free-text query matched across title, cast, crew, genres and keywords.
@@ -28,23 +30,7 @@ pub struct SearchResponse {
     pub people: PaginatedPersonHits,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
-pub struct PaginatedMovieHits {
-    pub items: Vec<MovieSearchHitDto>,
-    pub total_count: u64,
-    pub limit: u32,
-    pub offset: u32,
-}
-
-#[derive(Debug, Serialize, ToSchema)]
-pub struct PaginatedPersonHits {
-    pub items: Vec<PersonSearchHitDto>,
-    pub total_count: u64,
-    pub limit: u32,
-    pub offset: u32,
-}
-
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct MovieSearchHitDto {
     pub movie_id: Uuid,
     pub title: String,
@@ -54,7 +40,7 @@ pub struct MovieSearchHitDto {
     pub genres: Vec<String>,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct PersonSearchHitDto {
     pub person_id: Uuid,
     pub name: String,

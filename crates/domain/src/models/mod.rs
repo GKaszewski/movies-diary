@@ -47,8 +47,9 @@ pub use import::{
 pub use import_profile::ImportProfile;
 pub use import_session::ImportSession;
 pub use person::{
-    CastCredit, CrewCredit, ExternalPersonId, Person, PersonCredits, PersonEnrichmentData, PersonId,
+    CastCredit, CrewCredit, ExternalPersonId, Person, PersonCredits, PersonEnrichmentData,
 };
+pub use crate::value_objects::PersonId;
 pub use refresh_session::{GeneratedToken, RefreshSession};
 pub use search::{
     EntityType, IndexableDocument, MovieSearchHit, PersonSearchHit, SearchFilters, SearchQuery,
@@ -85,7 +86,7 @@ impl std::str::FromStr for GoalType {
 }
 
 #[derive(Clone, Debug, Default)]
-pub enum SortDirection {
+pub enum ReviewSortBy {
     #[default]
     Descending,
     Ascending,
