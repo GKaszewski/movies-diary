@@ -90,11 +90,12 @@ Hexagonal (Ports & Adapters) with Domain-Driven Design:
 ```
 api-types           — shared REST API request/response DTOs (Serialize/Deserialize + utoipa schemas) + HtmlPageContext; used by presentation, tui, and template adapters
 infra-wiring        — shared infrastructure types (DbPool, EventBusBackend, AppConfig) used by both presentation and worker binaries
-domain              — pure types and CQRS port traits (MovieCommand/MovieQuery, WatchEventCommand/WatchEventQuery, PersonCommand/PersonQuery, SearchCommand/SearchPort, ImageFetcher, RssFeedRenderer), no external deps except serde
+domain              — pure types and CQRS port traits (MovieCommand/MovieQuery, WatchEventCommand/WatchEventQuery, GoalCommand/GoalQuery, DiaryQuery, PersonCommand/PersonQuery, SearchCommand/SearchPort, ImageFetcher, RssFeedRenderer), no external deps except serde
 application         — use cases (commands + queries), business logic orchestration; handlers delegate here for all domain logic
 presentation        — Axum HTTP router, OpenAPI spec assembly, Swagger UI + Scalar serving, composition root for the HTTP process
 worker              — standalone worker binary (event consumer, poster sync, federation)
 adapters/
+  adapter-common       — shared row-to-domain conversions, sqlx error mapping, date/uuid parsing utils
   auth                 — JWT issuance and validation (Argon2 passwords)
   sqlite               — SQLite repository + connection factory
   postgres             — PostgreSQL repository + connection factory

@@ -59,7 +59,7 @@ graph TB
             M_SEARCH["SearchQuery,<br/>SearchResults"]
         end
         subgraph Ports["Port Traits (Interfaces)"]
-            P_REPOS["MovieCommand / MovieQuery<br/>ReviewRepository<br/>DiaryRepository / StatsRepository<br/>UserRepository<br/>WatchlistRepository<br/>WatchEventCommand / WatchEventQuery<br/>WebhookTokenRepository<br/>ImportSessionRepository<br/>MovieProfileRepository<br/>WrapUpRepository<br/>GoalRepository<br/>UserSettingsRepository<br/>MovieDeduplicator"]
+            P_REPOS["MovieCommand / MovieQuery<br/>ReviewRepository<br/>DiaryQuery / StatsRepository<br/>UserRepository<br/>WatchlistRepository<br/>WatchEventCommand / WatchEventQuery<br/>WebhookTokenRepository<br/>ImportSessionRepository<br/>MovieProfileRepository<br/>WrapUpRepository<br/>GoalCommand / GoalQuery<br/>UserSettingsRepository<br/>MovieDeduplicator"]
             P_SERVICES["AuthService<br/>MetadataClient<br/>PosterFetcherClient<br/>ImageFetcher<br/>ObjectStorage<br/>EventPublisher<br/>EventConsumer<br/>PasswordHasher<br/>DiaryExporter<br/>DocumentParser<br/>RssFeedRenderer"]
             P_SEARCH["SearchPort<br/>SearchCommand<br/>PersonQuery<br/>PersonCommand"]
             P_FEDERATION["SocialQueryPort<br/>LocalApContentQuery<br/>RemoteWatchlistRepository<br/>RemoteGoalRepository"]
@@ -82,6 +82,7 @@ graph TB
 
     subgraph Adapters["Adapters (implement Port Traits)"]
         direction TB
+        A_COMMON["adapter-common<br/><i>Shared row conversions,<br/>error mapping, date utils</i>"]
         subgraph Storage["Storage"]
             A_SQLITE["sqlite<br/><i>SQLite repos</i>"]
             A_PG["postgres<br/><i>PostgreSQL repos</i>"]
