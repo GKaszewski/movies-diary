@@ -16,10 +16,6 @@ impl PostgresUserSettingsRepository {
         Self { pool }
     }
 
-    fn map_err(e: sqlx::Error) -> DomainError {
-        tracing::error!("Database error: {:?}", e);
-        DomainError::InfrastructureError("Database operation failed".into())
-    }
 }
 
 #[async_trait]
@@ -33,7 +29,7 @@ impl UserSettingsRepository for PostgresUserSettingsRepository {
         .bind(&uid)
         .fetch_optional(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         match row {
             Some(r) => {
@@ -65,7 +61,7 @@ impl UserSettingsRepository for PostgresUserSettingsRepository {
         .bind(settings.federate_watchlist())
         .execute(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
         Ok(())
     }
 }
@@ -81,7 +77,7 @@ impl UserFederationSettingsQuery for PostgresUserSettingsRepository {
         .bind(&uid)
         .fetch_optional(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         match row {
             Some(r) => {

@@ -7,12 +7,8 @@ use domain::{
 };
 use sqlx::{PgPool, Row};
 
-use crate::models::{parse_datetime, parse_uuid};
+use adapter_common::{parse_datetime, parse_uuid};
 
-fn map_err(e: sqlx::Error) -> DomainError {
-    tracing::error!("Database error: {:?}", e);
-    DomainError::InfrastructureError("Database operation failed".into())
-}
 
 // ── WatchEventRepository ──────────────────────────────────────────────────────
 
@@ -52,7 +48,7 @@ impl WatchEventCommand for PostgresWatchEventRepository {
         .bind(event.created_at())
         .execute(&self.pool)
         .await
-        .map_err(map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         Ok(())
     }
@@ -70,7 +66,7 @@ impl WatchEventCommand for PostgresWatchEventRepository {
             .bind(&id_str)
             .execute(&self.pool)
             .await
-            .map_err(map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
 
         Ok(())
     }
@@ -90,7 +86,7 @@ impl WatchEventCommand for PostgresWatchEventRepository {
             .bind(&id_strs)
             .execute(&self.pool)
             .await
-            .map_err(map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
         Ok(result.rows_affected())
     }
 
@@ -103,7 +99,7 @@ impl WatchEventCommand for PostgresWatchEventRepository {
                 .bind(before)
                 .execute(&self.pool)
                 .await
-                .map_err(map_err)?;
+                .map_err(adapter_common::map_sqlx_error)?;
         Ok(result.rows_affected())
     }
 }
@@ -126,7 +122,7 @@ impl WatchEventQuery for PostgresWatchEventRepository {
         .bind(&uid)
         .fetch_all(&self.pool)
         .await
-        .map_err(map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         rows.iter().map(row_to_watch_event).collect()
     }
@@ -145,7 +141,7 @@ impl WatchEventQuery for PostgresWatchEventRepository {
         .bind(&id_str)
         .fetch_optional(&self.pool)
         .await
-        .map_err(map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         row.as_ref().map(row_to_watch_event).transpose()
     }
@@ -166,7 +162,7 @@ impl WatchEventQuery for PostgresWatchEventRepository {
         .bind(&id_strs)
         .fetch_all(&self.pool)
         .await
-        .map_err(map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
         rows.iter().map(row_to_watch_event).collect()
     }
 
@@ -187,23 +183,23 @@ impl WatchEventQuery for PostgresWatchEventRepository {
         .bind(after)
         .fetch_one(&self.pool)
         .await
-        .map_err(map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         Ok(count > 0)
     }
 }
 
 fn row_to_watch_event(row: &sqlx::postgres::PgRow) -> Result<WatchEvent, DomainError> {
-    let id_str: String = row.try_get("id").map_err(map_err)?;
-    let user_id_str: String = row.try_get("user_id").map_err(map_err)?;
-    let movie_id_str: Option<String> = row.try_get("movie_id").map_err(map_err)?;
-    let title: String = row.try_get("title").map_err(map_err)?;
-    let year: Option<i32> = row.try_get("year").map_err(map_err)?;
-    let ext_id: Option<String> = row.try_get("external_metadata_id").map_err(map_err)?;
-    let source_str: String = row.try_get("source").map_err(map_err)?;
-    let watched_at_str: String = row.try_get("watched_at").map_err(map_err)?;
-    let status_str: String = row.try_get("status").map_err(map_err)?;
-    let created_at_str: String = row.try_get("created_at").map_err(map_err)?;
+    let id_str: String = row.try_get("id").map_err(adapter_common::map_sqlx_error)?;
+    let user_id_str: String = row.try_get("user_id").map_err(adapter_common::map_sqlx_error)?;
+    let movie_id_str: Option<String> = row.try_get("movie_id").map_err(adapter_common::map_sqlx_error)?;
+    let title: String = row.try_get("title").map_err(adapter_common::map_sqlx_error)?;
+    let year: Option<i32> = row.try_get("year").map_err(adapter_common::map_sqlx_error)?;
+    let ext_id: Option<String> = row.try_get("external_metadata_id").map_err(adapter_common::map_sqlx_error)?;
+    let source_str: String = row.try_get("source").map_err(adapter_common::map_sqlx_error)?;
+    let watched_at_str: String = row.try_get("watched_at").map_err(adapter_common::map_sqlx_error)?;
+    let status_str: String = row.try_get("status").map_err(adapter_common::map_sqlx_error)?;
+    let created_at_str: String = row.try_get("created_at").map_err(adapter_common::map_sqlx_error)?;
 
     let source: WatchEventSource = source_str
         .parse()
@@ -265,7 +261,7 @@ impl WebhookTokenRepository for PostgresWebhookTokenRepository {
         .bind(token.last_used_at())
         .execute(&self.pool)
         .await
-        .map_err(map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         Ok(())
     }
@@ -280,7 +276,7 @@ impl WebhookTokenRepository for PostgresWebhookTokenRepository {
         .bind(hash)
         .fetch_optional(&self.pool)
         .await
-        .map_err(map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         row.as_ref().map(row_to_webhook_token).transpose()
     }
@@ -297,7 +293,7 @@ impl WebhookTokenRepository for PostgresWebhookTokenRepository {
         .bind(&uid)
         .fetch_all(&self.pool)
         .await
-        .map_err(map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         rows.iter().map(row_to_webhook_token).collect()
     }
@@ -311,7 +307,7 @@ impl WebhookTokenRepository for PostgresWebhookTokenRepository {
             .bind(&uid)
             .execute(&self.pool)
             .await
-            .map_err(map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
 
         if result.rows_affected() == 0 {
             return Err(DomainError::NotFound(format!("Webhook token {id_str}")));
@@ -326,20 +322,20 @@ impl WebhookTokenRepository for PostgresWebhookTokenRepository {
             .bind(&id_str)
             .execute(&self.pool)
             .await
-            .map_err(map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
 
         Ok(())
     }
 }
 
 fn row_to_webhook_token(row: &sqlx::postgres::PgRow) -> Result<WebhookToken, DomainError> {
-    let id_str: String = row.try_get("id").map_err(map_err)?;
-    let user_id_str: String = row.try_get("user_id").map_err(map_err)?;
-    let token_hash: String = row.try_get("token_hash").map_err(map_err)?;
-    let provider_str: String = row.try_get("provider").map_err(map_err)?;
-    let label: Option<String> = row.try_get("label").map_err(map_err)?;
-    let created_at_str: String = row.try_get("created_at").map_err(map_err)?;
-    let last_used_str: Option<String> = row.try_get("last_used_at").map_err(map_err)?;
+    let id_str: String = row.try_get("id").map_err(adapter_common::map_sqlx_error)?;
+    let user_id_str: String = row.try_get("user_id").map_err(adapter_common::map_sqlx_error)?;
+    let token_hash: String = row.try_get("token_hash").map_err(adapter_common::map_sqlx_error)?;
+    let provider_str: String = row.try_get("provider").map_err(adapter_common::map_sqlx_error)?;
+    let label: Option<String> = row.try_get("label").map_err(adapter_common::map_sqlx_error)?;
+    let created_at_str: String = row.try_get("created_at").map_err(adapter_common::map_sqlx_error)?;
+    let last_used_str: Option<String> = row.try_get("last_used_at").map_err(adapter_common::map_sqlx_error)?;
 
     let provider: WatchEventSource = provider_str
         .parse()

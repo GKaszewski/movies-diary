@@ -21,10 +21,6 @@ impl SqliteMovieRepository {
         Self { pool }
     }
 
-    fn map_err(e: sqlx::Error) -> DomainError {
-        tracing::error!("Database error: {:?}", e);
-        DomainError::InfrastructureError("Database operation failed".into())
-    }
 }
 
 #[async_trait]
@@ -55,7 +51,7 @@ impl MovieCommand for SqliteMovieRepository {
         .bind(&poster_path)
         .execute(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         Ok(())
     }
@@ -66,7 +62,7 @@ impl MovieCommand for SqliteMovieRepository {
             .bind(&id)
             .execute(&self.pool)
             .await
-            .map_err(Self::map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
         Ok(())
     }
 }
@@ -85,7 +81,7 @@ impl MovieQuery for SqliteMovieRepository {
         .bind(id)
         .fetch_optional(&self.pool)
         .await
-        .map_err(Self::map_err)?
+        .map_err(adapter_common::map_sqlx_error)?
         .map(MovieRow::into_domain)
         .transpose()
     }
@@ -99,7 +95,7 @@ impl MovieQuery for SqliteMovieRepository {
         .bind(&id)
         .fetch_optional(&self.pool)
         .await
-        .map_err(Self::map_err)?
+        .map_err(adapter_common::map_sqlx_error)?
         .map(MovieRow::into_domain)
         .transpose()
     }
@@ -119,7 +115,7 @@ impl MovieQuery for SqliteMovieRepository {
         .bind(y)
         .fetch_all(&self.pool)
         .await
-        .map_err(Self::map_err)?
+        .map_err(adapter_common::map_sqlx_error)?
         .into_iter()
         .map(MovieRow::into_domain)
         .collect()
@@ -141,7 +137,7 @@ impl MovieQuery for SqliteMovieRepository {
         for id in ids {
             q = q.bind(id.value().to_string());
         }
-        let rows = q.fetch_all(&self.pool).await.map_err(Self::map_err)?;
+        let rows = q.fetch_all(&self.pool).await.map_err(adapter_common::map_sqlx_error)?;
         Ok(rows.into_iter().collect())
     }
 
@@ -165,7 +161,7 @@ impl MovieQuery for SqliteMovieRepository {
         for (t, y) in pairs {
             q = q.bind(t.value().to_string()).bind(y.value() as i64);
         }
-        let rows = q.fetch_all(&self.pool).await.map_err(Self::map_err)?;
+        let rows = q.fetch_all(&self.pool).await.map_err(adapter_common::map_sqlx_error)?;
         Ok(rows
             .into_iter()
             .map(|r| {
@@ -217,7 +213,7 @@ impl MovieQuery for SqliteMovieRepository {
         .bind(offset)
         .fetch_all(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         let total: i64 = sqlx::query(
             "SELECT COUNT(DISTINCT m.id) \
@@ -235,7 +231,7 @@ impl MovieQuery for SqliteMovieRepository {
         .bind(genre)
         .fetch_one(&self.pool)
         .await
-        .map_err(Self::map_err)?
+        .map_err(adapter_common::map_sqlx_error)?
         .try_get(0)
         .unwrap_or(0);
 
@@ -259,7 +255,7 @@ impl MovieQuery for SqliteMovieRepository {
         )
         .fetch_all(&self.pool)
         .await
-        .map_err(Self::map_err)?
+        .map_err(adapter_common::map_sqlx_error)?
         .into_iter()
         .map(MovieRow::into_domain)
         .collect()

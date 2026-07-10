@@ -6,8 +6,9 @@ use k_ap::{
 };
 use sqlx::Row;
 
+use adapter_common::datetime_to_str;
 use super::{
-    SqliteFederationRepository, datetime_to_str, remote_actor_from_row, status_to_str,
+    SqliteFederationRepository, remote_actor_from_row, status_to_str,
     str_to_status,
 };
 

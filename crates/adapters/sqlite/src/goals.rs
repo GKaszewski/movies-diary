@@ -16,10 +16,6 @@ impl SqliteGoalRepository {
         Self { pool }
     }
 
-    fn map_err(e: sqlx::Error) -> DomainError {
-        tracing::error!("Database error: {:?}", e);
-        DomainError::InfrastructureError("Database operation failed".into())
-    }
 }
 
 #[async_trait]
@@ -44,7 +40,7 @@ impl GoalCommand for SqliteGoalRepository {
         .bind(&created_at)
         .execute(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         Ok(())
     }
@@ -58,7 +54,7 @@ impl GoalCommand for SqliteGoalRepository {
             .bind(&id)
             .execute(&self.pool)
             .await
-            .map_err(Self::map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
 
         if result.rows_affected() == 0 {
             return Err(DomainError::NotFound("Goal not found".into()));
@@ -75,7 +71,7 @@ impl GoalCommand for SqliteGoalRepository {
             .bind(&uid)
             .execute(&self.pool)
             .await
-            .map_err(Self::map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
 
         if result.rows_affected() == 0 {
             return Err(DomainError::NotFound("Goal not found".into()));
@@ -102,7 +98,7 @@ impl GoalQuery for SqliteGoalRepository {
         .bind(y)
         .fetch_optional(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         row.map(|r| row_to_goal(&r)).transpose()
     }
@@ -117,7 +113,7 @@ impl GoalQuery for SqliteGoalRepository {
         .bind(&uid)
         .fetch_all(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         rows.iter().map(row_to_goal).collect()
     }

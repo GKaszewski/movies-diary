@@ -13,13 +13,8 @@ pub mod remote_goals;
 pub use ap_content::SqliteApContentQuery;
 pub use remote_goals::SqliteRemoteGoalRepository;
 
-use chrono::NaiveDateTime;
 use k_ap::{FollowerStatus, RemoteActor};
 use sqlx::SqlitePool;
-
-pub(crate) fn datetime_to_str(dt: &NaiveDateTime) -> String {
-    dt.format("%Y-%m-%d %H:%M:%S").to_string()
-}
 
 pub(crate) fn status_to_str(status: &FollowerStatus) -> &'static str {
     match status {

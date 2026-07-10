@@ -97,10 +97,6 @@ impl PostgresImportProfileRepository {
         Self { pool }
     }
 
-    fn map_err(e: sqlx::Error) -> DomainError {
-        tracing::error!("DB error: {:?}", e);
-        DomainError::InfrastructureError("Database operation failed".into())
-    }
 }
 
 #[async_trait]
@@ -118,7 +114,7 @@ impl ImportProfileRepository for PostgresImportProfileRepository {
         .execute(&self.pool)
         .await
         .map(|_| ())
-        .map_err(Self::map_err)
+        .map_err(adapter_common::map_sqlx_error)
     }
 
     async fn list_for_user(&self, user_id: &UserId) -> Result<Vec<ImportProfile>, DomainError> {
@@ -139,7 +135,7 @@ impl ImportProfileRepository for PostgresImportProfileRepository {
         .bind(&uid)
         .fetch_all(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         rows.into_iter()
             .map(|r| {
@@ -184,7 +180,7 @@ impl ImportProfileRepository for PostgresImportProfileRepository {
         .bind(&id_str).bind(&uid_str)
         .fetch_optional(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         row.map(|r| {
             Ok(ImportProfile {
@@ -212,6 +208,6 @@ impl ImportProfileRepository for PostgresImportProfileRepository {
             .execute(&self.pool)
             .await
             .map(|_| ())
-            .map_err(Self::map_err)
+            .map_err(adapter_common::map_sqlx_error)
     }
 }

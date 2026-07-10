@@ -31,6 +31,7 @@ members = [
     "crates/adapters/plex",
     "crates/adapters/sqlite-search",
     "crates/adapters/postgres-search",
+    "crates/adapters/adapter-common",
     "crates/infra-wiring",
 ]
 resolver = "2"
@@ -92,6 +93,7 @@ plex = { path = "crates/adapters/plex" }
 image-converter = { path = "crates/adapters/image-converter" }
 sqlite-search = { path = "crates/adapters/sqlite-search" }
 postgres-search = { path = "crates/adapters/postgres-search" }
+adapter-common = { path = "crates/adapters/adapter-common" }
 infra-wiring = { path = "crates/infra-wiring" }
 
 [profile.dev]

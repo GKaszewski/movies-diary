@@ -12,13 +12,8 @@ mod watchlist;
 pub use ap_content::PostgresApContentQuery;
 pub use remote_goals::PostgresRemoteGoalRepository;
 
-use chrono::NaiveDateTime;
 use k_ap::{FollowerStatus, RemoteActor};
 use sqlx::{PgPool, Row};
-
-pub(crate) fn datetime_to_str(dt: &NaiveDateTime) -> String {
-    dt.format("%Y-%m-%d %H:%M:%S").to_string()
-}
 
 pub(crate) fn status_to_str(status: &FollowerStatus) -> &'static str {
     match status {

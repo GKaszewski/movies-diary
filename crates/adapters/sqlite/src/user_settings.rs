@@ -16,10 +16,6 @@ impl SqliteUserSettingsRepository {
         Self { pool }
     }
 
-    fn map_err(e: sqlx::Error) -> DomainError {
-        tracing::error!("Database error: {:?}", e);
-        DomainError::InfrastructureError("Database operation failed".into())
-    }
 }
 
 #[async_trait]
@@ -33,7 +29,7 @@ impl UserSettingsRepository for SqliteUserSettingsRepository {
         .bind(&uid)
         .fetch_optional(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         match row {
             Some(r) => {
@@ -68,7 +64,7 @@ impl UserSettingsRepository for SqliteUserSettingsRepository {
         })
         .execute(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
         Ok(())
     }
 }
@@ -84,7 +80,7 @@ impl UserFederationSettingsQuery for SqliteUserSettingsRepository {
         .bind(&uid)
         .fetch_optional(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         match row {
             Some(r) => {

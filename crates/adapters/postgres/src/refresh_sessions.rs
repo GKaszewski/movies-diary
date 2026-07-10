@@ -16,9 +16,6 @@ impl PostgresRefreshSessionAdapter {
     }
 }
 
-fn map_err(e: sqlx::Error) -> DomainError {
-    DomainError::InfrastructureError(e.to_string())
-}
 
 #[async_trait]
 impl RefreshSessionRepository for PostgresRefreshSessionAdapter {
@@ -34,7 +31,7 @@ impl RefreshSessionRepository for PostgresRefreshSessionAdapter {
         .bind(session.created_at)
         .execute(&self.pool)
         .await
-        .map_err(map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
         Ok(())
     }
 
@@ -48,7 +45,7 @@ impl RefreshSessionRepository for PostgresRefreshSessionAdapter {
         .bind(token)
         .fetch_optional(&self.pool)
         .await
-        .map_err(map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         row.map(RefreshSessionRow::into_domain).transpose()
     }
@@ -58,7 +55,7 @@ impl RefreshSessionRepository for PostgresRefreshSessionAdapter {
             .bind(token)
             .execute(&self.pool)
             .await
-            .map_err(map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
         Ok(())
     }
 
@@ -67,7 +64,7 @@ impl RefreshSessionRepository for PostgresRefreshSessionAdapter {
             .bind(user_id.value().to_string())
             .execute(&self.pool)
             .await
-            .map_err(map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
         Ok(())
     }
 
@@ -75,7 +72,7 @@ impl RefreshSessionRepository for PostgresRefreshSessionAdapter {
         let result = sqlx::query("DELETE FROM refresh_sessions WHERE expires_at < NOW()")
             .execute(&self.pool)
             .await
-            .map_err(map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
         Ok(result.rows_affected())
     }
 }

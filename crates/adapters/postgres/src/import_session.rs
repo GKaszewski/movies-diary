@@ -202,10 +202,6 @@ impl PostgresImportSessionRepository {
         Self { pool }
     }
 
-    fn map_err(e: sqlx::Error) -> DomainError {
-        tracing::error!("DB error: {:?}", e);
-        DomainError::InfrastructureError("Database operation failed".into())
-    }
 
     fn serialize_session(
         s: &ImportSession,
@@ -301,7 +297,7 @@ impl ImportSessionRepository for PostgresImportSessionRepository {
         .execute(&self.pool)
         .await
         .map(|_| ())
-        .map_err(Self::map_err)
+        .map_err(adapter_common::map_sqlx_error)
     }
 
     async fn get(
@@ -331,7 +327,7 @@ impl ImportSessionRepository for PostgresImportSessionRepository {
         .bind(&uid_str)
         .fetch_optional(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         row.map(|r| {
             Self::deserialize_session(
@@ -359,7 +355,7 @@ impl ImportSessionRepository for PostgresImportSessionRepository {
         .execute(&self.pool)
         .await
         .map(|_| ())
-        .map_err(Self::map_err)
+        .map_err(adapter_common::map_sqlx_error)
     }
 
     async fn delete(&self, id: &ImportSessionId) -> Result<(), DomainError> {
@@ -369,14 +365,14 @@ impl ImportSessionRepository for PostgresImportSessionRepository {
             .execute(&self.pool)
             .await
             .map(|_| ())
-            .map_err(Self::map_err)
+            .map_err(adapter_common::map_sqlx_error)
     }
 
     async fn delete_expired(&self) -> Result<u64, DomainError> {
         let result = sqlx::query("DELETE FROM import_sessions WHERE expires_at < NOW()")
             .execute(&self.pool)
             .await
-            .map_err(Self::map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
         Ok(result.rows_affected())
     }
 
@@ -387,6 +383,6 @@ impl ImportSessionRepository for PostgresImportSessionRepository {
             .execute(&self.pool)
             .await
             .map(|_| ())
-            .map_err(Self::map_err)
+            .map_err(adapter_common::map_sqlx_error)
     }
 }

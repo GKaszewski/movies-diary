@@ -12,10 +12,6 @@ impl PostgresRemoteGoalRepository {
         Self { pool }
     }
 
-    fn map_err(e: sqlx::Error) -> DomainError {
-        tracing::error!("Database error: {:?}", e);
-        DomainError::InfrastructureError("Database operation failed".into())
-    }
 }
 
 #[async_trait]
@@ -38,7 +34,7 @@ impl RemoteGoalRepository for PostgresRemoteGoalRepository {
         .bind(&received)
         .execute(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         Ok(())
     }
@@ -57,7 +53,7 @@ impl RemoteGoalRepository for PostgresRemoteGoalRepository {
         .bind(ap_id)
         .execute(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         Ok(())
     }
@@ -68,7 +64,7 @@ impl RemoteGoalRepository for PostgresRemoteGoalRepository {
             .bind(actor_url)
             .execute(&self.pool)
             .await
-            .map_err(Self::map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
 
         Ok(())
     }
@@ -78,7 +74,7 @@ impl RemoteGoalRepository for PostgresRemoteGoalRepository {
             .bind(actor_url)
             .execute(&self.pool)
             .await
-            .map_err(Self::map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
 
         Ok(())
     }
@@ -92,7 +88,7 @@ impl RemoteGoalRepository for PostgresRemoteGoalRepository {
         .bind(actor_url)
         .fetch_all(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         rows.iter()
             .map(|r| {

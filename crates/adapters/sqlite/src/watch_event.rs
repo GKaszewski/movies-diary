@@ -7,12 +7,7 @@ use domain::{
 };
 use sqlx::{Row, SqlitePool};
 
-use crate::models::datetime_to_str;
-
-fn map_err(e: sqlx::Error) -> DomainError {
-    tracing::error!("Database error: {:?}", e);
-    DomainError::InfrastructureError("Database operation failed".into())
-}
+use adapter_common::datetime_to_str;
 
 fn parse_uuid(s: &str) -> Result<uuid::Uuid, DomainError> {
     s.parse()
@@ -65,7 +60,7 @@ impl WatchEventCommand for SqliteWatchEventRepository {
         .bind(&created_at)
         .execute(&self.pool)
         .await
-        .map_err(map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         Ok(())
     }
@@ -83,7 +78,7 @@ impl WatchEventCommand for SqliteWatchEventRepository {
             .bind(&id_str)
             .execute(&self.pool)
             .await
-            .map_err(map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
 
         Ok(())
     }
@@ -105,7 +100,7 @@ impl WatchEventCommand for SqliteWatchEventRepository {
         for id in ids {
             q = q.bind(id.value().to_string());
         }
-        let result = q.execute(&self.pool).await.map_err(map_err)?;
+        let result = q.execute(&self.pool).await.map_err(adapter_common::map_sqlx_error)?;
         Ok(result.rows_affected())
     }
 
@@ -119,7 +114,7 @@ impl WatchEventCommand for SqliteWatchEventRepository {
                 .bind(&before_str)
                 .execute(&self.pool)
                 .await
-                .map_err(map_err)?;
+                .map_err(adapter_common::map_sqlx_error)?;
         Ok(result.rows_affected())
     }
 }
@@ -139,7 +134,7 @@ impl WatchEventQuery for SqliteWatchEventRepository {
         .bind(&uid)
         .fetch_all(&self.pool)
         .await
-        .map_err(map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         rows.iter().map(row_to_watch_event).collect()
     }
@@ -155,7 +150,7 @@ impl WatchEventQuery for SqliteWatchEventRepository {
         .bind(&id_str)
         .fetch_optional(&self.pool)
         .await
-        .map_err(map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         row.as_ref().map(row_to_watch_event).transpose()
     }
@@ -175,7 +170,7 @@ impl WatchEventQuery for SqliteWatchEventRepository {
         for id in ids {
             q = q.bind(id.value().to_string());
         }
-        let rows = q.fetch_all(&self.pool).await.map_err(map_err)?;
+        let rows = q.fetch_all(&self.pool).await.map_err(adapter_common::map_sqlx_error)?;
         rows.iter().map(row_to_watch_event).collect()
     }
 
@@ -197,7 +192,7 @@ impl WatchEventQuery for SqliteWatchEventRepository {
         .bind(&after_str)
         .fetch_one(&self.pool)
         .await
-        .map_err(map_err)?
+        .map_err(adapter_common::map_sqlx_error)?
         .try_get(0)
         .unwrap_or(0);
 
@@ -206,16 +201,16 @@ impl WatchEventQuery for SqliteWatchEventRepository {
 }
 
 fn row_to_watch_event(row: &sqlx::sqlite::SqliteRow) -> Result<WatchEvent, DomainError> {
-    let id_str: &str = row.try_get("id").map_err(map_err)?;
-    let user_id_str: &str = row.try_get("user_id").map_err(map_err)?;
-    let movie_id_str: Option<&str> = row.try_get("movie_id").map_err(map_err)?;
-    let title: String = row.try_get("title").map_err(map_err)?;
-    let year: Option<i64> = row.try_get("year").map_err(map_err)?;
-    let ext_id: Option<String> = row.try_get("external_metadata_id").map_err(map_err)?;
-    let source_str: String = row.try_get("source").map_err(map_err)?;
-    let watched_at_str: String = row.try_get("watched_at").map_err(map_err)?;
-    let status_str: String = row.try_get("status").map_err(map_err)?;
-    let created_at_str: String = row.try_get("created_at").map_err(map_err)?;
+    let id_str: &str = row.try_get("id").map_err(adapter_common::map_sqlx_error)?;
+    let user_id_str: &str = row.try_get("user_id").map_err(adapter_common::map_sqlx_error)?;
+    let movie_id_str: Option<&str> = row.try_get("movie_id").map_err(adapter_common::map_sqlx_error)?;
+    let title: String = row.try_get("title").map_err(adapter_common::map_sqlx_error)?;
+    let year: Option<i64> = row.try_get("year").map_err(adapter_common::map_sqlx_error)?;
+    let ext_id: Option<String> = row.try_get("external_metadata_id").map_err(adapter_common::map_sqlx_error)?;
+    let source_str: String = row.try_get("source").map_err(adapter_common::map_sqlx_error)?;
+    let watched_at_str: String = row.try_get("watched_at").map_err(adapter_common::map_sqlx_error)?;
+    let status_str: String = row.try_get("status").map_err(adapter_common::map_sqlx_error)?;
+    let created_at_str: String = row.try_get("created_at").map_err(adapter_common::map_sqlx_error)?;
 
     let source: WatchEventSource = source_str
         .parse()
@@ -278,7 +273,7 @@ impl WebhookTokenRepository for SqliteWebhookTokenRepository {
         .bind(&last_used)
         .execute(&self.pool)
         .await
-        .map_err(map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         Ok(())
     }
@@ -291,7 +286,7 @@ impl WebhookTokenRepository for SqliteWebhookTokenRepository {
         .bind(hash)
         .fetch_optional(&self.pool)
         .await
-        .map_err(map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         row.as_ref().map(row_to_webhook_token).transpose()
     }
@@ -306,7 +301,7 @@ impl WebhookTokenRepository for SqliteWebhookTokenRepository {
         .bind(&uid)
         .fetch_all(&self.pool)
         .await
-        .map_err(map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         rows.iter().map(row_to_webhook_token).collect()
     }
@@ -320,7 +315,7 @@ impl WebhookTokenRepository for SqliteWebhookTokenRepository {
             .bind(&uid)
             .execute(&self.pool)
             .await
-            .map_err(map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
 
         if result.rows_affected() == 0 {
             return Err(DomainError::NotFound(format!("Webhook token {id_str}")));
@@ -337,20 +332,20 @@ impl WebhookTokenRepository for SqliteWebhookTokenRepository {
             .bind(&id_str)
             .execute(&self.pool)
             .await
-            .map_err(map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
 
         Ok(())
     }
 }
 
 fn row_to_webhook_token(row: &sqlx::sqlite::SqliteRow) -> Result<WebhookToken, DomainError> {
-    let id_str: &str = row.try_get("id").map_err(map_err)?;
-    let user_id_str: &str = row.try_get("user_id").map_err(map_err)?;
-    let token_hash: String = row.try_get("token_hash").map_err(map_err)?;
-    let provider_str: String = row.try_get("provider").map_err(map_err)?;
-    let label: Option<String> = row.try_get("label").map_err(map_err)?;
-    let created_at_str: String = row.try_get("created_at").map_err(map_err)?;
-    let last_used_str: Option<String> = row.try_get("last_used_at").map_err(map_err)?;
+    let id_str: &str = row.try_get("id").map_err(adapter_common::map_sqlx_error)?;
+    let user_id_str: &str = row.try_get("user_id").map_err(adapter_common::map_sqlx_error)?;
+    let token_hash: String = row.try_get("token_hash").map_err(adapter_common::map_sqlx_error)?;
+    let provider_str: String = row.try_get("provider").map_err(adapter_common::map_sqlx_error)?;
+    let label: Option<String> = row.try_get("label").map_err(adapter_common::map_sqlx_error)?;
+    let created_at_str: String = row.try_get("created_at").map_err(adapter_common::map_sqlx_error)?;
+    let last_used_str: Option<String> = row.try_get("last_used_at").map_err(adapter_common::map_sqlx_error)?;
 
     let provider: WatchEventSource = provider_str
         .parse()

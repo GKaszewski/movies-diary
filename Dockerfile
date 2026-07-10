@@ -44,6 +44,7 @@ COPY crates/tui/Cargo.toml                        crates/tui/Cargo.toml
 COPY crates/adapters/image-converter/Cargo.toml   crates/adapters/image-converter/Cargo.toml
 COPY crates/adapters/sqlite-search/Cargo.toml     crates/adapters/sqlite-search/Cargo.toml
 COPY crates/adapters/postgres-search/Cargo.toml   crates/adapters/postgres-search/Cargo.toml
+COPY crates/adapters/adapter-common/Cargo.toml   crates/adapters/adapter-common/Cargo.toml
 COPY crates/worker/Cargo.toml                     crates/worker/Cargo.toml
 COPY crates/infra-wiring/Cargo.toml               crates/infra-wiring/Cargo.toml
 

@@ -6,8 +6,9 @@ use k_ap::{
 };
 use sqlx::Row;
 
+use adapter_common::datetime_to_str;
 use super::{
-    PG_ACTOR_COLS, PostgresFederationRepository, datetime_to_str, pg_remote_actor, status_to_str,
+    PG_ACTOR_COLS, PostgresFederationRepository, pg_remote_actor, status_to_str,
     str_to_status,
 };
 

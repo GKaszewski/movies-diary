@@ -15,10 +15,6 @@ impl SqliteProfileFieldsRepository {
         Self { pool }
     }
 
-    fn map_err(e: sqlx::Error) -> DomainError {
-        tracing::error!("Database error: {:?}", e);
-        DomainError::InfrastructureError("Database operation failed".into())
-    }
 }
 
 #[async_trait]
@@ -31,7 +27,7 @@ impl UserProfileFieldsRepository for SqliteProfileFieldsRepository {
         .bind(&id_str)
         .fetch_all(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         Ok(rows
             .iter()
@@ -53,7 +49,7 @@ impl UserProfileFieldsRepository for SqliteProfileFieldsRepository {
             .bind(&id_str)
             .execute(&self.pool)
             .await
-            .map_err(Self::map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
 
         for (i, field) in fields.into_iter().enumerate() {
             let id = uuid::Uuid::new_v4().to_string();
@@ -68,7 +64,7 @@ impl UserProfileFieldsRepository for SqliteProfileFieldsRepository {
             .bind(position)
             .execute(&self.pool)
             .await
-            .map_err(Self::map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
         }
 
         Ok(())

@@ -97,11 +97,6 @@ impl SqliteImportProfileRepository {
         Self { pool }
     }
 
-    fn map_err(e: sqlx::Error) -> DomainError {
-        tracing::error!("DB error: {:?}", e);
-        DomainError::InfrastructureError("Database operation failed".into())
-    }
-
     fn parse_dt(s: &str) -> Result<NaiveDateTime, DomainError> {
         NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S")
             .or_else(|_| NaiveDateTime::parse_from_str(s, "%Y-%m-%dT%H:%M:%S"))
@@ -130,7 +125,7 @@ impl ImportProfileRepository for SqliteImportProfileRepository {
         .execute(&self.pool)
         .await
         .map(|_| ())
-        .map_err(Self::map_err)
+        .map_err(adapter_common::map_sqlx_error)
     }
 
     async fn list_for_user(&self, user_id: &UserId) -> Result<Vec<ImportProfile>, DomainError> {
@@ -141,7 +136,7 @@ impl ImportProfileRepository for SqliteImportProfileRepository {
         .bind(&uid)
         .fetch_all(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         rows.iter()
             .map(|r| {
@@ -183,7 +178,7 @@ impl ImportProfileRepository for SqliteImportProfileRepository {
         .bind(&uid_str)
         .fetch_optional(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         row.map(|r| {
             use sqlx::Row;
@@ -215,6 +210,6 @@ impl ImportProfileRepository for SqliteImportProfileRepository {
             .execute(&self.pool)
             .await
             .map(|_| ())
-            .map_err(Self::map_err)
+            .map_err(adapter_common::map_sqlx_error)
     }
 }

@@ -31,10 +31,6 @@ pub fn create_search_adapter(pool: SqlitePool) -> (Arc<dyn SearchCommand>, Arc<d
     )
 }
 
-fn map_err(e: sqlx::Error) -> DomainError {
-    DomainError::InfrastructureError(e.to_string())
-}
-
 #[async_trait]
 impl SearchCommand for SqliteSearchAdapter {
     async fn index(&self, doc: IndexableDocument) -> Result<(), DomainError> {
@@ -86,7 +82,7 @@ impl SearchCommand for SqliteSearchAdapter {
                 .bind(&movie_id)
                 .execute(&self.pool)
                 .await
-                .map_err(map_err)?;
+                .map_err(adapter_common::map_sqlx_error)?;
 
                 sqlx::query(
                     "INSERT INTO movies_fts(movie_id, title, director, overview, genres, keywords, cast_names, crew_names, release_year, language)
@@ -104,7 +100,7 @@ impl SearchCommand for SqliteSearchAdapter {
                 .bind(&language)
                 .execute(&self.pool)
                 .await
-                .map_err(map_err)?;
+                .map_err(adapter_common::map_sqlx_error)?;
 
                 Ok(())
             }
@@ -118,7 +114,7 @@ impl SearchCommand for SqliteSearchAdapter {
                 .bind(&person_id)
                 .execute(&self.pool)
                 .await
-                .map_err(map_err)?;
+                .map_err(adapter_common::map_sqlx_error)?;
 
                 sqlx::query(
                     "INSERT INTO people_fts(person_id, name, known_for_department) VALUES (?, ?, ?)",
@@ -128,7 +124,7 @@ impl SearchCommand for SqliteSearchAdapter {
                 .bind(person.known_for_department())
                 .execute(&self.pool)
                 .await
-                .map_err(map_err)?;
+                .map_err(adapter_common::map_sqlx_error)?;
 
                 Ok(())
             }
@@ -144,7 +140,7 @@ impl SearchCommand for SqliteSearchAdapter {
                 .bind(id)
                 .execute(&self.pool)
                 .await
-                .map_err(map_err)?;
+                .map_err(adapter_common::map_sqlx_error)?;
             }
             EntityType::Person => {
                 sqlx::query(
@@ -153,7 +149,7 @@ impl SearchCommand for SqliteSearchAdapter {
                 .bind(id)
                 .execute(&self.pool)
                 .await
-                .map_err(map_err)?;
+                .map_err(adapter_common::map_sqlx_error)?;
             }
         }
         Ok(())
@@ -205,7 +201,7 @@ impl SqliteSearchAdapter {
             .bind(query.filters.year.map(|y| y as i64))
             .fetch_one(&self.pool)
             .await
-            .map_err(map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
             count as u64
         } else {
             let count: i64 = sqlx::query_scalar(
@@ -221,7 +217,7 @@ impl SqliteSearchAdapter {
             .bind(query.filters.year.map(|y| y as i64))
             .fetch_one(&self.pool)
             .await
-            .map_err(map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
             count as u64
         };
 
@@ -249,7 +245,7 @@ impl SqliteSearchAdapter {
             .bind(offset)
             .fetch_all(&self.pool)
             .await
-            .map_err(map_err)?
+            .map_err(adapter_common::map_sqlx_error)?
         } else {
             sqlx::query_as::<_, Row>(
                 "SELECT m.id, m.title, m.release_year, m.director, m.poster_path,
@@ -270,7 +266,7 @@ impl SqliteSearchAdapter {
             .bind(offset)
             .fetch_all(&self.pool)
             .await
-            .map_err(map_err)?
+            .map_err(adapter_common::map_sqlx_error)?
         };
         let items = rows
             .into_iter()
@@ -321,7 +317,7 @@ impl SqliteSearchAdapter {
                     .bind(&fts_query)
                     .fetch_one(&self.pool)
                     .await
-                    .map_err(map_err)?;
+                    .map_err(adapter_common::map_sqlx_error)?;
             count as u64
         };
 
@@ -346,7 +342,7 @@ impl SqliteSearchAdapter {
         .bind(offset)
         .fetch_all(&self.pool)
         .await
-        .map_err(map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         let mut items = Vec::with_capacity(rows.len());
         for row in rows {
@@ -355,7 +351,7 @@ impl SqliteSearchAdapter {
                     .bind(&row.person_id)
                     .fetch_optional(&self.pool)
                     .await
-                    .map_err(map_err)?
+                    .map_err(adapter_common::map_sqlx_error)?
                     .flatten();
 
             let known_for_titles = if let Some(tid) = tmdb_id {

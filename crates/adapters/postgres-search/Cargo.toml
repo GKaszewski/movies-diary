@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-domain      = { workspace = true }
-async-trait = { workspace = true }
-sqlx        = { version = "0.8.6", features = ["runtime-tokio-rustls", "postgres", "uuid", "macros"] }
-uuid        = { workspace = true }
+domain          = { workspace = true }
+adapter-common  = { workspace = true }
+async-trait     = { workspace = true }
+sqlx            = { version = "0.8.6", features = ["runtime-tokio-rustls", "postgres", "uuid", "macros"] }
+uuid            = { workspace = true }

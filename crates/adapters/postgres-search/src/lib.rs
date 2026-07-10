@@ -31,10 +31,6 @@ pub fn create_search_adapter(pool: PgPool) -> (Arc<dyn SearchCommand>, Arc<dyn S
     )
 }
 
-fn map_err(e: sqlx::Error) -> DomainError {
-    DomainError::InfrastructureError(e.to_string())
-}
-
 #[async_trait]
 impl SearchCommand for PostgresSearchAdapter {
     async fn index(&self, doc: IndexableDocument) -> Result<(), DomainError> {
@@ -91,7 +87,7 @@ impl SearchCommand for PostgresSearchAdapter {
                 .bind(&fts_input)
                 .execute(&self.pool)
                 .await
-                .map_err(map_err)?;
+                .map_err(adapter_common::map_sqlx_error)?;
 
                 Ok(())
             }
@@ -113,7 +109,7 @@ impl SearchCommand for PostgresSearchAdapter {
                 .bind(&fts_input)
                 .execute(&self.pool)
                 .await
-                .map_err(map_err)?;
+                .map_err(adapter_common::map_sqlx_error)?;
 
                 Ok(())
             }
@@ -127,14 +123,14 @@ impl SearchCommand for PostgresSearchAdapter {
                     .bind(id)
                     .execute(&self.pool)
                     .await
-                    .map_err(map_err)?;
+                    .map_err(adapter_common::map_sqlx_error)?;
             }
             EntityType::Person => {
                 sqlx::query("DELETE FROM people_search WHERE person_id = $1")
                     .bind(id)
                     .execute(&self.pool)
                     .await
-                    .map_err(map_err)?;
+                    .map_err(adapter_common::map_sqlx_error)?;
             }
         }
         Ok(())
@@ -183,7 +179,7 @@ impl PostgresSearchAdapter {
             .bind(query.filters.year.map(|y| y as i32))
             .fetch_one(&self.pool)
             .await
-            .map_err(map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
             count as u64
         } else {
             let count: i64 = sqlx::query_scalar(
@@ -196,7 +192,7 @@ impl PostgresSearchAdapter {
             .bind(query.filters.year.map(|y| y as i32))
             .fetch_one(&self.pool)
             .await
-            .map_err(map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
             count as u64
         };
 
@@ -221,7 +217,7 @@ impl PostgresSearchAdapter {
             .bind(offset)
             .fetch_all(&self.pool)
             .await
-            .map_err(map_err)?
+            .map_err(adapter_common::map_sqlx_error)?
         } else {
             sqlx::query_as::<_, Row>(
                 "SELECT m.id, m.title, m.release_year, m.director, m.poster_path,
@@ -238,7 +234,7 @@ impl PostgresSearchAdapter {
             .bind(offset)
             .fetch_all(&self.pool)
             .await
-            .map_err(map_err)?
+            .map_err(adapter_common::map_sqlx_error)?
         };
 
         let items = rows
@@ -290,7 +286,7 @@ impl PostgresSearchAdapter {
             .bind(text)
             .fetch_one(&self.pool)
             .await
-            .map_err(map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
             count as u64
         };
 
@@ -316,7 +312,7 @@ impl PostgresSearchAdapter {
         .bind(offset)
         .fetch_all(&self.pool)
         .await
-        .map_err(map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         let mut items = Vec::with_capacity(rows.len());
         for row in rows {

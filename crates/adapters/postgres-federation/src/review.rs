@@ -3,7 +3,8 @@ use anyhow::{Result, anyhow};
 use async_trait::async_trait;
 use domain::models::{Review, ReviewSource};
 
-use super::{PostgresFederationRepository, datetime_to_str};
+use adapter_common::datetime_to_str;
+use super::PostgresFederationRepository;
 
 #[async_trait]
 impl RemoteReviewRepository for PostgresFederationRepository {

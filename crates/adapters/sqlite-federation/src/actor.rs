@@ -4,7 +4,8 @@ use chrono::Utc;
 use k_ap::{ActorRepository, RemoteActor};
 use sqlx::Row;
 
-use super::{SqliteFederationRepository, datetime_to_str, remote_actor_from_row};
+use adapter_common::datetime_to_str;
+use super::{SqliteFederationRepository, remote_actor_from_row};
 
 #[async_trait]
 impl ActorRepository for SqliteFederationRepository {

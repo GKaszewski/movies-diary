@@ -17,10 +17,6 @@ impl SqliteMovieProfileRepository {
         Self { pool }
     }
 
-    fn map_err(e: sqlx::Error) -> DomainError {
-        tracing::error!("Database error: {:?}", e);
-        DomainError::InfrastructureError("Database operation failed".into())
-    }
 }
 
 #[async_trait]
@@ -29,7 +25,7 @@ impl MovieProfileRepository for SqliteMovieProfileRepository {
         let movie_id = p.movie_id.value().to_string();
         let enriched_at = p.enriched_at.to_rfc3339();
 
-        let mut tx = self.pool.begin().await.map_err(Self::map_err)?;
+        let mut tx = self.pool.begin().await.map_err(adapter_common::map_sqlx_error)?;
 
         sqlx::query(
             r#"INSERT INTO movie_profiles
@@ -62,13 +58,13 @@ impl MovieProfileRepository for SqliteMovieProfileRepository {
         .bind(&enriched_at)
         .execute(&mut *tx)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         sqlx::query("DELETE FROM movie_genres WHERE movie_id = ?")
             .bind(&movie_id)
             .execute(&mut *tx)
             .await
-            .map_err(Self::map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
         for g in &p.genres {
             sqlx::query(
                 "INSERT OR IGNORE INTO movie_genres (movie_id, tmdb_id, name) VALUES (?,?,?)",
@@ -78,14 +74,14 @@ impl MovieProfileRepository for SqliteMovieProfileRepository {
             .bind(&g.name)
             .execute(&mut *tx)
             .await
-            .map_err(Self::map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
         }
 
         sqlx::query("DELETE FROM movie_keywords WHERE movie_id = ?")
             .bind(&movie_id)
             .execute(&mut *tx)
             .await
-            .map_err(Self::map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
         for k in &p.keywords {
             sqlx::query(
                 "INSERT OR IGNORE INTO movie_keywords (movie_id, tmdb_id, name) VALUES (?,?,?)",
@@ -95,14 +91,14 @@ impl MovieProfileRepository for SqliteMovieProfileRepository {
             .bind(&k.name)
             .execute(&mut *tx)
             .await
-            .map_err(Self::map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
         }
 
         sqlx::query("DELETE FROM movie_cast WHERE movie_id = ?")
             .bind(&movie_id)
             .execute(&mut *tx)
             .await
-            .map_err(Self::map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
         for c in &p.cast {
             sqlx::query(
                 "INSERT OR IGNORE INTO movie_cast \
@@ -117,14 +113,14 @@ impl MovieProfileRepository for SqliteMovieProfileRepository {
             .bind(&c.profile_path)
             .execute(&mut *tx)
             .await
-            .map_err(Self::map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
         }
 
         sqlx::query("DELETE FROM movie_crew WHERE movie_id = ?")
             .bind(&movie_id)
             .execute(&mut *tx)
             .await
-            .map_err(Self::map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
         for cr in &p.crew {
             sqlx::query(
                 "INSERT OR IGNORE INTO movie_crew \
@@ -139,10 +135,10 @@ impl MovieProfileRepository for SqliteMovieProfileRepository {
             .bind(&cr.profile_path)
             .execute(&mut *tx)
             .await
-            .map_err(Self::map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
         }
 
-        tx.commit().await.map_err(Self::map_err)
+        tx.commit().await.map_err(adapter_common::map_sqlx_error)
     }
 
     async fn get_by_movie_id(&self, id: &MovieId) -> Result<Option<MovieProfile>, DomainError> {
@@ -157,7 +153,7 @@ impl MovieProfileRepository for SqliteMovieProfileRepository {
         .bind(&movie_id)
         .fetch_optional(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         let row = match row {
             Some(r) => r,
@@ -175,7 +171,7 @@ impl MovieProfileRepository for SqliteMovieProfileRepository {
             .bind(&movie_id)
             .fetch_all(&self.pool)
             .await
-            .map_err(Self::map_err)?
+            .map_err(adapter_common::map_sqlx_error)?
             .into_iter()
             .map(|r| Genre {
                 tmdb_id: r.try_get::<i64, _>("tmdb_id").unwrap_or(0) as u32,
@@ -187,7 +183,7 @@ impl MovieProfileRepository for SqliteMovieProfileRepository {
             .bind(&movie_id)
             .fetch_all(&self.pool)
             .await
-            .map_err(Self::map_err)?
+            .map_err(adapter_common::map_sqlx_error)?
             .into_iter()
             .map(|r| Keyword {
                 tmdb_id: r.try_get::<i64, _>("tmdb_id").unwrap_or(0) as u32,
@@ -202,7 +198,7 @@ impl MovieProfileRepository for SqliteMovieProfileRepository {
         .bind(&movie_id)
         .fetch_all(&self.pool)
         .await
-        .map_err(Self::map_err)?
+        .map_err(adapter_common::map_sqlx_error)?
         .into_iter()
         .map(|r| CastMember {
             tmdb_person_id: r.try_get::<i64, _>("tmdb_person_id").unwrap_or(0) as u64,
@@ -220,7 +216,7 @@ impl MovieProfileRepository for SqliteMovieProfileRepository {
         .bind(&movie_id)
         .fetch_all(&self.pool)
         .await
-        .map_err(Self::map_err)?
+        .map_err(adapter_common::map_sqlx_error)?
         .into_iter()
         .map(|r| CrewMember {
             tmdb_person_id: r.try_get::<i64, _>("tmdb_person_id").unwrap_or(0) as u64,
@@ -273,7 +269,7 @@ impl MovieProfileRepository for SqliteMovieProfileRepository {
         .bind(&threshold)
         .fetch_all(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         Ok(rows
             .into_iter()

@@ -21,10 +21,6 @@ impl PostgresMovieRepository {
         Self { pool }
     }
 
-    fn map_err(e: sqlx::Error) -> DomainError {
-        tracing::error!("Database error: {:?}", e);
-        DomainError::InfrastructureError("Database operation failed".into())
-    }
 }
 
 #[async_trait]
@@ -55,7 +51,7 @@ impl MovieCommand for PostgresMovieRepository {
         .bind(&poster_path)
         .execute(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         Ok(())
     }
@@ -66,7 +62,7 @@ impl MovieCommand for PostgresMovieRepository {
             .bind(&id)
             .execute(&self.pool)
             .await
-            .map_err(Self::map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
         Ok(())
     }
 }
@@ -85,7 +81,7 @@ impl MovieQuery for PostgresMovieRepository {
         .bind(id)
         .fetch_optional(&self.pool)
         .await
-        .map_err(Self::map_err)?
+        .map_err(adapter_common::map_sqlx_error)?
         .map(MovieRow::into_domain)
         .transpose()
     }
@@ -99,7 +95,7 @@ impl MovieQuery for PostgresMovieRepository {
         .bind(&id)
         .fetch_optional(&self.pool)
         .await
-        .map_err(Self::map_err)?
+        .map_err(adapter_common::map_sqlx_error)?
         .map(MovieRow::into_domain)
         .transpose()
     }
@@ -119,7 +115,7 @@ impl MovieQuery for PostgresMovieRepository {
         .bind(year)
         .fetch_all(&self.pool)
         .await
-        .map_err(Self::map_err)?
+        .map_err(adapter_common::map_sqlx_error)?
         .into_iter()
         .map(MovieRow::into_domain)
         .collect()
@@ -139,7 +135,7 @@ impl MovieQuery for PostgresMovieRepository {
         .bind(&vals)
         .fetch_all(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
         Ok(rows.into_iter().map(|(id,)| id).collect())
     }
 
@@ -162,7 +158,7 @@ impl MovieQuery for PostgresMovieRepository {
         .bind(&years)
         .fetch_all(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
         Ok(rows
             .into_iter()
             .map(|r| {
@@ -211,7 +207,7 @@ impl MovieQuery for PostgresMovieRepository {
         .bind(offset)
         .fetch_all(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         let total: i64 = sqlx::query(
             "SELECT COUNT(DISTINCT m.id) \
@@ -226,7 +222,7 @@ impl MovieQuery for PostgresMovieRepository {
         .bind(genre)
         .fetch_one(&self.pool)
         .await
-        .map_err(Self::map_err)?
+        .map_err(adapter_common::map_sqlx_error)?
         .try_get(0)
         .unwrap_or(0);
 
@@ -250,7 +246,7 @@ impl MovieQuery for PostgresMovieRepository {
         )
         .fetch_all(&self.pool)
         .await
-        .map_err(Self::map_err)?
+        .map_err(adapter_common::map_sqlx_error)?
         .into_iter()
         .map(|r| r.into_domain())
         .collect()

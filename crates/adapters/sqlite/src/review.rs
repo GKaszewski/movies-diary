@@ -7,7 +7,8 @@ use domain::{
 };
 use sqlx::SqlitePool;
 
-use crate::models::{ReviewRow, datetime_to_str};
+use adapter_common::datetime_to_str;
+use crate::models::ReviewRow;
 
 pub struct SqliteReviewRepository {
     pool: SqlitePool,
@@ -18,10 +19,6 @@ impl SqliteReviewRepository {
         Self { pool }
     }
 
-    fn map_err(e: sqlx::Error) -> DomainError {
-        tracing::error!("Database error: {:?}", e);
-        DomainError::InfrastructureError("Database operation failed".into())
-    }
 }
 
 #[async_trait]
@@ -54,7 +51,7 @@ impl ReviewRepository for SqliteReviewRepository {
         .bind(review.watch_medium().map(|wm| wm.to_string()))
         .execute(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         Ok(())
     }
@@ -68,7 +65,7 @@ impl ReviewRepository for SqliteReviewRepository {
         .bind(&id)
         .fetch_optional(&self.pool)
         .await
-        .map_err(Self::map_err)?
+        .map_err(adapter_common::map_sqlx_error)?
         .map(ReviewRow::into_domain)
         .transpose()
     }
@@ -90,7 +87,7 @@ impl ReviewRepository for SqliteReviewRepository {
         .bind(&id)
         .execute(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         Ok(())
     }
@@ -101,7 +98,7 @@ impl ReviewRepository for SqliteReviewRepository {
             .bind(&id)
             .execute(&self.pool)
             .await
-            .map_err(Self::map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
         Ok(())
     }
 
@@ -114,7 +111,7 @@ impl ReviewRepository for SqliteReviewRepository {
         .bind(&uid)
         .fetch_all(&self.pool)
         .await
-        .map_err(Self::map_err)?
+        .map_err(adapter_common::map_sqlx_error)?
         .into_iter()
         .map(ReviewRow::into_domain)
         .collect()

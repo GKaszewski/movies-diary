@@ -7,7 +7,7 @@ use domain::{
 };
 use sqlx::{PgPool, Row};
 
-use crate::models::{datetime_to_str, parse_datetime, parse_uuid};
+use adapter_common::{datetime_to_str, parse_datetime, parse_uuid};
 
 pub struct PostgresGoalRepository {
     pool: PgPool,
@@ -18,10 +18,6 @@ impl PostgresGoalRepository {
         Self { pool }
     }
 
-    fn map_err(e: sqlx::Error) -> DomainError {
-        tracing::error!("Database error: {:?}", e);
-        DomainError::InfrastructureError("Database operation failed".into())
-    }
 }
 
 #[async_trait]
@@ -46,7 +42,7 @@ impl GoalCommand for PostgresGoalRepository {
         .bind(&created_at)
         .execute(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         Ok(())
     }
@@ -60,7 +56,7 @@ impl GoalCommand for PostgresGoalRepository {
             .bind(&id)
             .execute(&self.pool)
             .await
-            .map_err(Self::map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
 
         if result.rows_affected() == 0 {
             return Err(DomainError::NotFound("Goal not found".into()));
@@ -77,7 +73,7 @@ impl GoalCommand for PostgresGoalRepository {
             .bind(&uid)
             .execute(&self.pool)
             .await
-            .map_err(Self::map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
 
         if result.rows_affected() == 0 {
             return Err(DomainError::NotFound("Goal not found".into()));
@@ -105,7 +101,7 @@ impl GoalQuery for PostgresGoalRepository {
         .bind(y)
         .fetch_optional(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         row.map(|r| row_to_goal(&r)).transpose()
     }
@@ -121,7 +117,7 @@ impl GoalQuery for PostgresGoalRepository {
         .bind(&uid)
         .fetch_all(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         rows.iter().map(row_to_goal).collect()
     }

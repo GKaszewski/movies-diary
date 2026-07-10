@@ -3,7 +3,8 @@ use async_trait::async_trait;
 use chrono::Utc;
 use k_ap::ActivityRepository;
 
-use super::{PostgresFederationRepository, datetime_to_str};
+use adapter_common::datetime_to_str;
+use super::PostgresFederationRepository;
 
 #[async_trait]
 impl ActivityRepository for PostgresFederationRepository {

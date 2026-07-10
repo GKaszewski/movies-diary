@@ -45,30 +45,6 @@ pub fn create_profile_fields_repo(
     std::sync::Arc::new(SqliteProfileFieldsRepository::new(pool))
 }
 
-pub(crate) fn format_year_month(ym: &str) -> String {
-    let parts: Vec<&str> = ym.splitn(2, '-').collect();
-    if parts.len() != 2 {
-        return ym.to_string();
-    }
-    let year = parts[0].get(2..).unwrap_or(parts[0]);
-    let month = match parts[1] {
-        "01" => "Jan",
-        "02" => "Feb",
-        "03" => "Mar",
-        "04" => "Apr",
-        "05" => "May",
-        "06" => "Jun",
-        "07" => "Jul",
-        "08" => "Aug",
-        "09" => "Sep",
-        "10" => "Oct",
-        "11" => "Nov",
-        "12" => "Dec",
-        _ => parts[1],
-    };
-    format!("{} '{}", month, year)
-}
-
 pub async fn migrate(pool: &SqlitePool) -> Result<(), domain::errors::DomainError> {
     migrations::run(pool).await
 }

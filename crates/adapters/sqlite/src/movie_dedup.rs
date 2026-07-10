@@ -13,10 +13,6 @@ impl SqliteMovieDeduplicator {
         Self { pool }
     }
 
-    fn map_err(e: sqlx::Error) -> DomainError {
-        tracing::error!("Database error: {:?}", e);
-        DomainError::InfrastructureError("Database operation failed".into())
-    }
 }
 
 #[async_trait]
@@ -36,7 +32,7 @@ impl MovieDeduplicator for SqliteMovieDeduplicator {
         let director = canonical.director().map(str::to_string);
         let poster = canonical.poster_path().map(|p| p.value().to_string());
 
-        let mut tx = self.pool.begin().await.map_err(Self::map_err)?;
+        let mut tx = self.pool.begin().await.map_err(adapter_common::map_sqlx_error)?;
 
         // 1. Upsert canonical movie record
         sqlx::query(
@@ -47,7 +43,7 @@ impl MovieDeduplicator for SqliteMovieDeduplicator {
                  poster_path = COALESCE(excluded.poster_path, movies.poster_path)",
         )
         .bind(&new).bind(&ext_id).bind(&title).bind(year).bind(&director).bind(&poster)
-        .execute(&mut *tx).await.map_err(Self::map_err)?;
+        .execute(&mut *tx).await.map_err(adapter_common::map_sqlx_error)?;
 
         // 2. Re-point simple FK tables
         let reviews = sqlx::query("UPDATE reviews SET movie_id = ? WHERE movie_id = ?")
@@ -55,7 +51,7 @@ impl MovieDeduplicator for SqliteMovieDeduplicator {
             .bind(&old)
             .execute(&mut *tx)
             .await
-            .map_err(Self::map_err)?
+            .map_err(adapter_common::map_sqlx_error)?
             .rows_affected();
 
         let watchlist = sqlx::query("UPDATE watchlist_entries SET movie_id = ? WHERE movie_id = ?")
@@ -63,7 +59,7 @@ impl MovieDeduplicator for SqliteMovieDeduplicator {
             .bind(&old)
             .execute(&mut *tx)
             .await
-            .map_err(Self::map_err)?
+            .map_err(adapter_common::map_sqlx_error)?
             .rows_affected();
 
         let watch_events = sqlx::query("UPDATE watch_events SET movie_id = ? WHERE movie_id = ?")
@@ -71,7 +67,7 @@ impl MovieDeduplicator for SqliteMovieDeduplicator {
             .bind(&old)
             .execute(&mut *tx)
             .await
-            .map_err(Self::map_err)?
+            .map_err(adapter_common::map_sqlx_error)?
             .rows_affected();
 
         // 3. Re-point movie_profiles (PK — move only if canonical has none)
@@ -80,7 +76,7 @@ impl MovieDeduplicator for SqliteMovieDeduplicator {
             .bind(&old)
             .execute(&mut *tx)
             .await
-            .map_err(Self::map_err)?
+            .map_err(adapter_common::map_sqlx_error)?
             .rows_affected();
 
         // 4. Re-point enrichment tables with composite PKs (INSERT OR IGNORE + DELETE)
@@ -93,12 +89,12 @@ impl MovieDeduplicator for SqliteMovieDeduplicator {
         .bind(&old)
         .execute(&mut *tx)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
         sqlx::query("DELETE FROM movie_genres WHERE movie_id = ?")
             .bind(&old)
             .execute(&mut *tx)
             .await
-            .map_err(Self::map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
 
         sqlx::query(
             "INSERT OR IGNORE INTO movie_keywords (movie_id, tmdb_id, name)
@@ -108,41 +104,41 @@ impl MovieDeduplicator for SqliteMovieDeduplicator {
         .bind(&old)
         .execute(&mut *tx)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
         sqlx::query("DELETE FROM movie_keywords WHERE movie_id = ?")
             .bind(&old)
             .execute(&mut *tx)
             .await
-            .map_err(Self::map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
 
         sqlx::query(
             "INSERT OR IGNORE INTO movie_cast (movie_id, tmdb_person_id, name, character, billing_order, profile_path)
              SELECT ?, tmdb_person_id, name, character, billing_order, profile_path FROM movie_cast WHERE movie_id = ?",
-        ).bind(&new).bind(&old).execute(&mut *tx).await.map_err(Self::map_err)?;
+        ).bind(&new).bind(&old).execute(&mut *tx).await.map_err(adapter_common::map_sqlx_error)?;
         sqlx::query("DELETE FROM movie_cast WHERE movie_id = ?")
             .bind(&old)
             .execute(&mut *tx)
             .await
-            .map_err(Self::map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
 
         sqlx::query(
             "INSERT OR IGNORE INTO movie_crew (movie_id, tmdb_person_id, name, job, department, profile_path)
              SELECT ?, tmdb_person_id, name, job, department, profile_path FROM movie_crew WHERE movie_id = ?",
-        ).bind(&new).bind(&old).execute(&mut *tx).await.map_err(Self::map_err)?;
+        ).bind(&new).bind(&old).execute(&mut *tx).await.map_err(adapter_common::map_sqlx_error)?;
         sqlx::query("DELETE FROM movie_crew WHERE movie_id = ?")
             .bind(&old)
             .execute(&mut *tx)
             .await
-            .map_err(Self::map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
 
         // 5. Delete the now-empty old movie record (remaining cascades are safe: all FKs cleared above)
         sqlx::query("DELETE FROM movies WHERE id = ?")
             .bind(&old)
             .execute(&mut *tx)
             .await
-            .map_err(Self::map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
 
-        tx.commit().await.map_err(Self::map_err)?;
+        tx.commit().await.map_err(adapter_common::map_sqlx_error)?;
 
         Ok(reviews + watchlist + watch_events + profiles)
     }

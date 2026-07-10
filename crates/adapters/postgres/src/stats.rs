@@ -7,7 +7,7 @@ use domain::{
 };
 use sqlx::PgPool;
 
-use crate::format_year_month;
+use adapter_common::format_year_month;
 use crate::models::{DirectorCountRow, MonthlyRatingRow, UserTotalsRow};
 
 pub struct PostgresStatsRepository {
@@ -19,10 +19,6 @@ impl PostgresStatsRepository {
         Self { pool }
     }
 
-    fn map_err(e: sqlx::Error) -> DomainError {
-        tracing::error!("Database error: {:?}", e);
-        DomainError::InfrastructureError("Database operation failed".into())
-    }
 
     async fn fetch_user_totals(&self, user_id: &str) -> Result<UserTotalsRow, DomainError> {
         sqlx::query_as::<_, UserTotalsRow>(
@@ -33,7 +29,7 @@ impl PostgresStatsRepository {
         .bind(user_id)
         .fetch_one(&self.pool)
         .await
-        .map_err(Self::map_err)
+        .map_err(adapter_common::map_sqlx_error)
     }
 
     async fn fetch_user_favorite_director(
@@ -52,7 +48,7 @@ impl PostgresStatsRepository {
         .bind(user_id)
         .fetch_optional(&self.pool)
         .await
-        .map_err(Self::map_err)
+        .map_err(adapter_common::map_sqlx_error)
     }
 
     async fn fetch_user_most_active_month(
@@ -70,7 +66,7 @@ impl PostgresStatsRepository {
         .bind(user_id)
         .fetch_optional(&self.pool)
         .await
-        .map_err(Self::map_err)
+        .map_err(adapter_common::map_sqlx_error)
     }
 }
 
@@ -126,7 +122,7 @@ impl StatsRepository for PostgresStatsRepository {
             .bind(&uid)
             .fetch_all(&self.pool)
         )
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         let max_director_count = director_rows.iter().map(|d| d.count).max().unwrap_or(1);
 

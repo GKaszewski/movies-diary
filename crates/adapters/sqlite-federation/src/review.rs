@@ -3,7 +3,8 @@ use anyhow::{Result, anyhow};
 use async_trait::async_trait;
 use domain::models::{Review, ReviewSource};
 
-use super::{SqliteFederationRepository, datetime_to_str};
+use adapter_common::datetime_to_str;
+use super::SqliteFederationRepository;
 
 #[async_trait]
 impl RemoteReviewRepository for SqliteFederationRepository {

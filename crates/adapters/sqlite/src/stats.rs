@@ -18,11 +18,6 @@ impl SqliteStatsRepository {
         Self { pool }
     }
 
-    fn map_err(e: sqlx::Error) -> DomainError {
-        tracing::error!("Database error: {:?}", e);
-        DomainError::InfrastructureError("Database operation failed".into())
-    }
-
     async fn fetch_user_totals(&self, user_id: &str) -> Result<UserTotalsRow, DomainError> {
         sqlx::query_as::<_, UserTotalsRow>(
             "SELECT COUNT(DISTINCT movie_id) AS total,
@@ -32,7 +27,7 @@ impl SqliteStatsRepository {
         .bind(user_id)
         .fetch_one(&self.pool)
         .await
-        .map_err(Self::map_err)
+        .map_err(adapter_common::map_sqlx_error)
     }
 
     async fn fetch_user_favorite_director(
@@ -51,7 +46,7 @@ impl SqliteStatsRepository {
         .bind(user_id)
         .fetch_optional(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
         Ok(row)
     }
 
@@ -70,7 +65,7 @@ impl SqliteStatsRepository {
         .bind(user_id)
         .fetch_optional(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
         Ok(row)
     }
 }
@@ -86,7 +81,7 @@ impl StatsRepository for SqliteStatsRepository {
             self.fetch_user_most_active_month(&uid)
         )?;
 
-        let most_active_month = most_active.map(|ym| crate::format_year_month(&ym));
+        let most_active_month = most_active.map(|ym| adapter_common::format_year_month(&ym));
 
         Ok(UserStats {
             total_movies: totals.total,
@@ -128,14 +123,14 @@ impl StatsRepository for SqliteStatsRepository {
             .bind(&uid)
             .fetch_all(&self.pool)
         )
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         let max_director_count = director_rows.iter().map(|d| d.count).max().unwrap_or(1);
 
         let monthly_ratings = rating_rows
             .into_iter()
             .map(|r| MonthlyRating {
-                month_label: crate::format_year_month(&r.month),
+                month_label: adapter_common::format_year_month(&r.month),
                 year_month: r.month,
                 avg_rating: r.avg_rating,
                 count: r.count,

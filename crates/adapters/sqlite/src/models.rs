@@ -1,16 +1,11 @@
-use chrono::NaiveDateTime;
 use domain::{
     errors::DomainError,
-    models::{
-        DiaryEntry, FeedEntry, Movie, MovieSummary, PersistedReview, Review, ReviewSource,
-        UserSummary, WatchlistEntry, WatchlistWithMovie,
-    },
-    value_objects::{
-        Comment, Email, ExternalMetadataId, MovieId, MovieTitle, PosterPath, Rating, ReleaseYear,
-        ReviewId, UserId, Username, WatchlistEntryId,
-    },
+    models::{DiaryEntry, FeedEntry, Movie, MovieSummary, Review, WatchlistWithMovie},
 };
-use uuid::Uuid;
+use adapter_common::{
+    movie_row_to_domain, movie_stats_to_domain, movie_summary_to_domain, review_row_to_domain,
+    user_summary_to_domain, watchlist_entry_to_domain, watchlist_with_movie_to_domain,
+};
 
 #[derive(sqlx::FromRow)]
 pub(crate) struct MovieRow {
@@ -24,22 +19,14 @@ pub(crate) struct MovieRow {
 
 impl MovieRow {
     pub fn into_domain(self) -> Result<Movie, DomainError> {
-        let id = MovieId::from_uuid(parse_uuid(&self.id)?);
-        let external_metadata_id = self
-            .external_metadata_id
-            .map(ExternalMetadataId::new)
-            .transpose()?;
-        let title = MovieTitle::new(self.title)?;
-        let release_year = ReleaseYear::new(self.release_year as u16)?;
-        let poster_path = self.poster_path.map(PosterPath::new).transpose()?;
-        Ok(Movie::from_persistence(
-            id,
-            external_metadata_id,
-            title,
-            release_year,
+        movie_row_to_domain(
+            self.id,
+            self.external_metadata_id,
+            self.title,
+            self.release_year,
             self.director,
-            poster_path,
-        ))
+            self.poster_path,
+        )
     }
 }
 
@@ -60,27 +47,26 @@ pub(crate) struct MovieSummaryRow {
 
 impl MovieSummaryRow {
     pub fn into_domain(self) -> Result<MovieSummary, DomainError> {
-        let movie = MovieRow {
-            id: self.id,
-            external_metadata_id: self.external_metadata_id,
-            title: self.title,
-            release_year: self.release_year,
-            director: self.director,
-            poster_path: self.poster_path,
-        }
-        .into_domain()?;
+        let movie = movie_row_to_domain(
+            self.id,
+            self.external_metadata_id,
+            self.title,
+            self.release_year,
+            self.director,
+            self.poster_path,
+        )?;
         let genres = self
             .genres
             .map(|g| g.split(',').map(str::to_string).collect())
             .unwrap_or_default();
-        Ok(MovieSummary {
+        Ok(movie_summary_to_domain(
             movie,
             genres,
-            runtime_minutes: self.runtime_minutes.map(|v| v as u32),
-            original_language: self.original_language,
-            overview: self.overview,
-            collection_name: self.collection_name,
-        })
+            self.runtime_minutes,
+            self.original_language,
+            self.overview,
+            self.collection_name,
+        ))
     }
 }
 
@@ -99,29 +85,17 @@ pub(crate) struct ReviewRow {
 
 impl ReviewRow {
     pub fn into_domain(self) -> Result<Review, DomainError> {
-        let id = ReviewId::from_uuid(parse_uuid(&self.id)?);
-        let movie_id = MovieId::from_uuid(parse_uuid(&self.movie_id)?);
-        let user_id = UserId::from_uuid(parse_uuid(&self.user_id)?);
-        let rating = Rating::new(self.rating as u8)?;
-        let comment = self.comment.map(Comment::new).transpose()?;
-        let watched_at = parse_datetime(&self.watched_at)?;
-        let created_at = parse_datetime(&self.created_at)?;
-        let source = match self.remote_actor_url {
-            None => ReviewSource::Local,
-            Some(url) => ReviewSource::Remote { actor_url: url },
-        };
-        let watch_medium = self.watch_medium.map(|s| s.parse()).transpose()?;
-        Ok(Review::from_persistence(PersistedReview {
-            id,
-            movie_id,
-            user_id,
-            rating,
-            comment,
-            watched_at,
-            created_at,
-            source,
-            watch_medium,
-        }))
+        review_row_to_domain(
+            self.id,
+            self.movie_id,
+            self.user_id,
+            self.rating,
+            self.comment,
+            self.watched_at,
+            self.created_at,
+            self.remote_actor_url,
+            self.watch_medium,
+        )
     }
 }
 
@@ -147,29 +121,25 @@ pub(crate) struct DiaryRow {
 
 impl DiaryRow {
     pub fn into_domain(self) -> Result<DiaryEntry, DomainError> {
-        let movie = MovieRow {
-            id: self.id,
-            external_metadata_id: self.external_metadata_id,
-            title: self.title,
-            release_year: self.release_year,
-            director: self.director,
-            poster_path: self.poster_path,
-        }
-        .into_domain()?;
-
-        let review = ReviewRow {
-            id: self.review_id,
-            movie_id: self.movie_id,
-            user_id: self.user_id,
-            rating: self.rating,
-            comment: self.comment,
-            watched_at: self.watched_at,
-            created_at: self.created_at,
-            remote_actor_url: self.remote_actor_url,
-            watch_medium: self.watch_medium,
-        }
-        .into_domain()?;
-
+        let movie = movie_row_to_domain(
+            self.id,
+            self.external_metadata_id,
+            self.title,
+            self.release_year,
+            self.director,
+            self.poster_path,
+        )?;
+        let review = review_row_to_domain(
+            self.review_id,
+            self.movie_id,
+            self.user_id,
+            self.rating,
+            self.comment,
+            self.watched_at,
+            self.created_at,
+            self.remote_actor_url,
+            self.watch_medium,
+        )?;
         Ok(DiaryEntry::new(movie, review))
     }
 }
@@ -188,18 +158,18 @@ pub(crate) struct MovieStatsRow {
 
 impl MovieStatsRow {
     pub fn into_domain(self) -> domain::models::MovieStats {
-        domain::models::MovieStats {
-            total_count: self.total_count as u64,
-            avg_rating: self.avg_rating,
-            federated_count: self.federated_count as u64,
-            rating_histogram: [
-                self.rating_1 as u64,
-                self.rating_2 as u64,
-                self.rating_3 as u64,
-                self.rating_4 as u64,
-                self.rating_5 as u64,
+        movie_stats_to_domain(
+            self.total_count,
+            self.avg_rating,
+            self.federated_count,
+            [
+                self.rating_1,
+                self.rating_2,
+                self.rating_3,
+                self.rating_4,
+                self.rating_5,
             ],
-        }
+        )
     }
 }
 
@@ -226,24 +196,26 @@ pub(crate) struct FeedRow {
 
 impl FeedRow {
     pub fn into_domain(self) -> Result<FeedEntry, DomainError> {
-        let diary = DiaryRow {
-            id: self.id,
-            external_metadata_id: self.external_metadata_id,
-            title: self.title,
-            release_year: self.release_year,
-            director: self.director,
-            poster_path: self.poster_path,
-            review_id: self.review_id,
-            movie_id: self.movie_id,
-            user_id: self.user_id,
-            rating: self.rating,
-            comment: self.comment,
-            watched_at: self.watched_at,
-            created_at: self.created_at,
-            remote_actor_url: self.remote_actor_url,
-            watch_medium: self.watch_medium,
-        }
-        .into_domain()?;
+        let movie = movie_row_to_domain(
+            self.id,
+            self.external_metadata_id,
+            self.title,
+            self.release_year,
+            self.director,
+            self.poster_path,
+        )?;
+        let review = review_row_to_domain(
+            self.review_id,
+            self.movie_id,
+            self.user_id,
+            self.rating,
+            self.comment,
+            self.watched_at,
+            self.created_at,
+            self.remote_actor_url,
+            self.watch_medium,
+        )?;
+        let diary = DiaryEntry::new(movie, review);
         Ok(FeedEntry::new(diary, self.user_email))
     }
 }
@@ -260,16 +232,16 @@ pub(crate) struct UserSummaryRow {
 }
 
 impl UserSummaryRow {
-    pub fn into_domain(self) -> Result<UserSummary, DomainError> {
-        Ok(UserSummary::new(
-            UserId::from_uuid(parse_uuid(&self.id)?),
-            Email::new(self.email)?,
-            Username::new(self.username)?,
+    pub fn into_domain(self) -> Result<domain::models::UserSummary, DomainError> {
+        user_summary_to_domain(
+            self.id,
+            self.email,
+            self.username,
             self.display_name,
             self.total_movies,
             self.avg_rating,
             self.avatar_path,
-        ))
+        )
     }
 }
 
@@ -308,35 +280,20 @@ pub(crate) struct WatchlistRow {
 
 impl WatchlistRow {
     pub fn into_domain(self) -> Result<WatchlistWithMovie, DomainError> {
-        let entry = WatchlistEntry {
-            id: WatchlistEntryId::from_uuid(parse_uuid(&self.id)?),
-            user_id: UserId::from_uuid(parse_uuid(&self.user_id)?),
-            movie_id: MovieId::from_uuid(parse_uuid(&self.movie_id)?),
-            added_at: parse_datetime(&self.added_at)?,
-        };
-        let movie = MovieRow {
-            id: self.m_id,
-            external_metadata_id: self.external_metadata_id,
-            title: self.title,
-            release_year: self.release_year,
-            director: self.director,
-            poster_path: self.poster_path,
-        }
-        .into_domain()?;
-        Ok(WatchlistWithMovie { entry, movie })
+        let entry = watchlist_entry_to_domain(
+            self.id,
+            self.user_id,
+            self.movie_id,
+            self.added_at,
+        )?;
+        let movie = movie_row_to_domain(
+            self.m_id,
+            self.external_metadata_id,
+            self.title,
+            self.release_year,
+            self.director,
+            self.poster_path,
+        )?;
+        Ok(watchlist_with_movie_to_domain(entry, movie))
     }
-}
-
-pub(crate) fn parse_uuid(s: &str) -> Result<Uuid, DomainError> {
-    Uuid::parse_str(s)
-        .map_err(|e| DomainError::InfrastructureError(format!("Invalid UUID '{}': {}", s, e)))
-}
-
-pub(crate) fn datetime_to_str(dt: &NaiveDateTime) -> String {
-    dt.format("%Y-%m-%d %H:%M:%S").to_string()
-}
-
-pub(crate) fn parse_datetime(s: &str) -> Result<NaiveDateTime, DomainError> {
-    NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S")
-        .map_err(|e| DomainError::InfrastructureError(format!("Invalid datetime '{}': {}", s, e)))
 }

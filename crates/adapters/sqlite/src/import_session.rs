@@ -202,11 +202,6 @@ impl SqliteImportSessionRepository {
         Self { pool }
     }
 
-    fn map_err(e: sqlx::Error) -> DomainError {
-        tracing::error!("DB error: {:?}", e);
-        DomainError::InfrastructureError("Database operation failed".into())
-    }
-
     fn parse_dt(s: &str) -> Result<NaiveDateTime, DomainError> {
         NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S")
             .or_else(|_| NaiveDateTime::parse_from_str(s, "%Y-%m-%dT%H:%M:%S"))
@@ -316,7 +311,7 @@ impl ImportSessionRepository for SqliteImportSessionRepository {
         .execute(&self.pool)
         .await
         .map(|_| ())
-        .map_err(Self::map_err)
+        .map_err(adapter_common::map_sqlx_error)
     }
 
     async fn get(
@@ -334,7 +329,7 @@ impl ImportSessionRepository for SqliteImportSessionRepository {
         .bind(&uid_str)
         .fetch_optional(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         row.map(|r| {
             use sqlx::Row;
@@ -361,7 +356,7 @@ impl ImportSessionRepository for SqliteImportSessionRepository {
             .execute(&self.pool)
             .await
             .map(|_| ())
-            .map_err(Self::map_err)
+            .map_err(adapter_common::map_sqlx_error)
     }
 
     async fn delete(&self, id: &ImportSessionId) -> Result<(), DomainError> {
@@ -371,14 +366,14 @@ impl ImportSessionRepository for SqliteImportSessionRepository {
             .execute(&self.pool)
             .await
             .map(|_| ())
-            .map_err(Self::map_err)
+            .map_err(adapter_common::map_sqlx_error)
     }
 
     async fn delete_expired(&self) -> Result<u64, DomainError> {
         let result = sqlx::query("DELETE FROM import_sessions WHERE expires_at < datetime('now')")
             .execute(&self.pool)
             .await
-            .map_err(Self::map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
         Ok(result.rows_affected())
     }
 
@@ -391,6 +386,6 @@ impl ImportSessionRepository for SqliteImportSessionRepository {
         .execute(&self.pool)
         .await
         .map(|_| ())
-        .map_err(Self::map_err)
+        .map_err(adapter_common::map_sqlx_error)
     }
 }

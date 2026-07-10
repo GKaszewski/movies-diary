@@ -221,6 +221,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "adapter-common"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "domain",
+ "sqlx",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "adler2"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3884,6 +3895,7 @@ dependencies = [
 name = "postgres"
 version = "0.1.0"
 dependencies = [
+ "adapter-common",
  "anyhow",
  "async-stream",
  "async-trait",
@@ -3920,6 +3932,7 @@ name = "postgres-federation"
 version = "0.1.0"
 dependencies = [
  "activitypub",
+ "adapter-common",
  "anyhow",
  "async-trait",
  "chrono",
@@ -3935,6 +3948,7 @@ dependencies = [
 name = "postgres-search"
 version = "0.1.0"
 dependencies = [
+ "adapter-common",
  "async-trait",
  "domain",
  "sqlx",
@@ -5164,6 +5178,7 @@ dependencies = [
 name = "sqlite"
 version = "0.1.0"
 dependencies = [
+ "adapter-common",
  "anyhow",
  "async-stream",
  "async-trait",
@@ -5200,6 +5215,7 @@ name = "sqlite-federation"
 version = "0.1.0"
 dependencies = [
  "activitypub",
+ "adapter-common",
  "anyhow",
  "async-trait",
  "chrono",
@@ -5216,6 +5232,7 @@ dependencies = [
 name = "sqlite-search"
 version = "0.1.0"
 dependencies = [
+ "adapter-common",
  "async-trait",
  "domain",
  "sqlx",

@@ -12,7 +12,6 @@ use domain::{
     },
 };
 use sqlx::{PgPool, Row};
-use uuid::Uuid;
 
 pub struct PostgresApContentQuery {
     pool: PgPool,
@@ -22,24 +21,11 @@ impl PostgresApContentQuery {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
-
-    fn map_err(e: sqlx::Error) -> DomainError {
-        tracing::error!("Database error: {:?}", e);
-        DomainError::InfrastructureError("Database operation failed".into())
-    }
 }
 
 // ── Local row types ──────────────────────────────────────────────────────────
 
-fn parse_uuid(s: &str) -> Result<Uuid, DomainError> {
-    Uuid::parse_str(s)
-        .map_err(|e| DomainError::InfrastructureError(format!("Invalid UUID '{}': {}", s, e)))
-}
-
-fn parse_datetime(s: &str) -> Result<chrono::NaiveDateTime, DomainError> {
-    chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S")
-        .map_err(|e| DomainError::InfrastructureError(format!("Invalid datetime '{}': {}", s, e)))
-}
+use adapter_common::{parse_uuid, parse_datetime};
 
 #[derive(sqlx::FromRow)]
 struct MovieRow {
@@ -181,7 +167,7 @@ impl LocalApContentQuery for PostgresApContentQuery {
         .bind(&uid)
         .fetch_all(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         rows.into_iter()
             .map(|row| {
@@ -249,7 +235,7 @@ impl LocalApContentQuery for PostgresApContentQuery {
         .bind(&mid)
         .fetch_all(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
         rows.into_iter().map(DiaryRow::into_domain).collect()
     }
 
@@ -282,7 +268,7 @@ impl LocalApContentQuery for PostgresApContentQuery {
             .bind(limit_i64)
             .fetch_all(&self.pool)
             .await
-            .map_err(Self::map_err)?
+            .map_err(adapter_common::map_sqlx_error)?
         } else {
             sqlx::query_as::<_, DiaryRow>(
                 "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
@@ -301,7 +287,7 @@ impl LocalApContentQuery for PostgresApContentQuery {
             .bind(limit_i64)
             .fetch_all(&self.pool)
             .await
-            .map_err(Self::map_err)?
+            .map_err(adapter_common::map_sqlx_error)?
         };
         rows.into_iter().map(DiaryRow::into_domain).collect()
     }

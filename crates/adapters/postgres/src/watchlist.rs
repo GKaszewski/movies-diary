@@ -10,7 +10,8 @@ use domain::{
 };
 use sqlx::{PgPool, Row};
 
-use crate::models::{MovieRow, parse_datetime, parse_uuid};
+use adapter_common::{parse_datetime, parse_uuid};
+use crate::models::MovieRow;
 
 pub struct PostgresWatchlistRepository {
     pool: PgPool,
@@ -21,10 +22,6 @@ impl PostgresWatchlistRepository {
         Self { pool }
     }
 
-    fn map_err(e: sqlx::Error) -> DomainError {
-        tracing::error!("Database error: {:?}", e);
-        DomainError::InfrastructureError("Database operation failed".into())
-    }
 }
 
 #[async_trait]
@@ -46,7 +43,7 @@ impl WatchlistRepository for PostgresWatchlistRepository {
         .bind(added_at)
         .execute(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         Ok(())
     }
@@ -61,7 +58,7 @@ impl WatchlistRepository for PostgresWatchlistRepository {
                 .bind(&mid)
                 .execute(&self.pool)
                 .await
-                .map_err(Self::map_err)?;
+                .map_err(adapter_common::map_sqlx_error)?;
 
         if result.rows_affected() == 0 {
             return Err(DomainError::NotFound(format!(
@@ -85,7 +82,7 @@ impl WatchlistRepository for PostgresWatchlistRepository {
                 .bind(&mid)
                 .execute(&self.pool)
                 .await
-                .map_err(Self::map_err)?;
+                .map_err(adapter_common::map_sqlx_error)?;
         Ok(result.rows_affected() > 0)
     }
 
@@ -114,14 +111,14 @@ impl WatchlistRepository for PostgresWatchlistRepository {
         .bind(offset)
         .fetch_all(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         let total: i64 =
             sqlx::query_scalar("SELECT COUNT(*) FROM watchlist_entries WHERE user_id = $1")
                 .bind(&uid)
                 .fetch_one(&self.pool)
                 .await
-                .map_err(Self::map_err)?;
+                .map_err(adapter_common::map_sqlx_error)?;
 
         let items = rows
             .into_iter()
@@ -187,7 +184,7 @@ impl WatchlistRepository for PostgresWatchlistRepository {
         .bind(&mid)
         .fetch_one(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
         Ok(count > 0)
     }
 }

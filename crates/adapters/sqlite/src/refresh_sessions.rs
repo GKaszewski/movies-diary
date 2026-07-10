@@ -16,10 +16,6 @@ impl SqliteRefreshSessionAdapter {
     }
 }
 
-fn map_err(e: sqlx::Error) -> DomainError {
-    DomainError::InfrastructureError(e.to_string())
-}
-
 #[async_trait]
 impl RefreshSessionRepository for SqliteRefreshSessionAdapter {
     async fn create(&self, session: &RefreshSession) -> Result<(), DomainError> {
@@ -34,7 +30,7 @@ impl RefreshSessionRepository for SqliteRefreshSessionAdapter {
         .bind(session.created_at.to_rfc3339())
         .execute(&self.pool)
         .await
-        .map_err(map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
         Ok(())
     }
 
@@ -45,7 +41,7 @@ impl RefreshSessionRepository for SqliteRefreshSessionAdapter {
         .bind(token)
         .fetch_optional(&self.pool)
         .await
-        .map_err(map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         row.map(RefreshSessionRow::into_domain).transpose()
     }
@@ -55,7 +51,7 @@ impl RefreshSessionRepository for SqliteRefreshSessionAdapter {
             .bind(token)
             .execute(&self.pool)
             .await
-            .map_err(map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
         Ok(())
     }
 
@@ -64,7 +60,7 @@ impl RefreshSessionRepository for SqliteRefreshSessionAdapter {
             .bind(user_id.value().to_string())
             .execute(&self.pool)
             .await
-            .map_err(map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
         Ok(())
     }
 
@@ -74,7 +70,7 @@ impl RefreshSessionRepository for SqliteRefreshSessionAdapter {
             .bind(&now)
             .execute(&self.pool)
             .await
-            .map_err(map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
         Ok(result.rows_affected())
     }
 }

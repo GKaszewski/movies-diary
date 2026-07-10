@@ -19,11 +19,6 @@ impl SqliteUserRepository {
         Self { pool }
     }
 
-    fn map_err(e: sqlx::Error) -> DomainError {
-        tracing::error!("Database error: {:?}", e);
-        DomainError::InfrastructureError("Database operation failed".into())
-    }
-
     fn parse_role(s: &str) -> UserRole {
         match s {
             "admin" => UserRole::Admin,
@@ -73,7 +68,7 @@ impl UserRepository for SqliteUserRepository {
             .bind(email_str)
             .fetch_optional(&self.pool)
             .await
-            .map_err(Self::map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
 
         row.as_ref()
             .map(|r| Self::row_to_user(r, vec![]))
@@ -86,7 +81,7 @@ impl UserRepository for SqliteUserRepository {
             .bind(username_str)
             .fetch_optional(&self.pool)
             .await
-            .map_err(Self::map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
 
         row.as_ref()
             .map(|r| Self::row_to_user(r, vec![]))
@@ -126,7 +121,7 @@ impl UserRepository for SqliteUserRepository {
         .bind(role)
         .execute(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         Ok(())
     }
@@ -137,7 +132,7 @@ impl UserRepository for SqliteUserRepository {
             .bind(&id_str)
             .fetch_optional(&self.pool)
             .await
-            .map_err(Self::map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
 
         let Some(r) = row else { return Ok(None) };
 
@@ -194,7 +189,7 @@ impl UserRepository for SqliteUserRepository {
         )
         .fetch_all(&self.pool)
         .await
-        .map_err(Self::map_err)?
+        .map_err(adapter_common::map_sqlx_error)?
         .into_iter()
         .map(UserSummaryRow::into_domain)
         .collect()

@@ -22,23 +22,19 @@ impl PostgresDiaryRepository {
         Self { pool }
     }
 
-    fn map_err(e: sqlx::Error) -> DomainError {
-        tracing::error!("Database error: {:?}", e);
-        DomainError::InfrastructureError("Database operation failed".into())
-    }
 
     async fn count_diary_entries(&self, movie_id: Option<&str>) -> Result<i64, DomainError> {
         match movie_id {
             None => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM reviews")
                 .fetch_one(&self.pool)
                 .await
-                .map_err(Self::map_err),
+                .map_err(adapter_common::map_sqlx_error),
             Some(id) => {
                 sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM reviews WHERE movie_id = $1")
                     .bind(id)
                     .fetch_one(&self.pool)
                     .await
-                    .map_err(Self::map_err)
+                    .map_err(adapter_common::map_sqlx_error)
             }
         }
     }
@@ -73,7 +69,7 @@ impl PostgresDiaryRepository {
             .bind(offset)
             .fetch_all(&self.pool)
             .await
-            .map_err(Self::map_err)
+            .map_err(adapter_common::map_sqlx_error)
     }
 
     async fn fetch_movie_diary_rows(
@@ -109,7 +105,7 @@ impl PostgresDiaryRepository {
             .bind(offset)
             .fetch_all(&self.pool)
             .await
-            .map_err(Self::map_err)
+            .map_err(adapter_common::map_sqlx_error)
     }
 
     async fn count_user_diary_entries(
@@ -138,7 +134,7 @@ impl PostgresDiaryRepository {
         if has_search {
             q = q.bind(search.unwrap());
         }
-        q.fetch_one(&self.pool).await.map_err(Self::map_err)
+        q.fetch_one(&self.pool).await.map_err(adapter_common::map_sqlx_error)
     }
 
     async fn fetch_user_diary_rows(
@@ -197,7 +193,7 @@ impl PostgresDiaryRepository {
             .bind(offset)
             .fetch_all(&self.pool)
             .await
-            .map_err(Self::map_err)
+            .map_err(adapter_common::map_sqlx_error)
     }
 }
 
@@ -375,7 +371,7 @@ impl DiaryQuery for PostgresDiaryRepository {
         }
 
         let count_q = bind_filter_params!(sqlx::query_scalar::<_, i64>(&count_sql));
-        let total = count_q.fetch_one(&self.pool).await.map_err(Self::map_err)?;
+        let total = count_q.fetch_one(&self.pool).await.map_err(adapter_common::map_sqlx_error)?;
 
         let rows_q = bind_filter_params!(sqlx::query_as::<_, FeedRow>(&select_sql));
         let rows = rows_q
@@ -383,7 +379,7 @@ impl DiaryQuery for PostgresDiaryRepository {
             .bind(offset)
             .fetch_all(&self.pool)
             .await
-            .map_err(Self::map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
 
         let items = rows
             .into_iter()
@@ -408,7 +404,7 @@ impl DiaryQuery for PostgresDiaryRepository {
         .bind(&id_str)
         .fetch_optional(&self.pool)
         .await
-        .map_err(Self::map_err)?
+        .map_err(adapter_common::map_sqlx_error)?
         .ok_or_else(|| DomainError::NotFound(format!("Movie {}", id_str)))?
         .into_domain()?;
 
@@ -423,7 +419,7 @@ impl DiaryQuery for PostgresDiaryRepository {
         .bind(&id_str)
         .fetch_all(&self.pool)
         .await
-        .map_err(Self::map_err)?
+        .map_err(adapter_common::map_sqlx_error)?
         .into_iter()
         .map(ReviewRow::into_domain)
         .collect::<Result<Vec<_>, _>>()?;
@@ -448,7 +444,7 @@ impl DiaryQuery for PostgresDiaryRepository {
         .bind(&uid)
         .fetch_all(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         rows.into_iter().map(DiaryRow::into_domain).collect()
     }
@@ -477,7 +473,7 @@ impl DiaryQuery for PostgresDiaryRepository {
             while let Some(row) = futures::StreamExt::next(&mut rows).await {
                 yield match row {
                     Ok(r) => r.into_domain(),
-                    Err(e) => Err(Self::map_err(e)),
+                    Err(e) => Err(adapter_common::map_sqlx_error(e)),
                 };
             }
         })
@@ -500,7 +496,7 @@ impl DiaryQuery for PostgresDiaryRepository {
         .bind(id_str)
         .fetch_one(&self.pool)
         .await
-        .map_err(Self::map_err)
+        .map_err(adapter_common::map_sqlx_error)
         .map(MovieStatsRow::into_domain)
     }
 
@@ -517,7 +513,7 @@ impl DiaryQuery for PostgresDiaryRepository {
             .bind(&id_str)
             .fetch_one(&self.pool)
             .await
-            .map_err(Self::map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
 
         let rows = sqlx::query_as::<_, FeedRow>(
             "SELECT m.id, m.external_metadata_id, m.title, m.release_year, m.director, m.poster_path,
@@ -541,7 +537,7 @@ impl DiaryQuery for PostgresDiaryRepository {
         .bind(offset)
         .fetch_all(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         let items = rows
             .into_iter()
@@ -561,7 +557,7 @@ impl DiaryQuery for PostgresDiaryRepository {
             sqlx::query_scalar("SELECT COUNT(*) FROM reviews WHERE remote_actor_url IS NULL")
                 .fetch_one(&self.pool)
                 .await
-                .map_err(Self::map_err)?;
+                .map_err(adapter_common::map_sqlx_error)?;
         Ok(count as u64)
     }
 }

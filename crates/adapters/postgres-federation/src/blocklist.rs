@@ -4,7 +4,8 @@ use chrono::Utc;
 use k_ap::{BlockedDomain, BlocklistRepository};
 use sqlx::Row;
 
-use super::{PostgresFederationRepository, datetime_to_str};
+use adapter_common::datetime_to_str;
+use super::PostgresFederationRepository;
 
 #[async_trait]
 impl BlocklistRepository for PostgresFederationRepository {

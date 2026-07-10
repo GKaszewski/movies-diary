@@ -10,7 +10,8 @@ use domain::{
 };
 use sqlx::{Row, SqlitePool};
 
-use crate::models::{WatchlistRow, datetime_to_str};
+use adapter_common::datetime_to_str;
+use crate::models::WatchlistRow;
 
 pub struct SqliteWatchlistRepository {
     pool: SqlitePool,
@@ -21,10 +22,6 @@ impl SqliteWatchlistRepository {
         Self { pool }
     }
 
-    fn map_err(e: sqlx::Error) -> DomainError {
-        tracing::error!("Database error: {:?}", e);
-        DomainError::InfrastructureError("Database operation failed".into())
-    }
 }
 
 #[async_trait]
@@ -45,7 +42,7 @@ impl WatchlistRepository for SqliteWatchlistRepository {
         .bind(&added_at)
         .execute(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         Ok(())
     }
@@ -60,7 +57,7 @@ impl WatchlistRepository for SqliteWatchlistRepository {
                 .bind(&mid)
                 .execute(&self.pool)
                 .await
-                .map_err(Self::map_err)?;
+                .map_err(adapter_common::map_sqlx_error)?;
 
         if result.rows_affected() == 0 {
             return Err(DomainError::NotFound(format!(
@@ -84,7 +81,7 @@ impl WatchlistRepository for SqliteWatchlistRepository {
                 .bind(&mid)
                 .execute(&self.pool)
                 .await
-                .map_err(Self::map_err)?;
+                .map_err(adapter_common::map_sqlx_error)?;
         Ok(result.rows_affected() > 0)
     }
 
@@ -112,13 +109,13 @@ impl WatchlistRepository for SqliteWatchlistRepository {
         .bind(offset)
         .fetch_all(&self.pool)
         .await
-        .map_err(Self::map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         let total: i64 = sqlx::query("SELECT COUNT(*) FROM watchlist_entries WHERE user_id = ?")
             .bind(&uid)
             .fetch_one(&self.pool)
             .await
-            .map_err(Self::map_err)?
+            .map_err(adapter_common::map_sqlx_error)?
             .try_get(0)
             .unwrap_or(0);
 
@@ -145,7 +142,7 @@ impl WatchlistRepository for SqliteWatchlistRepository {
         .bind(&mid)
         .fetch_one(&self.pool)
         .await
-        .map_err(Self::map_err)?
+        .map_err(adapter_common::map_sqlx_error)?
         .try_get(0)
         .unwrap_or(0);
         Ok(count > 0)

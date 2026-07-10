@@ -29,9 +29,6 @@ pub fn create_person_adapter(pool: PgPool) -> (Arc<dyn PersonCommand>, Arc<dyn P
     )
 }
 
-fn map_err(e: sqlx::Error) -> DomainError {
-    DomainError::InfrastructureError(e.to_string())
-}
 
 #[async_trait]
 impl PersonCommand for PostgresPersonAdapter {
@@ -56,7 +53,7 @@ impl PersonCommand for PostgresPersonAdapter {
             .bind(person.profile_path())
             .execute(&self.pool)
             .await
-            .map_err(map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
         }
         Ok(())
     }
@@ -89,7 +86,7 @@ impl PersonCommand for PostgresPersonAdapter {
         .bind(batch_size as i64)
         .fetch_all(&self.pool)
         .await
-        .map_err(map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         let has_more = rows.len() as u32 >= batch_size;
         let mut count = 0u64;
@@ -109,7 +106,7 @@ impl PersonCommand for PostgresPersonAdapter {
             .bind(&row.profile_path)
             .execute(&self.pool)
             .await
-            .map_err(map_err)?;
+            .map_err(adapter_common::map_sqlx_error)?;
             count += 1;
         }
         Ok((count, has_more))
@@ -137,7 +134,7 @@ impl PersonCommand for PostgresPersonAdapter {
         .bind(id.value().to_string())
         .execute(&self.pool)
         .await
-        .map_err(map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
         Ok(())
     }
 }
@@ -151,7 +148,7 @@ impl PersonQuery for PostgresPersonAdapter {
         .bind(id.value().to_string())
         .fetch_optional(&self.pool)
         .await
-        .map_err(map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         Ok(row.map(PersonRow::into_person))
     }
@@ -166,7 +163,7 @@ impl PersonQuery for PostgresPersonAdapter {
         .bind(id.value())
         .fetch_optional(&self.pool)
         .await
-        .map_err(map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         Ok(row.map(PersonRow::into_person))
     }
@@ -182,7 +179,7 @@ impl PersonQuery for PostgresPersonAdapter {
                 .bind(id.value().to_string())
                 .fetch_optional(&self.pool)
                 .await
-                .map_err(map_err)?
+                .map_err(adapter_common::map_sqlx_error)?
                 .flatten();
 
         let Some(tmdb_id) = tmdb_id else {
@@ -219,7 +216,7 @@ impl PersonQuery for PostgresPersonAdapter {
         .bind(tmdb_id)
         .fetch_all(&self.pool)
         .await
-        .map_err(map_err)?
+        .map_err(adapter_common::map_sqlx_error)?
         .into_iter()
         .map(|r| CastCredit {
             movie_id: MovieId::from_uuid(uuid::Uuid::parse_str(&r.id).unwrap_or_default()),
@@ -238,7 +235,7 @@ impl PersonQuery for PostgresPersonAdapter {
         .bind(tmdb_id)
         .fetch_all(&self.pool)
         .await
-        .map_err(map_err)?
+        .map_err(adapter_common::map_sqlx_error)?
         .into_iter()
         .map(|r| CrewCredit {
             movie_id: MovieId::from_uuid(uuid::Uuid::parse_str(&r.id).unwrap_or_default()),
@@ -261,7 +258,7 @@ impl PersonQuery for PostgresPersonAdapter {
         .bind(offset as i64)
         .fetch_all(&self.pool)
         .await
-        .map_err(map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         Ok(rows.into_iter().map(PersonRow::into_person).collect())
     }
@@ -279,7 +276,7 @@ impl PersonQuery for PostgresPersonAdapter {
         )
         .fetch_all(&self.pool)
         .await
-        .map_err(map_err)?;
+        .map_err(adapter_common::map_sqlx_error)?;
 
         Ok(rows
             .into_iter()
