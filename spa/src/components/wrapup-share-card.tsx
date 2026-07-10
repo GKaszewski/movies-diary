@@ -1,4 +1,4 @@
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Download, Share2, X } from "lucide-react"
 import html2canvas from "html2canvas-pro"
@@ -17,6 +17,11 @@ export function WrapUpShareCard({ report, onClose }: Props) {
   const { t } = useTranslation()
   const cardRef = useRef<HTMLDivElement>(null)
   const [exporting, setExporting] = useState(false)
+
+  useEffect(() => {
+    document.body.style.overflow = "hidden"
+    return () => { document.body.style.overflow = "" }
+  }, [])
 
   const watchHours = Math.round(report.total_watch_time_minutes / 60)
   const topGenre = report.top_genres[0]?.genre
@@ -66,7 +71,7 @@ export function WrapUpShareCard({ report, onClose }: Props) {
         </Button>
       </div>
 
-      <div className="max-h-[75vh] overflow-y-auto rounded-2xl">
+      <div className="max-h-[75vh] rounded-2xl">
         <div
           ref={cardRef}
           className="relative w-[360px] overflow-hidden rounded-2xl"
