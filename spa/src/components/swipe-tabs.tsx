@@ -47,7 +47,7 @@ export function SwipeTabs({
         }
       }
     },
-    { axis: "x", filterTaps: true },
+    { axis: "x", filterTaps: true, pointer: { touch: true } },
   )
 
   return (
