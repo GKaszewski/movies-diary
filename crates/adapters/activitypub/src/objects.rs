@@ -104,12 +104,12 @@ pub fn review_to_ap_object(review: &Review, input: ReviewApInput) -> ReviewObjec
     let tag = vec![
         ApHashtag {
             kind: "Hashtag".to_string(),
-            href: Url::parse(&format!("{}/tags/moviesdiary", &base_url)).expect("valid base_url"),
+            href: Url::parse(&format!("{}/tags/moviesdiary", base_url)).expect("valid base_url"),
             name: "#MoviesDiary".to_string(),
         },
         ApHashtag {
             kind: "Hashtag".to_string(),
-            href: Url::parse(&format!("{}/tags/{}", &base_url, normalized.to_lowercase()))
+            href: Url::parse(&format!("{}/tags/{}", base_url, normalized.to_lowercase()))
                 .expect("valid base_url"),
             name: format!("#{}", normalized),
         },

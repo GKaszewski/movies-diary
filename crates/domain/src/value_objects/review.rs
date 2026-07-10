@@ -86,10 +86,11 @@ pub fn format_watched_at(dt: &chrono::NaiveDateTime) -> String {
 pub struct Rating(u8);
 
 impl Rating {
+    const MIN: u8 = 1;
     const MAX: u8 = 5;
 
     pub fn new(value: u8) -> Result<Self, DomainError> {
-        if value <= Self::MAX {
+        if (Self::MIN..=Self::MAX).contains(&value) {
             Ok(Self(value))
         } else {
             Err(DomainError::InvalidRating {

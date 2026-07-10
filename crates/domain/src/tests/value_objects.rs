@@ -9,13 +9,14 @@ fn movie_id_generate_unique() {
 
 #[test]
 fn rating_valid_range() {
-    assert!(Rating::new(0).is_ok());
+    assert!(Rating::new(1).is_ok());
     assert!(Rating::new(5).is_ok());
     assert_eq!(Rating::new(3).unwrap().value(), 3);
 }
 
 #[test]
 fn rating_invalid() {
+    assert!(Rating::new(0).is_err());
     assert!(Rating::new(6).is_err());
     assert!(Rating::new(255).is_err());
 }
