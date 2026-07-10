@@ -243,15 +243,4 @@ impl SocialQuery for CompositeSocialAdapter {
         Ok(following.iter().any(|a| a.identity == *target))
     }
 
-    async fn get_accepted_following_urls(
-        &self,
-        user_id: &UserId,
-    ) -> Result<Vec<String>, DomainError> {
-        let actors = self
-            .ap_service
-            .get_following(user_id.value())
-            .await
-            .map_err(ap_err)?;
-        Ok(actors.into_iter().map(|a| a.url).collect())
-    }
 }

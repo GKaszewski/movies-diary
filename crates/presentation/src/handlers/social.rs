@@ -30,6 +30,24 @@ use template_askama::{
 
 use super::helpers::{build_page_context, encode_error};
 
+impl From<&AppState> for SocialCommandDeps {
+    fn from(state: &AppState) -> Self {
+        Self {
+            social_command: state.app_ctx.repos.social_command.clone(),
+            social_query: state.app_ctx.repos.social_query_unified.clone(),
+            event_publisher: state.app_ctx.services.event_publisher.clone(),
+        }
+    }
+}
+
+impl From<&AppState> for SocialQueryDeps {
+    fn from(state: &AppState) -> Self {
+        Self {
+            social_query: state.app_ctx.repos.social_query_unified.clone(),
+        }
+    }
+}
+
 fn ap_to_domain(e: anyhow::Error) -> domain::errors::DomainError {
     tracing::error!("ActivityPub error: {:?}", e);
     domain::errors::DomainError::InfrastructureError(e.to_string())
@@ -166,11 +184,7 @@ pub async fn block_actor_api(
     user: AuthenticatedUser,
     axum::Json(body): axum::Json<ActorUrlRequest>,
 ) -> Result<impl IntoResponse, ApiError> {
-    let deps = SocialCommandDeps {
-        social_command: state.app_ctx.repos.social_command.clone(),
-        social_query: state.app_ctx.repos.social_query_unified.clone(),
-        event_publisher: state.app_ctx.services.event_publisher.clone(),
-    };
+    let deps = SocialCommandDeps::from(&state);
     application::social::execute::execute_command(
         &deps,
         application::social::commands::SocialCmd::Block {
@@ -198,11 +212,7 @@ pub async fn unblock_actor_api(
     user: AuthenticatedUser,
     axum::Json(body): axum::Json<ActorUrlRequest>,
 ) -> Result<impl IntoResponse, ApiError> {
-    let deps = SocialCommandDeps {
-        social_command: state.app_ctx.repos.social_command.clone(),
-        social_query: state.app_ctx.repos.social_query_unified.clone(),
-        event_publisher: state.app_ctx.services.event_publisher.clone(),
-    };
+    let deps = SocialCommandDeps::from(&state);
     application::social::execute::execute_command(
         &deps,
         application::social::commands::SocialCmd::Unblock {
@@ -228,9 +238,7 @@ pub async fn get_blocked_actors_api(
     State(state): State<AppState>,
     user: AuthenticatedUser,
 ) -> Result<Json<Vec<BlockedActorResponse>>, ApiError> {
-    let deps = SocialQueryDeps {
-        social_query: state.app_ctx.repos.social_query_unified.clone(),
-    };
+    let deps = SocialQueryDeps::from(&state);
     let identities = application::social::execute::execute_query(
         &deps,
         application::social::queries::SocialQry::GetBlocked {
@@ -258,9 +266,7 @@ pub async fn get_following(
     State(state): State<AppState>,
     user: AuthenticatedUser,
 ) -> Result<Json<ActorListResponse>, ApiError> {
-    let deps = SocialQueryDeps {
-        social_query: state.app_ctx.repos.social_query_unified.clone(),
-    };
+    let deps = SocialQueryDeps::from(&state);
     let identities = application::social::execute::execute_query(
         &deps,
         application::social::queries::SocialQry::GetFollowing {
@@ -285,9 +291,7 @@ pub async fn get_followers(
     State(state): State<AppState>,
     user: AuthenticatedUser,
 ) -> Result<Json<ActorListResponse>, ApiError> {
-    let deps = SocialQueryDeps {
-        social_query: state.app_ctx.repos.social_query_unified.clone(),
-    };
+    let deps = SocialQueryDeps::from(&state);
     let identities = application::social::execute::execute_query(
         &deps,
         application::social::queries::SocialQry::GetFollowers {
@@ -305,9 +309,7 @@ pub async fn get_user_following(
     _user: AuthenticatedUser,
     Path(user_id): Path<Uuid>,
 ) -> Result<Json<ActorListResponse>, ApiError> {
-    let deps = SocialQueryDeps {
-        social_query: state.app_ctx.repos.social_query_unified.clone(),
-    };
+    let deps = SocialQueryDeps::from(&state);
     let identities = application::social::execute::execute_query(
         &deps,
         application::social::queries::SocialQry::GetFollowing { user_id },
@@ -323,9 +325,7 @@ pub async fn get_user_followers(
     _user: AuthenticatedUser,
     Path(user_id): Path<Uuid>,
 ) -> Result<Json<ActorListResponse>, ApiError> {
-    let deps = SocialQueryDeps {
-        social_query: state.app_ctx.repos.social_query_unified.clone(),
-    };
+    let deps = SocialQueryDeps::from(&state);
     let identities = application::social::execute::execute_query(
         &deps,
         application::social::queries::SocialQry::GetFollowers { user_id },
@@ -350,11 +350,7 @@ pub async fn follow(
     user: AuthenticatedUser,
     Json(body): Json<FollowRequest>,
 ) -> Result<impl IntoResponse, ApiError> {
-    let deps = SocialCommandDeps {
-        social_command: state.app_ctx.repos.social_command.clone(),
-        social_query: state.app_ctx.repos.social_query_unified.clone(),
-        event_publisher: state.app_ctx.services.event_publisher.clone(),
-    };
+    let deps = SocialCommandDeps::from(&state);
     application::social::execute::execute_command(
         &deps,
         application::social::commands::SocialCmd::Follow {
@@ -380,11 +376,7 @@ pub async fn unfollow(
     user: AuthenticatedUser,
     Json(body): Json<ActorUrlRequest>,
 ) -> Result<impl IntoResponse, ApiError> {
-    let deps = SocialCommandDeps {
-        social_command: state.app_ctx.repos.social_command.clone(),
-        social_query: state.app_ctx.repos.social_query_unified.clone(),
-        event_publisher: state.app_ctx.services.event_publisher.clone(),
-    };
+    let deps = SocialCommandDeps::from(&state);
     application::social::execute::execute_command(
         &deps,
         application::social::commands::SocialCmd::Unfollow {
@@ -412,11 +404,7 @@ pub async fn accept_follower(
     user: AuthenticatedUser,
     Json(body): Json<ActorUrlRequest>,
 ) -> Result<impl IntoResponse, ApiError> {
-    let deps = SocialCommandDeps {
-        social_command: state.app_ctx.repos.social_command.clone(),
-        social_query: state.app_ctx.repos.social_query_unified.clone(),
-        event_publisher: state.app_ctx.services.event_publisher.clone(),
-    };
+    let deps = SocialCommandDeps::from(&state);
     application::social::execute::execute_command(
         &deps,
         application::social::commands::SocialCmd::AcceptFollow {
@@ -444,11 +432,7 @@ pub async fn reject_follower(
     user: AuthenticatedUser,
     Json(body): Json<ActorUrlRequest>,
 ) -> Result<impl IntoResponse, ApiError> {
-    let deps = SocialCommandDeps {
-        social_command: state.app_ctx.repos.social_command.clone(),
-        social_query: state.app_ctx.repos.social_query_unified.clone(),
-        event_publisher: state.app_ctx.services.event_publisher.clone(),
-    };
+    let deps = SocialCommandDeps::from(&state);
     application::social::execute::execute_command(
         &deps,
         application::social::commands::SocialCmd::RejectFollow {
@@ -476,11 +460,7 @@ pub async fn remove_follower(
     user: AuthenticatedUser,
     Json(body): Json<ActorUrlRequest>,
 ) -> Result<impl IntoResponse, ApiError> {
-    let deps = SocialCommandDeps {
-        social_command: state.app_ctx.repos.social_command.clone(),
-        social_query: state.app_ctx.repos.social_query_unified.clone(),
-        event_publisher: state.app_ctx.services.event_publisher.clone(),
-    };
+    let deps = SocialCommandDeps::from(&state);
     application::social::execute::execute_command(
         &deps,
         application::social::commands::SocialCmd::RemoveFollower {
@@ -506,9 +486,7 @@ pub async fn get_pending_followers(
     State(state): State<AppState>,
     user: AuthenticatedUser,
 ) -> Result<Json<ActorListResponse>, ApiError> {
-    let deps = SocialQueryDeps {
-        social_query: state.app_ctx.repos.social_query_unified.clone(),
-    };
+    let deps = SocialQueryDeps::from(&state);
     let identities = application::social::execute::execute_query(
         &deps,
         application::social::queries::SocialQry::GetPending {
@@ -543,11 +521,7 @@ pub async fn follow_remote_user(
         .unwrap_or(&format!("/users/{}", profile_user_uuid))
         .to_string();
 
-    let deps = SocialCommandDeps {
-        social_command: state.app_ctx.repos.social_command.clone(),
-        social_query: state.app_ctx.repos.social_query_unified.clone(),
-        event_publisher: state.app_ctx.services.event_publisher.clone(),
-    };
+    let deps = SocialCommandDeps::from(&state);
     match application::social::execute::execute_command(
         &deps,
         application::social::commands::SocialCmd::Follow {
@@ -584,11 +558,7 @@ pub async fn unfollow_remote_user(
     if crate::csrf::mismatch(&csrf, &form.csrf_token) {
         return StatusCode::FORBIDDEN.into_response();
     }
-    let deps = SocialCommandDeps {
-        social_command: state.app_ctx.repos.social_command.clone(),
-        social_query: state.app_ctx.repos.social_query_unified.clone(),
-        event_publisher: state.app_ctx.services.event_publisher.clone(),
-    };
+    let deps = SocialCommandDeps::from(&state);
     match application::social::execute::execute_command(
         &deps,
         application::social::commands::SocialCmd::Unfollow {
@@ -627,11 +597,7 @@ pub async fn accept_follower_html(
     if crate::csrf::mismatch(&csrf, &form.csrf_token) {
         return StatusCode::FORBIDDEN.into_response();
     }
-    let deps = SocialCommandDeps {
-        social_command: state.app_ctx.repos.social_command.clone(),
-        social_query: state.app_ctx.repos.social_query_unified.clone(),
-        event_publisher: state.app_ctx.services.event_publisher.clone(),
-    };
+    let deps = SocialCommandDeps::from(&state);
     match application::social::execute::execute_command(
         &deps,
         application::social::commands::SocialCmd::AcceptFollow {
@@ -664,11 +630,7 @@ pub async fn reject_follower_html(
     if crate::csrf::mismatch(&csrf, &form.csrf_token) {
         return StatusCode::FORBIDDEN.into_response();
     }
-    let deps = SocialCommandDeps {
-        social_command: state.app_ctx.repos.social_command.clone(),
-        social_query: state.app_ctx.repos.social_query_unified.clone(),
-        event_publisher: state.app_ctx.services.event_publisher.clone(),
-    };
+    let deps = SocialCommandDeps::from(&state);
     match application::social::execute::execute_command(
         &deps,
         application::social::commands::SocialCmd::RejectFollow {
@@ -770,9 +732,7 @@ pub async fn get_following_page(
         "{}/users/{}/following-list",
         state.app_ctx.config.base_url, profile_user_uuid
     );
-    let deps = SocialQueryDeps {
-        social_query: state.app_ctx.repos.social_query_unified.clone(),
-    };
+    let deps = SocialQueryDeps::from(&state);
     match application::social::execute::execute_query(
         &deps,
         application::social::queries::SocialQry::GetFollowing {
@@ -821,9 +781,7 @@ pub async fn get_followers_page(
         "{}/users/{}/followers-list",
         state.app_ctx.config.base_url, profile_user_uuid
     );
-    let deps = SocialQueryDeps {
-        social_query: state.app_ctx.repos.social_query_unified.clone(),
-    };
+    let deps = SocialQueryDeps::from(&state);
     match application::social::execute::execute_query(
         &deps,
         application::social::queries::SocialQry::GetFollowers {
@@ -869,11 +827,7 @@ pub async fn remove_follower_html(
     if crate::csrf::mismatch(&csrf, &form.csrf_token) {
         return StatusCode::FORBIDDEN.into_response();
     }
-    let deps = SocialCommandDeps {
-        social_command: state.app_ctx.repos.social_command.clone(),
-        social_query: state.app_ctx.repos.social_query_unified.clone(),
-        event_publisher: state.app_ctx.services.event_publisher.clone(),
-    };
+    let deps = SocialCommandDeps::from(&state);
     match application::social::execute::execute_command(
         &deps,
         application::social::commands::SocialCmd::RemoveFollower {
@@ -997,9 +951,7 @@ pub async fn get_blocked_actors_page(
     let mut ctx = build_page_context(&state, Some(user_id.clone()), csrf.0).await;
     ctx.page_title = "Blocked Users — Movies Diary".to_string();
     ctx.canonical_url = format!("{}/social/blocked", state.app_ctx.config.base_url);
-    let deps = SocialQueryDeps {
-        social_query: state.app_ctx.repos.social_query_unified.clone(),
-    };
+    let deps = SocialQueryDeps::from(&state);
     match application::social::execute::execute_query(
         &deps,
         application::social::queries::SocialQry::GetBlocked {
@@ -1044,11 +996,7 @@ pub async fn post_block_actor_html(
     if crate::csrf::mismatch(&csrf, &form.csrf_token) {
         return StatusCode::FORBIDDEN.into_response();
     }
-    let deps = SocialCommandDeps {
-        social_command: state.app_ctx.repos.social_command.clone(),
-        social_query: state.app_ctx.repos.social_query_unified.clone(),
-        event_publisher: state.app_ctx.services.event_publisher.clone(),
-    };
+    let deps = SocialCommandDeps::from(&state);
     match application::social::execute::execute_command(
         &deps,
         application::social::commands::SocialCmd::Block {
@@ -1077,11 +1025,7 @@ pub async fn post_unblock_actor(
     if crate::csrf::mismatch(&csrf, &form.csrf_token) {
         return StatusCode::FORBIDDEN.into_response();
     }
-    let deps = SocialCommandDeps {
-        social_command: state.app_ctx.repos.social_command.clone(),
-        social_query: state.app_ctx.repos.social_query_unified.clone(),
-        event_publisher: state.app_ctx.services.event_publisher.clone(),
-    };
+    let deps = SocialCommandDeps::from(&state);
     match application::social::execute::execute_command(
         &deps,
         application::social::commands::SocialCmd::Unblock {

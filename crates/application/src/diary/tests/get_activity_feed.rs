@@ -3,7 +3,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use domain::errors::DomainError;
 use domain::testing::InMemorySocialRepository;
-use domain::value_objects::SocialActor;
+use domain::value_objects::{SocialActor, SocialIdentity, UserId};
 
 use crate::{
     config::AppConfig, diary::deps::GetActivityFeedDeps, diary::get_activity_feed,
@@ -63,72 +63,59 @@ async fn returns_feed_with_following_filter() {
     assert!(result.items.is_empty());
 }
 
-struct FakeSocialWithFollowing(Vec<String>);
+struct FakeSocialWithFollowing(Vec<SocialActor>);
 
 #[async_trait]
 impl domain::ports::SocialQuery for FakeSocialWithFollowing {
     async fn get_following(
         &self,
-        _: &domain::value_objects::UserId,
+        _: &UserId,
     ) -> Result<Vec<SocialActor>, DomainError> {
-        Ok(vec![])
-    }
-    async fn get_followers(
-        &self,
-        _: &domain::value_objects::UserId,
-    ) -> Result<Vec<SocialActor>, DomainError> {
-        Ok(vec![])
-    }
-    async fn get_pending_followers(
-        &self,
-        _: &domain::value_objects::UserId,
-    ) -> Result<Vec<SocialActor>, DomainError> {
-        Ok(vec![])
-    }
-    async fn count_following(
-        &self,
-        _: &domain::value_objects::UserId,
-    ) -> Result<usize, DomainError> {
-        Ok(0)
-    }
-    async fn count_followers(
-        &self,
-        _: &domain::value_objects::UserId,
-    ) -> Result<usize, DomainError> {
-        Ok(0)
-    }
-    async fn get_blocked(
-        &self,
-        _: &domain::value_objects::UserId,
-    ) -> Result<Vec<SocialActor>, DomainError> {
-        Ok(vec![])
-    }
-    async fn is_following(
-        &self,
-        _: &domain::value_objects::UserId,
-        _: &domain::value_objects::SocialIdentity,
-    ) -> Result<bool, DomainError> {
-        Ok(false)
-    }
-    async fn get_accepted_following_urls(
-        &self,
-        _: &domain::value_objects::UserId,
-    ) -> Result<Vec<String>, DomainError> {
         Ok(self.0.clone())
+    }
+    async fn get_followers(&self, _: &UserId) -> Result<Vec<SocialActor>, DomainError> {
+        Ok(vec![])
+    }
+    async fn get_pending_followers(&self, _: &UserId) -> Result<Vec<SocialActor>, DomainError> {
+        Ok(vec![])
+    }
+    async fn count_following(&self, _: &UserId) -> Result<usize, DomainError> {
+        Ok(0)
+    }
+    async fn count_followers(&self, _: &UserId) -> Result<usize, DomainError> {
+        Ok(0)
+    }
+    async fn get_blocked(&self, _: &UserId) -> Result<Vec<SocialActor>, DomainError> {
+        Ok(vec![])
+    }
+    async fn is_following(&self, _: &UserId, _: &SocialIdentity) -> Result<bool, DomainError> {
+        Ok(false)
     }
 }
 
 #[tokio::test]
-async fn following_filter_parses_local_and_remote_urls() {
+async fn following_filter_separates_local_and_remote() {
     let viewer = uuid::Uuid::new_v4();
     let local_friend = uuid::Uuid::new_v4();
 
-    let following_urls = vec![
-        format!("http://localhost:3000/users/{}", local_friend),
-        "https://remote.example/actor/1".to_string(),
+    let following = vec![
+        SocialActor {
+            identity: SocialIdentity::Local(UserId::from_uuid(local_friend)),
+            handle: "friend".into(),
+            display_name: None,
+            avatar_url: None,
+        },
+        SocialActor {
+            identity: SocialIdentity::Remote {
+                actor_url: "https://remote.example/actor/1".into(),
+            },
+            handle: "@alice@remote.example".into(),
+            display_name: None,
+            avatar_url: None,
+        },
     ];
 
-    let social = Arc::new(FakeSocialWithFollowing(following_urls));
+    let social = Arc::new(FakeSocialWithFollowing(following));
 
     let deps = GetActivityFeedDeps {
         diary: domain::testing::FakeDiaryQuery::new() as _,

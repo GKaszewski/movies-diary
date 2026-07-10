@@ -1106,10 +1106,4 @@ impl SocialQuery for InMemorySocialRepository {
         }))
     }
 
-    async fn get_accepted_following_urls(
-        &self,
-        _user_id: &UserId,
-    ) -> Result<Vec<String>, DomainError> {
-        Ok(vec![])
-    }
 }

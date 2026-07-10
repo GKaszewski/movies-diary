@@ -6,7 +6,7 @@ use domain::{
         FeedEntry,
         collections::{PageParams, Paginated},
     },
-    value_objects::UserId,
+    value_objects::{SocialIdentity, UserId},
 };
 
 pub async fn execute(
@@ -36,28 +36,24 @@ async fn build_following_filter(
     }
     let viewer_id = query.viewer_user_id?;
     let viewer = UserId::from_uuid(viewer_id);
-    let urls = deps
+    let actors = deps
         .social_query
-        .get_accepted_following_urls(&viewer)
+        .get_following(&viewer)
         .await
         .unwrap_or_default();
-    if urls.is_empty() {
+    if actors.is_empty() {
         return Some(FollowingFilter {
             local_user_ids: vec![viewer_id],
             remote_actor_urls: vec![],
         });
     }
-    let base_url = &deps.config.base_url;
     let mut local_ids = vec![viewer_id];
     let mut remote_urls = Vec::new();
-    for url in urls {
-        if let Some(suffix) = url.strip_prefix(&format!("{}/users/", base_url))
-            && let Ok(parsed_id) = uuid::Uuid::parse_str(suffix)
-        {
-            local_ids.push(parsed_id);
-            continue;
+    for actor in actors {
+        match actor.identity {
+            SocialIdentity::Local(uid) => local_ids.push(uid.value()),
+            SocialIdentity::Remote { actor_url } => remote_urls.push(actor_url),
         }
-        remote_urls.push(url);
     }
     Some(FollowingFilter {
         local_user_ids: local_ids,

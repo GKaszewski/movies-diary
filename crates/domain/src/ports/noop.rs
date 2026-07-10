@@ -91,9 +91,6 @@ impl super::SocialQuery for NoopSocialQuery {
     async fn is_following(&self, _: &UserId, _: &SocialIdentity) -> Result<bool, DomainError> {
         Ok(false)
     }
-    async fn get_accepted_following_urls(&self, _: &UserId) -> Result<Vec<String>, DomainError> {
-        Ok(vec![])
-    }
 }
 
 // ── NoopFederationAdminQuery ─────────────────────────────────────────────────

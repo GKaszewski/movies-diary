@@ -62,10 +62,6 @@ pub trait SocialQuery: Send + Sync {
         target: &SocialIdentity,
     ) -> Result<bool, DomainError>;
 
-    async fn get_accepted_following_urls(
-        &self,
-        user_id: &UserId,
-    ) -> Result<Vec<String>, DomainError>;
 }
 
 #[async_trait]
