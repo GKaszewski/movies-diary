@@ -11,6 +11,7 @@ pub mod integrations;
 pub mod movies;
 pub mod person;
 pub mod search;
+pub mod social;
 pub mod users;
 pub mod watchlist;
 pub mod wrapup;

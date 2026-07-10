@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
 use domain::testing::{
-    InMemoryGoalRepository, InMemoryWrapUpRepository, InMemoryWrapUpStatsQuery, NoopSocialQueryPort,
+    InMemoryGoalRepository, InMemorySocialRepository, InMemoryWrapUpRepository,
+    InMemoryWrapUpStatsQuery, NoopSocialQueryPort,
 };
 use domain::{
     ports::{
@@ -72,6 +73,8 @@ pub struct TestContextBuilder {
     pub goal_query: Arc<dyn GoalQuery>,
     pub user_settings_repo: Arc<dyn UserSettingsRepository>,
     pub review_logger: Arc<dyn ReviewLogger>,
+    pub social_command: Arc<dyn domain::ports::SocialCommand>,
+    pub social_query_unified: Arc<dyn domain::ports::SocialQuery>,
     pub social_query: Arc<dyn domain::ports::SocialQueryPort>,
     pub refresh_session_repo: Arc<dyn RefreshSessionRepository>,
     pub config: AppConfig,
@@ -88,6 +91,7 @@ impl TestContextBuilder {
         let movies = InMemoryMovieRepository::new();
         let watch_events = InMemoryWatchEventRepository::new();
         let goals = InMemoryGoalRepository::new();
+        let social = InMemorySocialRepository::new();
         Self {
             movie_command: Arc::clone(&movies) as _,
             movie_query: movies as _,
@@ -121,6 +125,8 @@ impl TestContextBuilder {
             goal_query: goals as _,
             user_settings_repo: InMemoryUserSettingsRepository::new(),
             review_logger: Arc::new(NoopReviewLogger),
+            social_command: Arc::clone(&social) as _,
+            social_query_unified: Arc::clone(&social) as _,
             social_query: Arc::new(NoopSocialQueryPort),
             refresh_session_repo: InMemoryRefreshSessionRepository::new(),
             config: AppConfig {

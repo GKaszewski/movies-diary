@@ -19,13 +19,13 @@ use crate::{
     ports::{
         GoalCommand, GoalQuery, ImportProfileRepository, ImportSessionRepository, MovieCommand,
         MovieProfileRepository, MovieQuery, RefreshSessionRepository, ReviewRepository,
-        UserFederationSettingsQuery, UserProfileFieldsRepository, UserRepository,
-        UserSettingsRepository, WatchEventCommand, WatchEventQuery, WatchlistRepository,
-        WebhookTokenRepository,
+        SocialCommand, SocialQuery, UserFederationSettingsQuery, UserProfileFieldsRepository,
+        UserRepository, UserSettingsRepository, WatchEventCommand, WatchEventQuery,
+        WatchlistRepository, WebhookTokenRepository,
     },
     value_objects::{
         Email, ExternalMetadataId, GoalId, ImportProfileId, ImportSessionId, MovieId, MovieTitle,
-        ReleaseYear, ReviewId, UserId, Username, WatchEventId, WebhookTokenId,
+        ReleaseYear, ReviewId, SocialIdentity, UserId, Username, WatchEventId, WebhookTokenId,
     },
 };
 
@@ -852,5 +852,249 @@ impl RefreshSessionRepository for InMemoryRefreshSessionRepository {
         let now = Utc::now();
         store.retain(|s| s.expires_at >= now);
         Ok((before - store.len()) as u64)
+    }
+}
+
+// ── InMemorySocialRepository ────────────────────────────────────────────────
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum FollowState {
+    Pending,
+    Accepted,
+}
+
+pub struct InMemorySocialRepository {
+    follows: Mutex<Vec<(Uuid, SocialIdentity, FollowState)>>,
+    blocked: Mutex<Vec<(Uuid, SocialIdentity)>>,
+}
+
+impl InMemorySocialRepository {
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self {
+            follows: Mutex::new(Vec::new()),
+            blocked: Mutex::new(Vec::new()),
+        })
+    }
+}
+
+#[async_trait]
+impl SocialCommand for InMemorySocialRepository {
+    async fn follow(
+        &self,
+        follower: &UserId,
+        target: &SocialIdentity,
+    ) -> Result<(), DomainError> {
+        if let SocialIdentity::Local(target_id) = target {
+            if follower == target_id {
+                return Err(DomainError::ValidationError(
+                    "Cannot follow yourself".into(),
+                ));
+            }
+        }
+        let mut store = self.follows.lock().unwrap();
+        let already = store
+            .iter()
+            .any(|(f, t, _)| *f == follower.value() && t == target);
+        if already {
+            return Err(DomainError::ValidationError("Already following".into()));
+        }
+        store.push((follower.value(), target.clone(), FollowState::Pending));
+        Ok(())
+    }
+
+    async fn unfollow(
+        &self,
+        follower: &UserId,
+        target: &SocialIdentity,
+    ) -> Result<(), DomainError> {
+        let mut store = self.follows.lock().unwrap();
+        let before = store.len();
+        store.retain(|(f, t, _)| !(*f == follower.value() && t == target));
+        if store.len() == before {
+            return Err(DomainError::NotFound("Follow relationship not found".into()));
+        }
+        Ok(())
+    }
+
+    async fn accept_follow(
+        &self,
+        owner: &UserId,
+        requester: &SocialIdentity,
+    ) -> Result<(), DomainError> {
+        let mut store = self.follows.lock().unwrap();
+        let target_identity = SocialIdentity::Local(owner.clone());
+        for (f, t, state) in store.iter_mut() {
+            let requester_matches = match requester {
+                SocialIdentity::Local(uid) => *f == uid.value(),
+                SocialIdentity::Remote { actor_url } => {
+                    if let SocialIdentity::Remote {
+                        actor_url: stored_url,
+                    } = requester
+                    {
+                        stored_url == actor_url
+                    } else {
+                        false
+                    }
+                }
+            };
+            if requester_matches && *t == target_identity && *state == FollowState::Pending {
+                *state = FollowState::Accepted;
+                return Ok(());
+            }
+        }
+        Err(DomainError::NotFound(
+            "Pending follow request not found".into(),
+        ))
+    }
+
+    async fn reject_follow(
+        &self,
+        owner: &UserId,
+        requester: &SocialIdentity,
+    ) -> Result<(), DomainError> {
+        let mut store = self.follows.lock().unwrap();
+        let target_identity = SocialIdentity::Local(owner.clone());
+        let before = store.len();
+        store.retain(|(f, t, state)| {
+            let requester_matches = match requester {
+                SocialIdentity::Local(uid) => *f == uid.value(),
+                SocialIdentity::Remote { .. } => {
+                    // For remote, match by checking the stored requester identity
+                    false // simplified: reject removes by follower uuid match
+                }
+            };
+            !(requester_matches && *t == target_identity && *state == FollowState::Pending)
+        });
+        if store.len() == before {
+            return Err(DomainError::NotFound(
+                "Pending follow request not found".into(),
+            ));
+        }
+        Ok(())
+    }
+
+    async fn remove_follower(
+        &self,
+        owner: &UserId,
+        follower: &SocialIdentity,
+    ) -> Result<(), DomainError> {
+        let mut store = self.follows.lock().unwrap();
+        let target_identity = SocialIdentity::Local(owner.clone());
+        let before = store.len();
+        store.retain(|(f, t, _)| {
+            let follower_matches = match follower {
+                SocialIdentity::Local(uid) => *f == uid.value(),
+                SocialIdentity::Remote { .. } => false,
+            };
+            !(follower_matches && *t == target_identity)
+        });
+        if store.len() == before {
+            return Err(DomainError::NotFound("Follower not found".into()));
+        }
+        Ok(())
+    }
+
+    async fn block(
+        &self,
+        blocker: &UserId,
+        target: &SocialIdentity,
+    ) -> Result<(), DomainError> {
+        let mut store = self.blocked.lock().unwrap();
+        store.push((blocker.value(), target.clone()));
+        // Also remove any existing follow relationships
+        let mut follows = self.follows.lock().unwrap();
+        follows.retain(|(f, t, _)| !(*f == blocker.value() && t == target));
+        Ok(())
+    }
+
+    async fn unblock(
+        &self,
+        blocker: &UserId,
+        target: &SocialIdentity,
+    ) -> Result<(), DomainError> {
+        let mut store = self.blocked.lock().unwrap();
+        store.retain(|(b, t)| !(*b == blocker.value() && t == target));
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl SocialQuery for InMemorySocialRepository {
+    async fn get_following(
+        &self,
+        user: &UserId,
+    ) -> Result<Vec<SocialIdentity>, DomainError> {
+        let store = self.follows.lock().unwrap();
+        Ok(store
+            .iter()
+            .filter(|(f, _, state)| *f == user.value() && *state == FollowState::Accepted)
+            .map(|(_, t, _)| t.clone())
+            .collect())
+    }
+
+    async fn get_followers(
+        &self,
+        user: &UserId,
+    ) -> Result<Vec<SocialIdentity>, DomainError> {
+        let store = self.follows.lock().unwrap();
+        let target = SocialIdentity::Local(user.clone());
+        Ok(store
+            .iter()
+            .filter(|(_, t, state)| *t == target && *state == FollowState::Accepted)
+            .map(|(f, _, _)| SocialIdentity::Local(UserId::from_uuid(*f)))
+            .collect())
+    }
+
+    async fn get_pending_followers(
+        &self,
+        user: &UserId,
+    ) -> Result<Vec<SocialIdentity>, DomainError> {
+        let store = self.follows.lock().unwrap();
+        let target = SocialIdentity::Local(user.clone());
+        Ok(store
+            .iter()
+            .filter(|(_, t, state)| *t == target && *state == FollowState::Pending)
+            .map(|(f, _, _)| SocialIdentity::Local(UserId::from_uuid(*f)))
+            .collect())
+    }
+
+    async fn count_following(&self, user: &UserId) -> Result<usize, DomainError> {
+        let store = self.follows.lock().unwrap();
+        Ok(store
+            .iter()
+            .filter(|(f, _, state)| *f == user.value() && *state == FollowState::Accepted)
+            .count())
+    }
+
+    async fn count_followers(&self, user: &UserId) -> Result<usize, DomainError> {
+        let store = self.follows.lock().unwrap();
+        let target = SocialIdentity::Local(user.clone());
+        Ok(store
+            .iter()
+            .filter(|(_, t, state)| *t == target && *state == FollowState::Accepted)
+            .count())
+    }
+
+    async fn get_blocked(
+        &self,
+        user: &UserId,
+    ) -> Result<Vec<SocialIdentity>, DomainError> {
+        let store = self.blocked.lock().unwrap();
+        Ok(store
+            .iter()
+            .filter(|(b, _)| *b == user.value())
+            .map(|(_, t)| t.clone())
+            .collect())
+    }
+
+    async fn is_following(
+        &self,
+        follower: &UserId,
+        target: &SocialIdentity,
+    ) -> Result<bool, DomainError> {
+        let store = self.follows.lock().unwrap();
+        Ok(store
+            .iter()
+            .any(|(f, t, state)| *f == follower.value() && t == target && *state == FollowState::Accepted))
     }
 }

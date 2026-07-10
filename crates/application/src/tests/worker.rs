@@ -72,7 +72,12 @@ impl EventHandler for RecordingHandler {
             DomainEvent::WatchlistEntryAdded { .. } | DomainEvent::WatchlistEntryRemoved { .. } => {
                 "watchlist"
             }
+            DomainEvent::FollowRequested { .. } => "follow_requested",
             DomainEvent::FollowAccepted { .. } => "follow_accepted",
+            DomainEvent::Unfollowed { .. } => "unfollowed",
+            DomainEvent::FollowerRemoved { .. } => "follower_removed",
+            DomainEvent::ActorBlocked { .. } => "actor_blocked",
+            DomainEvent::ActorUnblocked { .. } => "actor_unblocked",
             DomainEvent::BackfillFollower { .. } => "backfill_follower",
             DomainEvent::FederationDeliveryRequested { .. } => "federation_delivery",
             DomainEvent::WatchEventIngested { .. } => "watch_event_ingested",

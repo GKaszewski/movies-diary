@@ -1,16 +1,39 @@
 use super::*;
-use crate::value_objects::UserId;
+use crate::value_objects::{SocialIdentity, UserId};
 
 #[test]
 fn follow_accepted_matches() {
     let uid = UserId::from_uuid(uuid::Uuid::new_v4());
     let event = DomainEvent::FollowAccepted {
-        local_user_id: uid.clone(),
-        remote_actor_url: "https://remote.example/users/alice".to_string(),
-        outbox_url: "https://remote.example/users/alice/outbox".to_string(),
+        owner: uid.clone(),
+        requester: SocialIdentity::Remote {
+            actor_url: "https://remote.example/users/alice".to_string(),
+        },
     };
-    let DomainEvent::FollowAccepted { outbox_url, .. } = event else {
+    let DomainEvent::FollowAccepted { requester, .. } = event else {
         panic!("wrong variant");
     };
-    assert_eq!(outbox_url, "https://remote.example/users/alice/outbox");
+    assert_eq!(
+        requester,
+        SocialIdentity::Remote {
+            actor_url: "https://remote.example/users/alice".to_string()
+        }
+    );
+}
+
+#[test]
+fn follow_requested_local() {
+    let follower = UserId::from_uuid(uuid::Uuid::new_v4());
+    let target = UserId::from_uuid(uuid::Uuid::new_v4());
+    let event = DomainEvent::FollowRequested {
+        follower: follower.clone(),
+        target: SocialIdentity::Local(target.clone()),
+    };
+    assert!(matches!(
+        event,
+        DomainEvent::FollowRequested {
+            target: SocialIdentity::Local(_),
+            ..
+        }
+    ));
 }

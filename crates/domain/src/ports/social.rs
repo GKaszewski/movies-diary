@@ -7,8 +7,90 @@ use crate::{
         DiaryEntry, FederationFlags, PendingFollowerInfo, RemoteActorInfo, RemoteGoalEntry,
         RemoteWatchlistEntry, WatchlistWithMovie,
     },
-    value_objects::{MovieId, UserId},
+    value_objects::{MovieId, SocialIdentity, UserId},
 };
+
+// ── Unified social ports (ADR-0002) ─────────────────────────────────────────
+
+#[async_trait]
+pub trait SocialCommand: Send + Sync {
+    async fn follow(
+        &self,
+        follower: &UserId,
+        target: &SocialIdentity,
+    ) -> Result<(), DomainError>;
+
+    async fn unfollow(
+        &self,
+        follower: &UserId,
+        target: &SocialIdentity,
+    ) -> Result<(), DomainError>;
+
+    async fn accept_follow(
+        &self,
+        owner: &UserId,
+        requester: &SocialIdentity,
+    ) -> Result<(), DomainError>;
+
+    async fn reject_follow(
+        &self,
+        owner: &UserId,
+        requester: &SocialIdentity,
+    ) -> Result<(), DomainError>;
+
+    async fn remove_follower(
+        &self,
+        owner: &UserId,
+        follower: &SocialIdentity,
+    ) -> Result<(), DomainError>;
+
+    async fn block(
+        &self,
+        blocker: &UserId,
+        target: &SocialIdentity,
+    ) -> Result<(), DomainError>;
+
+    async fn unblock(
+        &self,
+        blocker: &UserId,
+        target: &SocialIdentity,
+    ) -> Result<(), DomainError>;
+}
+
+#[async_trait]
+pub trait SocialQuery: Send + Sync {
+    async fn get_following(
+        &self,
+        user: &UserId,
+    ) -> Result<Vec<SocialIdentity>, DomainError>;
+
+    async fn get_followers(
+        &self,
+        user: &UserId,
+    ) -> Result<Vec<SocialIdentity>, DomainError>;
+
+    async fn get_pending_followers(
+        &self,
+        user: &UserId,
+    ) -> Result<Vec<SocialIdentity>, DomainError>;
+
+    async fn count_following(&self, user: &UserId) -> Result<usize, DomainError>;
+
+    async fn count_followers(&self, user: &UserId) -> Result<usize, DomainError>;
+
+    async fn get_blocked(
+        &self,
+        user: &UserId,
+    ) -> Result<Vec<SocialIdentity>, DomainError>;
+
+    async fn is_following(
+        &self,
+        follower: &UserId,
+        target: &SocialIdentity,
+    ) -> Result<bool, DomainError>;
+}
+
+// ── Legacy ports (pre-unification, still used by AP adapter + handlers) ─────
 
 #[async_trait]
 pub trait SocialQueryPort: Send + Sync {
@@ -39,7 +121,6 @@ pub trait RemoteWatchlistRepository: Send + Sync {
         actor_url: &str,
     ) -> Result<Vec<RemoteWatchlistEntry>, DomainError>;
     async fn remove_all_by_actor(&self, actor_url: &str) -> Result<(), DomainError>;
-    /// Find entries for a remote actor whose URL hashes (v5 UUID) to the given UUID.
     async fn get_by_derived_uuid(
         &self,
         uuid: uuid::Uuid,
@@ -60,10 +141,6 @@ pub trait RemoteGoalRepository: Send + Sync {
     async fn get_by_actor_url(&self, actor_url: &str) -> Result<Vec<RemoteGoalEntry>, DomainError>;
 }
 
-/// Federation-specific read-only queries that have no equivalent on the
-/// standard domain ports (e.g. unpaginated watchlist, local-only review
-/// listings). Generic lookups (get_movie_by_id, get_review_by_id, etc.)
-/// live on MovieRepository, ReviewRepository, and the other domain ports.
 #[async_trait]
 pub trait LocalApContentQuery: Send + Sync {
     async fn get_local_watchlist_for_user(

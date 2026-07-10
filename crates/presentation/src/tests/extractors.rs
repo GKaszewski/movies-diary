@@ -811,6 +811,8 @@ pub fn make_test_state(auth_service: Arc<dyn AuthService>) -> crate::state::AppS
                 search_port: Arc::clone(&repo) as _,
                 search_command: Arc::clone(&repo) as _,
                 remote_watchlist: Arc::clone(&repo) as _,
+                social_command: Arc::new(domain::ports::noop::NoopSocialCommand) as _,
+                social_query_unified: Arc::new(domain::ports::noop::NoopSocialQuery) as _,
                 social_query: Arc::clone(&repo) as _,
                 wrapup_stats: Arc::clone(&repo) as _,
                 wrapup_repo: Arc::clone(&repo) as _,

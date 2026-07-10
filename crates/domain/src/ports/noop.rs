@@ -1,6 +1,9 @@
 use async_trait::async_trait;
 
-use crate::{errors::DomainError, value_objects::UserId};
+use crate::{
+    errors::DomainError,
+    value_objects::{SocialIdentity, UserId},
+};
 
 // ── NoopRemoteWatchlistRepository ─────────────────────────────────────────────
 
@@ -29,6 +32,64 @@ impl super::RemoteWatchlistRepository for NoopRemoteWatchlistRepository {
         _: uuid::Uuid,
     ) -> Result<Vec<crate::models::RemoteWatchlistEntry>, DomainError> {
         Ok(vec![])
+    }
+}
+
+// ── NoopSocialCommand ────────────────────────────────────────────────────────
+
+pub struct NoopSocialCommand;
+
+#[async_trait]
+impl super::SocialCommand for NoopSocialCommand {
+    async fn follow(&self, _: &UserId, _: &SocialIdentity) -> Result<(), DomainError> {
+        Ok(())
+    }
+    async fn unfollow(&self, _: &UserId, _: &SocialIdentity) -> Result<(), DomainError> {
+        Ok(())
+    }
+    async fn accept_follow(&self, _: &UserId, _: &SocialIdentity) -> Result<(), DomainError> {
+        Ok(())
+    }
+    async fn reject_follow(&self, _: &UserId, _: &SocialIdentity) -> Result<(), DomainError> {
+        Ok(())
+    }
+    async fn remove_follower(&self, _: &UserId, _: &SocialIdentity) -> Result<(), DomainError> {
+        Ok(())
+    }
+    async fn block(&self, _: &UserId, _: &SocialIdentity) -> Result<(), DomainError> {
+        Ok(())
+    }
+    async fn unblock(&self, _: &UserId, _: &SocialIdentity) -> Result<(), DomainError> {
+        Ok(())
+    }
+}
+
+// ── NoopSocialQuery ─────────────────────────────────────────────────────────
+
+pub struct NoopSocialQuery;
+
+#[async_trait]
+impl super::SocialQuery for NoopSocialQuery {
+    async fn get_following(&self, _: &UserId) -> Result<Vec<SocialIdentity>, DomainError> {
+        Ok(vec![])
+    }
+    async fn get_followers(&self, _: &UserId) -> Result<Vec<SocialIdentity>, DomainError> {
+        Ok(vec![])
+    }
+    async fn get_pending_followers(&self, _: &UserId) -> Result<Vec<SocialIdentity>, DomainError> {
+        Ok(vec![])
+    }
+    async fn count_following(&self, _: &UserId) -> Result<usize, DomainError> {
+        Ok(0)
+    }
+    async fn count_followers(&self, _: &UserId) -> Result<usize, DomainError> {
+        Ok(0)
+    }
+    async fn get_blocked(&self, _: &UserId) -> Result<Vec<SocialIdentity>, DomainError> {
+        Ok(vec![])
+    }
+    async fn is_following(&self, _: &UserId, _: &SocialIdentity) -> Result<bool, DomainError> {
+        Ok(false)
     }
 }
 

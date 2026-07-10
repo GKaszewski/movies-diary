@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use domain::{errors::DomainError, events::DomainEvent, ports::EventHandler};
+use domain::{errors::DomainError, events::DomainEvent, ports::EventHandler, value_objects::SocialIdentity};
 
 pub struct FollowBackfillHandler {
     pub ap_service: Arc<dyn activitypub::ActivityPubPort>,
@@ -12,15 +12,11 @@ impl EventHandler for FollowBackfillHandler {
     async fn handle(&self, event: &DomainEvent) -> Result<(), DomainError> {
         match event {
             DomainEvent::FollowAccepted {
-                remote_actor_url,
-                outbox_url,
+                requester: SocialIdentity::Remote { actor_url },
                 ..
             } => {
-                tracing::info!(actor = %remote_actor_url, outbox = %outbox_url, "importing remote outbox");
-                self.ap_service
-                    .import_remote_outbox(outbox_url, remote_actor_url)
-                    .await
-                    .map_err(|e| DomainError::InfrastructureError(e.to_string()))
+                tracing::info!(actor = %actor_url, "follow accepted from remote actor");
+                Ok(())
             }
             DomainEvent::BackfillFollower {
                 owner_user_id,

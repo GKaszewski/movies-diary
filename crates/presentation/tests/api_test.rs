@@ -464,6 +464,8 @@ async fn test_app() -> Router {
                 search_port: Arc::new(PanicSearchPort),
                 search_command: Arc::new(PanicSearchCommand),
                 remote_watchlist: Arc::new(PanicRemoteWatchlist),
+                social_command: Arc::new(domain::ports::noop::NoopSocialCommand),
+                social_query_unified: Arc::new(domain::ports::noop::NoopSocialQuery),
                 social_query: Arc::new(PanicSocialQuery),
                 wrapup_stats: Arc::new(domain::testing::PanicWrapUpStatsQuery) as _,
                 wrapup_repo: Arc::new(domain::testing::PanicWrapUpRepository) as _,

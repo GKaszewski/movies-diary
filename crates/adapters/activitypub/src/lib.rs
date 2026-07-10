@@ -1,4 +1,5 @@
 pub mod composite_handler;
+pub mod social_adapter;
 pub mod event_handler;
 pub mod federation_event_bridge;
 pub mod goal_handler;
@@ -24,6 +25,7 @@ pub use event_handler::ActivityPubEventHandler;
 pub use port::{ActivityPubPort, NoopActivityPubService};
 pub use remote_review_repository::{RemoteReviewRepository, RemoteReviewUpdate};
 pub use review_handler::ReviewObjectHandler;
+pub use social_adapter::CompositeSocialAdapter;
 pub use user_adapter::DomainUserRepoAdapter;
 
 pub type FederationRepos = (

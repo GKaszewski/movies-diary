@@ -4,7 +4,8 @@ use domain::{
     events::DomainEvent,
     models::{ExternalPersonId, PersonId},
     value_objects::{
-        ExternalMetadataId, GoalId, MovieId, PosterPath, Rating, ReviewId, UserId, WrapUpId,
+        ExternalMetadataId, GoalId, MovieId, PosterPath, Rating, ReviewId, SocialIdentity, UserId,
+        WrapUpId,
     },
 };
 use serde::{Deserialize, Serialize};
@@ -61,10 +62,35 @@ pub enum EventPayload {
         user_id: String,
         movie_id: String,
     },
+    FollowRequested {
+        follower_id: String,
+        target_kind: String,
+        target_id: String,
+    },
     FollowAccepted {
-        local_user_id: String,
-        remote_actor_url: String,
-        outbox_url: String,
+        owner_id: String,
+        requester_kind: String,
+        requester_id: String,
+    },
+    Unfollowed {
+        follower_id: String,
+        target_kind: String,
+        target_id: String,
+    },
+    FollowerRemoved {
+        owner_id: String,
+        follower_kind: String,
+        follower_id: String,
+    },
+    ActorBlocked {
+        blocker_id: String,
+        target_kind: String,
+        target_id: String,
+    },
+    ActorUnblocked {
+        blocker_id: String,
+        target_kind: String,
+        target_id: String,
     },
     BackfillFollower {
         owner_user_id: String,
@@ -136,7 +162,12 @@ impl EventPayload {
             EventPayload::ImageStored { .. } => "ImageStored",
             EventPayload::WatchlistEntryAdded { .. } => "WatchlistEntryAdded",
             EventPayload::WatchlistEntryRemoved { .. } => "WatchlistEntryRemoved",
+            EventPayload::FollowRequested { .. } => "FollowRequested",
             EventPayload::FollowAccepted { .. } => "FollowAccepted",
+            EventPayload::Unfollowed { .. } => "Unfollowed",
+            EventPayload::FollowerRemoved { .. } => "FollowerRemoved",
+            EventPayload::ActorBlocked { .. } => "ActorBlocked",
+            EventPayload::ActorUnblocked { .. } => "ActorUnblocked",
             EventPayload::BackfillFollower { .. } => "BackfillFollower",
             EventPayload::FederationDeliveryRequested { .. } => "FederationDeliveryRequested",
             EventPayload::WatchEventIngested { .. } => "WatchEventIngested",
@@ -156,6 +187,25 @@ impl EventPayload {
 
 fn parse_uuid(s: &str, field: &str) -> Result<Uuid, DomainError> {
     Uuid::parse_str(s).map_err(|e| DomainError::InfrastructureError(format!("{field}: {e}")))
+}
+
+fn identity_to_payload(id: &SocialIdentity) -> (String, String) {
+    match id {
+        SocialIdentity::Local(uid) => ("local".into(), uid.value().to_string()),
+        SocialIdentity::Remote { actor_url } => ("remote".into(), actor_url.clone()),
+    }
+}
+
+fn payload_to_identity(kind: &str, id: String) -> Result<SocialIdentity, DomainError> {
+    match kind {
+        "local" => Ok(SocialIdentity::Local(UserId::from_uuid(parse_uuid(
+            &id, "user_id",
+        )?))),
+        "remote" => Ok(SocialIdentity::Remote { actor_url: id }),
+        other => Err(DomainError::InfrastructureError(format!(
+            "unknown identity kind: {other}"
+        ))),
+    }
 }
 
 fn parse_ts(ts: i64) -> Result<NaiveDateTime, DomainError> {
@@ -243,15 +293,54 @@ impl From<&DomainEvent> for EventPayload {
                     movie_id: movie_id.value().to_string(),
                 }
             }
-            DomainEvent::FollowAccepted {
-                local_user_id,
-                remote_actor_url,
-                outbox_url,
-            } => EventPayload::FollowAccepted {
-                local_user_id: local_user_id.value().to_string(),
-                remote_actor_url: remote_actor_url.clone(),
-                outbox_url: outbox_url.clone(),
-            },
+            DomainEvent::FollowRequested { follower, target } => {
+                let (kind, id) = identity_to_payload(target);
+                EventPayload::FollowRequested {
+                    follower_id: follower.value().to_string(),
+                    target_kind: kind,
+                    target_id: id,
+                }
+            }
+            DomainEvent::FollowAccepted { owner, requester } => {
+                let (kind, id) = identity_to_payload(requester);
+                EventPayload::FollowAccepted {
+                    owner_id: owner.value().to_string(),
+                    requester_kind: kind,
+                    requester_id: id,
+                }
+            }
+            DomainEvent::Unfollowed { follower, target } => {
+                let (kind, id) = identity_to_payload(target);
+                EventPayload::Unfollowed {
+                    follower_id: follower.value().to_string(),
+                    target_kind: kind,
+                    target_id: id,
+                }
+            }
+            DomainEvent::FollowerRemoved { owner, follower } => {
+                let (kind, id) = identity_to_payload(follower);
+                EventPayload::FollowerRemoved {
+                    owner_id: owner.value().to_string(),
+                    follower_kind: kind,
+                    follower_id: id,
+                }
+            }
+            DomainEvent::ActorBlocked { blocker, target } => {
+                let (kind, id) = identity_to_payload(target);
+                EventPayload::ActorBlocked {
+                    blocker_id: blocker.value().to_string(),
+                    target_kind: kind,
+                    target_id: id,
+                }
+            }
+            DomainEvent::ActorUnblocked { blocker, target } => {
+                let (kind, id) = identity_to_payload(target);
+                EventPayload::ActorUnblocked {
+                    blocker_id: blocker.value().to_string(),
+                    target_kind: kind,
+                    target_id: id,
+                }
+            }
             DomainEvent::BackfillFollower {
                 owner_user_id,
                 follower_inbox_url,
@@ -435,14 +524,53 @@ impl TryFrom<EventPayload> for DomainEvent {
                     movie_id: MovieId::from_uuid(parse_uuid(&movie_id, "movie_id")?),
                 })
             }
+            EventPayload::FollowRequested {
+                follower_id,
+                target_kind,
+                target_id,
+            } => Ok(DomainEvent::FollowRequested {
+                follower: UserId::from_uuid(parse_uuid(&follower_id, "follower_id")?),
+                target: payload_to_identity(&target_kind, target_id)?,
+            }),
             EventPayload::FollowAccepted {
-                local_user_id,
-                remote_actor_url,
-                outbox_url,
+                owner_id,
+                requester_kind,
+                requester_id,
             } => Ok(DomainEvent::FollowAccepted {
-                local_user_id: UserId::from_uuid(parse_uuid(&local_user_id, "local_user_id")?),
-                remote_actor_url,
-                outbox_url,
+                owner: UserId::from_uuid(parse_uuid(&owner_id, "owner_id")?),
+                requester: payload_to_identity(&requester_kind, requester_id)?,
+            }),
+            EventPayload::Unfollowed {
+                follower_id,
+                target_kind,
+                target_id,
+            } => Ok(DomainEvent::Unfollowed {
+                follower: UserId::from_uuid(parse_uuid(&follower_id, "follower_id")?),
+                target: payload_to_identity(&target_kind, target_id)?,
+            }),
+            EventPayload::FollowerRemoved {
+                owner_id,
+                follower_kind,
+                follower_id,
+            } => Ok(DomainEvent::FollowerRemoved {
+                owner: UserId::from_uuid(parse_uuid(&owner_id, "owner_id")?),
+                follower: payload_to_identity(&follower_kind, follower_id)?,
+            }),
+            EventPayload::ActorBlocked {
+                blocker_id,
+                target_kind,
+                target_id,
+            } => Ok(DomainEvent::ActorBlocked {
+                blocker: UserId::from_uuid(parse_uuid(&blocker_id, "blocker_id")?),
+                target: payload_to_identity(&target_kind, target_id)?,
+            }),
+            EventPayload::ActorUnblocked {
+                blocker_id,
+                target_kind,
+                target_id,
+            } => Ok(DomainEvent::ActorUnblocked {
+                blocker: UserId::from_uuid(parse_uuid(&blocker_id, "blocker_id")?),
+                target: payload_to_identity(&target_kind, target_id)?,
             }),
             EventPayload::BackfillFollower {
                 owner_user_id,

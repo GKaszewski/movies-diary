@@ -63,10 +63,29 @@ pub enum DomainEvent {
         user_id: UserId,
         movie_id: MovieId,
     },
+    FollowRequested {
+        follower: UserId,
+        target: crate::value_objects::SocialIdentity,
+    },
     FollowAccepted {
-        local_user_id: UserId,
-        remote_actor_url: String,
-        outbox_url: String,
+        owner: UserId,
+        requester: crate::value_objects::SocialIdentity,
+    },
+    Unfollowed {
+        follower: UserId,
+        target: crate::value_objects::SocialIdentity,
+    },
+    FollowerRemoved {
+        owner: UserId,
+        follower: crate::value_objects::SocialIdentity,
+    },
+    ActorBlocked {
+        blocker: UserId,
+        target: crate::value_objects::SocialIdentity,
+    },
+    ActorUnblocked {
+        blocker: UserId,
+        target: crate::value_objects::SocialIdentity,
     },
     BackfillFollower {
         owner_user_id: UserId,

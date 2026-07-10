@@ -66,7 +66,7 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
     let event_bus = EventBusBackend::from_env()?;
 
     #[cfg(feature = "federation")]
-    let (event_publisher_arc, ap_router, ap_service, social_query, remote_watchlist_repo) = {
+    let (event_publisher_arc, ap_router, ap_service, social_query, remote_watchlist_repo, social_command_arc, social_query_unified_arc) = {
         let (
             activity_repo,
             follow_repo,
@@ -112,12 +112,20 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
         let ap_router = ap.router;
         let ap_service_arc = ap.service;
 
+        let composite_social = Arc::new(activitypub::CompositeSocialAdapter::new(
+            Arc::clone(&ap_service_arc),
+            Arc::clone(&db.user),
+            app_config.base_url.clone(),
+        ));
+
         (
             ep,
             ap_router,
             ap_service_arc,
             social_query_arc,
             remote_watchlist_repo,
+            composite_social.clone() as Arc<dyn domain::ports::SocialCommand>,
+            composite_social as Arc<dyn domain::ports::SocialQuery>,
         )
     };
 
@@ -125,6 +133,12 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
     let event_publisher_arc = create_event_publisher(event_bus, &db_pool).await?;
     #[cfg(not(feature = "federation"))]
     let ap_router = axum::Router::new();
+    #[cfg(not(feature = "federation"))]
+    let social_command_arc: Arc<dyn domain::ports::SocialCommand> =
+        Arc::new(domain::ports::noop::NoopSocialCommand);
+    #[cfg(not(feature = "federation"))]
+    let social_query_unified_arc: Arc<dyn domain::ports::SocialQuery> =
+        Arc::new(domain::ports::noop::NoopSocialQuery);
 
     let review_logger = Arc::new(application::diary::review_logger::DefaultReviewLogger::new(
         Arc::clone(&db.movie_command),
@@ -159,6 +173,8 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
             remote_watchlist: remote_watchlist_repo,
             #[cfg(not(feature = "federation"))]
             remote_watchlist: Arc::new(domain::ports::noop::NoopRemoteWatchlistRepository),
+            social_command: social_command_arc,
+            social_query_unified: social_query_unified_arc,
             #[cfg(feature = "federation")]
             social_query: social_query.clone(),
             #[cfg(not(feature = "federation"))]
