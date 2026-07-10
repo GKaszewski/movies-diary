@@ -46,6 +46,28 @@ impl k_ap::EventPublisher for FederationEventBridge {
                 tracing::warn!(inbox = %inbox, error = %error, "federation delivery failed permanently");
                 Ok(())
             }
+            FederationEvent::OutboundFollowAccepted {
+                local_user_id,
+                remote_actor_url,
+                outbox_url,
+            } => {
+                let identity = domain::value_objects::SocialIdentity::Remote {
+                    actor_url: remote_actor_url,
+                };
+                self.domain_publisher
+                    .publish(&DomainEvent::FollowAccepted {
+                        owner: UserId::from_uuid(local_user_id),
+                        requester: identity,
+                    })
+                    .await
+                    .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+
+                if let Some(outbox) = outbox_url {
+                    tracing::info!(outbox = %outbox, "importing remote outbox after follow accepted");
+                    // Handled by FollowBackfillHandler reacting to FollowAccepted
+                }
+                Ok(())
+            }
         }
     }
 }
