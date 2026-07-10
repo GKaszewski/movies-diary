@@ -12,9 +12,9 @@ import { MovieCard } from "@/components/movie-card"
 import { EmptyState } from "@/components/empty-state"
 import { SwipeTabs } from "@/components/swipe-tabs"
 import { VirtualList } from "@/components/virtual-list"
-import { useInfiniteDiary } from "@/hooks/use-diary"
+import { useInfiniteDiary } from "@/features/diary"
 import { TimeAgo } from "@/components/time-ago"
-import type { UserProfileResponse } from "@/lib/api/users"
+import type { UserProfileResponse } from "@/features/users"
 
 type ProfileViewProps = {
   data: UserProfileResponse

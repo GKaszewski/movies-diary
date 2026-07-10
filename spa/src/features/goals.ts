@@ -1,19 +1,62 @@
+import { z } from "zod"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import {
-  getGoals,
-  getUserGoals,
-  createGoal,
-  updateGoal,
-  deleteGoal,
-  getSettings,
-  updateSettings,
-} from "@/lib/api/goals"
-import type {
-  CreateGoalRequest,
-  UpdateGoalRequest,
-  UpdateUserSettingsRequest,
-} from "@/lib/api/goals"
-import { userKeys } from "@/hooks/use-users"
+import { get, post, put, del } from "@/lib/api/client"
+import { goalDtoSchema, userKeys } from "@/features/users"
+
+export const goalsResponseSchema = z.object({
+  goals: z.array(goalDtoSchema),
+})
+export type GoalsResponse = z.infer<typeof goalsResponseSchema>
+
+export type CreateGoalRequest = {
+  year: number
+  target_count: number
+}
+
+export type UpdateGoalRequest = {
+  target_count: number
+}
+
+export const userSettingsDtoSchema = z.object({
+  federate_goals: z.boolean(),
+  federate_reviews: z.boolean(),
+  federate_watchlist: z.boolean(),
+})
+export type UserSettingsDto = z.infer<typeof userSettingsDtoSchema>
+
+export type UpdateUserSettingsRequest = {
+  federate_goals: boolean
+  federate_reviews: boolean
+  federate_watchlist: boolean
+}
+
+function getGoals() {
+  return get<GoalsResponse>("/goals")
+}
+
+function getUserGoals(userId: string) {
+  return get<GoalsResponse>(`/users/${userId}/goals`)
+}
+
+function createGoal(data: CreateGoalRequest) {
+  return post<z.infer<typeof goalDtoSchema>>("/goals", data)
+}
+
+function updateGoal(year: number, data: UpdateGoalRequest) {
+  return put<z.infer<typeof goalDtoSchema>>(`/goals/${year}`, data)
+}
+
+function deleteGoal(year: number) {
+  return del(`/goals/${year}`)
+}
+
+function getSettings() {
+  return get<UserSettingsDto>("/settings")
+}
+
+function updateSettings(data: UpdateUserSettingsRequest) {
+  return put("/settings", data)
+}
 
 export const goalKeys = {
   all: ["goals"] as const,

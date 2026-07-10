@@ -9,10 +9,10 @@ import { PersonRow } from "@/components/person-row"
 import { EmptyState } from "@/components/empty-state"
 import { InfiniteScroll } from "@/components/infinite-scroll"
 import { Skeleton } from "@/components/ui/skeleton"
-import { useInfiniteSearch } from "@/hooks/use-search"
+import { useInfiniteSearch } from "@/features/search"
 import { useDebounce } from "@/hooks/use-debounce"
 import { useDocumentTitle } from "@/hooks/use-document-title"
-import { useAddToWatchlist } from "@/hooks/use-watchlist"
+import { useAddToWatchlist } from "@/features/watchlist"
 import { toast } from "sonner"
 
 export const Route = createFileRoute("/_app/search")({

@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useLogin } from "@/hooks/use-auth"
+import { useLogin } from "@/features/auth"
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,

@@ -1,5 +1,6 @@
 import { z } from "zod"
-import { del, get, post } from "./client"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { del, get, post } from "@/lib/api/client"
 
 export const webhookTokenDtoSchema = z.object({
   id: z.string(),
@@ -59,26 +60,85 @@ export const dismissWatchResponseSchema = z.object({
 })
 export type DismissWatchResponse = z.infer<typeof dismissWatchResponseSchema>
 
-export function getWebhookTokens() {
+function getWebhookTokens() {
   return get<WebhookTokenDto[]>("/settings/webhook-tokens")
 }
 
-export function generateToken(data: GenerateTokenRequest) {
+function generateToken(data: GenerateTokenRequest) {
   return post<GenerateTokenResponse>("/settings/webhook-tokens", data)
 }
 
-export function deleteToken(id: string) {
+function deleteToken(id: string) {
   return del(`/settings/webhook-tokens/${id}`)
 }
 
-export function getWatchQueue() {
+function getWatchQueue() {
   return get<WatchQueueEntryDto[]>("/watch-queue")
 }
 
-export function confirmWatch(data: ConfirmWatchRequest) {
+function confirmWatch(data: ConfirmWatchRequest) {
   return post<ConfirmWatchResponse>("/watch-queue/confirm", data)
 }
 
-export function dismissWatch(data: DismissWatchRequest) {
+function dismissWatch(data: DismissWatchRequest) {
   return post<DismissWatchResponse>("/watch-queue/dismiss", data)
+}
+
+export const webhookKeys = {
+  tokens: ["webhook-tokens"] as const,
+  queue: ["watch-queue"] as const,
+}
+
+export function useWebhookTokens() {
+  return useQuery({
+    queryKey: webhookKeys.tokens,
+    queryFn: getWebhookTokens,
+  })
+}
+
+export function useGenerateToken() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: GenerateTokenRequest) => generateToken(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: webhookKeys.tokens })
+    },
+  })
+}
+
+export function useDeleteToken() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => deleteToken(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: webhookKeys.tokens })
+    },
+  })
+}
+
+export function useWatchQueue() {
+  return useQuery({
+    queryKey: webhookKeys.queue,
+    queryFn: getWatchQueue,
+  })
+}
+
+export function useConfirmWatch() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: ConfirmWatchRequest) => confirmWatch(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: webhookKeys.queue })
+    },
+  })
+}
+
+export function useDismissWatch() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: DismissWatchRequest) => dismissWatch(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: webhookKeys.queue })
+    },
+  })
 }

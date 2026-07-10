@@ -14,7 +14,7 @@ import {
   useBlockedDomains,
   useAddBlockedDomain,
   useRemoveBlockedDomain,
-} from "@/hooks/use-social"
+} from "@/features/social"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 
 export const Route = createFileRoute("/_app/settings/blocked")({

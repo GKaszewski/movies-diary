@@ -5,14 +5,14 @@ import { ChevronDown, ChevronRight, Plus, Settings, Sparkles } from "lucide-reac
 import { Button } from "@/components/ui/button"
 import { ProfileView, ProfileSkeleton } from "@/components/profile-view"
 import { useAuth } from "@/components/auth-provider"
-import { useWrapUps } from "@/hooks/use-wrapup"
-import { useUserProfile } from "@/hooks/use-users"
-import { useDeleteGoal } from "@/hooks/use-goals"
+import { useWrapUps } from "@/features/wrapup"
+import { useUserProfile } from "@/features/users"
+import { useDeleteGoal } from "@/features/goals"
 import { GoalCard } from "@/components/goal-card"
 import { GoalSheet } from "@/components/goal-sheet"
 import { toast } from "sonner"
 import { useDocumentTitle } from "@/hooks/use-document-title"
-import type { GoalDto } from "@/lib/api/users"
+import type { GoalDto } from "@/features/users"
 
 export const Route = createFileRoute("/_app/profile")({
   component: ProfilePage,

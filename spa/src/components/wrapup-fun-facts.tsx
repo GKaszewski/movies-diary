@@ -3,7 +3,7 @@ import { Lightbulb } from "lucide-react"
 import { fmtUsd } from "@/lib/format"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { RevealCard } from "@/components/reveal-card"
-import type { WrapUpReport } from "@/lib/api/wrapup"
+import type { WrapUpReport } from "@/features/wrapup"
 
 export function FunFacts({ report, watchHours }: { report: WrapUpReport; watchHours: number }) {
   const { t } = useTranslation()

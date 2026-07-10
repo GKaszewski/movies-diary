@@ -4,7 +4,7 @@ import { Download, Share2, X } from "lucide-react"
 import html2canvas from "html2canvas-pro"
 import { Button } from "@/components/ui/button"
 import { posterUrl } from "@/lib/api/client"
-import type { WrapUpReport } from "@/lib/api/wrapup"
+import type { WrapUpReport } from "@/features/wrapup"
 const logoSrc = `${import.meta.env.BASE_URL}logo.webp`
 const bgSrc = `${import.meta.env.BASE_URL}shareable_bg.jpg`
 

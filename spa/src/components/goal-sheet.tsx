@@ -5,7 +5,7 @@ import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useCreateGoal, useUpdateGoal } from "@/hooks/use-goals"
+import { useCreateGoal, useUpdateGoal } from "@/features/goals"
 import { toast } from "sonner"
 
 type GoalSheetProps = {

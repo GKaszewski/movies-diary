@@ -16,9 +16,9 @@ import { FunFacts } from "@/components/wrapup-fun-facts"
 import { RankCard } from "@/components/wrapup-rank-card"
 import { posterUrl } from "@/lib/api/client"
 import { fmtUsd } from "@/lib/format"
-import { useWrapUpReport } from "@/hooks/use-wrapup"
+import { useWrapUpReport } from "@/features/wrapup"
 import { useDocumentTitle } from "@/hooks/use-document-title"
-import type { MovieRef } from "@/lib/api/wrapup"
+import type { MovieRef } from "@/features/wrapup"
 
 const WrapUpShareCard = lazy(() => import("@/components/wrapup-share-card").then((m) => ({ default: m.WrapUpShareCard })))
 

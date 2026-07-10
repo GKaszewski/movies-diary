@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 import { Skeleton } from "@/components/ui/skeleton"
-import { useProfile, useUpdateProfile, useUpdateProfileFields } from "@/hooks/use-users"
+import { useProfile, useUpdateProfile, useUpdateProfileFields } from "@/features/users"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 
 export const Route = createFileRoute("/_app/settings/edit-profile")({

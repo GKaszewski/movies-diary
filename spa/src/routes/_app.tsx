@@ -8,7 +8,7 @@ import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Toaster } from "@/components/ui/sonner"
 import { BottomTabBar } from "@/components/bottom-tab-bar"
-import { LogSheet } from "@/components/log-sheet"
+import { ReviewSheet } from "@/components/review-sheet"
 import { getAuth } from "@/lib/auth"
 
 export const Route = createFileRoute("/_app")({
@@ -43,7 +43,7 @@ function AppLayout() {
         <Outlet />
       </main>
       <BottomTabBar onLogTap={() => setLogOpen(true)} />
-      <LogSheet open={logOpen} onOpenChange={setLogOpen} />
+      <ReviewSheet mode="log" open={logOpen} onOpenChange={setLogOpen} />
       <Toaster position="top-center" />
     </div>
   )

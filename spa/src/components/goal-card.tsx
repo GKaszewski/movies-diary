@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
-import type { GoalDto } from "@/lib/api/users"
+import type { GoalDto } from "@/features/users"
 
 type GoalCardProps = {
   goal: GoalDto

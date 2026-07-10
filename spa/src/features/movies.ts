@@ -1,7 +1,8 @@
 import { z } from "zod"
-import type { Paginated } from "./common"
-import { movieDtoSchema, paginatedSchema, reviewDtoSchema } from "./common"
-import { get, post } from "./client"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import type { Paginated } from "@/lib/api/common"
+import { movieDtoSchema, paginatedSchema, reviewDtoSchema } from "@/lib/api/common"
+import { get, post } from "@/lib/api/client"
 
 export const moviesQueryParamsSchema = z.object({
   limit: z.number().optional(),
@@ -100,22 +101,71 @@ export const movieProfileResponseSchema = z.object({
 })
 export type MovieProfileResponse = z.infer<typeof movieProfileResponseSchema>
 
-export function getMovies(params?: MoviesQueryParams) {
+function getMovies(params?: MoviesQueryParams) {
   return get<MoviesResponse>("/movies", params)
 }
 
-export function getMovie(id: string) {
+function getMovie(id: string) {
   return get<MovieDetailResponse>(`/movies/${id}`)
 }
 
-export function getMovieHistory(id: string) {
+function getMovieHistory(id: string) {
   return get<ReviewHistoryResponse>(`/movies/${id}/history`)
 }
 
-export function getMovieProfile(id: string) {
+function getMovieProfile(id: string) {
   return get<MovieProfileResponse>(`/movies/${id}/profile`)
 }
 
-export function syncPoster(id: string) {
+function syncPoster(id: string) {
   return post(`/movies/${id}/sync-poster`)
+}
+
+export const movieKeys = {
+  all: ["movies"] as const,
+  list: (params?: MoviesQueryParams) => [...movieKeys.all, params] as const,
+  detail: (id: string) => [...movieKeys.all, id] as const,
+  history: (id: string) => [...movieKeys.all, id, "history"] as const,
+  profile: (id: string) => [...movieKeys.all, id, "profile"] as const,
+}
+
+export function useMovies(params?: MoviesQueryParams) {
+  return useQuery({
+    queryKey: movieKeys.list(params),
+    queryFn: () => getMovies(params),
+  })
+}
+
+export function useMovie(id: string) {
+  return useQuery({
+    queryKey: movieKeys.detail(id),
+    queryFn: () => getMovie(id),
+    enabled: !!id,
+  })
+}
+
+export function useMovieHistory(id: string) {
+  return useQuery({
+    queryKey: movieKeys.history(id),
+    queryFn: () => getMovieHistory(id),
+    enabled: !!id,
+  })
+}
+
+export function useMovieProfile(id: string) {
+  return useQuery({
+    queryKey: movieKeys.profile(id),
+    queryFn: () => getMovieProfile(id),
+    enabled: !!id,
+  })
+}
+
+export function useSyncPoster() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => syncPoster(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: movieKeys.all })
+    },
+  })
 }

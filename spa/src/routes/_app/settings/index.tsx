@@ -19,9 +19,9 @@ import {
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { useAuth, useIsAdmin } from "@/components/auth-provider"
-import { reindexSearch } from "@/lib/api/users"
-import { useSettings, useUpdateSettings } from "@/hooks/use-goals"
-import type { UpdateUserSettingsRequest } from "@/lib/api/goals"
+import { reindexSearch } from "@/features/users"
+import { useSettings, useUpdateSettings } from "@/features/goals"
+import type { UpdateUserSettingsRequest } from "@/features/goals"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 
 export const Route = createFileRoute("/_app/settings/")({

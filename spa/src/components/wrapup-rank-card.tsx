@@ -4,7 +4,7 @@ import { Users } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { tmdbProfileUrl } from "@/lib/api/client"
-import type { PersonStat } from "@/lib/api/wrapup"
+import type { PersonStat } from "@/features/wrapup"
 
 export function RankCard({ title, subtitle, items, profilePaths }: { title: string; subtitle: string; items: PersonStat[]; profilePaths?: string[] }) {
   const { t } = useTranslation()

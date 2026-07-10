@@ -1,26 +1,24 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { useTranslation } from "react-i18next"
-import { Bookmark, BookmarkCheck, Globe, Star, TrendingUp, User, Users } from "lucide-react"
+import { Bookmark, BookmarkCheck, Star, User } from "lucide-react"
 import { BackButton } from "@/components/back-button"
+import { CommunityReviews } from "@/components/community-reviews"
+import { ViewingHistory } from "@/components/viewing-history"
 import { StarDisplay } from "@/components/star-display"
-import { WatchMediumBadge } from "@/components/watch-medium-badge"
 import { RatingHistogram } from "@/components/rating-histogram"
-import { EmptyState } from "@/components/empty-state"
 import { HorizontalStrip } from "@/components/horizontal-strip"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { posterUrl, tmdbProfileUrl } from "@/lib/api/client"
-import { timeAgo, shortDate } from "@/lib/date"
-import { useMovie, useMovieHistory, useMovieProfile } from "@/hooks/use-movies"
+import { useMovie, useMovieHistory, useMovieProfile } from "@/features/movies"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import {
   useWatchlistStatus,
   useAddToWatchlist,
   useRemoveFromWatchlist,
-} from "@/hooks/use-watchlist"
-import type { CastMemberDto, CrewMemberDto } from "@/lib/api/movies"
+} from "@/features/watchlist"
+import type { CastMemberDto, CrewMemberDto } from "@/features/movies"
 
 export const Route = createFileRoute("/_app/movies/$id")({
   component: MovieDetailPage,
@@ -105,64 +103,9 @@ function MovieDetailPage() {
         </section>
       )}
 
-      <section>
-        <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("movie.community")}</h3>
-        {!reviews.items.length ? (
-          <EmptyState icon={Users} title={t("movie.noReviews")} description={t("movie.beFirst")} />
-        ) : (
-          <div className="space-y-2">
-            {reviews.items.map((r, i) => (
-              <Card key={i} size="sm">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="flex items-center gap-1.5 text-sm">
-                        {r.user_display}
-                        {r.is_federated && <Globe className="size-3 text-muted-foreground/60" />}
-                      </CardTitle>
-                      <CardDescription className="text-[10px]">{timeAgo(r.watched_at)}</CardDescription>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <StarDisplay rating={r.rating} size="xs" />
-                      {r.watch_medium && <WatchMediumBadge medium={r.watch_medium} />}
-                    </div>
-                  </div>
-                </CardHeader>
-                {r.comment && (
-                  <CardContent>
-                    <p className="text-xs text-muted-foreground">{r.comment}</p>
-                  </CardContent>
-                )}
-              </Card>
-            ))}
-          </div>
-        )}
-      </section>
+      <CommunityReviews reviews={reviews} />
 
-      {history && history.viewings.length > 0 && (
-        <section>
-          <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("movie.yourHistory")}</h3>
-          <div className="space-y-2">
-            {history.trend && (
-              <div className="flex items-center gap-2 rounded-xl bg-card p-3 text-xs text-muted-foreground">
-                <TrendingUp className="size-3.5" />
-                {t("movie.trend", { trend: history.trend })}
-              </div>
-            )}
-            {history.viewings.map((v) => (
-              <div key={v.id} className="flex items-center justify-between rounded-xl bg-card p-3">
-                <div>
-                  <p className="text-sm font-medium">{shortDate(v.watched_at)}</p>
-                  {v.comment && (
-                    <p className="mt-0.5 text-xs text-muted-foreground line-clamp-1">{v.comment}</p>
-                  )}
-                </div>
-                <StarDisplay rating={v.rating} size="xs" />
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      {history && <ViewingHistory history={history} />}
     </div>
   )
 }

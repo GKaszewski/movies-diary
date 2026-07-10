@@ -1,6 +1,7 @@
 import { z } from "zod"
-import { diaryEntryDtoSchema, paginatedSchema } from "./common"
-import { get, post, put, putForm } from "./client"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { diaryEntryDtoSchema, paginatedSchema } from "@/lib/api/common"
+import { get, post, put, putForm } from "@/lib/api/client"
 
 export const userSummaryDtoSchema = z.object({
   id: z.string().uuid(),
@@ -62,8 +63,6 @@ export const monthActivityDtoSchema = z.object({
 })
 export type MonthActivityDto = z.infer<typeof monthActivityDtoSchema>
 
-const userDiaryResponseSchema = paginatedSchema(diaryEntryDtoSchema)
-
 export const goalDtoSchema = z.object({
   year: z.number(),
   target_count: z.number(),
@@ -73,6 +72,8 @@ export const goalDtoSchema = z.object({
   goal_type: z.string(),
 })
 export type GoalDto = z.infer<typeof goalDtoSchema>
+
+const userDiaryResponseSchema = paginatedSchema(diaryEntryDtoSchema)
 
 export const userProfileResponseSchema = z.object({
   user_id: z.string().uuid(),
@@ -116,18 +117,6 @@ export const updateProfileFieldsRequestSchema = z.object({
 })
 export type UpdateProfileFieldsRequest = z.infer<typeof updateProfileFieldsRequestSchema>
 
-export function getUsers() {
-  return get<UsersResponse>("/users")
-}
-
-export function getUserProfile(id: string, params?: UserProfileQueryParams) {
-  return get<UserProfileResponse>(`/users/${id}`, params)
-}
-
-export function getProfile() {
-  return get<ProfileResponse>("/profile")
-}
-
 export type UpdateProfileData = {
   display_name?: string
   bio?: string
@@ -136,7 +125,19 @@ export type UpdateProfileData = {
   banner?: File
 }
 
-export function updateProfile(data: UpdateProfileData) {
+function getUsers() {
+  return get<UsersResponse>("/users")
+}
+
+function getUserProfile(id: string, params?: UserProfileQueryParams) {
+  return get<UserProfileResponse>(`/users/${id}`, params)
+}
+
+function getProfile() {
+  return get<ProfileResponse>("/profile")
+}
+
+function updateProfile(data: UpdateProfileData) {
   const form = new FormData()
   if (data.display_name != null) form.append("display_name", data.display_name)
   if (data.also_known_as != null) form.append("also_known_as", data.also_known_as)
@@ -146,10 +147,60 @@ export function updateProfile(data: UpdateProfileData) {
   return putForm("/profile", form)
 }
 
-export function updateProfileFields(data: UpdateProfileFieldsRequest) {
+function updateProfileFields(data: UpdateProfileFieldsRequest) {
   return put("/profile/fields", data)
 }
 
 export function reindexSearch() {
   return post("/admin/reindex-search")
+}
+
+export const userKeys = {
+  all: ["users"] as const,
+  list: () => [...userKeys.all, "list"] as const,
+  profile: (id: string, params?: UserProfileQueryParams) =>
+    [...userKeys.all, id, params] as const,
+  me: ["profile"] as const,
+}
+
+export function useUsers() {
+  return useQuery({
+    queryKey: userKeys.list(),
+    queryFn: getUsers,
+  })
+}
+
+export function useUserProfile(id: string, params?: UserProfileQueryParams) {
+  return useQuery({
+    queryKey: userKeys.profile(id, params),
+    queryFn: () => getUserProfile(id, params),
+    enabled: !!id,
+  })
+}
+
+export function useProfile() {
+  return useQuery({
+    queryKey: userKeys.me,
+    queryFn: getProfile,
+  })
+}
+
+export function useUpdateProfile() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: UpdateProfileData) => updateProfile(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: userKeys.me })
+    },
+  })
+}
+
+export function useUpdateProfileFields() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: UpdateProfileFieldsRequest) => updateProfileFields(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: userKeys.me })
+    },
+  })
 }

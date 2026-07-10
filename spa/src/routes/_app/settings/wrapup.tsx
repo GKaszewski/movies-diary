@@ -21,8 +21,8 @@ import {
   useWrapUps,
   useGenerateWrapUp,
   useDeleteWrapUp,
-} from "@/hooks/use-wrapup"
-import { useUsers } from "@/hooks/use-users"
+} from "@/features/wrapup"
+import { useUsers } from "@/features/users"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 
 export const Route = createFileRoute("/_app/settings/wrapup")({

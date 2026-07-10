@@ -3,7 +3,7 @@ import { useCallback, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { BookOpen, ChevronLeft, ChevronRight, Pencil } from "lucide-react"
 import { format, startOfMonth, subMonths } from "date-fns"
-import { EditReviewSheet } from "@/components/edit-review-sheet"
+import { ReviewSheet } from "@/components/review-sheet"
 import { EditableContextMenu } from "@/components/editable-context-menu"
 import { MovieCard } from "@/components/movie-card"
 import { EmptyState } from "@/components/empty-state"
@@ -13,7 +13,7 @@ import { VirtualList } from "@/components/virtual-list"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAuth } from "@/components/auth-provider"
-import { useInfiniteDiary, useDeleteReview } from "@/hooks/use-diary"
+import { useInfiniteDiary, useDeleteReview } from "@/features/diary"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import type { DiaryEntryDto } from "@/lib/api/common"
 
@@ -145,8 +145,9 @@ function DiaryPage() {
       )}
 
       {editingEntry && (
-        <EditReviewSheet
+        <ReviewSheet
           key={editingEntry.review.id}
+          mode="edit"
           open={!!editingEntry}
           onOpenChange={(open) => !open && setEditingEntry(null)}
           movie={editingEntry.movie}

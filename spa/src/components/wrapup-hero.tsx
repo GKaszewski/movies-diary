@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next"
 import { Card, CardContent } from "@/components/ui/card"
 import { RevealCard } from "@/components/reveal-card"
 import { useCountUp } from "@/hooks/use-animate"
-import type { WrapUpReport } from "@/lib/api/wrapup"
+import type { WrapUpReport } from "@/features/wrapup"
 
 export function HeroCard({ report, watchHours }: { report: WrapUpReport; watchHours: number }) {
   const { t } = useTranslation()

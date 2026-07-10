@@ -1,27 +1,113 @@
+import { z } from "zod"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import {
-  acceptFollower,
-  addBlockedDomain,
-  blockActor,
-  follow,
-  getBlockedActors,
-  getBlockedDomains,
-  getFollowers,
-  getFollowing,
-  getPendingFollowers,
-  getUserFollowers,
-  getUserFollowing,
-  rejectFollower,
-  removeBlockedDomain,
-  removeFollower,
-  unblockActor,
-  unfollow,
-} from "@/lib/api/social"
-import type {
-  ActorUrlRequest,
-  AddBlockedDomainRequest,
-  FollowRequest,
-} from "@/lib/api/social"
+import { del, get, post } from "@/lib/api/client"
+
+export const remoteActorDtoSchema = z.object({
+  handle: z.string(),
+  display_name: z.string().optional(),
+  url: z.string(),
+})
+export type RemoteActorDto = z.infer<typeof remoteActorDtoSchema>
+
+export const actorListResponseSchema = z.object({
+  actors: z.array(remoteActorDtoSchema),
+})
+export type ActorListResponse = z.infer<typeof actorListResponseSchema>
+
+export const followRequestSchema = z.object({
+  handle: z.string(),
+})
+export type FollowRequest = z.infer<typeof followRequestSchema>
+
+export const actorUrlRequestSchema = z.object({
+  actor_url: z.string(),
+})
+export type ActorUrlRequest = z.infer<typeof actorUrlRequestSchema>
+
+export const blockedDomainResponseSchema = z.object({
+  domain: z.string(),
+  reason: z.string().optional(),
+  blocked_at: z.string(),
+})
+export type BlockedDomainResponse = z.infer<typeof blockedDomainResponseSchema>
+
+export const addBlockedDomainRequestSchema = z.object({
+  domain: z.string(),
+  reason: z.string().optional(),
+})
+export type AddBlockedDomainRequest = z.infer<typeof addBlockedDomainRequestSchema>
+
+export const blockedActorResponseSchema = z.object({
+  url: z.string(),
+  handle: z.string(),
+  display_name: z.string().optional(),
+  avatar_url: z.string().optional(),
+})
+export type BlockedActorResponse = z.infer<typeof blockedActorResponseSchema>
+
+function getFollowing() {
+  return get<ActorListResponse>("/social/following")
+}
+
+function getFollowers() {
+  return get<ActorListResponse>("/social/followers")
+}
+
+function getUserFollowing(userId: string) {
+  return get<ActorListResponse>(`/users/${userId}/following`)
+}
+
+function getUserFollowers(userId: string) {
+  return get<ActorListResponse>(`/users/${userId}/followers`)
+}
+
+function getPendingFollowers() {
+  return get<ActorListResponse>("/social/followers/pending")
+}
+
+function follow(data: FollowRequest) {
+  return post("/social/follow", data)
+}
+
+function unfollow(data: ActorUrlRequest) {
+  return post("/social/unfollow", data)
+}
+
+function acceptFollower(data: ActorUrlRequest) {
+  return post("/social/followers/accept", data)
+}
+
+function rejectFollower(data: ActorUrlRequest) {
+  return post("/social/followers/reject", data)
+}
+
+function removeFollower(data: ActorUrlRequest) {
+  return post("/social/followers/remove", data)
+}
+
+function getBlockedDomains() {
+  return get<BlockedDomainResponse[]>("/admin/blocked-domains")
+}
+
+function addBlockedDomain(data: AddBlockedDomainRequest) {
+  return post("/admin/blocked-domains", data)
+}
+
+function removeBlockedDomain(domain: string) {
+  return del(`/admin/blocked-domains/${domain}`)
+}
+
+function blockActor(data: ActorUrlRequest) {
+  return post("/social/block", data)
+}
+
+function unblockActor(data: ActorUrlRequest) {
+  return post("/social/unblock", data)
+}
+
+function getBlockedActors() {
+  return get<BlockedActorResponse[]>("/social/blocked")
+}
 
 export const socialKeys = {
   following: ["following"] as const,

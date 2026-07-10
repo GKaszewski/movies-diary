@@ -26,7 +26,7 @@ import {
   useWebhookTokens,
   useGenerateToken,
   useDeleteToken,
-} from "@/hooks/use-webhooks"
+} from "@/features/webhooks"
 import { API_URL } from "@/lib/api/client"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 

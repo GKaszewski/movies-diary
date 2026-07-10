@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button"
 import { ProfileView, ProfileSkeleton } from "@/components/profile-view"
 import { GoalCard } from "@/components/goal-card"
 import { useAuth } from "@/components/auth-provider"
-import { useUserProfile } from "@/hooks/use-users"
-import { useFollow, useUnfollow, useFollowing } from "@/hooks/use-social"
+import { useUserProfile } from "@/features/users"
+import { useFollow, useUnfollow, useFollowing } from "@/features/social"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 
 export const Route = createFileRoute("/_app/users/$id")({

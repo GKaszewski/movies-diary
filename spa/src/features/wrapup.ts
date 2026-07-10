@@ -1,5 +1,6 @@
 import { z } from "zod"
-import { del, get, post } from "./client"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { del, get, post } from "@/lib/api/client"
 
 export const generateWrapUpRequestSchema = z.object({
   start_date: z.string(),
@@ -29,22 +30,6 @@ export const wrapUpListResponseSchema = z.object({
   items: z.array(wrapUpStatusResponseSchema),
 })
 export type WrapUpListResponse = z.infer<typeof wrapUpListResponseSchema>
-
-export function generateWrapUp(data: GenerateWrapUpRequest) {
-  return post<WrapUpGeneratedResponse>("/wrapups/generate", data)
-}
-
-export function getWrapUps() {
-  return get<WrapUpListResponse>("/wrapups")
-}
-
-export function getWrapUp(id: string) {
-  return get<WrapUpStatusResponse>(`/wrapups/${id}`)
-}
-
-export function deleteWrapUp(id: string) {
-  return del(`/wrapups/${id}`)
-}
 
 export type MovieRef = {
   movie_id?: string
@@ -118,6 +103,72 @@ export type WrapUpReport = {
   top_cast_profile_paths: string[]
 }
 
-export function getWrapUpReport(id: string) {
+function generateWrapUp(data: GenerateWrapUpRequest) {
+  return post<WrapUpGeneratedResponse>("/wrapups/generate", data)
+}
+
+function getWrapUps() {
+  return get<WrapUpListResponse>("/wrapups")
+}
+
+function getWrapUp(id: string) {
+  return get<WrapUpStatusResponse>(`/wrapups/${id}`)
+}
+
+function deleteWrapUp(id: string) {
+  return del(`/wrapups/${id}`)
+}
+
+function getWrapUpReport(id: string) {
   return get<WrapUpReport>(`/wrapups/${id}/report`)
+}
+
+export const wrapupKeys = {
+  all: ["wrapups"] as const,
+  list: () => [...wrapupKeys.all, "list"] as const,
+  detail: (id: string) => [...wrapupKeys.all, id] as const,
+  report: (id: string) => [...wrapupKeys.all, id, "report"] as const,
+}
+
+export function useWrapUpReport(id: string) {
+  return useQuery({
+    queryKey: wrapupKeys.report(id),
+    queryFn: () => getWrapUpReport(id),
+    enabled: !!id,
+  })
+}
+
+export function useWrapUps() {
+  return useQuery({
+    queryKey: wrapupKeys.list(),
+    queryFn: getWrapUps,
+  })
+}
+
+export function useWrapUp(id: string) {
+  return useQuery({
+    queryKey: wrapupKeys.detail(id),
+    queryFn: () => getWrapUp(id),
+    enabled: !!id,
+  })
+}
+
+export function useGenerateWrapUp() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: GenerateWrapUpRequest) => generateWrapUp(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: wrapupKeys.all })
+    },
+  })
+}
+
+export function useDeleteWrapUp() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => deleteWrapUp(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: wrapupKeys.all })
+    },
+  })
 }

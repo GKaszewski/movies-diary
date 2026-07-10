@@ -32,9 +32,9 @@ import {
   useImportProfiles,
   useSaveImportProfile,
   useDeleteImportProfile,
-} from "@/hooks/use-imports"
+} from "@/features/imports"
 import { useDocumentTitle } from "@/hooks/use-document-title"
-import type { SessionCreatedResponse } from "@/lib/api/imports"
+import type { SessionCreatedResponse } from "@/features/imports"
 
 export const Route = createFileRoute("/_app/settings/import")({
   component: ImportPage,
