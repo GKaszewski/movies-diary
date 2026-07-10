@@ -904,12 +904,12 @@ impl SocialCommand for InMemorySocialRepository {
                 actor_url: h.clone(),
             },
         };
-        if let SocialIdentity::Local(target_id) = &identity {
-            if follower == target_id {
-                return Err(DomainError::ValidationError(
-                    "Cannot follow yourself".into(),
-                ));
-            }
+        if let SocialIdentity::Local(target_id) = &identity
+            && follower == target_id
+        {
+            return Err(DomainError::ValidationError(
+                "Cannot follow yourself".into(),
+            ));
         }
         let mut store = self.follows.lock().unwrap();
         let already = store
