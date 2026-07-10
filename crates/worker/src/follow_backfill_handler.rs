@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use domain::{errors::DomainError, events::DomainEvent, ports::EventHandler, value_objects::SocialIdentity};
+use domain::{
+    errors::DomainError, events::DomainEvent, ports::EventHandler, value_objects::SocialIdentity,
+};
 
 pub struct FollowBackfillHandler {
     pub ap_service: Arc<dyn activitypub::ActivityPubPort>,

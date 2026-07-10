@@ -1,5 +1,4 @@
 pub mod composite_handler;
-pub mod social_adapter;
 pub mod event_handler;
 pub mod federation_event_bridge;
 pub mod goal_handler;
@@ -7,6 +6,7 @@ pub mod objects;
 pub mod port;
 pub mod remote_review_repository;
 pub mod review_handler;
+pub mod social_adapter;
 pub(crate) mod urls;
 pub mod user_adapter;
 pub mod watchlist_handler;

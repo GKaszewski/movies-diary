@@ -1,4 +1,7 @@
-use domain::{errors::DomainError, value_objects::{SocialActor, UserId}};
+use domain::{
+    errors::DomainError,
+    value_objects::{SocialActor, UserId},
+};
 
 use super::{deps::SocialQueryDeps, queries::GetFollowersQuery};
 

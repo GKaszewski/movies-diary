@@ -9,7 +9,11 @@ use uuid::Uuid;
 
 use crate::social::{block, commands::BlockCommand, deps::SocialCommandDeps};
 
-fn make_deps() -> (Arc<InMemorySocialRepository>, Arc<NoopEventPublisher>, SocialCommandDeps) {
+fn make_deps() -> (
+    Arc<InMemorySocialRepository>,
+    Arc<NoopEventPublisher>,
+    SocialCommandDeps,
+) {
     let social = InMemorySocialRepository::new();
     let events = NoopEventPublisher::new();
     let deps = SocialCommandDeps {
@@ -35,7 +39,9 @@ async fn block_emits_actor_blocked_event() {
     .unwrap();
 
     let published = events.published();
-    assert!(published
-        .iter()
-        .any(|e| matches!(e, DomainEvent::ActorBlocked { .. })));
+    assert!(
+        published
+            .iter()
+            .any(|e| matches!(e, DomainEvent::ActorBlocked { .. }))
+    );
 }

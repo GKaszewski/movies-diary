@@ -84,7 +84,9 @@ pub async fn get_blocked_domains_admin(
     _admin: AdminApiUser,
 ) -> Result<Json<Vec<BlockedDomainResponse>>, ApiError> {
     let domains = state
-        .app_ctx.services.ap_service
+        .app_ctx
+        .services
+        .ap_service
         .get_blocked_domains()
         .await
         .map_err(ap_to_domain)?;
@@ -116,7 +118,9 @@ pub async fn add_blocked_domain_admin(
     axum::Json(body): axum::Json<AddBlockedDomainRequest>,
 ) -> Result<impl IntoResponse, ApiError> {
     state
-        .app_ctx.services.ap_service
+        .app_ctx
+        .services
+        .ap_service
         .add_blocked_domain(&body.domain, body.reason.as_deref())
         .await
         .map_err(ap_to_domain)?;
@@ -139,7 +143,9 @@ pub async fn remove_blocked_domain_admin(
     axum::extract::Path(domain): axum::extract::Path<String>,
 ) -> Result<impl IntoResponse, ApiError> {
     state
-        .app_ctx.services.ap_service
+        .app_ctx
+        .services
+        .ap_service
         .remove_blocked_domain(&domain)
         .await
         .map_err(ap_to_domain)?;
@@ -263,10 +269,7 @@ pub async fn get_following(
     )
     .await?;
     Ok(Json(ActorListResponse {
-        actors: identities
-            .into_iter()
-            .map(social_actor_to_dto)
-            .collect(),
+        actors: identities.into_iter().map(social_actor_to_dto).collect(),
     }))
 }
 
@@ -293,10 +296,7 @@ pub async fn get_followers(
     )
     .await?;
     Ok(Json(ActorListResponse {
-        actors: identities
-            .into_iter()
-            .map(social_actor_to_dto)
-            .collect(),
+        actors: identities.into_iter().map(social_actor_to_dto).collect(),
     }))
 }
 
@@ -314,10 +314,7 @@ pub async fn get_user_following(
     )
     .await?;
     Ok(Json(ActorListResponse {
-        actors: identities
-            .into_iter()
-            .map(social_actor_to_dto)
-            .collect(),
+        actors: identities.into_iter().map(social_actor_to_dto).collect(),
     }))
 }
 
@@ -335,10 +332,7 @@ pub async fn get_user_followers(
     )
     .await?;
     Ok(Json(ActorListResponse {
-        actors: identities
-            .into_iter()
-            .map(social_actor_to_dto)
-            .collect(),
+        actors: identities.into_iter().map(social_actor_to_dto).collect(),
     }))
 }
 
@@ -525,10 +519,7 @@ pub async fn get_pending_followers(
     )
     .await?;
     Ok(Json(ActorListResponse {
-        actors: identities
-            .into_iter()
-            .map(social_actor_to_dto)
-            .collect(),
+        actors: identities.into_iter().map(social_actor_to_dto).collect(),
     }))
 }
 
@@ -563,7 +554,9 @@ pub async fn follow_remote_user(
         &deps,
         application::social::commands::FollowCommand {
             follower_id: user_id.value(),
-            target: SocialIdentity::Remote { actor_url: form.handle },
+            target: SocialIdentity::Remote {
+                actor_url: form.handle,
+            },
         },
     )
     .await
@@ -604,7 +597,9 @@ pub async fn unfollow_remote_user(
         &deps,
         application::social::commands::UnfollowCommand {
             follower_id: user_id.value(),
-            target: SocialIdentity::Remote { actor_url: form.actor_url },
+            target: SocialIdentity::Remote {
+                actor_url: form.actor_url,
+            },
         },
     )
     .await
@@ -645,7 +640,9 @@ pub async fn accept_follower_html(
         &deps,
         application::social::commands::AcceptFollowCommand {
             owner_id: user_id.value(),
-            requester: SocialIdentity::Remote { actor_url: form.actor_url },
+            requester: SocialIdentity::Remote {
+                actor_url: form.actor_url,
+            },
         },
     )
     .await
@@ -680,7 +677,9 @@ pub async fn reject_follower_html(
         &deps,
         application::social::commands::RejectFollowCommand {
             owner_id: user_id.value(),
-            requester: SocialIdentity::Remote { actor_url: form.actor_url },
+            requester: SocialIdentity::Remote {
+                actor_url: form.actor_url,
+            },
         },
     )
     .await
@@ -706,7 +705,9 @@ pub async fn get_followers_collection(
     if accept.contains("application/activity+json") || accept.contains("application/ld+json") {
         let page = params.get("page").and_then(|p| p.parse::<u32>().ok());
         return match state
-            .app_ctx.services.ap_service
+            .app_ctx
+            .services
+            .ap_service
             .followers_collection_json(user_id, page)
             .await
         {
@@ -737,7 +738,9 @@ pub async fn get_following_collection(
     if accept.contains("application/activity+json") || accept.contains("application/ld+json") {
         let page = params.get("page").and_then(|p| p.parse::<u32>().ok());
         return match state
-            .app_ctx.services.ap_service
+            .app_ctx
+            .services
+            .ap_service
             .following_collection_json(user_id, page)
             .await
         {
@@ -776,7 +779,9 @@ pub async fn get_following_page(
     };
     match application::social::get_following::execute(
         &deps,
-        application::social::queries::GetFollowingQuery { user_id: user_id.value() },
+        application::social::queries::GetFollowingQuery {
+            user_id: user_id.value(),
+        },
     )
     .await
     {
@@ -825,7 +830,9 @@ pub async fn get_followers_page(
     };
     match application::social::get_followers::execute(
         &deps,
-        application::social::queries::GetFollowersQuery { user_id: user_id.value() },
+        application::social::queries::GetFollowersQuery {
+            user_id: user_id.value(),
+        },
     )
     .await
     {
@@ -875,7 +882,9 @@ pub async fn remove_follower_html(
         &deps,
         application::social::commands::RemoveFollowerCommand {
             owner_id: user_id.value(),
-            follower: SocialIdentity::Remote { actor_url: form.actor_url },
+            follower: SocialIdentity::Remote {
+                actor_url: form.actor_url,
+            },
         },
     )
     .await
@@ -902,7 +911,13 @@ pub async fn get_blocked_domains_page(
     let mut ctx = build_page_context(&state, Some(user_id), csrf.0).await;
     ctx.page_title = "Blocked Domains — Movies Diary".to_string();
     ctx.canonical_url = format!("{}/admin/blocked-domains", state.app_ctx.config.base_url);
-    match state.app_ctx.services.ap_service.get_blocked_domains().await {
+    match state
+        .app_ctx
+        .services
+        .ap_service
+        .get_blocked_domains()
+        .await
+    {
         Ok(domains) => {
             let entries: Vec<template_askama::BlockedDomainEntry> = domains
                 .into_iter()
@@ -940,7 +955,9 @@ pub async fn post_blocked_domain(
     }
     let reason = form.reason.as_deref().filter(|s| !s.trim().is_empty());
     match state
-        .app_ctx.services.ap_service
+        .app_ctx
+        .services
+        .ap_service
         .add_blocked_domain(&form.domain, reason)
         .await
     {
@@ -961,7 +978,13 @@ pub async fn post_remove_blocked_domain(
     if crate::csrf::mismatch(&csrf, &form.csrf_token) {
         return StatusCode::FORBIDDEN.into_response();
     }
-    match state.app_ctx.services.ap_service.remove_blocked_domain(&form.domain).await {
+    match state
+        .app_ctx
+        .services
+        .ap_service
+        .remove_blocked_domain(&form.domain)
+        .await
+    {
         Ok(()) => Redirect::to("/admin/blocked-domains").into_response(),
         Err(e) => {
             tracing::error!("remove_blocked_domain error: {:?}", e);
@@ -983,7 +1006,9 @@ pub async fn get_blocked_actors_page(
     };
     match application::social::get_blocked::execute(
         &deps,
-        application::social::queries::GetBlockedQuery { user_id: user_id.value() },
+        application::social::queries::GetBlockedQuery {
+            user_id: user_id.value(),
+        },
     )
     .await
     {
@@ -1032,7 +1057,9 @@ pub async fn post_block_actor_html(
         &deps,
         application::social::commands::BlockCommand {
             blocker_id: user_id.value(),
-            target: SocialIdentity::Remote { actor_url: form.actor_url },
+            target: SocialIdentity::Remote {
+                actor_url: form.actor_url,
+            },
         },
     )
     .await
@@ -1063,7 +1090,9 @@ pub async fn post_unblock_actor(
         &deps,
         application::social::commands::UnblockCommand {
             blocker_id: user_id.value(),
-            target: SocialIdentity::Remote { actor_url: form.actor_url },
+            target: SocialIdentity::Remote {
+                actor_url: form.actor_url,
+            },
         },
     )
     .await

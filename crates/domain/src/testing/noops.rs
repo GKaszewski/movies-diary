@@ -64,8 +64,8 @@ impl ObjectStorage for NoopObjectStorage {
 
 // Re-export production noop types so test code that imports from
 // `domain::testing` keeps compiling without changes.
-pub use crate::ports::noop::NoopRemoteWatchlistRepository;
 pub use crate::ports::noop::NoopFederationAdminQuery;
+pub use crate::ports::noop::NoopRemoteWatchlistRepository;
 
 // ── NoopGoalCommand ───────────────────────────────────────────────────────────
 

@@ -66,7 +66,15 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
     let event_bus = EventBusBackend::from_env()?;
 
     #[cfg(feature = "federation")]
-    let (event_publisher_arc, ap_router, ap_service, social_query, remote_watchlist_repo, social_command_arc, social_query_unified_arc) = {
+    let (
+        event_publisher_arc,
+        ap_router,
+        ap_service,
+        social_query,
+        remote_watchlist_repo,
+        social_command_arc,
+        social_query_unified_arc,
+    ) = {
         let (
             activity_repo,
             follow_repo,

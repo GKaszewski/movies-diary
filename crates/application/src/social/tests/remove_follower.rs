@@ -14,7 +14,11 @@ use crate::social::{
     follow, remove_follower,
 };
 
-fn make_deps() -> (Arc<InMemorySocialRepository>, Arc<NoopEventPublisher>, SocialCommandDeps) {
+fn make_deps() -> (
+    Arc<InMemorySocialRepository>,
+    Arc<NoopEventPublisher>,
+    SocialCommandDeps,
+) {
     let social = InMemorySocialRepository::new();
     let events = NoopEventPublisher::new();
     let deps = SocialCommandDeps {
@@ -62,7 +66,9 @@ async fn remove_follower_emits_follower_removed_event() {
     .unwrap();
 
     let published = events.published();
-    assert!(published
-        .iter()
-        .any(|e| matches!(e, DomainEvent::FollowerRemoved { .. })));
+    assert!(
+        published
+            .iter()
+            .any(|e| matches!(e, DomainEvent::FollowerRemoved { .. }))
+    );
 }

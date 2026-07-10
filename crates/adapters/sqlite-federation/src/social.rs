@@ -1,9 +1,5 @@
 use async_trait::async_trait;
-use domain::{
-    errors::DomainError,
-    models::RemoteActorInfo,
-    ports::FederationAdminQuery,
-};
+use domain::{errors::DomainError, models::RemoteActorInfo, ports::FederationAdminQuery};
 
 use super::SqliteFederationRepository;
 

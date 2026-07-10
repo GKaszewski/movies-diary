@@ -12,7 +12,11 @@ use crate::social::{
     follow, reject,
 };
 
-fn make_deps() -> (Arc<InMemorySocialRepository>, Arc<NoopEventPublisher>, SocialCommandDeps) {
+fn make_deps() -> (
+    Arc<InMemorySocialRepository>,
+    Arc<NoopEventPublisher>,
+    SocialCommandDeps,
+) {
     let social = InMemorySocialRepository::new();
     let events = NoopEventPublisher::new();
     let deps = SocialCommandDeps {

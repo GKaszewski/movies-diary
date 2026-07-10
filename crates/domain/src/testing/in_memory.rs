@@ -893,11 +893,7 @@ impl InMemorySocialRepository {
 
 #[async_trait]
 impl SocialCommand for InMemorySocialRepository {
-    async fn follow(
-        &self,
-        follower: &UserId,
-        target: &SocialIdentity,
-    ) -> Result<(), DomainError> {
+    async fn follow(&self, follower: &UserId, target: &SocialIdentity) -> Result<(), DomainError> {
         if let SocialIdentity::Local(target_id) = target {
             if follower == target_id {
                 return Err(DomainError::ValidationError(
@@ -925,7 +921,9 @@ impl SocialCommand for InMemorySocialRepository {
         let before = store.len();
         store.retain(|(f, t, _)| !(*f == follower.value() && t == target));
         if store.len() == before {
-            return Err(DomainError::NotFound("Follow relationship not found".into()));
+            return Err(DomainError::NotFound(
+                "Follow relationship not found".into(),
+            ));
         }
         Ok(())
     }
@@ -1008,11 +1006,7 @@ impl SocialCommand for InMemorySocialRepository {
         Ok(())
     }
 
-    async fn block(
-        &self,
-        blocker: &UserId,
-        target: &SocialIdentity,
-    ) -> Result<(), DomainError> {
+    async fn block(&self, blocker: &UserId, target: &SocialIdentity) -> Result<(), DomainError> {
         let mut store = self.blocked.lock().unwrap();
         store.push((blocker.value(), target.clone()));
         // Also remove any existing follow relationships
@@ -1021,11 +1015,7 @@ impl SocialCommand for InMemorySocialRepository {
         Ok(())
     }
 
-    async fn unblock(
-        &self,
-        blocker: &UserId,
-        target: &SocialIdentity,
-    ) -> Result<(), DomainError> {
+    async fn unblock(&self, blocker: &UserId, target: &SocialIdentity) -> Result<(), DomainError> {
         let mut store = self.blocked.lock().unwrap();
         store.retain(|(b, t)| !(*b == blocker.value() && t == target));
         Ok(())
@@ -1034,10 +1024,7 @@ impl SocialCommand for InMemorySocialRepository {
 
 #[async_trait]
 impl SocialQuery for InMemorySocialRepository {
-    async fn get_following(
-        &self,
-        user: &UserId,
-    ) -> Result<Vec<SocialActor>, DomainError> {
+    async fn get_following(&self, user: &UserId) -> Result<Vec<SocialActor>, DomainError> {
         let store = self.follows.lock().unwrap();
         Ok(store
             .iter()
@@ -1046,10 +1033,7 @@ impl SocialQuery for InMemorySocialRepository {
             .collect())
     }
 
-    async fn get_followers(
-        &self,
-        user: &UserId,
-    ) -> Result<Vec<SocialActor>, DomainError> {
+    async fn get_followers(&self, user: &UserId) -> Result<Vec<SocialActor>, DomainError> {
         let store = self.follows.lock().unwrap();
         let target = SocialIdentity::Local(user.clone());
         Ok(store
@@ -1062,10 +1046,7 @@ impl SocialQuery for InMemorySocialRepository {
             .collect())
     }
 
-    async fn get_pending_followers(
-        &self,
-        user: &UserId,
-    ) -> Result<Vec<SocialActor>, DomainError> {
+    async fn get_pending_followers(&self, user: &UserId) -> Result<Vec<SocialActor>, DomainError> {
         let store = self.follows.lock().unwrap();
         let target = SocialIdentity::Local(user.clone());
         Ok(store
@@ -1095,10 +1076,7 @@ impl SocialQuery for InMemorySocialRepository {
             .count())
     }
 
-    async fn get_blocked(
-        &self,
-        user: &UserId,
-    ) -> Result<Vec<SocialActor>, DomainError> {
+    async fn get_blocked(&self, user: &UserId) -> Result<Vec<SocialActor>, DomainError> {
         let store = self.blocked.lock().unwrap();
         Ok(store
             .iter()
@@ -1113,9 +1091,9 @@ impl SocialQuery for InMemorySocialRepository {
         target: &SocialIdentity,
     ) -> Result<bool, DomainError> {
         let store = self.follows.lock().unwrap();
-        Ok(store
-            .iter()
-            .any(|(f, t, state)| *f == follower.value() && t == target && *state == FollowState::Accepted))
+        Ok(store.iter().any(|(f, t, state)| {
+            *f == follower.value() && t == target && *state == FollowState::Accepted
+        }))
     }
 
     async fn get_accepted_following_urls(

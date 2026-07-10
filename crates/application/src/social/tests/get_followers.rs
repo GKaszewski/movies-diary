@@ -50,13 +50,8 @@ async fn returns_accepted_followers() {
     .await
     .unwrap();
 
-    let followers = get_followers::execute(
-        &query_deps,
-        GetFollowersQuery {
-            user_id: owner_id,
-        },
-    )
-    .await
-    .unwrap();
+    let followers = get_followers::execute(&query_deps, GetFollowersQuery { user_id: owner_id })
+        .await
+        .unwrap();
     assert_eq!(followers.len(), 1);
 }

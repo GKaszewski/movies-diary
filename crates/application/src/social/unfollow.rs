@@ -4,9 +4,7 @@ use super::{commands::UnfollowCommand, deps::SocialCommandDeps};
 
 pub async fn execute(deps: &SocialCommandDeps, cmd: UnfollowCommand) -> Result<(), DomainError> {
     let follower = UserId::from_uuid(cmd.follower_id);
-    deps.social_command
-        .unfollow(&follower, &cmd.target)
-        .await?;
+    deps.social_command.unfollow(&follower, &cmd.target).await?;
     deps.event_publisher
         .publish(&DomainEvent::Unfollowed {
             follower,

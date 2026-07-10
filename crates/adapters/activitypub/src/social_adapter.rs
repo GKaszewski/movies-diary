@@ -87,11 +87,7 @@ fn ap_err(e: anyhow::Error) -> DomainError {
 
 #[async_trait]
 impl SocialCommand for CompositeSocialAdapter {
-    async fn follow(
-        &self,
-        follower: &UserId,
-        target: &SocialIdentity,
-    ) -> Result<(), DomainError> {
+    async fn follow(&self, follower: &UserId, target: &SocialIdentity) -> Result<(), DomainError> {
         if let SocialIdentity::Local(target_id) = target
             && follower == target_id
         {
@@ -154,11 +150,7 @@ impl SocialCommand for CompositeSocialAdapter {
             .map_err(ap_err)
     }
 
-    async fn block(
-        &self,
-        blocker: &UserId,
-        target: &SocialIdentity,
-    ) -> Result<(), DomainError> {
+    async fn block(&self, blocker: &UserId, target: &SocialIdentity) -> Result<(), DomainError> {
         let actor_url = self.actor_url_from_identity(target);
         self.ap_service
             .block_actor(blocker.value(), &actor_url)
@@ -166,11 +158,7 @@ impl SocialCommand for CompositeSocialAdapter {
             .map_err(ap_err)
     }
 
-    async fn unblock(
-        &self,
-        blocker: &UserId,
-        target: &SocialIdentity,
-    ) -> Result<(), DomainError> {
+    async fn unblock(&self, blocker: &UserId, target: &SocialIdentity) -> Result<(), DomainError> {
         let actor_url = self.actor_url_from_identity(target);
         self.ap_service
             .unblock_actor(blocker.value(), &actor_url)
@@ -181,10 +169,7 @@ impl SocialCommand for CompositeSocialAdapter {
 
 #[async_trait]
 impl SocialQuery for CompositeSocialAdapter {
-    async fn get_following(
-        &self,
-        user: &UserId,
-    ) -> Result<Vec<SocialActor>, DomainError> {
+    async fn get_following(&self, user: &UserId) -> Result<Vec<SocialActor>, DomainError> {
         let actors = self
             .ap_service
             .get_following(user.value())
@@ -196,10 +181,7 @@ impl SocialQuery for CompositeSocialAdapter {
             .collect())
     }
 
-    async fn get_followers(
-        &self,
-        user: &UserId,
-    ) -> Result<Vec<SocialActor>, DomainError> {
+    async fn get_followers(&self, user: &UserId) -> Result<Vec<SocialActor>, DomainError> {
         let actors = self
             .ap_service
             .get_accepted_followers(user.value())
@@ -211,10 +193,7 @@ impl SocialQuery for CompositeSocialAdapter {
             .collect())
     }
 
-    async fn get_pending_followers(
-        &self,
-        user: &UserId,
-    ) -> Result<Vec<SocialActor>, DomainError> {
+    async fn get_pending_followers(&self, user: &UserId) -> Result<Vec<SocialActor>, DomainError> {
         let actors = self
             .ap_service
             .get_pending_followers(user.value())
@@ -240,10 +219,7 @@ impl SocialQuery for CompositeSocialAdapter {
             .map_err(ap_err)
     }
 
-    async fn get_blocked(
-        &self,
-        user: &UserId,
-    ) -> Result<Vec<SocialActor>, DomainError> {
+    async fn get_blocked(&self, user: &UserId) -> Result<Vec<SocialActor>, DomainError> {
         let actors = self
             .ap_service
             .get_blocked_actors(user.value())

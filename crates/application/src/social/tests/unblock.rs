@@ -8,12 +8,17 @@ use domain::{
 use uuid::Uuid;
 
 use crate::social::{
+    block,
     commands::{BlockCommand, UnblockCommand},
     deps::SocialCommandDeps,
-    block, unblock,
+    unblock,
 };
 
-fn make_deps() -> (Arc<InMemorySocialRepository>, Arc<NoopEventPublisher>, SocialCommandDeps) {
+fn make_deps() -> (
+    Arc<InMemorySocialRepository>,
+    Arc<NoopEventPublisher>,
+    SocialCommandDeps,
+) {
     let social = InMemorySocialRepository::new();
     let events = NoopEventPublisher::new();
     let deps = SocialCommandDeps {
@@ -40,18 +45,14 @@ async fn unblock_emits_actor_unblocked_event() {
     .await
     .unwrap();
 
-    unblock::execute(
-        &deps,
-        UnblockCommand {
-            blocker_id,
-            target,
-        },
-    )
-    .await
-    .unwrap();
+    unblock::execute(&deps, UnblockCommand { blocker_id, target })
+        .await
+        .unwrap();
 
     let published = events.published();
-    assert!(published
-        .iter()
-        .any(|e| matches!(e, DomainEvent::ActorUnblocked { .. })));
+    assert!(
+        published
+            .iter()
+            .any(|e| matches!(e, DomainEvent::ActorUnblocked { .. }))
+    );
 }

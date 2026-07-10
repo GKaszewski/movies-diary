@@ -39,13 +39,8 @@ async fn returns_only_pending_followers() {
     .await
     .unwrap();
 
-    let pending = get_pending::execute(
-        &query_deps,
-        GetPendingFollowersQuery {
-            user_id: owner_id,
-        },
-    )
-    .await
-    .unwrap();
+    let pending = get_pending::execute(&query_deps, GetPendingFollowersQuery { user_id: owner_id })
+        .await
+        .unwrap();
     assert_eq!(pending.len(), 1);
 }

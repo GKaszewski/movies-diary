@@ -4,8 +4,8 @@ use chrono::NaiveDateTime;
 use crate::{
     errors::DomainError,
     models::{
-        DiaryEntry, FederationFlags, RemoteActorInfo, RemoteGoalEntry,
-        RemoteWatchlistEntry, WatchlistWithMovie,
+        DiaryEntry, FederationFlags, RemoteActorInfo, RemoteGoalEntry, RemoteWatchlistEntry,
+        WatchlistWithMovie,
     },
     value_objects::{MovieId, SocialActor, SocialIdentity, UserId},
 };
@@ -14,17 +14,10 @@ use crate::{
 
 #[async_trait]
 pub trait SocialCommand: Send + Sync {
-    async fn follow(
-        &self,
-        follower: &UserId,
-        target: &SocialIdentity,
-    ) -> Result<(), DomainError>;
+    async fn follow(&self, follower: &UserId, target: &SocialIdentity) -> Result<(), DomainError>;
 
-    async fn unfollow(
-        &self,
-        follower: &UserId,
-        target: &SocialIdentity,
-    ) -> Result<(), DomainError>;
+    async fn unfollow(&self, follower: &UserId, target: &SocialIdentity)
+    -> Result<(), DomainError>;
 
     async fn accept_follow(
         &self,
@@ -44,44 +37,24 @@ pub trait SocialCommand: Send + Sync {
         follower: &SocialIdentity,
     ) -> Result<(), DomainError>;
 
-    async fn block(
-        &self,
-        blocker: &UserId,
-        target: &SocialIdentity,
-    ) -> Result<(), DomainError>;
+    async fn block(&self, blocker: &UserId, target: &SocialIdentity) -> Result<(), DomainError>;
 
-    async fn unblock(
-        &self,
-        blocker: &UserId,
-        target: &SocialIdentity,
-    ) -> Result<(), DomainError>;
+    async fn unblock(&self, blocker: &UserId, target: &SocialIdentity) -> Result<(), DomainError>;
 }
 
 #[async_trait]
 pub trait SocialQuery: Send + Sync {
-    async fn get_following(
-        &self,
-        user: &UserId,
-    ) -> Result<Vec<SocialActor>, DomainError>;
+    async fn get_following(&self, user: &UserId) -> Result<Vec<SocialActor>, DomainError>;
 
-    async fn get_followers(
-        &self,
-        user: &UserId,
-    ) -> Result<Vec<SocialActor>, DomainError>;
+    async fn get_followers(&self, user: &UserId) -> Result<Vec<SocialActor>, DomainError>;
 
-    async fn get_pending_followers(
-        &self,
-        user: &UserId,
-    ) -> Result<Vec<SocialActor>, DomainError>;
+    async fn get_pending_followers(&self, user: &UserId) -> Result<Vec<SocialActor>, DomainError>;
 
     async fn count_following(&self, user: &UserId) -> Result<usize, DomainError>;
 
     async fn count_followers(&self, user: &UserId) -> Result<usize, DomainError>;
 
-    async fn get_blocked(
-        &self,
-        user: &UserId,
-    ) -> Result<Vec<SocialActor>, DomainError>;
+    async fn get_blocked(&self, user: &UserId) -> Result<Vec<SocialActor>, DomainError>;
 
     async fn is_following(
         &self,
@@ -93,7 +66,6 @@ pub trait SocialQuery: Send + Sync {
         &self,
         user_id: &UserId,
     ) -> Result<Vec<String>, DomainError>;
-
 }
 
 #[async_trait]
