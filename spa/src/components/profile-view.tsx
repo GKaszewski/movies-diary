@@ -199,7 +199,6 @@ function CalendarTab({ userId }: { userId?: string }) {
   const { data, isPending, hasNextPage, fetchNextPage } =
     useInfiniteDiary({ sort_by: "date_desc", user_id: userId })
   const items = data?.pages.flatMap((p) => p.items) ?? []
-  const [detailEntries, setDetailEntries] = useState<DiaryEntryDto[] | null>(null)
   const [detailEntry, setDetailEntry] = useState<DiaryEntryDto | null>(null)
 
   if (isPending) return <Skeleton className="h-80 w-full rounded-xl" />
@@ -209,10 +208,7 @@ function CalendarTab({ userId }: { userId?: string }) {
     <>
       <DiaryCalendar
         entries={items}
-        onSelectDate={(entries) => {
-          if (entries.length === 1) setDetailEntry(entries[0]!)
-          else setDetailEntries(entries)
-        }}
+        onSelectEntry={setDetailEntry}
       />
       {detailEntry && (
         <ReviewDetailSheet
@@ -220,14 +216,6 @@ function CalendarTab({ userId }: { userId?: string }) {
           onOpenChange={(open) => !open && setDetailEntry(null)}
           movie={detailEntry.movie}
           review={detailEntry.review}
-        />
-      )}
-      {detailEntries && (
-        <ReviewDetailSheet
-          open={!!detailEntries}
-          onOpenChange={(open) => !open && setDetailEntries(null)}
-          movie={detailEntries[0]!.movie}
-          review={detailEntries[0]!.review}
         />
       )}
     </>
