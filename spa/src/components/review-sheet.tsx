@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button"
 import { ReviewFormFields } from "@/components/review-form-fields"
 import { SearchOverlay } from "@/components/search-overlay"
 import type { MovieSelection } from "@/components/search-overlay"
-import { useLogReview, useEditReview } from "@/features/diary"
+import { useLogReview, useEditReview, useDeleteReview } from "@/features/diary"
+import { ConfirmDialog } from "@/components/confirm-dialog"
+import { Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { posterUrl } from "@/lib/api/client"
 import { hapticMedium } from "@/lib/haptics"
@@ -146,7 +148,9 @@ function EditMode({
   const [watchedAt, setWatchedAt] = useState<Date>(() => parseLocalDate(review.watched_at))
   const [dateChanged, setDateChanged] = useState(false)
   const [watchMedium, setWatchMedium] = useState<string | undefined>(review.watch_medium)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const editMutation = useEditReview()
+  const deleteMutation = useDeleteReview()
 
   function handleDateChange(d: Date) {
     setWatchedAt(d)
@@ -207,6 +211,32 @@ function EditMode({
           <Button onClick={handleSubmit} disabled={!rating || editMutation.isPending} className="w-full" size="lg">
             {editMutation.isPending ? t("editReview.saving") : t("editReview.save")}
           </Button>
+
+          <Button
+            variant="ghost"
+            className="mt-2 w-full text-destructive hover:text-destructive"
+            onClick={() => setConfirmDelete(true)}
+            disabled={deleteMutation.isPending}
+          >
+            <Trash2 className="mr-1.5 size-4" />
+            {t("editReview.delete", { defaultValue: "Delete review" })}
+          </Button>
+
+          <ConfirmDialog
+            open={confirmDelete}
+            onOpenChange={setConfirmDelete}
+            title={t("diary.deleteReview", { defaultValue: "Delete review?" })}
+            description={`${movie.title} — ${review.watched_at.slice(0, 10)}`}
+            onConfirm={() =>
+              deleteMutation.mutate(review.id, {
+                onSuccess: () => {
+                  hapticMedium()
+                  toast.success(t("editReview.deleted", { defaultValue: "Review deleted", title: movie.title }))
+                  onOpenChange(false)
+                },
+              })
+            }
+          />
         </div>
       </DrawerContent>
     </Drawer>

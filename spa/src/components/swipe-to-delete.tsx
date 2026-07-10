@@ -41,7 +41,7 @@ export function SwipeToDelete({
         }
       }
     },
-    { axis: "x", filterTaps: true, pointer: { capture: true } },
+    { axis: "x", filterTaps: true },
   )
 
   function handleDeleteTap() {
