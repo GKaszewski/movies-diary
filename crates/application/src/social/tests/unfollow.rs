@@ -3,7 +3,7 @@ use std::sync::Arc;
 use domain::{
     events::DomainEvent,
     testing::{InMemorySocialRepository, NoopEventPublisher},
-    value_objects::{SocialIdentity, UserId},
+    value_objects::{FollowTarget, SocialIdentity, UserId},
 };
 use uuid::Uuid;
 
@@ -38,7 +38,7 @@ async fn unfollow_emits_unfollowed_event() {
         &deps,
         FollowCommand {
             follower_id,
-            target: target.clone(),
+            target: FollowTarget::Identity(target.clone()),
         },
     )
     .await

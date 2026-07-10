@@ -7,14 +7,14 @@ use crate::{
         DiaryEntry, FederationFlags, RemoteActorInfo, RemoteGoalEntry, RemoteWatchlistEntry,
         WatchlistWithMovie,
     },
-    value_objects::{MovieId, SocialActor, SocialIdentity, UserId},
+    value_objects::{FollowTarget, MovieId, SocialActor, SocialIdentity, UserId},
 };
 
 // ── Unified social ports (ADR-0002) ─────────────────────────────────────────
 
 #[async_trait]
 pub trait SocialCommand: Send + Sync {
-    async fn follow(&self, follower: &UserId, target: &SocialIdentity) -> Result<(), DomainError>;
+    async fn follow(&self, follower: &UserId, target: &FollowTarget) -> Result<(), DomainError>;
 
     async fn unfollow(&self, follower: &UserId, target: &SocialIdentity)
     -> Result<(), DomainError>;

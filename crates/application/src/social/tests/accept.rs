@@ -3,7 +3,7 @@ use std::sync::Arc;
 use domain::{
     events::DomainEvent,
     testing::{InMemorySocialRepository, NoopEventPublisher},
-    value_objects::{SocialIdentity, UserId},
+    value_objects::{FollowTarget, SocialIdentity, UserId},
 };
 use uuid::Uuid;
 
@@ -40,7 +40,7 @@ async fn accept_follow_emits_follow_accepted_event() {
         &deps,
         FollowCommand {
             follower_id,
-            target: SocialIdentity::Local(UserId::from_uuid(owner_id)),
+            target: FollowTarget::Identity(SocialIdentity::Local(UserId::from_uuid(owner_id))),
         },
     )
     .await

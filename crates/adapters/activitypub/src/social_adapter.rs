@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use domain::{
     errors::DomainError,
     ports::{SocialCommand, SocialQuery, UserRepository},
-    value_objects::{SocialActor, SocialIdentity, UserId},
+    value_objects::{FollowTarget, SocialActor, SocialIdentity, UserId},
 };
 
 use k_ap::RemoteActor;
@@ -87,15 +87,18 @@ fn ap_err(e: anyhow::Error) -> DomainError {
 
 #[async_trait]
 impl SocialCommand for CompositeSocialAdapter {
-    async fn follow(&self, follower: &UserId, target: &SocialIdentity) -> Result<(), DomainError> {
-        if let SocialIdentity::Local(target_id) = target
+    async fn follow(&self, follower: &UserId, target: &FollowTarget) -> Result<(), DomainError> {
+        if let FollowTarget::Identity(SocialIdentity::Local(target_id)) = target
             && follower == target_id
         {
             return Err(DomainError::ValidationError(
                 "Cannot follow yourself".into(),
             ));
         }
-        let handle = self.resolve_handle(target).await?;
+        let handle = match target {
+            FollowTarget::Handle(h) => h.clone(),
+            FollowTarget::Identity(id) => self.resolve_handle(id).await?,
+        };
         self.ap_service
             .follow(follower.value(), &handle)
             .await

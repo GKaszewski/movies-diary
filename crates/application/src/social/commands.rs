@@ -1,9 +1,9 @@
-use domain::value_objects::SocialIdentity;
+use domain::value_objects::{FollowTarget, SocialIdentity};
 use uuid::Uuid;
 
 pub struct FollowCommand {
     pub follower_id: Uuid,
-    pub target: SocialIdentity,
+    pub target: FollowTarget,
 }
 
 pub struct UnfollowCommand {

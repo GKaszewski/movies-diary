@@ -16,6 +16,12 @@ impl SocialIdentity {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum FollowTarget {
+    Identity(SocialIdentity),
+    Handle(String),
+}
+
 #[derive(Clone, Debug)]
 pub struct SocialActor {
     pub identity: SocialIdentity,

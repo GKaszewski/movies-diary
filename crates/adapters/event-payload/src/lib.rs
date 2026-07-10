@@ -196,6 +196,13 @@ fn identity_to_payload(id: &SocialIdentity) -> (String, String) {
     }
 }
 
+fn follow_target_to_payload(target: &domain::value_objects::FollowTarget) -> (String, String) {
+    match target {
+        domain::value_objects::FollowTarget::Identity(id) => identity_to_payload(id),
+        domain::value_objects::FollowTarget::Handle(h) => ("handle".into(), h.clone()),
+    }
+}
+
 fn payload_to_identity(kind: &str, id: String) -> Result<SocialIdentity, DomainError> {
     match kind {
         "local" => Ok(SocialIdentity::Local(UserId::from_uuid(parse_uuid(
@@ -205,6 +212,18 @@ fn payload_to_identity(kind: &str, id: String) -> Result<SocialIdentity, DomainE
         other => Err(DomainError::InfrastructureError(format!(
             "unknown identity kind: {other}"
         ))),
+    }
+}
+
+fn payload_to_follow_target(
+    kind: &str,
+    id: String,
+) -> Result<domain::value_objects::FollowTarget, DomainError> {
+    match kind {
+        "handle" => Ok(domain::value_objects::FollowTarget::Handle(id)),
+        other => Ok(domain::value_objects::FollowTarget::Identity(
+            payload_to_identity(other, id)?,
+        )),
     }
 }
 
@@ -294,7 +313,7 @@ impl From<&DomainEvent> for EventPayload {
                 }
             }
             DomainEvent::FollowRequested { follower, target } => {
-                let (kind, id) = identity_to_payload(target);
+                let (kind, id) = follow_target_to_payload(target);
                 EventPayload::FollowRequested {
                     follower_id: follower.value().to_string(),
                     target_kind: kind,
@@ -530,7 +549,7 @@ impl TryFrom<EventPayload> for DomainEvent {
                 target_id,
             } => Ok(DomainEvent::FollowRequested {
                 follower: UserId::from_uuid(parse_uuid(&follower_id, "follower_id")?),
-                target: payload_to_identity(&target_kind, target_id)?,
+                target: payload_to_follow_target(&target_kind, target_id)?,
             }),
             EventPayload::FollowAccepted {
                 owner_id,

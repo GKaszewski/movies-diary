@@ -22,7 +22,7 @@ use api_types::{
     BlockedDomainResponse, FollowRequest, RemoteActorDto,
 };
 use application::social::deps::{SocialCommandDeps, SocialQueryDeps};
-use domain::value_objects::{SocialActor, SocialIdentity};
+use domain::value_objects::{FollowTarget, SocialActor, SocialIdentity};
 use template_askama::{
     BlockedActorsTemplate, BlockedDomainsTemplate, FollowersTemplate, FollowingTemplate,
     RemoteActorData,
@@ -359,9 +359,7 @@ pub async fn follow(
         &deps,
         application::social::commands::FollowCommand {
             follower_id: user.0.value(),
-            target: SocialIdentity::Remote {
-                actor_url: body.handle,
-            },
+            target: FollowTarget::Handle(body.handle),
         },
     )
     .await?;
@@ -554,9 +552,7 @@ pub async fn follow_remote_user(
         &deps,
         application::social::commands::FollowCommand {
             follower_id: user_id.value(),
-            target: SocialIdentity::Remote {
-                actor_url: form.handle,
-            },
+            target: FollowTarget::Handle(form.handle),
         },
     )
     .await

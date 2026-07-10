@@ -893,8 +893,18 @@ impl InMemorySocialRepository {
 
 #[async_trait]
 impl SocialCommand for InMemorySocialRepository {
-    async fn follow(&self, follower: &UserId, target: &SocialIdentity) -> Result<(), DomainError> {
-        if let SocialIdentity::Local(target_id) = target {
+    async fn follow(
+        &self,
+        follower: &UserId,
+        target: &crate::value_objects::FollowTarget,
+    ) -> Result<(), DomainError> {
+        let identity = match target {
+            crate::value_objects::FollowTarget::Identity(id) => id.clone(),
+            crate::value_objects::FollowTarget::Handle(h) => SocialIdentity::Remote {
+                actor_url: h.clone(),
+            },
+        };
+        if let SocialIdentity::Local(target_id) = &identity {
             if follower == target_id {
                 return Err(DomainError::ValidationError(
                     "Cannot follow yourself".into(),
@@ -904,11 +914,11 @@ impl SocialCommand for InMemorySocialRepository {
         let mut store = self.follows.lock().unwrap();
         let already = store
             .iter()
-            .any(|(f, t, _)| *f == follower.value() && t == target);
+            .any(|(f, t, _)| *f == follower.value() && *t == identity);
         if already {
             return Err(DomainError::ValidationError("Already following".into()));
         }
-        store.push((follower.value(), target.clone(), FollowState::Pending));
+        store.push((follower.value(), identity, FollowState::Pending));
         Ok(())
     }
 

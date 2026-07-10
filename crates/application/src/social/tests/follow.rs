@@ -3,7 +3,7 @@ use std::sync::Arc;
 use domain::{
     events::DomainEvent,
     testing::{InMemorySocialRepository, NoopEventPublisher},
-    value_objects::{SocialIdentity, UserId},
+    value_objects::{FollowTarget, SocialIdentity, UserId},
 };
 use uuid::Uuid;
 
@@ -32,7 +32,7 @@ async fn follow_emits_follow_requested_event() {
         &deps,
         FollowCommand {
             follower_id: Uuid::new_v4(),
-            target: SocialIdentity::Local(UserId::from_uuid(Uuid::new_v4())),
+            target: FollowTarget::Identity(SocialIdentity::Local(UserId::from_uuid(Uuid::new_v4()))),
         },
     )
     .await
@@ -55,7 +55,7 @@ async fn cannot_follow_yourself() {
         &deps,
         FollowCommand {
             follower_id: user_id,
-            target: SocialIdentity::Local(UserId::from_uuid(user_id)),
+            target: FollowTarget::Identity(SocialIdentity::Local(UserId::from_uuid(user_id))),
         },
     )
     .await;
@@ -67,7 +67,7 @@ async fn cannot_follow_yourself() {
 async fn cannot_follow_same_target_twice() {
     let (_social, _events, deps) = make_deps();
     let follower_id = Uuid::new_v4();
-    let target = SocialIdentity::Local(UserId::from_uuid(Uuid::new_v4()));
+    let target = FollowTarget::Identity(SocialIdentity::Local(UserId::from_uuid(Uuid::new_v4())));
 
     follow::execute(
         &deps,
