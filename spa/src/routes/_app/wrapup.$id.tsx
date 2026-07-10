@@ -164,7 +164,7 @@ function WrapUpReportPage() {
                       {Icon && <Icon className="size-4 text-muted-foreground" />}
                       {def ? t(def.labelKey) : wm.medium}
                     </span>
-                    <span className="text-muted-foreground">{wm.count} {t("common.films", { count: wm.count })}</span>
+                    <span className="text-muted-foreground">{t("common.films", { count: wm.count })}</span>
                   </div>
                 )
               })}
