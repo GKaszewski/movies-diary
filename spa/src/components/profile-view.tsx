@@ -17,6 +17,7 @@ import { useInfiniteDiary } from "@/features/diary"
 import { TimeAgo } from "@/components/time-ago"
 import { WATCH_MEDIUMS } from "@/lib/watch-mediums"
 import { ReviewDetailSheet } from "@/components/review-detail-sheet"
+import { DiaryCalendar } from "@/components/diary-calendar"
 import type { DiaryEntryDto } from "@/lib/api/common"
 import type { UserProfileResponse } from "@/features/users"
 
@@ -51,6 +52,7 @@ export function ProfileView({
   const profileTabs = [
     { value: "recent", label: t("profile.recent") },
     { value: "top_rated", label: t("profile.topRated") },
+    { value: "calendar", label: t("profile.calendar", { defaultValue: "Calendar" }) },
     { value: "trends", label: t("profile.trends") },
   ] as const
 
@@ -128,6 +130,7 @@ export function ProfileView({
                 search={search}
               />
             )}
+            {tab === "calendar" && <CalendarTab userId={userId} />}
             {tab === "trends" && <TrendsView data={data} />}
           </>
         )}
@@ -186,6 +189,45 @@ function DiaryTab({ sortBy, userId, search }: { sortBy: string; userId?: string;
           onOpenChange={(open) => !open && setDetailEntry(null)}
           movie={detailEntry.movie}
           review={detailEntry.review}
+        />
+      )}
+    </>
+  )
+}
+
+function CalendarTab({ userId }: { userId?: string }) {
+  const { data, isPending, hasNextPage, fetchNextPage } =
+    useInfiniteDiary({ sort_by: "date_desc", user_id: userId })
+  const items = data?.pages.flatMap((p) => p.items) ?? []
+  const [detailEntries, setDetailEntries] = useState<DiaryEntryDto[] | null>(null)
+  const [detailEntry, setDetailEntry] = useState<DiaryEntryDto | null>(null)
+
+  if (isPending) return <Skeleton className="h-80 w-full rounded-xl" />
+  if (hasNextPage) fetchNextPage()
+
+  return (
+    <>
+      <DiaryCalendar
+        entries={items}
+        onSelectDate={(entries) => {
+          if (entries.length === 1) setDetailEntry(entries[0]!)
+          else setDetailEntries(entries)
+        }}
+      />
+      {detailEntry && (
+        <ReviewDetailSheet
+          open={!!detailEntry}
+          onOpenChange={(open) => !open && setDetailEntry(null)}
+          movie={detailEntry.movie}
+          review={detailEntry.review}
+        />
+      )}
+      {detailEntries && (
+        <ReviewDetailSheet
+          open={!!detailEntries}
+          onOpenChange={(open) => !open && setDetailEntries(null)}
+          movie={detailEntries[0]!.movie}
+          review={detailEntries[0]!.review}
         />
       )}
     </>
