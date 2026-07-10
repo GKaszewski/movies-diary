@@ -74,6 +74,7 @@ impl EventHandler for RecordingHandler {
             }
             DomainEvent::FollowRequested { .. } => "follow_requested",
             DomainEvent::FollowAccepted { .. } => "follow_accepted",
+            DomainEvent::FollowRejected { .. } => "follow_rejected",
             DomainEvent::Unfollowed { .. } => "unfollowed",
             DomainEvent::FollowerRemoved { .. } => "follower_removed",
             DomainEvent::ActorBlocked { .. } => "actor_blocked",

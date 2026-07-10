@@ -171,9 +171,9 @@ pub async fn block_actor_api(
         social_query: state.app_ctx.repos.social_query_unified.clone(),
         event_publisher: state.app_ctx.services.event_publisher.clone(),
     };
-    application::social::block::execute(
+    application::social::execute::execute_command(
         &deps,
-        application::social::commands::BlockCommand {
+        application::social::commands::SocialCmd::Block {
             blocker_id: user.0.value(),
             target: SocialIdentity::Remote {
                 actor_url: body.actor_url,
@@ -203,9 +203,9 @@ pub async fn unblock_actor_api(
         social_query: state.app_ctx.repos.social_query_unified.clone(),
         event_publisher: state.app_ctx.services.event_publisher.clone(),
     };
-    application::social::unblock::execute(
+    application::social::execute::execute_command(
         &deps,
-        application::social::commands::UnblockCommand {
+        application::social::commands::SocialCmd::Unblock {
             blocker_id: user.0.value(),
             target: SocialIdentity::Remote {
                 actor_url: body.actor_url,
@@ -231,9 +231,9 @@ pub async fn get_blocked_actors_api(
     let deps = SocialQueryDeps {
         social_query: state.app_ctx.repos.social_query_unified.clone(),
     };
-    let identities = application::social::get_blocked::execute(
+    let identities = application::social::execute::execute_query(
         &deps,
-        application::social::queries::GetBlockedQuery {
+        application::social::queries::SocialQry::GetBlocked {
             user_id: user.0.value(),
         },
     )
@@ -261,9 +261,9 @@ pub async fn get_following(
     let deps = SocialQueryDeps {
         social_query: state.app_ctx.repos.social_query_unified.clone(),
     };
-    let identities = application::social::get_following::execute(
+    let identities = application::social::execute::execute_query(
         &deps,
-        application::social::queries::GetFollowingQuery {
+        application::social::queries::SocialQry::GetFollowing {
             user_id: user.0.value(),
         },
     )
@@ -288,9 +288,9 @@ pub async fn get_followers(
     let deps = SocialQueryDeps {
         social_query: state.app_ctx.repos.social_query_unified.clone(),
     };
-    let identities = application::social::get_followers::execute(
+    let identities = application::social::execute::execute_query(
         &deps,
-        application::social::queries::GetFollowersQuery {
+        application::social::queries::SocialQry::GetFollowers {
             user_id: user.0.value(),
         },
     )
@@ -308,9 +308,9 @@ pub async fn get_user_following(
     let deps = SocialQueryDeps {
         social_query: state.app_ctx.repos.social_query_unified.clone(),
     };
-    let identities = application::social::get_following::execute(
+    let identities = application::social::execute::execute_query(
         &deps,
-        application::social::queries::GetFollowingQuery { user_id },
+        application::social::queries::SocialQry::GetFollowing { user_id },
     )
     .await?;
     Ok(Json(ActorListResponse {
@@ -326,9 +326,9 @@ pub async fn get_user_followers(
     let deps = SocialQueryDeps {
         social_query: state.app_ctx.repos.social_query_unified.clone(),
     };
-    let identities = application::social::get_followers::execute(
+    let identities = application::social::execute::execute_query(
         &deps,
-        application::social::queries::GetFollowersQuery { user_id },
+        application::social::queries::SocialQry::GetFollowers { user_id },
     )
     .await?;
     Ok(Json(ActorListResponse {
@@ -355,9 +355,9 @@ pub async fn follow(
         social_query: state.app_ctx.repos.social_query_unified.clone(),
         event_publisher: state.app_ctx.services.event_publisher.clone(),
     };
-    application::social::follow::execute(
+    application::social::execute::execute_command(
         &deps,
-        application::social::commands::FollowCommand {
+        application::social::commands::SocialCmd::Follow {
             follower_id: user.0.value(),
             target: FollowTarget::Handle(body.handle),
         },
@@ -385,9 +385,9 @@ pub async fn unfollow(
         social_query: state.app_ctx.repos.social_query_unified.clone(),
         event_publisher: state.app_ctx.services.event_publisher.clone(),
     };
-    application::social::unfollow::execute(
+    application::social::execute::execute_command(
         &deps,
-        application::social::commands::UnfollowCommand {
+        application::social::commands::SocialCmd::Unfollow {
             follower_id: user.0.value(),
             target: SocialIdentity::Remote {
                 actor_url: body.actor_url,
@@ -417,9 +417,9 @@ pub async fn accept_follower(
         social_query: state.app_ctx.repos.social_query_unified.clone(),
         event_publisher: state.app_ctx.services.event_publisher.clone(),
     };
-    application::social::accept::execute(
+    application::social::execute::execute_command(
         &deps,
-        application::social::commands::AcceptFollowCommand {
+        application::social::commands::SocialCmd::AcceptFollow {
             owner_id: user.0.value(),
             requester: SocialIdentity::Remote {
                 actor_url: body.actor_url,
@@ -449,9 +449,9 @@ pub async fn reject_follower(
         social_query: state.app_ctx.repos.social_query_unified.clone(),
         event_publisher: state.app_ctx.services.event_publisher.clone(),
     };
-    application::social::reject::execute(
+    application::social::execute::execute_command(
         &deps,
-        application::social::commands::RejectFollowCommand {
+        application::social::commands::SocialCmd::RejectFollow {
             owner_id: user.0.value(),
             requester: SocialIdentity::Remote {
                 actor_url: body.actor_url,
@@ -481,9 +481,9 @@ pub async fn remove_follower(
         social_query: state.app_ctx.repos.social_query_unified.clone(),
         event_publisher: state.app_ctx.services.event_publisher.clone(),
     };
-    application::social::remove_follower::execute(
+    application::social::execute::execute_command(
         &deps,
-        application::social::commands::RemoveFollowerCommand {
+        application::social::commands::SocialCmd::RemoveFollower {
             owner_id: user.0.value(),
             follower: SocialIdentity::Remote {
                 actor_url: body.actor_url,
@@ -509,9 +509,9 @@ pub async fn get_pending_followers(
     let deps = SocialQueryDeps {
         social_query: state.app_ctx.repos.social_query_unified.clone(),
     };
-    let identities = application::social::get_pending::execute(
+    let identities = application::social::execute::execute_query(
         &deps,
-        application::social::queries::GetPendingFollowersQuery {
+        application::social::queries::SocialQry::GetPending {
             user_id: user.0.value(),
         },
     )
@@ -548,9 +548,9 @@ pub async fn follow_remote_user(
         social_query: state.app_ctx.repos.social_query_unified.clone(),
         event_publisher: state.app_ctx.services.event_publisher.clone(),
     };
-    match application::social::follow::execute(
+    match application::social::execute::execute_command(
         &deps,
-        application::social::commands::FollowCommand {
+        application::social::commands::SocialCmd::Follow {
             follower_id: user_id.value(),
             target: FollowTarget::Handle(form.handle),
         },
@@ -589,9 +589,9 @@ pub async fn unfollow_remote_user(
         social_query: state.app_ctx.repos.social_query_unified.clone(),
         event_publisher: state.app_ctx.services.event_publisher.clone(),
     };
-    match application::social::unfollow::execute(
+    match application::social::execute::execute_command(
         &deps,
-        application::social::commands::UnfollowCommand {
+        application::social::commands::SocialCmd::Unfollow {
             follower_id: user_id.value(),
             target: SocialIdentity::Remote {
                 actor_url: form.actor_url,
@@ -632,9 +632,9 @@ pub async fn accept_follower_html(
         social_query: state.app_ctx.repos.social_query_unified.clone(),
         event_publisher: state.app_ctx.services.event_publisher.clone(),
     };
-    match application::social::accept::execute(
+    match application::social::execute::execute_command(
         &deps,
-        application::social::commands::AcceptFollowCommand {
+        application::social::commands::SocialCmd::AcceptFollow {
             owner_id: user_id.value(),
             requester: SocialIdentity::Remote {
                 actor_url: form.actor_url,
@@ -669,9 +669,9 @@ pub async fn reject_follower_html(
         social_query: state.app_ctx.repos.social_query_unified.clone(),
         event_publisher: state.app_ctx.services.event_publisher.clone(),
     };
-    match application::social::reject::execute(
+    match application::social::execute::execute_command(
         &deps,
-        application::social::commands::RejectFollowCommand {
+        application::social::commands::SocialCmd::RejectFollow {
             owner_id: user_id.value(),
             requester: SocialIdentity::Remote {
                 actor_url: form.actor_url,
@@ -773,9 +773,9 @@ pub async fn get_following_page(
     let deps = SocialQueryDeps {
         social_query: state.app_ctx.repos.social_query_unified.clone(),
     };
-    match application::social::get_following::execute(
+    match application::social::execute::execute_query(
         &deps,
-        application::social::queries::GetFollowingQuery {
+        application::social::queries::SocialQry::GetFollowing {
             user_id: user_id.value(),
         },
     )
@@ -824,9 +824,9 @@ pub async fn get_followers_page(
     let deps = SocialQueryDeps {
         social_query: state.app_ctx.repos.social_query_unified.clone(),
     };
-    match application::social::get_followers::execute(
+    match application::social::execute::execute_query(
         &deps,
-        application::social::queries::GetFollowersQuery {
+        application::social::queries::SocialQry::GetFollowers {
             user_id: user_id.value(),
         },
     )
@@ -874,9 +874,9 @@ pub async fn remove_follower_html(
         social_query: state.app_ctx.repos.social_query_unified.clone(),
         event_publisher: state.app_ctx.services.event_publisher.clone(),
     };
-    match application::social::remove_follower::execute(
+    match application::social::execute::execute_command(
         &deps,
-        application::social::commands::RemoveFollowerCommand {
+        application::social::commands::SocialCmd::RemoveFollower {
             owner_id: user_id.value(),
             follower: SocialIdentity::Remote {
                 actor_url: form.actor_url,
@@ -1000,9 +1000,9 @@ pub async fn get_blocked_actors_page(
     let deps = SocialQueryDeps {
         social_query: state.app_ctx.repos.social_query_unified.clone(),
     };
-    match application::social::get_blocked::execute(
+    match application::social::execute::execute_query(
         &deps,
-        application::social::queries::GetBlockedQuery {
+        application::social::queries::SocialQry::GetBlocked {
             user_id: user_id.value(),
         },
     )
@@ -1049,9 +1049,9 @@ pub async fn post_block_actor_html(
         social_query: state.app_ctx.repos.social_query_unified.clone(),
         event_publisher: state.app_ctx.services.event_publisher.clone(),
     };
-    match application::social::block::execute(
+    match application::social::execute::execute_command(
         &deps,
-        application::social::commands::BlockCommand {
+        application::social::commands::SocialCmd::Block {
             blocker_id: user_id.value(),
             target: SocialIdentity::Remote {
                 actor_url: form.actor_url,
@@ -1082,9 +1082,9 @@ pub async fn post_unblock_actor(
         social_query: state.app_ctx.repos.social_query_unified.clone(),
         event_publisher: state.app_ctx.services.event_publisher.clone(),
     };
-    match application::social::unblock::execute(
+    match application::social::execute::execute_command(
         &deps,
-        application::social::commands::UnblockCommand {
+        application::social::commands::SocialCmd::Unblock {
             blocker_id: user_id.value(),
             target: SocialIdentity::Remote {
                 actor_url: form.actor_url,

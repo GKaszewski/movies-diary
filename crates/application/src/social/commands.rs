@@ -1,37 +1,33 @@
 use domain::value_objects::{FollowTarget, SocialIdentity};
 use uuid::Uuid;
 
-pub struct FollowCommand {
-    pub follower_id: Uuid,
-    pub target: FollowTarget,
-}
-
-pub struct UnfollowCommand {
-    pub follower_id: Uuid,
-    pub target: SocialIdentity,
-}
-
-pub struct AcceptFollowCommand {
-    pub owner_id: Uuid,
-    pub requester: SocialIdentity,
-}
-
-pub struct RejectFollowCommand {
-    pub owner_id: Uuid,
-    pub requester: SocialIdentity,
-}
-
-pub struct RemoveFollowerCommand {
-    pub owner_id: Uuid,
-    pub follower: SocialIdentity,
-}
-
-pub struct BlockCommand {
-    pub blocker_id: Uuid,
-    pub target: SocialIdentity,
-}
-
-pub struct UnblockCommand {
-    pub blocker_id: Uuid,
-    pub target: SocialIdentity,
+pub enum SocialCmd {
+    Follow {
+        follower_id: Uuid,
+        target: FollowTarget,
+    },
+    Unfollow {
+        follower_id: Uuid,
+        target: SocialIdentity,
+    },
+    AcceptFollow {
+        owner_id: Uuid,
+        requester: SocialIdentity,
+    },
+    RejectFollow {
+        owner_id: Uuid,
+        requester: SocialIdentity,
+    },
+    RemoveFollower {
+        owner_id: Uuid,
+        follower: SocialIdentity,
+    },
+    Block {
+        blocker_id: Uuid,
+        target: SocialIdentity,
+    },
+    Unblock {
+        blocker_id: Uuid,
+        target: SocialIdentity,
+    },
 }

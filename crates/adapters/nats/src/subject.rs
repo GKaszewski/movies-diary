@@ -14,6 +14,7 @@ pub fn event_to_subject(prefix: &str, event: &DomainEvent) -> String {
         DomainEvent::WatchlistEntryRemoved { .. } => "watchlist.entry.removed",
         DomainEvent::FollowRequested { .. } => "follow.requested",
         DomainEvent::FollowAccepted { .. } => "follow.accepted",
+        DomainEvent::FollowRejected { .. } => "follow.rejected",
         DomainEvent::Unfollowed { .. } => "follow.unfollowed",
         DomainEvent::FollowerRemoved { .. } => "follower.removed",
         DomainEvent::ActorBlocked { .. } => "actor.blocked",

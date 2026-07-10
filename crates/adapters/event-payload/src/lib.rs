@@ -72,6 +72,11 @@ pub enum EventPayload {
         requester_kind: String,
         requester_id: String,
     },
+    FollowRejected {
+        owner_id: String,
+        requester_kind: String,
+        requester_id: String,
+    },
     Unfollowed {
         follower_id: String,
         target_kind: String,
@@ -164,6 +169,7 @@ impl EventPayload {
             EventPayload::WatchlistEntryRemoved { .. } => "WatchlistEntryRemoved",
             EventPayload::FollowRequested { .. } => "FollowRequested",
             EventPayload::FollowAccepted { .. } => "FollowAccepted",
+            EventPayload::FollowRejected { .. } => "FollowRejected",
             EventPayload::Unfollowed { .. } => "Unfollowed",
             EventPayload::FollowerRemoved { .. } => "FollowerRemoved",
             EventPayload::ActorBlocked { .. } => "ActorBlocked",
@@ -323,6 +329,14 @@ impl From<&DomainEvent> for EventPayload {
             DomainEvent::FollowAccepted { owner, requester } => {
                 let (kind, id) = identity_to_payload(requester);
                 EventPayload::FollowAccepted {
+                    owner_id: owner.value().to_string(),
+                    requester_kind: kind,
+                    requester_id: id,
+                }
+            }
+            DomainEvent::FollowRejected { owner, requester } => {
+                let (kind, id) = identity_to_payload(requester);
+                EventPayload::FollowRejected {
                     owner_id: owner.value().to_string(),
                     requester_kind: kind,
                     requester_id: id,
@@ -556,6 +570,14 @@ impl TryFrom<EventPayload> for DomainEvent {
                 requester_kind,
                 requester_id,
             } => Ok(DomainEvent::FollowAccepted {
+                owner: UserId::from_uuid(parse_uuid(&owner_id, "owner_id")?),
+                requester: payload_to_identity(&requester_kind, requester_id)?,
+            }),
+            EventPayload::FollowRejected {
+                owner_id,
+                requester_kind,
+                requester_id,
+            } => Ok(DomainEvent::FollowRejected {
                 owner: UserId::from_uuid(parse_uuid(&owner_id, "owner_id")?),
                 requester: payload_to_identity(&requester_kind, requester_id)?,
             }),

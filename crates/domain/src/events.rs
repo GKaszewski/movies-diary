@@ -71,6 +71,10 @@ pub enum DomainEvent {
         owner: UserId,
         requester: crate::value_objects::SocialIdentity,
     },
+    FollowRejected {
+        owner: UserId,
+        requester: crate::value_objects::SocialIdentity,
+    },
     Unfollowed {
         follower: UserId,
         target: crate::value_objects::SocialIdentity,
