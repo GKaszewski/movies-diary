@@ -355,6 +355,32 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "global"
     },
+    {
+      "_id": "req_reviews_edit",
+      "_type": "request",
+      "parentId": "fld_reviews",
+      "modified": 1749340800000,
+      "created": 1749340800000,
+      "name": "Edit Review",
+      "method": "PATCH",
+      "url": "{{ base_url }}/api/v1/reviews/:id",
+      "description": "Partial update — all fields optional",
+      "headers": [{ "name": "Content-Type", "value": "application/json" }],
+      "parameters": [],
+      "authentication": { "type": "bearer", "token": "{{ token }}" },
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"rating\": 9,\n  \"comment\": \"Updated thoughts\",\n  \"watch_medium\": \"cinema\"\n}"
+      },
+      "metaSortKey": -3,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
 
     {
       "_id": "fld_people",

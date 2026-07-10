@@ -88,8 +88,9 @@ Open `http://localhost:3000`. The HTTP server and background worker start togeth
 Hexagonal (Ports & Adapters) with Domain-Driven Design:
 
 ```
-api-types           — shared REST API request/response DTOs (Serialize/Deserialize + utoipa schemas); used by presentation and tui
-domain              — pure types and trait definitions, no external deps
+api-types           — shared REST API request/response DTOs (Serialize/Deserialize + utoipa schemas) + HtmlPageContext; used by presentation, tui, and template adapters
+infra-wiring        — shared infrastructure types (DbPool, EventBusBackend, AppConfig) used by both presentation and worker binaries
+domain              — pure types and CQRS port traits (MovieCommand/MovieQuery, WatchEventCommand/WatchEventQuery, PersonCommand/PersonQuery, SearchCommand/SearchPort, ImageFetcher, RssFeedRenderer), no external deps except serde
 application         — use cases (commands + queries), business logic orchestration; handlers delegate here for all domain logic
 presentation        — Axum HTTP router, OpenAPI spec assembly, Swagger UI + Scalar serving, composition root for the HTTP process
 worker              — standalone worker binary (event consumer, poster sync, federation)

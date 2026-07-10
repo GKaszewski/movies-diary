@@ -59,8 +59,8 @@ graph TB
             M_SEARCH["SearchQuery,<br/>SearchResults"]
         end
         subgraph Ports["Port Traits (Interfaces)"]
-            P_REPOS["MovieRepository<br/>ReviewRepository<br/>DiaryRepository<br/>UserRepository<br/>WatchlistRepository<br/>WatchEventRepository<br/>WebhookTokenRepository<br/>ImportSessionRepository<br/>MovieProfileRepository<br/>WrapUpRepository<br/>GoalRepository<br/>UserSettingsRepository<br/>MovieDeduplicator"]
-            P_SERVICES["AuthService<br/>MetadataClient<br/>PosterFetcherClient<br/>ObjectStorage<br/>EventPublisher<br/>EventConsumer<br/>PasswordHasher<br/>DiaryExporter<br/>DocumentParser"]
+            P_REPOS["MovieCommand / MovieQuery<br/>ReviewRepository<br/>DiaryRepository / StatsRepository<br/>UserRepository<br/>WatchlistRepository<br/>WatchEventCommand / WatchEventQuery<br/>WebhookTokenRepository<br/>ImportSessionRepository<br/>MovieProfileRepository<br/>WrapUpRepository<br/>GoalRepository<br/>UserSettingsRepository<br/>MovieDeduplicator"]
+            P_SERVICES["AuthService<br/>MetadataClient<br/>PosterFetcherClient<br/>ImageFetcher<br/>ObjectStorage<br/>EventPublisher<br/>EventConsumer<br/>PasswordHasher<br/>DiaryExporter<br/>DocumentParser<br/>RssFeedRenderer"]
             P_SEARCH["SearchPort<br/>SearchCommand<br/>PersonQuery<br/>PersonCommand"]
             P_FEDERATION["SocialQueryPort<br/>LocalApContentQuery<br/>RemoteWatchlistRepository<br/>RemoteGoalRepository"]
         end
@@ -72,8 +72,12 @@ graph TB
         VO["Value Objects<br/><i>MovieId, UserId, Rating,<br/>WatchMedium, Email, Username,<br/>Password, ...</i>"]
     end
 
-    subgraph ApiTypes["api-types (0 domain deps)"]
-        DTO["DTOs<br/><i>MovieDto, ReviewDto,<br/>FeedEntryDto, UserSummaryDto,<br/>CastMemberDto, ...</i>"]
+    subgraph ApiTypes["api-types"]
+        DTO["DTOs<br/><i>MovieDto, ReviewDto,<br/>FeedEntryDto, UserSummaryDto,<br/>HtmlPageContext, ...</i>"]
+    end
+
+    subgraph InfraWiring["infra-wiring"]
+        IW["DbPool, EventBusBackend,<br/>AppConfig<br/><i>Shared infra types</i>"]
     end
 
     subgraph Adapters["Adapters (implement Port Traits)"]
