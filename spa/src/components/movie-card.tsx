@@ -44,7 +44,7 @@ export function MovieCard({ movie, rating, comment, subtitle, variant = "full", 
       <Card size="sm">
         <CardContent className="flex gap-3">
           <div className="h-[84px] w-14 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
-            {movie.poster_path && <img src={posterUrl(movie.poster_path)} alt="" className="size-full object-cover" />}
+            {movie.poster_path && <img src={posterUrl(movie.poster_path)} alt="" className="aero-poster-hover size-full object-cover" />}
           </div>
           <div className="min-w-0 flex-1">
             <p className="font-semibold">{movie.title}</p>

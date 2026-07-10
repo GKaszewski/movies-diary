@@ -25,7 +25,7 @@ export function ReviewCard({ movie, review, userName, userId, isFederated, actor
     <Card size="sm">
       <CardContent className="flex gap-3">
         <Link to="/movies/$id" params={{ id: movie.id }} className="h-[84px] w-14 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
-          {movie.poster_path && <img src={posterUrl(movie.poster_path)} alt="" className="size-full object-cover" />}
+          {movie.poster_path && <img src={posterUrl(movie.poster_path)} alt="" className="aero-poster-hover size-full object-cover" />}
         </Link>
         <div className="min-w-0 flex-1">
           {userName && (

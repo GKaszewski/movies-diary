@@ -327,3 +327,31 @@ body > #root {
 .aero-star-filled {
   filter: drop-shadow(0 0 4px var(--aero-primary-glow)) drop-shadow(0 0 1px var(--aero-primary));
 }
+
+/* ── Keyframe animations ────────────────────────────────────── */
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes aero-page-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .aero-page-in {
+    animation: aero-page-in 0.25s ease-out both;
+  }
+
+  @keyframes aero-star-pop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.35); }
+    100% { transform: scale(1); }
+  }
+  .aero-star-pop {
+    animation: aero-star-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  .aero-poster-hover {
+    transition: transform 0.2s ease-out;
+  }
+  .aero-poster-hover:hover {
+    transform: scale(1.04);
+  }
+}

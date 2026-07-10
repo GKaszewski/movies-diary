@@ -2,6 +2,7 @@ import {
   createFileRoute,
   Outlet,
   redirect,
+  useMatches,
 } from "@tanstack/react-router"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
@@ -36,11 +37,15 @@ function ErrorFallback({ error, reset }: { error: unknown; reset: () => void }) 
 
 function AppLayout() {
   const [logOpen, setLogOpen] = useState(false)
+  const matches = useMatches()
+  const routeKey = matches.at(-1)?.id ?? ""
 
   return (
     <div className="mx-auto min-h-svh max-w-lg">
       <main className="pb-20">
-        <Outlet />
+        <div key={routeKey} className="aero-page-in">
+          <Outlet />
+        </div>
       </main>
       <BottomTabBar onLogTap={() => setLogOpen(true)} />
       <ReviewSheet mode="log" open={logOpen} onOpenChange={setLogOpen} />
