@@ -11,9 +11,10 @@ type MovieCardProps = {
   subtitle?: React.ReactNode
   variant?: "compact" | "full"
   action?: React.ReactNode
+  onShowDetail?: () => void
 }
 
-export function MovieCard({ movie, rating, comment, subtitle, variant = "full", action }: MovieCardProps) {
+export function MovieCard({ movie, rating, comment, subtitle, variant = "full", action, onShowDetail }: MovieCardProps) {
   if (variant === "compact") {
     return (
       <Link to="/movies/$id" params={{ id: movie.id }} className="glass flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors active:bg-muted/50">
@@ -23,7 +24,15 @@ export function MovieCard({ movie, rating, comment, subtitle, variant = "full", 
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold">{movie.title}</p>
           {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
-          {comment && <p className="truncate text-xs text-muted-foreground/70">{comment}</p>}
+          {comment && (
+            <p
+              className="truncate text-xs text-muted-foreground/70"
+              role={onShowDetail ? "button" : undefined}
+              tabIndex={onShowDetail ? 0 : undefined}
+              onClick={onShowDetail ? (e) => { e.preventDefault(); onShowDetail() } : undefined}
+              onKeyDown={onShowDetail ? (e) => e.key === "Enter" && onShowDetail() : undefined}
+            >{comment}</p>
+          )}
         </div>
         {rating != null && <StarDisplay rating={rating} size="xs" />}
       </Link>
@@ -41,7 +50,15 @@ export function MovieCard({ movie, rating, comment, subtitle, variant = "full", 
             <p className="font-semibold">{movie.title}</p>
             <p className="text-xs text-muted-foreground">{movie.release_year}{movie.director && ` · ${movie.director}`}</p>
             {rating != null && <div className="mt-1"><StarDisplay rating={rating} /></div>}
-            {comment && <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{comment}</p>}
+            {comment && (
+              <p
+                className="mt-1 line-clamp-2 text-xs text-muted-foreground"
+                role={onShowDetail ? "button" : undefined}
+                tabIndex={onShowDetail ? 0 : undefined}
+                onClick={onShowDetail ? (e) => { e.preventDefault(); onShowDetail() } : undefined}
+                onKeyDown={onShowDetail ? (e) => e.key === "Enter" && onShowDetail() : undefined}
+              >{comment}</p>
+            )}
           </div>
           {action && <div className="flex items-center" onClick={(e) => e.preventDefault()}>{action}</div>}
         </CardContent>

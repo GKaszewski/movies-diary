@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 import { BookOpen, ChevronLeft, ChevronRight, Pencil } from "lucide-react"
 import { format, startOfMonth, subMonths } from "date-fns"
 import { ReviewSheet } from "@/components/review-sheet"
+import { ReviewDetailSheet } from "@/components/review-detail-sheet"
 import { EditableContextMenu } from "@/components/editable-context-menu"
 import { MovieCard } from "@/components/movie-card"
 import { EmptyState } from "@/components/empty-state"
@@ -39,6 +40,7 @@ function DiaryPage() {
     useInfiniteDiary({ sort_by: "desc", user_id: auth?.user_id })
   const deleteReview = useDeleteReview()
   const [editingEntry, setEditingEntry] = useState<DiaryEntryDto | null>(null)
+  const [detailEntry, setDetailEntry] = useState<DiaryEntryDto | null>(null)
 
   const monthLabel = format(month, "MMMM yyyy")
   const monthStr = format(month, "yyyy-MM")
@@ -121,6 +123,7 @@ function DiaryPage() {
                     rating={item.entry.review.rating}
                     comment={item.entry.review.comment}
                     variant="full"
+                    onShowDetail={item.entry.review.comment ? () => setDetailEntry(item.entry) : undefined}
                     action={
                       <div className="flex items-center gap-1">
                         {item.entry.review.watch_medium && (
@@ -152,6 +155,15 @@ function DiaryPage() {
           onOpenChange={(open) => !open && setEditingEntry(null)}
           movie={editingEntry.movie}
           review={editingEntry.review}
+        />
+      )}
+
+      {detailEntry && (
+        <ReviewDetailSheet
+          open={!!detailEntry}
+          onOpenChange={(open) => !open && setDetailEntry(null)}
+          movie={detailEntry.movie}
+          review={detailEntry.review}
         />
       )}
     </div>

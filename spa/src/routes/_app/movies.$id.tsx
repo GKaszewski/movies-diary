@@ -1,8 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
+import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Bookmark, BookmarkCheck, Star, User } from "lucide-react"
 import { BackButton } from "@/components/back-button"
 import { CommunityReviews } from "@/components/community-reviews"
+import { ReviewDetailSheet } from "@/components/review-detail-sheet"
 import { ViewingHistory } from "@/components/viewing-history"
 import { RatingHistogram } from "@/components/rating-histogram"
 import { HorizontalStrip } from "@/components/horizontal-strip"
@@ -17,7 +19,7 @@ import {
   useAddToWatchlist,
   useRemoveFromWatchlist,
 } from "@/features/watchlist"
-import type { CastMemberDto, CrewMemberDto } from "@/features/movies"
+import type { CastMemberDto, CrewMemberDto, SocialReviewDto } from "@/features/movies"
 
 export const Route = createFileRoute("/_app/movies/$id")({
   component: MovieDetailPage,
@@ -30,6 +32,7 @@ function MovieDetailPage() {
   const { data: profile } = useMovieProfile(id)
   const { data: history } = useMovieHistory(id)
   useDocumentTitle(data?.movie.title)
+  const [detailReview, setDetailReview] = useState<SocialReviewDto | null>(null)
 
   if (isPending) return <DetailSkeleton />
   if (!data) return null
@@ -102,9 +105,19 @@ function MovieDetailPage() {
         </section>
       )}
 
-      <CommunityReviews reviews={reviews} />
+      <CommunityReviews reviews={reviews} onShowDetail={setDetailReview} />
 
       {history && <ViewingHistory history={history} />}
+
+      {detailReview && (
+        <ReviewDetailSheet
+          open={!!detailReview}
+          onOpenChange={(open) => !open && setDetailReview(null)}
+          movie={movie}
+          review={{ id: "", rating: detailReview.rating, comment: detailReview.comment, watched_at: detailReview.watched_at, watch_medium: detailReview.watch_medium }}
+          userName={detailReview.user_display}
+        />
+      )}
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router"
-import { useCallback } from "react"
+import { useCallback, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Bar, BarChart, XAxis, YAxis } from "recharts"
 import { Globe, Search, User } from "lucide-react"
@@ -16,6 +16,8 @@ import { VirtualList } from "@/components/virtual-list"
 import { useInfiniteDiary } from "@/features/diary"
 import { TimeAgo } from "@/components/time-ago"
 import { WATCH_MEDIUMS } from "@/lib/watch-mediums"
+import { ReviewDetailSheet } from "@/components/review-detail-sheet"
+import type { DiaryEntryDto } from "@/lib/api/common"
 import type { UserProfileResponse } from "@/features/users"
 
 type ProfileViewProps = {
@@ -154,27 +156,39 @@ function DiaryTab({ sortBy, userId, search }: { sortBy: string; userId?: string;
       )
     : items
   const loadMore = useCallback(() => fetchNextPage(), [fetchNextPage])
+  const [detailEntry, setDetailEntry] = useState<DiaryEntryDto | null>(null)
 
   if (isPending) return <Skeleton className="h-40 w-full rounded-xl" />
   if (!filtered.length) return <EmptyState icon={User} title={t("profile.noEntries")} />
 
   return (
-    <VirtualList
-      items={filtered}
-      estimateSize={52}
-      hasMore={!!hasNextPage}
-      isFetching={isFetchingNextPage}
-      onLoadMore={loadMore}
-      renderItem={(e) => (
-        <MovieCard
-          movie={e.movie}
-          rating={e.review.rating}
-          comment={e.review.comment}
-          subtitle={<><TimeAgo date={e.review.watched_at} /></>}
-          variant="compact"
+    <>
+      <VirtualList
+        items={filtered}
+        estimateSize={52}
+        hasMore={!!hasNextPage}
+        isFetching={isFetchingNextPage}
+        onLoadMore={loadMore}
+        renderItem={(e) => (
+          <MovieCard
+            movie={e.movie}
+            rating={e.review.rating}
+            comment={e.review.comment}
+            subtitle={<><TimeAgo date={e.review.watched_at} /></>}
+            variant="compact"
+            onShowDetail={e.review.comment ? () => setDetailEntry(e) : undefined}
+          />
+        )}
+      />
+      {detailEntry && (
+        <ReviewDetailSheet
+          open={!!detailEntry}
+          onOpenChange={(open) => !open && setDetailEntry(null)}
+          movie={detailEntry.movie}
+          review={detailEntry.review}
         />
       )}
-    />
+    </>
   )
 }
 

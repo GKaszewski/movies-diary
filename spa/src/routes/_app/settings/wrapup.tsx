@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { ArrowLeft, ChevronRight, Sparkles, Trash2 } from "lucide-react"
+import { format, subMonths, startOfYear, endOfYear } from "date-fns"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -125,6 +126,7 @@ function WrapupPage() {
             <DrawerTitle>{t("wrapup.generateWrapUp")}</DrawerTitle>
           </DrawerHeader>
           <div className="space-y-3 p-4 pb-8">
+            <PeriodPresets onSelect={(s, e) => { setStartDate(s); setEndDate(e) }} />
             <div className="space-y-1.5">
               <Label>{t("wrapup.startDate")}</Label>
               <Input
@@ -170,6 +172,36 @@ function WrapupPage() {
           </div>
         </DrawerContent>
       </Drawer>
+    </div>
+  )
+}
+
+function PeriodPresets({ onSelect }: { onSelect: (start: string, end: string) => void }) {
+  const { t } = useTranslation()
+  const now = new Date()
+  const fmt = (d: Date) => format(d, "yyyy-MM-dd")
+
+  const currentYear = now.getFullYear()
+  const presets = [
+    { label: String(currentYear), start: fmt(startOfYear(now)), end: fmt(endOfYear(now)) },
+    { label: String(currentYear - 1), start: fmt(startOfYear(new Date(currentYear - 1, 0))), end: fmt(endOfYear(new Date(currentYear - 1, 0))) },
+    { label: t("wrapup.last12Months", { defaultValue: "Last 12 months" }), start: fmt(subMonths(now, 12)), end: fmt(now) },
+    { label: t("wrapup.last6Months", { defaultValue: "Last 6 months" }), start: fmt(subMonths(now, 6)), end: fmt(now) },
+  ]
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {presets.map((p) => (
+        <Button
+          key={p.label}
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => onSelect(p.start, p.end)}
+        >
+          {p.label}
+        </Button>
+      ))}
     </div>
   )
 }

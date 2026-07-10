@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { timeAgo } from "@/lib/date"
 import type { SocialReviewDto } from "@/features/movies"
 
-export function CommunityReviews({ reviews }: { reviews: { items: SocialReviewDto[] } }) {
+export function CommunityReviews({ reviews, onShowDetail }: { reviews: { items: SocialReviewDto[] }; onShowDetail?: (review: SocialReviewDto) => void }) {
   const { t } = useTranslation()
 
   return (
@@ -36,7 +36,13 @@ export function CommunityReviews({ reviews }: { reviews: { items: SocialReviewDt
               </CardHeader>
               {r.comment && (
                 <CardContent>
-                  <p className="text-xs text-muted-foreground">{r.comment}</p>
+                  <p
+                    className="text-xs text-muted-foreground"
+                    role={onShowDetail ? "button" : undefined}
+                    tabIndex={onShowDetail ? 0 : undefined}
+                    onClick={onShowDetail ? () => onShowDetail(r) : undefined}
+                    onKeyDown={onShowDetail ? (e) => e.key === "Enter" && onShowDetail(r) : undefined}
+                  >{r.comment}</p>
                 </CardContent>
               )}
             </Card>
