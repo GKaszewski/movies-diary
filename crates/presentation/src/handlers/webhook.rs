@@ -251,7 +251,8 @@ pub async fn get_watch_queue(
     let query = GetWatchQueueQuery {
         user_id: user.0.value(),
     };
-    let events = get_watch_queue::execute(state.app_ctx.repos.watch_event_query.clone(), query).await?;
+    let events =
+        get_watch_queue::execute(state.app_ctx.repos.watch_event_query.clone(), query).await?;
 
     let dtos = events
         .into_iter()
@@ -326,7 +327,11 @@ pub async fn post_dismiss_watch_events(
         event_ids: req.event_ids,
     };
 
-    let dismissed =
-        dismiss_watch_events::execute(state.app_ctx.repos.watch_event_command.clone(), state.app_ctx.repos.watch_event_query.clone(), cmd).await?;
+    let dismissed = dismiss_watch_events::execute(
+        state.app_ctx.repos.watch_event_command.clone(),
+        state.app_ctx.repos.watch_event_query.clone(),
+        cmd,
+    )
+    .await?;
     Ok(Json(DismissWatchResponse { dismissed }))
 }

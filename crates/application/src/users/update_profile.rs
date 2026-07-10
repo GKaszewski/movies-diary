@@ -22,9 +22,9 @@ async fn upload_image(
 
     let ct = content_type.unwrap_or("");
     if !["image/jpeg", "image/png", "image/webp"].contains(&ct) {
-        return Err(DomainError::ValidationError(
-            format!("{kind} must be jpeg, png, or webp"),
-        ));
+        return Err(DomainError::ValidationError(format!(
+            "{kind} must be jpeg, png, or webp"
+        )));
     }
 
     if let Some(old) = old_path {

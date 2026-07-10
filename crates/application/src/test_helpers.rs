@@ -9,10 +9,9 @@ use domain::{
         GoalRepository, ImportProfileRepository, ImportSessionRepository, MetadataClient,
         MovieCommand, MovieProfileRepository, MovieQuery, ObjectStorage, PasswordHasher,
         PersonCommand, PersonQuery, PosterFetcherClient, RefreshSessionRepository,
-        ReviewRepository, SearchCommand, SearchPort, StatsRepository,
-        UserProfileFieldsRepository, UserRepository, UserSettingsRepository, WatchEventCommand,
-        WatchEventQuery, WatchlistRepository, WebhookTokenRepository,
-        WrapUpRepository, WrapUpStatsQuery,
+        ReviewRepository, SearchCommand, SearchPort, StatsRepository, UserProfileFieldsRepository,
+        UserRepository, UserSettingsRepository, WatchEventCommand, WatchEventQuery,
+        WatchlistRepository, WebhookTokenRepository, WrapUpRepository, WrapUpStatsQuery,
     },
     testing::{
         FakeAuthService, FakeDiaryRepository, FakeDocumentParser, FakeMetadataClient,

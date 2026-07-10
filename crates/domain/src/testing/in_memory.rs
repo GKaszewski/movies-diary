@@ -17,11 +17,11 @@ use crate::{
         collections::{PageParams, Paginated},
     },
     ports::{
-        GoalRepository, ImportProfileRepository, ImportSessionRepository, MovieProfileRepository,
-        MovieCommand, MovieQuery, RefreshSessionRepository, ReviewRepository,
+        GoalRepository, ImportProfileRepository, ImportSessionRepository, MovieCommand,
+        MovieProfileRepository, MovieQuery, RefreshSessionRepository, ReviewRepository,
         UserFederationSettingsQuery, UserProfileFieldsRepository, UserRepository,
-        UserSettingsRepository, WatchEventCommand, WatchEventQuery,
-        WatchlistRepository, WebhookTokenRepository,
+        UserSettingsRepository, WatchEventCommand, WatchEventQuery, WatchlistRepository,
+        WebhookTokenRepository,
     },
     value_objects::{
         Email, ExternalMetadataId, GoalId, ImportProfileId, ImportSessionId, MovieId, MovieTitle,
@@ -604,7 +604,6 @@ impl WatchEventQuery for InMemoryWatchEventRepository {
                 && *e.watched_at() > after
         }))
     }
-
 }
 
 // ── InMemoryImportSessionRepository ─────────────────────────────────────────

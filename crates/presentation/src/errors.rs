@@ -40,9 +40,17 @@ impl IntoResponse for ApiError {
         match &self.0 {
             DomainError::InfrastructureError(_) => {
                 tracing::error!("Internal error: {:?}", self.0);
-                (status, axum::Json(serde_json::json!({"error": "internal server error"}))).into_response()
+                (
+                    status,
+                    axum::Json(serde_json::json!({"error": "internal server error"})),
+                )
+                    .into_response()
             }
-            _ => (status, axum::Json(serde_json::json!({"error": self.0.to_string()}))).into_response(),
+            _ => (
+                status,
+                axum::Json(serde_json::json!({"error": self.0.to_string()})),
+            )
+                .into_response(),
         }
     }
 }

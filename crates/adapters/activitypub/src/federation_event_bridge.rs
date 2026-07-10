@@ -33,16 +33,15 @@ impl k_ap::EventPublisher for FederationEventBridge {
                 inbox,
                 activity,
                 signing_actor_id,
-            } => {
-                self.domain_publisher
-                    .publish(&DomainEvent::FederationDeliveryRequested {
-                        inbox_url: inbox.to_string(),
-                        activity_json: activity,
-                        signing_actor_id,
-                    })
-                    .await
-                    .map_err(|e| anyhow::anyhow!(e.to_string()))
-            }
+            } => self
+                .domain_publisher
+                .publish(&DomainEvent::FederationDeliveryRequested {
+                    inbox_url: inbox.to_string(),
+                    activity_json: activity,
+                    signing_actor_id,
+                })
+                .await
+                .map_err(|e| anyhow::anyhow!(e.to_string())),
             FederationEvent::DeliveryFailed { inbox, error, .. } => {
                 tracing::warn!(inbox = %inbox, error = %error, "federation delivery failed permanently");
                 Ok(())

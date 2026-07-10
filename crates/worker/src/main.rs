@@ -83,7 +83,6 @@ async fn main() -> anyhow::Result<()> {
     let import_session = db.import_session;
     let movie_profile = db.movie_profile;
     let watch_event_command = db.watch_event_command;
-    let watch_event_query = db.watch_event_query;
     let person_command = db.person_command;
     let person_query = db.person_query;
     let search_command = db.search_command;

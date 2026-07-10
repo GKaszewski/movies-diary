@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use domain::ports::{EventPublisher, MetadataClient, MovieCommand, MovieQuery, WatchlistRepository};
+use domain::ports::{
+    EventPublisher, MetadataClient, MovieCommand, MovieQuery, WatchlistRepository,
+};
 
 pub struct WatchlistAddDeps {
     pub movie_command: Arc<dyn MovieCommand>,

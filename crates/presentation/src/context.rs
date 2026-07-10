@@ -3,13 +3,12 @@ use std::sync::Arc;
 use domain::ports::{
     AuthService, DiaryExporter, DiaryRepository, DocumentParser, EventPublisher,
     FederatedProfileQuery, GoalRepository, ImportProfileRepository, ImportSessionRepository,
-    MetadataClient, MovieCommand, MovieProfileRepository, MovieQuery, ObjectStorage, PasswordHasher,
-    PersonCommand, PersonEnrichmentClient, PersonQuery, PosterFetcherClient,
+    MetadataClient, MovieCommand, MovieProfileRepository, MovieQuery, ObjectStorage,
+    PasswordHasher, PersonCommand, PersonEnrichmentClient, PersonQuery, PosterFetcherClient,
     RefreshSessionRepository, RemoteGoalRepository, RemoteWatchlistRepository, ReviewRepository,
     SearchCommand, SearchPort, SocialQueryPort, StatsRepository, UserProfileFieldsRepository,
     UserRepository, UserSettingsRepository, WatchEventCommand, WatchEventQuery,
-    WatchlistRepository,
-    WebhookTokenRepository, WrapUpRepository, WrapUpStatsQuery,
+    WatchlistRepository, WebhookTokenRepository, WrapUpRepository, WrapUpStatsQuery,
 };
 
 use application::config::AppConfig;

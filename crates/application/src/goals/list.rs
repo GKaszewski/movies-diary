@@ -1,8 +1,4 @@
-use domain::{
-    errors::DomainError,
-    models::GoalWithProgress,
-    value_objects::UserId,
-};
+use domain::{errors::DomainError, models::GoalWithProgress, value_objects::UserId};
 
 use super::{deps::GoalQueryDeps, queries::ListGoalsQuery};
 

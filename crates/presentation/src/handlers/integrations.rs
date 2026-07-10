@@ -204,7 +204,13 @@ pub async fn post_dismiss_single(
         event_ids: vec![event_id],
     };
 
-    match dismiss_watch_events::execute(state.app_ctx.repos.watch_event_command.clone(), state.app_ctx.repos.watch_event_query.clone(), cmd).await {
+    match dismiss_watch_events::execute(
+        state.app_ctx.repos.watch_event_command.clone(),
+        state.app_ctx.repos.watch_event_query.clone(),
+        cmd,
+    )
+    .await
+    {
         Ok(_) => Redirect::to("/watch-queue").into_response(),
         Err(e) => {
             let msg = encode_error(&e.to_string());

@@ -3,8 +3,8 @@ use std::sync::Arc;
 use anyhow::Context;
 use domain::ports::{
     AuthService, LocalApContentQuery, MetadataClient, ObjectStorage, PasswordHasher,
-    PosterFetcherClient, RefreshSessionRepository, UserProfileFieldsRepository,
-    WatchEventCommand, WatchEventQuery, WebhookTokenRepository,
+    PosterFetcherClient, RefreshSessionRepository, UserProfileFieldsRepository, WatchEventCommand,
+    WatchEventQuery, WebhookTokenRepository,
 };
 
 pub use infra_wiring::DbPool;

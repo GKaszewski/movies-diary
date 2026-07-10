@@ -1,15 +1,8 @@
-use domain::{
-    errors::DomainError,
-    events::DomainEvent,
-    value_objects::UserId,
-};
+use domain::{errors::DomainError, events::DomainEvent, value_objects::UserId};
 
 use super::{commands::DeleteGoalCommand, deps::GoalCommandDeps};
 
-pub async fn execute(
-    deps: &GoalCommandDeps,
-    cmd: DeleteGoalCommand,
-) -> Result<(), DomainError> {
+pub async fn execute(deps: &GoalCommandDeps, cmd: DeleteGoalCommand) -> Result<(), DomainError> {
     let user_id = UserId::from_uuid(cmd.user_id);
 
     let g = deps

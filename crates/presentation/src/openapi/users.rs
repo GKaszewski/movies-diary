@@ -1,6 +1,6 @@
 use api_types::{
-    ProfileFieldDto, ProfileResponse, ProfileViewData, UpdateProfileFieldsRequest,
-    UserProfileBase, UserProfileResponse, UserStatsDto, UserSummaryDto, UsersResponse,
+    ProfileFieldDto, ProfileResponse, ProfileViewData, UpdateProfileFieldsRequest, UserProfileBase,
+    UserProfileResponse, UserStatsDto, UserSummaryDto, UsersResponse,
 };
 use utoipa::OpenApi;
 

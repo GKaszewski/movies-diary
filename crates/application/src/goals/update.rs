@@ -1,8 +1,5 @@
 use domain::{
-    errors::DomainError,
-    events::DomainEvent,
-    models::GoalWithProgress,
-    value_objects::UserId,
+    errors::DomainError, events::DomainEvent, models::GoalWithProgress, value_objects::UserId,
 };
 
 use super::{commands::UpdateGoalCommand, deps::GoalCommandDeps};
