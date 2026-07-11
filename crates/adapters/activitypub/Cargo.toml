@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-k-ap = { version = "0.4.3", registry = "gitea" }
+k-ap = { version = "0.4.4", registry = "gitea" }
 domain = { workspace = true }
 axum = { workspace = true }
 serde = { workspace = true }
