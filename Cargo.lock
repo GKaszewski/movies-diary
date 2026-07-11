@@ -2892,9 +2892,9 @@ dependencies = [
 
 [[package]]
 name = "k-ap"
-version = "0.4.2"
+version = "0.4.3"
 source = "sparse+https://git.gabrielkaszewski.dev/api/packages/GKaszewski/cargo/"
-checksum = "4291cac43b119cce0be6e2ba8d85339f3f4c69b266cb7c00fb4cb179302b97e4"
+checksum = "33ac1fa26e97a4a290746e5db39cda9b108b60a1ffa2f568682b70c99c686fda"
 dependencies = [
  "activitypub_federation",
  "anyhow",
@@ -6714,7 +6714,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
