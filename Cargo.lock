@@ -2892,9 +2892,9 @@ dependencies = [
 
 [[package]]
 name = "k-ap"
-version = "0.4.4"
+version = "0.4.6"
 source = "sparse+https://git.gabrielkaszewski.dev/api/packages/GKaszewski/cargo/"
-checksum = "daec6ce514e07fc9c6e39a780f3144292534008a2c16c1645f131fad877c7894"
+checksum = "97c1d000cf9c80891973bb5f5adb96c90e0aea9c929c7fa6cb794ad28938bc50"
 dependencies = [
  "activitypub_federation",
  "anyhow",

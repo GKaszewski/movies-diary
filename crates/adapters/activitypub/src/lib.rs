@@ -141,6 +141,10 @@ pub async fn wire(deps: ActivityPubDeps) -> anyhow::Result<ActivityPubWire> {
             .event_publisher(fed_event_bridge)
             .allow_registration(allow_registration)
             .software_name("movies-diary")
+            .nodeinfo_metadata(serde_json::json!({
+                "nodeName": "movies-diary",
+                "nodeDescription": "A federated movie diary"
+            }))
             .debug(federation_debug)
             .build()
             .await?,
