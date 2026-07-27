@@ -150,7 +150,11 @@ fn social_actor_from_row(row: &sqlx::sqlite::SqliteRow, base_url: &str) -> Socia
         SocialIdentity::Local(_) => {
             let username: Option<String> = row.try_get("local_username").ok().flatten();
             let display: Option<String> = row.try_get("local_display").ok().flatten();
-            let avatar: Option<String> = row.try_get("local_avatar").ok().flatten();
+            let avatar: Option<String> = row
+                .try_get::<Option<String>, _>("local_avatar_path")
+                .ok()
+                .flatten()
+                .map(|p| format!("{}/images/{}", base_url, p));
             let handle = username
                 .as_deref()
                 .map(|u| SocialIdentity::format_local_handle(u, base_url))
@@ -186,7 +190,7 @@ impl domain::ports::FollowQuery for SqliteFederationRepository {
         let uid = user_id.to_string();
         let rows = sqlx::query(
             "SELECT f.remote_actor_url,
-                    u.username AS local_username, u.display_name AS local_display, u.avatar_url AS local_avatar,
+                    u.username AS local_username, u.display_name AS local_display, u.avatar_path AS local_avatar_path,
                     a.handle AS remote_handle, a.display_name AS remote_display, a.avatar_url AS remote_avatar
              FROM ap_following f
              LEFT JOIN users u ON f.remote_actor_url = ?1 || '/users/' || u.id
@@ -212,7 +216,7 @@ impl domain::ports::FollowQuery for SqliteFederationRepository {
         let uid = user_id.to_string();
         let rows = sqlx::query(
             "SELECT f.remote_actor_url,
-                    u.username AS local_username, u.display_name AS local_display, u.avatar_url AS local_avatar,
+                    u.username AS local_username, u.display_name AS local_display, u.avatar_path AS local_avatar_path,
                     a.handle AS remote_handle, a.display_name AS remote_display, a.avatar_url AS remote_avatar
              FROM ap_followers f
              LEFT JOIN users u ON f.remote_actor_url = ?1 || '/users/' || u.id
@@ -238,7 +242,7 @@ impl domain::ports::FollowQuery for SqliteFederationRepository {
         let uid = user_id.to_string();
         let rows = sqlx::query(
             "SELECT f.remote_actor_url,
-                    u.username AS local_username, u.display_name AS local_display, u.avatar_url AS local_avatar,
+                    u.username AS local_username, u.display_name AS local_display, u.avatar_path AS local_avatar_path,
                     a.handle AS remote_handle, a.display_name AS remote_display, a.avatar_url AS remote_avatar
              FROM ap_followers f
              LEFT JOIN users u ON f.remote_actor_url = ?1 || '/users/' || u.id
