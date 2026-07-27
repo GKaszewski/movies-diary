@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 import { useTranslation } from "react-i18next"
 import { Download, Share2, X } from "lucide-react"
 import html2canvas from "html2canvas-pro"
@@ -59,7 +60,7 @@ export function WrapUpShareCard({ report, onClose }: Props) {
     }
   }
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/80 p-4">
       <div className="mb-4 flex w-full max-w-sm items-center justify-between">
         <Button variant="ghost" size="icon" onClick={onClose} className="text-white">
@@ -138,7 +139,8 @@ export function WrapUpShareCard({ report, onClose }: Props) {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 
