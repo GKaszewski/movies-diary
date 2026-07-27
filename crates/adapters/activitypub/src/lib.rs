@@ -28,15 +28,17 @@ pub use review_handler::ReviewObjectHandler;
 pub use social_adapter::CompositeSocialAdapter;
 pub use user_adapter::DomainUserRepoAdapter;
 
-pub type FederationRepos = (
-    std::sync::Arc<dyn ActivityRepository>,
-    std::sync::Arc<dyn FollowRepository>,
-    std::sync::Arc<dyn ActorRepository>,
-    std::sync::Arc<dyn BlocklistRepository>,
-    std::sync::Arc<dyn domain::ports::FederationAdminQuery>,
-    std::sync::Arc<dyn RemoteReviewRepository>,
-    std::sync::Arc<dyn domain::ports::RemoteWatchlistRepository>,
-);
+pub struct FederationRepos {
+    pub activity: std::sync::Arc<dyn ActivityRepository>,
+    pub follow: std::sync::Arc<dyn FollowRepository>,
+    pub actor: std::sync::Arc<dyn ActorRepository>,
+    pub blocklist: std::sync::Arc<dyn BlocklistRepository>,
+    pub admin_query: std::sync::Arc<dyn domain::ports::FederationAdminQuery>,
+    pub review_store: std::sync::Arc<dyn RemoteReviewRepository>,
+    pub remote_watchlist: std::sync::Arc<dyn domain::ports::RemoteWatchlistRepository>,
+    pub follow_command: std::sync::Arc<dyn domain::ports::FollowCommand>,
+    pub follow_query: std::sync::Arc<dyn domain::ports::FollowQuery>,
+}
 
 pub struct ActivityPubWire {
     pub service: std::sync::Arc<dyn ActivityPubPort>,
@@ -60,6 +62,8 @@ pub struct ActivityPubDeps {
     pub stats_repo: std::sync::Arc<dyn domain::ports::StatsRepository>,
     pub user_repo: std::sync::Arc<dyn domain::ports::UserRepository>,
     pub federation_settings: std::sync::Arc<dyn domain::ports::UserFederationSettingsQuery>,
+    pub follow_command: std::sync::Arc<dyn domain::ports::FollowCommand>,
+    pub follow_query: std::sync::Arc<dyn domain::ports::FollowQuery>,
     pub base_url: String,
     pub allow_registration: bool,
     pub event_publisher: std::sync::Arc<dyn domain::ports::EventPublisher>,
@@ -82,6 +86,8 @@ pub async fn wire(deps: ActivityPubDeps) -> anyhow::Result<ActivityPubWire> {
         stats_repo,
         user_repo,
         federation_settings,
+        follow_command: _,
+        follow_query: _,
         base_url,
         allow_registration,
         event_publisher,

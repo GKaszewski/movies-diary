@@ -312,8 +312,7 @@ pub async fn get_activity_feed_html(
     let limit = params.limit.unwrap_or(20);
     let offset = params.offset.unwrap_or(0);
 
-    let filter_following =
-        cfg!(feature = "federation") && params.filter == "following" && user_id.is_some();
+    let filter_following = params.filter == "following" && user_id.is_some();
     let filter_str = if filter_following { "following" } else { "all" };
 
     let sort_by_str = match params.sort_by.as_str() {

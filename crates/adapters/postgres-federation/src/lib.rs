@@ -4,6 +4,7 @@ pub mod ap_content;
 mod blocklist;
 mod federated_profile;
 mod follow;
+mod follow_repository;
 pub mod remote_goals;
 mod review;
 mod social;
@@ -79,13 +80,15 @@ pub fn create_federated_profile_query(
 
 pub fn wire(pool: PgPool) -> activitypub::FederationRepos {
     let fed = std::sync::Arc::new(PostgresFederationRepository::new(pool));
-    (
-        std::sync::Arc::clone(&fed) as _,
-        std::sync::Arc::clone(&fed) as _,
-        std::sync::Arc::clone(&fed) as _,
-        std::sync::Arc::clone(&fed) as _,
-        std::sync::Arc::clone(&fed) as _,
-        std::sync::Arc::clone(&fed) as _,
-        fed as _,
-    )
+    activitypub::FederationRepos {
+        activity: std::sync::Arc::clone(&fed) as _,
+        follow: std::sync::Arc::clone(&fed) as _,
+        actor: std::sync::Arc::clone(&fed) as _,
+        blocklist: std::sync::Arc::clone(&fed) as _,
+        admin_query: std::sync::Arc::clone(&fed) as _,
+        review_store: std::sync::Arc::clone(&fed) as _,
+        remote_watchlist: std::sync::Arc::clone(&fed) as _,
+        follow_command: std::sync::Arc::clone(&fed) as _,
+        follow_query: fed as _,
+    }
 }

@@ -75,15 +75,7 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
         social_command_arc,
         social_query_unified_arc,
     ) = {
-        let (
-            activity_repo,
-            follow_repo,
-            actor_repo,
-            blocklist_repo,
-            social_query_arc,
-            review_store,
-            remote_watchlist_repo,
-        ) = match &db_pool {
+        let fed_repos = match &db_pool {
             #[cfg(feature = "postgres-federation")]
             factory::DbPool::Postgres(pool) => postgres_federation::wire(pool.clone()),
             #[cfg(feature = "sqlite-federation")]
@@ -97,12 +89,12 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
         let ep = create_event_publisher(event_bus, &db_pool).await?;
 
         let ap = activitypub::wire(activitypub::ActivityPubDeps {
-            activity_repo,
-            follow_repo,
-            actor_repo,
-            blocklist_repo,
-            review_store,
-            remote_watchlist_repo: remote_watchlist_repo.clone(),
+            activity_repo: fed_repos.activity,
+            follow_repo: fed_repos.follow,
+            actor_repo: fed_repos.actor,
+            blocklist_repo: fed_repos.blocklist,
+            review_store: fed_repos.review_store,
+            remote_watchlist_repo: fed_repos.remote_watchlist.clone(),
             remote_goal_repo: Arc::clone(&db.remote_goal),
             local_ap_content: Arc::clone(&ap_content_repo),
             movie_repo: Arc::clone(&db.movie_query),
@@ -112,6 +104,8 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
             stats_repo: Arc::clone(&db.stats),
             user_repo: Arc::clone(&db.user),
             federation_settings: std::sync::Arc::clone(&db.federation_settings),
+            follow_command: Arc::clone(&fed_repos.follow_command),
+            follow_query: Arc::clone(&fed_repos.follow_query),
             base_url: app_config.base_url.clone(),
             allow_registration: app_config.allow_registration,
             event_publisher: Arc::clone(&ep),
@@ -123,6 +117,8 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
         let composite_social = Arc::new(activitypub::CompositeSocialAdapter::new(
             Arc::clone(&ap_service_arc),
             Arc::clone(&db.user),
+            fed_repos.follow_command,
+            fed_repos.follow_query,
             app_config.base_url.clone(),
         ));
 
@@ -130,8 +126,8 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
             ep,
             ap_router,
             ap_service_arc,
-            social_query_arc,
-            remote_watchlist_repo,
+            fed_repos.admin_query,
+            fed_repos.remote_watchlist,
             composite_social.clone() as Arc<dyn domain::ports::SocialCommand>,
             composite_social as Arc<dyn domain::ports::SocialQuery>,
         )

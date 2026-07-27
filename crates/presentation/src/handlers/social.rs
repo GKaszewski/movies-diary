@@ -189,9 +189,7 @@ pub async fn block_actor_api(
         &deps,
         application::social::commands::SocialCmd::Block {
             blocker_id: user.0.value(),
-            target: SocialIdentity::Remote {
-                actor_url: body.actor_url,
-            },
+            target: SocialIdentity::from_actor_url(&body.actor_url, &state.app_ctx.config.base_url),
         },
     )
     .await?;
@@ -217,9 +215,7 @@ pub async fn unblock_actor_api(
         &deps,
         application::social::commands::SocialCmd::Unblock {
             blocker_id: user.0.value(),
-            target: SocialIdentity::Remote {
-                actor_url: body.actor_url,
-            },
+            target: SocialIdentity::from_actor_url(&body.actor_url, &state.app_ctx.config.base_url),
         },
     )
     .await?;
@@ -381,9 +377,7 @@ pub async fn unfollow(
         &deps,
         application::social::commands::SocialCmd::Unfollow {
             follower_id: user.0.value(),
-            target: SocialIdentity::Remote {
-                actor_url: body.actor_url,
-            },
+            target: SocialIdentity::from_actor_url(&body.actor_url, &state.app_ctx.config.base_url),
         },
     )
     .await?;
@@ -409,9 +403,10 @@ pub async fn accept_follower(
         &deps,
         application::social::commands::SocialCmd::AcceptFollow {
             owner_id: user.0.value(),
-            requester: SocialIdentity::Remote {
-                actor_url: body.actor_url,
-            },
+            requester: SocialIdentity::from_actor_url(
+                &body.actor_url,
+                &state.app_ctx.config.base_url,
+            ),
         },
     )
     .await?;
@@ -437,9 +432,10 @@ pub async fn reject_follower(
         &deps,
         application::social::commands::SocialCmd::RejectFollow {
             owner_id: user.0.value(),
-            requester: SocialIdentity::Remote {
-                actor_url: body.actor_url,
-            },
+            requester: SocialIdentity::from_actor_url(
+                &body.actor_url,
+                &state.app_ctx.config.base_url,
+            ),
         },
     )
     .await?;
@@ -465,9 +461,10 @@ pub async fn remove_follower(
         &deps,
         application::social::commands::SocialCmd::RemoveFollower {
             owner_id: user.0.value(),
-            follower: SocialIdentity::Remote {
-                actor_url: body.actor_url,
-            },
+            follower: SocialIdentity::from_actor_url(
+                &body.actor_url,
+                &state.app_ctx.config.base_url,
+            ),
         },
     )
     .await?;
@@ -563,9 +560,7 @@ pub async fn unfollow_remote_user(
         &deps,
         application::social::commands::SocialCmd::Unfollow {
             follower_id: user_id.value(),
-            target: SocialIdentity::Remote {
-                actor_url: form.actor_url,
-            },
+            target: SocialIdentity::from_actor_url(&form.actor_url, &state.app_ctx.config.base_url),
         },
     )
     .await
@@ -602,9 +597,10 @@ pub async fn accept_follower_html(
         &deps,
         application::social::commands::SocialCmd::AcceptFollow {
             owner_id: user_id.value(),
-            requester: SocialIdentity::Remote {
-                actor_url: form.actor_url,
-            },
+            requester: SocialIdentity::from_actor_url(
+                &form.actor_url,
+                &state.app_ctx.config.base_url,
+            ),
         },
     )
     .await
@@ -635,9 +631,10 @@ pub async fn reject_follower_html(
         &deps,
         application::social::commands::SocialCmd::RejectFollow {
             owner_id: user_id.value(),
-            requester: SocialIdentity::Remote {
-                actor_url: form.actor_url,
-            },
+            requester: SocialIdentity::from_actor_url(
+                &form.actor_url,
+                &state.app_ctx.config.base_url,
+            ),
         },
     )
     .await
@@ -832,9 +829,10 @@ pub async fn remove_follower_html(
         &deps,
         application::social::commands::SocialCmd::RemoveFollower {
             owner_id: user_id.value(),
-            follower: SocialIdentity::Remote {
-                actor_url: form.actor_url,
-            },
+            follower: SocialIdentity::from_actor_url(
+                &form.actor_url,
+                &state.app_ctx.config.base_url,
+            ),
         },
     )
     .await
@@ -1001,9 +999,7 @@ pub async fn post_block_actor_html(
         &deps,
         application::social::commands::SocialCmd::Block {
             blocker_id: user_id.value(),
-            target: SocialIdentity::Remote {
-                actor_url: form.actor_url,
-            },
+            target: SocialIdentity::from_actor_url(&form.actor_url, &state.app_ctx.config.base_url),
         },
     )
     .await
@@ -1030,9 +1026,7 @@ pub async fn post_unblock_actor(
         &deps,
         application::social::commands::SocialCmd::Unblock {
             blocker_id: user_id.value(),
-            target: SocialIdentity::Remote {
-                actor_url: form.actor_url,
-            },
+            target: SocialIdentity::from_actor_url(&form.actor_url, &state.app_ctx.config.base_url),
         },
     )
     .await

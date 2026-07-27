@@ -61,15 +61,7 @@ async fn main() -> anyhow::Result<()> {
     );
     // Wire federation repos early to get remote_watchlist_repo for AppContext.
     #[cfg(feature = "federation")]
-    let (
-        fed_activity_repo,
-        fed_follow_repo,
-        fed_actor_repo,
-        fed_blocklist_repo,
-        _fed_social_query,
-        fed_review_store,
-        fed_remote_watchlist_repo,
-    ) = match &db.db_pool {
+    let fed_repos = match &db.db_pool {
         #[cfg(feature = "sqlite-federation")]
         db::DbPool::Sqlite(pool) => sqlite_federation::wire(pool.clone()),
         #[cfg(feature = "postgres-federation")]
@@ -244,12 +236,12 @@ async fn main() -> anyhow::Result<()> {
         #[cfg(feature = "federation")]
         {
             let ap_wire = activitypub::wire(activitypub::ActivityPubDeps {
-                activity_repo: fed_activity_repo,
-                follow_repo: fed_follow_repo,
-                actor_repo: fed_actor_repo,
-                blocklist_repo: fed_blocklist_repo,
-                review_store: fed_review_store,
-                remote_watchlist_repo: fed_remote_watchlist_repo,
+                activity_repo: fed_repos.activity,
+                follow_repo: fed_repos.follow,
+                actor_repo: fed_repos.actor,
+                blocklist_repo: fed_repos.blocklist,
+                review_store: fed_repos.review_store,
+                remote_watchlist_repo: fed_repos.remote_watchlist,
                 remote_goal_repo: Arc::clone(&remote_goal),
                 local_ap_content: fed_ap_content,
                 movie_repo: fed_movie_repo,
@@ -258,6 +250,8 @@ async fn main() -> anyhow::Result<()> {
                 goal_repo: fed_goal_repo,
                 stats_repo: fed_stats_repo,
                 user_repo: fed_user_repo,
+                follow_command: fed_repos.follow_command,
+                follow_query: fed_repos.follow_query,
                 base_url,
                 allow_registration,
                 event_publisher: Arc::clone(&event_publisher),

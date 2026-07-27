@@ -3,17 +3,17 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use domain::{
     errors::DomainError,
-    ports::{SocialCommand, SocialQuery, UserRepository},
-    value_objects::{FollowTarget, SocialActor, SocialIdentity, UserId},
+    ports::{FollowCommand, FollowQuery, SocialCommand, SocialQuery, UserRepository},
+    value_objects::{FollowStatus, FollowTarget, SocialActor, SocialIdentity, UserId, Username},
 };
-
-use k_ap::RemoteActor;
 
 use super::ActivityPubPort;
 
 pub struct CompositeSocialAdapter {
     ap_service: Arc<dyn ActivityPubPort>,
     user_repo: Arc<dyn UserRepository>,
+    follow_command: Arc<dyn FollowCommand>,
+    follow_query: Arc<dyn FollowQuery>,
     base_url: String,
 }
 
@@ -21,11 +21,15 @@ impl CompositeSocialAdapter {
     pub fn new(
         ap_service: Arc<dyn ActivityPubPort>,
         user_repo: Arc<dyn UserRepository>,
+        follow_command: Arc<dyn FollowCommand>,
+        follow_query: Arc<dyn FollowQuery>,
         base_url: String,
     ) -> Self {
         Self {
             ap_service,
             user_repo,
+            follow_command,
+            follow_query,
             base_url,
         }
     }
@@ -41,42 +45,31 @@ impl CompositeSocialAdapter {
         }
     }
 
-    fn identity_from_actor_url(&self, url: &str) -> SocialIdentity {
-        let prefix = format!("{}/users/", self.base_url);
-        if let Some(uuid_str) = url.strip_prefix(&prefix)
-            && let Ok(uuid) = uuid::Uuid::parse_str(uuid_str)
-        {
-            return SocialIdentity::Local(UserId::from_uuid(uuid));
-        }
-        SocialIdentity::Remote {
-            actor_url: url.to_string(),
-        }
-    }
-
-    fn remote_actor_to_social_actor(&self, actor: RemoteActor) -> SocialActor {
-        let identity = self.identity_from_actor_url(&actor.url);
-        SocialActor {
-            identity,
-            handle: actor.handle,
-            display_name: actor.display_name,
-            avatar_url: actor.avatar_url,
-        }
-    }
-
-    async fn resolve_handle(&self, identity: &SocialIdentity) -> Result<String, DomainError> {
-        match identity {
-            SocialIdentity::Local(uid) => {
-                let user = self
-                    .user_repo
-                    .find_by_id(uid)
-                    .await?
-                    .ok_or_else(|| DomainError::NotFound("User not found".into()))?;
-                let host = url::Url::parse(&self.base_url)
-                    .map(|u| u.host_str().unwrap_or("localhost").to_string())
-                    .unwrap_or_else(|_| "localhost".to_string());
-                Ok(format!("@{}@{}", user.username().value(), host))
+    async fn resolve_target_identity(
+        &self,
+        target: &FollowTarget,
+    ) -> Result<SocialIdentity, DomainError> {
+        match target {
+            FollowTarget::Identity(id) => Ok(id.clone()),
+            FollowTarget::Handle(handle) => {
+                let host = handle.rsplit_once('@').map(|(_, h)| h).unwrap_or("");
+                let local_host = SocialIdentity::host_from_base_url(&self.base_url);
+                if host == local_host {
+                    let username_str = handle
+                        .trim_start_matches('@')
+                        .split('@')
+                        .next()
+                        .unwrap_or("");
+                    if let Ok(username) = Username::new(username_str.to_string())
+                        && let Some(user) = self.user_repo.find_by_username(&username).await?
+                    {
+                        return Ok(SocialIdentity::Local(user.id().clone()));
+                    }
+                }
+                Ok(SocialIdentity::Remote {
+                    actor_url: handle.clone(),
+                })
             }
-            SocialIdentity::Remote { actor_url } => Ok(actor_url.clone()),
         }
     }
 }
@@ -88,16 +81,38 @@ fn ap_err(e: anyhow::Error) -> DomainError {
 #[async_trait]
 impl SocialCommand for CompositeSocialAdapter {
     async fn follow(&self, follower: &UserId, target: &FollowTarget) -> Result<(), DomainError> {
-        if let FollowTarget::Identity(SocialIdentity::Local(target_id)) = target
-            && follower == target_id
-        {
-            return Err(DomainError::ValidationError(
-                "Cannot follow yourself".into(),
-            ));
+        let identity = self.resolve_target_identity(target).await?;
+
+        if let SocialIdentity::Local(ref target_id) = identity {
+            if follower == target_id {
+                return Err(DomainError::ValidationError(
+                    "Cannot follow yourself".into(),
+                ));
+            }
+            let follower_url = self.local_actor_url(follower);
+            let target_url = self.local_actor_url(target_id);
+            self.follow_command
+                .add_follower(target_id.value(), &follower_url, FollowStatus::Pending)
+                .await?;
+            self.follow_command
+                .add_follow(follower.value(), &target_url, FollowStatus::Pending)
+                .await?;
+            return Ok(());
         }
+
         let handle = match target {
             FollowTarget::Handle(h) => h.clone(),
-            FollowTarget::Identity(id) => self.resolve_handle(id).await?,
+            FollowTarget::Identity(id) => match id {
+                SocialIdentity::Local(uid) => {
+                    let user = self
+                        .user_repo
+                        .find_by_id(uid)
+                        .await?
+                        .ok_or_else(|| DomainError::NotFound("User not found".into()))?;
+                    SocialIdentity::format_local_handle(user.username().value(), &self.base_url)
+                }
+                SocialIdentity::Remote { actor_url } => actor_url.clone(),
+            },
         };
         self.ap_service
             .follow(follower.value(), &handle)
@@ -111,10 +126,23 @@ impl SocialCommand for CompositeSocialAdapter {
         target: &SocialIdentity,
     ) -> Result<(), DomainError> {
         let actor_url = self.actor_url_from_identity(target);
-        self.ap_service
-            .unfollow(follower.value(), &actor_url)
-            .await
-            .map_err(ap_err)
+        match target {
+            SocialIdentity::Local(target_id) => {
+                let follower_url = self.local_actor_url(follower);
+                self.follow_command
+                    .remove_follow(follower.value(), &actor_url)
+                    .await?;
+                self.follow_command
+                    .remove_follower_record(target_id.value(), &follower_url)
+                    .await?;
+                Ok(())
+            }
+            SocialIdentity::Remote { .. } => self
+                .ap_service
+                .unfollow(follower.value(), &actor_url)
+                .await
+                .map_err(ap_err),
+        }
     }
 
     async fn accept_follow(
@@ -123,10 +151,23 @@ impl SocialCommand for CompositeSocialAdapter {
         requester: &SocialIdentity,
     ) -> Result<(), DomainError> {
         let actor_url = self.actor_url_from_identity(requester);
-        self.ap_service
-            .accept_follower(owner.value(), &actor_url)
-            .await
-            .map_err(ap_err)
+        match requester {
+            SocialIdentity::Local(requester_id) => {
+                let owner_url = self.local_actor_url(owner);
+                self.follow_command
+                    .update_follower_status(owner.value(), &actor_url, FollowStatus::Accepted)
+                    .await?;
+                self.follow_command
+                    .update_follow_status(requester_id.value(), &owner_url, FollowStatus::Accepted)
+                    .await?;
+                Ok(())
+            }
+            SocialIdentity::Remote { .. } => self
+                .ap_service
+                .accept_follower(owner.value(), &actor_url)
+                .await
+                .map_err(ap_err),
+        }
     }
 
     async fn reject_follow(
@@ -135,10 +176,23 @@ impl SocialCommand for CompositeSocialAdapter {
         requester: &SocialIdentity,
     ) -> Result<(), DomainError> {
         let actor_url = self.actor_url_from_identity(requester);
-        self.ap_service
-            .reject_follower(owner.value(), &actor_url)
-            .await
-            .map_err(ap_err)
+        match requester {
+            SocialIdentity::Local(requester_id) => {
+                let owner_url = self.local_actor_url(owner);
+                self.follow_command
+                    .update_follower_status(owner.value(), &actor_url, FollowStatus::Rejected)
+                    .await?;
+                self.follow_command
+                    .remove_follow(requester_id.value(), &owner_url)
+                    .await?;
+                Ok(())
+            }
+            SocialIdentity::Remote { .. } => self
+                .ap_service
+                .reject_follower(owner.value(), &actor_url)
+                .await
+                .map_err(ap_err),
+        }
     }
 
     async fn remove_follower(
@@ -147,10 +201,23 @@ impl SocialCommand for CompositeSocialAdapter {
         follower: &SocialIdentity,
     ) -> Result<(), DomainError> {
         let actor_url = self.actor_url_from_identity(follower);
-        self.ap_service
-            .remove_follower(owner.value(), &actor_url)
-            .await
-            .map_err(ap_err)
+        match follower {
+            SocialIdentity::Local(follower_id) => {
+                let owner_url = self.local_actor_url(owner);
+                self.follow_command
+                    .remove_follower_record(owner.value(), &actor_url)
+                    .await?;
+                self.follow_command
+                    .remove_follow(follower_id.value(), &owner_url)
+                    .await?;
+                Ok(())
+            }
+            SocialIdentity::Remote { .. } => self
+                .ap_service
+                .remove_follower(owner.value(), &actor_url)
+                .await
+                .map_err(ap_err),
+        }
     }
 
     async fn block(&self, blocker: &UserId, target: &SocialIdentity) -> Result<(), DomainError> {
@@ -173,53 +240,29 @@ impl SocialCommand for CompositeSocialAdapter {
 #[async_trait]
 impl SocialQuery for CompositeSocialAdapter {
     async fn get_following(&self, user: &UserId) -> Result<Vec<SocialActor>, DomainError> {
-        let actors = self
-            .ap_service
-            .get_following(user.value())
+        self.follow_query
+            .get_following(user.value(), &self.base_url)
             .await
-            .map_err(ap_err)?;
-        Ok(actors
-            .into_iter()
-            .map(|a| self.remote_actor_to_social_actor(a))
-            .collect())
     }
 
     async fn get_followers(&self, user: &UserId) -> Result<Vec<SocialActor>, DomainError> {
-        let actors = self
-            .ap_service
-            .get_accepted_followers(user.value())
+        self.follow_query
+            .get_followers(user.value(), &self.base_url)
             .await
-            .map_err(ap_err)?;
-        Ok(actors
-            .into_iter()
-            .map(|a| self.remote_actor_to_social_actor(a))
-            .collect())
     }
 
     async fn get_pending_followers(&self, user: &UserId) -> Result<Vec<SocialActor>, DomainError> {
-        let actors = self
-            .ap_service
-            .get_pending_followers(user.value())
+        self.follow_query
+            .get_pending_followers(user.value(), &self.base_url)
             .await
-            .map_err(ap_err)?;
-        Ok(actors
-            .into_iter()
-            .map(|a| self.remote_actor_to_social_actor(a))
-            .collect())
     }
 
     async fn count_following(&self, user: &UserId) -> Result<usize, DomainError> {
-        self.ap_service
-            .count_following(user.value())
-            .await
-            .map_err(ap_err)
+        self.follow_query.count_following(user.value()).await
     }
 
     async fn count_followers(&self, user: &UserId) -> Result<usize, DomainError> {
-        self.ap_service
-            .count_accepted_followers(user.value())
-            .await
-            .map_err(ap_err)
+        self.follow_query.count_followers(user.value()).await
     }
 
     async fn get_blocked(&self, user: &UserId) -> Result<Vec<SocialActor>, DomainError> {
@@ -230,7 +273,15 @@ impl SocialQuery for CompositeSocialAdapter {
             .map_err(ap_err)?;
         Ok(actors
             .into_iter()
-            .map(|a| self.remote_actor_to_social_actor(a))
+            .map(|a| {
+                let identity = SocialIdentity::from_actor_url(&a.url, &self.base_url);
+                SocialActor {
+                    identity,
+                    handle: a.handle,
+                    display_name: a.display_name,
+                    avatar_url: a.avatar_url,
+                }
+            })
             .collect())
     }
 
@@ -239,7 +290,9 @@ impl SocialQuery for CompositeSocialAdapter {
         follower: &UserId,
         target: &SocialIdentity,
     ) -> Result<bool, DomainError> {
-        let following = self.get_following(follower).await?;
-        Ok(following.iter().any(|a| a.identity == *target))
+        let actor_url = self.actor_url_from_identity(target);
+        self.follow_query
+            .is_following(follower.value(), &actor_url)
+            .await
     }
 }
