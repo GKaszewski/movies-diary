@@ -1,8 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
-use k_ap::{ApContentReader, ApObjectHandler};
+use k_ap::{ApContentReader, ApObjectHandler, LocalObject};
 use url::Url;
 
 use crate::{
@@ -21,10 +20,9 @@ impl ApContentReader for CompositeObjectHandler {
     async fn get_local_objects_page(
         &self,
         user_id: uuid::Uuid,
-        before: Option<DateTime<Utc>>,
+        before: Option<chrono::DateTime<chrono::Utc>>,
         limit: usize,
-    ) -> anyhow::Result<Vec<(Url, serde_json::Value, DateTime<Utc>)>> {
-        // Fetch from all three sources (watchlist/goals return all, reviews use DB pagination)
+    ) -> anyhow::Result<Vec<LocalObject>> {
         let fetch_limit = limit * 3;
         let reviews = self
             .review
@@ -39,16 +37,15 @@ impl ApContentReader for CompositeObjectHandler {
             .get_local_objects_page(user_id, None, usize::MAX)
             .await?;
 
-        let mut all: Vec<(Url, serde_json::Value, DateTime<Utc>)> = Vec::new();
+        let mut all: Vec<LocalObject> = Vec::new();
         all.extend(reviews);
         all.extend(watchlist);
         all.extend(goals);
 
-        // Apply before filter and sort descending by timestamp
         if let Some(before_ts) = before {
-            all.retain(|(_, _, ts)| *ts < before_ts);
+            all.retain(|obj| obj.published_at < before_ts);
         }
-        all.sort_by_key(|b| std::cmp::Reverse(b.2));
+        all.sort_by_key(|obj| std::cmp::Reverse(obj.published_at));
         all.truncate(limit);
         Ok(all)
     }

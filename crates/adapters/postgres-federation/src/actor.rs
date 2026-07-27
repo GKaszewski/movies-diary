@@ -1,43 +1,41 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use chrono::Utc;
-use k_ap::{ActorRepository, RemoteActor};
+use k_ap::{AnnounceRepository, Keypair, KeypairRepository, RemoteActor, RemoteActorCache};
 use sqlx::Row;
 
 use super::{PG_ACTOR_COLS, PostgresFederationRepository, pg_remote_actor};
 use adapter_common::datetime_to_str;
 
 #[async_trait]
-impl ActorRepository for PostgresFederationRepository {
-    async fn get_local_actor_keypair(
-        &self,
-        user_id: uuid::Uuid,
-    ) -> Result<Option<(String, String)>> {
+impl KeypairRepository for PostgresFederationRepository {
+    async fn get_local_actor_keypair(&self, user_id: uuid::Uuid) -> Result<Option<Keypair>> {
         let uid = user_id.to_string();
         let row =
             sqlx::query("SELECT public_key, private_key FROM ap_local_actors WHERE user_id = $1")
                 .bind(&uid)
                 .fetch_optional(&self.pool)
                 .await?;
-        Ok(row.map(|r| (r.get("public_key"), r.get("private_key"))))
+        Ok(row.map(|r| Keypair {
+            public_key: r.get("public_key"),
+            private_key: r.get("private_key"),
+        }))
     }
 
-    async fn save_local_actor_keypair(
-        &self,
-        user_id: uuid::Uuid,
-        public_key: String,
-        private_key: String,
-    ) -> Result<()> {
+    async fn save_local_actor_keypair(&self, user_id: uuid::Uuid, keypair: Keypair) -> Result<()> {
         let uid = user_id.to_string();
         let now = Utc::now().naive_utc();
         let created_at = datetime_to_str(&now);
         sqlx::query(
             "INSERT INTO ap_local_actors (user_id, public_key, private_key, created_at) VALUES ($1, $2, $3, $4::timestamptz)
              ON CONFLICT(user_id) DO UPDATE SET public_key = EXCLUDED.public_key, private_key = EXCLUDED.private_key",
-        ).bind(&uid).bind(&public_key).bind(&private_key).bind(&created_at).execute(&self.pool).await?;
+        ).bind(&uid).bind(&keypair.public_key).bind(&keypair.private_key).bind(&created_at).execute(&self.pool).await?;
         Ok(())
     }
+}
 
+#[async_trait]
+impl RemoteActorCache for PostgresFederationRepository {
     async fn upsert_remote_actor(&self, actor: RemoteActor) -> Result<()> {
         let now = Utc::now().naive_utc();
         let fetched_at = datetime_to_str(&now);
@@ -68,7 +66,10 @@ impl ActorRepository for PostgresFederationRepository {
             .await?;
         Ok(row.as_ref().map(|r| pg_remote_actor(r, "url")))
     }
+}
 
+#[async_trait]
+impl AnnounceRepository for PostgresFederationRepository {
     async fn add_announce(
         &self,
         activity_id: &str,

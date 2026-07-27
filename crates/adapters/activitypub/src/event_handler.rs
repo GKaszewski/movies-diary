@@ -217,7 +217,7 @@ impl ActivityPubEventHandler {
         let json = serde_json::to_value(obj)?;
 
         self.ap_service
-            .broadcast_create_note(user_id.value(), json, ApVisibility::Public, vec![])
+            .broadcast_create(user_id.value(), json, ApVisibility::Public, vec![])
             .await?;
 
         let year = review.watched_at().year() as u16;
@@ -283,7 +283,7 @@ impl ActivityPubEventHandler {
         let json = serde_json::to_value(obj)?;
 
         self.ap_service
-            .broadcast_update_note(user_id.value(), json, ApVisibility::Public, vec![])
+            .broadcast_update(user_id.value(), json, ApVisibility::Public, vec![])
             .await?;
 
         Ok(())
@@ -349,7 +349,7 @@ impl ActivityPubEventHandler {
         let json = serde_json::to_value(obj)?;
 
         self.ap_service
-            .broadcast_create_note(user_id.value(), json, ApVisibility::Public, vec![])
+            .broadcast_create(user_id.value(), json, ApVisibility::Public, vec![])
             .await?;
         Ok(())
     }
@@ -416,7 +416,7 @@ impl ActivityPubEventHandler {
             let json = serde_json::to_value(obj)?;
 
             self.ap_service
-                .broadcast_update_note(user_id.value(), json, ApVisibility::Public, vec![])
+                .broadcast_update(user_id.value(), json, ApVisibility::Public, vec![])
                 .await?;
         }
 
@@ -462,7 +462,7 @@ impl ActivityPubEventHandler {
         );
         let json = serde_json::to_value(obj)?;
         self.ap_service
-            .broadcast_update_note(user_id.value(), json, ApVisibility::Public, vec![])
+            .broadcast_update(user_id.value(), json, ApVisibility::Public, vec![])
             .await?;
         Ok(())
     }
@@ -494,11 +494,11 @@ impl ActivityPubEventHandler {
         let json = serde_json::to_value(obj)?;
         if is_create {
             self.ap_service
-                .broadcast_create_note(user_id.value(), json, ApVisibility::Public, vec![])
+                .broadcast_create(user_id.value(), json, ApVisibility::Public, vec![])
                 .await?;
         } else {
             self.ap_service
-                .broadcast_update_note(user_id.value(), json, ApVisibility::Public, vec![])
+                .broadcast_update(user_id.value(), json, ApVisibility::Public, vec![])
                 .await?;
         }
         Ok(())

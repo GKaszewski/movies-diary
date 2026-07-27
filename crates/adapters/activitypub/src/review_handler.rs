@@ -7,7 +7,7 @@ use domain::{
     ports::{DiaryQuery, EventPublisher, LocalApContentQuery, MovieQuery},
     value_objects::{Comment, ExternalMetadataId, MovieId, Rating, ReviewId, UserId},
 };
-use k_ap::{ApContentReader, ApObjectHandler};
+use k_ap::{AS_PUBLIC, ApContentReader, ApObjectHandler, LocalObject};
 use url::Url;
 
 use crate::objects::{ReviewApInput, ReviewObject, review_to_ap_object};
@@ -30,7 +30,7 @@ impl ApContentReader for ReviewObjectHandler {
         user_id: uuid::Uuid,
         before: Option<chrono::DateTime<chrono::Utc>>,
         limit: usize,
-    ) -> anyhow::Result<Vec<(url::Url, serde_json::Value, chrono::DateTime<chrono::Utc>)>> {
+    ) -> anyhow::Result<Vec<LocalObject>> {
         let domain_user_id = UserId::from_uuid(user_id);
         let before_naive = before.map(|dt| dt.naive_utc());
         let entries = self
@@ -65,7 +65,16 @@ impl ApContentReader for ReviewObjectHandler {
                     base_url: self.base_url.clone(),
                 },
             );
-            results.push((ap_id, serde_json::to_value(obj)?, published));
+            let follower_cc = format!("{}/followers", actor);
+            results.push(LocalObject {
+                ap_id,
+                object: serde_json::to_value(obj)?,
+                published_at: published,
+                to: vec![AS_PUBLIC.to_string()],
+                cc: vec![follower_cc],
+                bto: vec![],
+                bcc: vec![],
+            });
         }
         Ok(results)
     }

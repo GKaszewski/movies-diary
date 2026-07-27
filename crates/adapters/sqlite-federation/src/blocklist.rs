@@ -1,14 +1,14 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use chrono::Utc;
-use k_ap::{BlockedDomain, BlocklistRepository};
+use k_ap::{ActorBlocklist, BlockedDomain, DomainBlocklist};
 use sqlx::Row;
 
 use super::SqliteFederationRepository;
 use adapter_common::datetime_to_str;
 
 #[async_trait]
-impl BlocklistRepository for SqliteFederationRepository {
+impl DomainBlocklist for SqliteFederationRepository {
     async fn add_blocked_domain(&self, domain: &str, reason: Option<&str>) -> Result<()> {
         let now = Utc::now().naive_utc();
         let ts = datetime_to_str(&now);
@@ -56,7 +56,10 @@ impl BlocklistRepository for SqliteFederationRepository {
                 .await?;
         Ok(count > 0)
     }
+}
 
+#[async_trait]
+impl ActorBlocklist for SqliteFederationRepository {
     async fn add_blocked_actor(&self, local_user_id: uuid::Uuid, actor_url: &str) -> Result<()> {
         let uid = local_user_id.to_string();
         let ts = datetime_to_str(&Utc::now().naive_utc());

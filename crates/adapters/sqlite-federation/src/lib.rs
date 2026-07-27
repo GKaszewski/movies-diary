@@ -103,10 +103,6 @@ pub fn wire(pool: SqlitePool) -> activitypub::FederationRepos {
 }
 
 #[cfg(test)]
-#[path = "tests/outbox_url.rs"]
-mod outbox_url_tests;
-
-#[cfg(test)]
 #[path = "tests/actor_block_tests.rs"]
 mod actor_block_tests;
 

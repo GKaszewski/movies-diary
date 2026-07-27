@@ -1,7 +1,7 @@
 use super::*;
 use chrono::Utc;
 use domain::ports::FederationAdminQuery;
-use k_ap::ActorRepository;
+use k_ap::AnnounceRepository;
 use sqlx::SqlitePool;
 
 async fn test_pool() -> SqlitePool {

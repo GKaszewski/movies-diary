@@ -7,7 +7,7 @@ use domain::{
     ports::{GoalQuery, RemoteGoalRepository},
     value_objects::UserId,
 };
-use k_ap::{ApContentReader, ApObjectHandler};
+use k_ap::{AS_PUBLIC, ApContentReader, ApObjectHandler, LocalObject};
 use url::Url;
 
 use crate::objects::{GoalObject, goal_to_ap_object};
@@ -26,7 +26,7 @@ impl ApContentReader for GoalObjectHandler {
         user_id: uuid::Uuid,
         _before: Option<DateTime<chrono::Utc>>,
         _limit: usize,
-    ) -> anyhow::Result<Vec<(Url, serde_json::Value, DateTime<chrono::Utc>)>> {
+    ) -> anyhow::Result<Vec<LocalObject>> {
         let uid = UserId::from_uuid(user_id);
         let goals = self
             .goal_repo
@@ -35,6 +35,7 @@ impl ApContentReader for GoalObjectHandler {
             .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         let actor = actor_url(&self.base_url, user_id);
+        let follower_cc = format!("{}/followers", actor);
         let mut results = Vec::new();
         for goal in goals {
             let ap_id = goal_url(&self.base_url, user_id, goal.year());
@@ -47,7 +48,15 @@ impl ApContentReader for GoalObjectHandler {
                 0,
                 &self.base_url,
             );
-            results.push((ap_id, serde_json::to_value(obj)?, published));
+            results.push(LocalObject {
+                ap_id,
+                object: serde_json::to_value(obj)?,
+                published_at: published,
+                to: vec![AS_PUBLIC.to_string()],
+                cc: vec![follower_cc.clone()],
+                bto: vec![],
+                bcc: vec![],
+            });
         }
         Ok(results)
     }

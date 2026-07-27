@@ -1,10 +1,16 @@
 use chrono::{DateTime, Utc};
 use k_ap::AS_PUBLIC;
-use k_ap::NoteType;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
 use domain::models::Review;
+
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+pub(crate) enum ActivityStreamsType {
+    #[default]
+    Note,
+    Article,
+}
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -34,7 +40,7 @@ pub(crate) fn normalize_hashtag(title: &str) -> String {
 #[serde(rename_all = "camelCase")]
 pub struct ReviewObject {
     #[serde(rename = "type")]
-    pub(crate) kind: NoteType,
+    pub(crate) kind: ActivityStreamsType,
     pub(crate) id: Url,
     pub(crate) attributed_to: Url,
     pub(crate) content: String,
@@ -125,7 +131,7 @@ pub fn review_to_ap_object(review: &Review, input: ReviewApInput) -> ReviewObjec
     };
 
     ReviewObject {
-        kind: NoteType::default(),
+        kind: ActivityStreamsType::default(),
         id: ap_id,
         attributed_to: actor_url.clone(),
         content,
@@ -150,7 +156,7 @@ pub fn review_to_ap_object(review: &Review, input: ReviewApInput) -> ReviewObjec
 #[serde(rename_all = "camelCase")]
 pub struct WatchlistObject {
     #[serde(rename = "type")]
-    pub(crate) kind: NoteType,
+    pub(crate) kind: ActivityStreamsType,
     pub(crate) id: Url,
     pub(crate) attributed_to: Url,
     pub(crate) content: String,
@@ -218,7 +224,7 @@ pub fn watchlist_to_ap_object(input: WatchlistApInput) -> WatchlistObject {
     ];
 
     WatchlistObject {
-        kind: NoteType::default(),
+        kind: ActivityStreamsType::default(),
         id: ap_id,
         attributed_to: actor_url.clone(),
         content,
@@ -240,7 +246,7 @@ pub fn watchlist_to_ap_object(input: WatchlistApInput) -> WatchlistObject {
 #[serde(rename_all = "camelCase")]
 pub struct GoalObject {
     #[serde(rename = "type")]
-    pub(crate) kind: NoteType,
+    pub(crate) kind: ActivityStreamsType,
     pub(crate) id: Url,
     pub(crate) attributed_to: Url,
     pub(crate) content: String,
@@ -277,7 +283,7 @@ pub fn goal_to_ap_object(
     }];
 
     GoalObject {
-        kind: NoteType::default(),
+        kind: ActivityStreamsType::default(),
         id: ap_id,
         attributed_to: actor_url.clone(),
         content,

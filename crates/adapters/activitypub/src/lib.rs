@@ -18,7 +18,7 @@ pub const INSTANCE_ACTOR_ID: uuid::Uuid =
 pub use k_ap::{
     ActivityPubService, ActivityRepository, ActorRepository, ApContentReader, ApFederationConfig,
     ApObjectHandler, ApUser, ApUserRepository, BlocklistRepository, FederationData,
-    FollowRepository, Follower, FollowerStatus, FollowingStatus, RemoteActor,
+    FollowRepository, Follower, FollowerStatus, FollowingStatus, LocalObject, RemoteActor,
 };
 
 pub use event_handler::ActivityPubEventHandler;

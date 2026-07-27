@@ -1,14 +1,14 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use chrono::Utc;
-use k_ap::{BlockedDomain, BlocklistRepository};
+use k_ap::{ActorBlocklist, BlockedDomain, DomainBlocklist};
 use sqlx::Row;
 
 use super::PostgresFederationRepository;
 use adapter_common::datetime_to_str;
 
 #[async_trait]
-impl BlocklistRepository for PostgresFederationRepository {
+impl DomainBlocklist for PostgresFederationRepository {
     async fn add_blocked_domain(&self, domain: &str, reason: Option<&str>) -> Result<()> {
         let ts = datetime_to_str(&Utc::now().naive_utc());
         sqlx::query("INSERT INTO blocked_domains (domain, reason, blocked_at) VALUES ($1, $2, $3) ON CONFLICT(domain) DO UPDATE SET reason = EXCLUDED.reason")
@@ -48,7 +48,10 @@ impl BlocklistRepository for PostgresFederationRepository {
                 .await?;
         Ok(count > 0)
     }
+}
 
+#[async_trait]
+impl ActorBlocklist for PostgresFederationRepository {
     async fn add_blocked_actor(&self, local_user_id: uuid::Uuid, actor_url: &str) -> Result<()> {
         let uid = local_user_id.to_string();
         let ts = datetime_to_str(&Utc::now().naive_utc());
