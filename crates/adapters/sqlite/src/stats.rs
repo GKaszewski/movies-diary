@@ -1,15 +1,17 @@
 use async_trait::async_trait;
 use domain::{
     errors::DomainError,
-    models::{DirectorStat, MonthlyRating, UserStats, UserTrends},
+    models::{
+        ActorAppearance, DirectorStat, MonthlyRating, UserStats, UserTrends, compute_top_actors,
+    },
     ports::StatsRepository,
     value_objects::UserId,
 };
 use sqlx::SqlitePool;
 
 use crate::models::{
-    DirectorCountRow, GenreCountRow, MonthlyRatingRow, RatingDistRow, UserTotalsRow,
-    WatchMediumCountRow,
+    ActorAppearanceRow, DirectorCountRow, GenreCountRow, MonthlyRatingRow, RatingDistRow,
+    UserTotalsRow, WatchMediumCountRow,
 };
 
 pub struct SqliteStatsRepository {
@@ -101,7 +103,7 @@ impl StatsRepository for SqliteStatsRepository {
     async fn get_user_trends(&self, user_id: &UserId) -> Result<UserTrends, DomainError> {
         let uid = user_id.value().to_string();
 
-        let (rating_rows, director_rows, genre_rows, rating_dist_rows, medium_rows) =
+        let (rating_rows, director_rows, genre_rows, rating_dist_rows, medium_rows, actor_rows) =
             tokio::try_join!(
                 sqlx::query_as::<_, MonthlyRatingRow>(
                     "SELECT strftime('%Y-%m', watched_at) AS month,
@@ -154,6 +156,16 @@ impl StatsRepository for SqliteStatsRepository {
                  ORDER BY COUNT(*) DESC",
                 )
                 .bind(&uid)
+                .fetch_all(&self.pool),
+                sqlx::query_as::<_, ActorAppearanceRow>(
+                    "SELECT mc.tmdb_person_id, mc.name, mc.profile_path,
+                            mc.billing_order, mc.movie_id
+                     FROM reviews r
+                     INNER JOIN movie_cast mc ON mc.movie_id = r.movie_id
+                     WHERE r.user_id = ?
+                     GROUP BY mc.tmdb_person_id, mc.movie_id",
+                )
+                .bind(&uid)
                 .fetch_all(&self.pool)
             )
             .map_err(adapter_common::map_sqlx_error)?;
@@ -203,6 +215,19 @@ impl StatsRepository for SqliteStatsRepository {
             })
             .collect();
 
+        let top_actors = compute_top_actors(
+            actor_rows
+                .into_iter()
+                .map(|r| ActorAppearance {
+                    tmdb_person_id: r.tmdb_person_id as u64,
+                    name: r.name,
+                    profile_path: r.profile_path,
+                    billing_order: r.billing_order as u32,
+                    movie_id: r.movie_id,
+                })
+                .collect(),
+        );
+
         Ok(UserTrends {
             monthly_ratings,
             top_directors,
@@ -210,6 +235,7 @@ impl StatsRepository for SqliteStatsRepository {
             top_genres,
             rating_distribution,
             watch_medium_distribution,
+            top_actors,
         })
     }
 }

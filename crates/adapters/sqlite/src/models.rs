@@ -283,6 +283,15 @@ pub(crate) struct WatchMediumCountRow {
 }
 
 #[derive(sqlx::FromRow)]
+pub(crate) struct ActorAppearanceRow {
+    pub tmdb_person_id: i64,
+    pub name: String,
+    pub profile_path: Option<String>,
+    pub billing_order: i32,
+    pub movie_id: String,
+}
+
+#[derive(sqlx::FromRow)]
 pub(crate) struct WatchlistRow {
     pub id: String,
     pub user_id: String,

@@ -19,6 +19,7 @@ import { WATCH_MEDIUMS } from "@/lib/watch-mediums"
 import { ReviewDetailSheet } from "@/components/review-detail-sheet"
 import { DiaryCalendar } from "@/components/diary-calendar"
 import type { DiaryEntryDto } from "@/lib/api/common"
+import { tmdbProfileUrl } from "@/lib/api/client"
 import type { UserProfileResponse } from "@/features/users"
 
 type ProfileViewProps = {
@@ -231,6 +232,7 @@ function TrendsView({
   data: {
     trends?: {
       top_directors: { director: string; count: number }[]
+      top_actors?: { name: string; profile_path?: string; movie_count: number; score: number }[]
       monthly_ratings: {
         month_label: string
         avg_rating: number
@@ -262,6 +264,33 @@ function TrendsView({
                 <span>{d.director}</span>
                 <span className="text-xs text-muted-foreground">
                   {t("common.films", { count: d.count })}
+                </span>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {data.trends.top_actors && data.trends.top_actors.length > 0 && (
+        <Card size="sm">
+          <CardHeader>
+            <CardTitle className="text-sm">{t("profile.topActors")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {data.trends.top_actors.map((a) => (
+              <div
+                key={a.name}
+                className="flex items-center gap-3 py-1.5"
+              >
+                <Avatar size="sm">
+                  {a.profile_path && (
+                    <AvatarImage src={tmdbProfileUrl(a.profile_path)} />
+                  )}
+                  <AvatarFallback>{a.name[0]}</AvatarFallback>
+                </Avatar>
+                <span className="flex-1 truncate text-sm">{a.name}</span>
+                <span className="text-xs text-muted-foreground">
+                  {t("common.films", { count: a.movie_count })}
                 </span>
               </div>
             ))}

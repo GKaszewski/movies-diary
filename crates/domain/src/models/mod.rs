@@ -26,7 +26,10 @@ pub use federation::*;
 pub use feed::*;
 pub use movie::*;
 pub use review::*;
-pub use stats::{DirectorStat, MonthActivity, MonthlyRating, MovieStats, UserStats, UserTrends};
+pub use stats::{
+    ActorAppearance, ActorStat, DirectorStat, MonthActivity, MonthlyRating, MovieStats, UserStats,
+    UserTrends, compute_top_actors,
+};
 pub use user::*;
 
 pub use goal::{Goal, GoalWithProgress};

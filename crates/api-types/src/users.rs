@@ -61,6 +61,15 @@ pub struct DirectorStatDto {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct ActorStatDto {
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub profile_path: Option<String>,
+    pub movie_count: u32,
+    pub score: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct GenreStatDto {
     pub genre: String,
     pub count: i64,
@@ -80,6 +89,7 @@ pub struct UserTrendsDto {
     pub top_genres: Vec<GenreStatDto>,
     pub rating_distribution: [i64; 5],
     pub watch_medium_distribution: Vec<WatchMediumStatDto>,
+    pub top_actors: Vec<ActorStatDto>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]

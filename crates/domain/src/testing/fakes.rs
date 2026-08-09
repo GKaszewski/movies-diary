@@ -243,6 +243,7 @@ impl StatsRepository for FakeStatsRepository {
             top_genres: vec![],
             rating_distribution: [0; 5],
             watch_medium_distribution: vec![],
+            top_actors: vec![],
         })
     }
 

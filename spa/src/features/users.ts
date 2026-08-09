@@ -48,6 +48,14 @@ export const directorStatDtoSchema = z.object({
 })
 export type DirectorStatDto = z.infer<typeof directorStatDtoSchema>
 
+export const actorStatDtoSchema = z.object({
+  name: z.string(),
+  profile_path: z.string().optional(),
+  movie_count: z.number(),
+  score: z.number(),
+})
+export type ActorStatDto = z.infer<typeof actorStatDtoSchema>
+
 export const genreStatDtoSchema = z.object({
   genre: z.string(),
   count: z.number(),
@@ -64,6 +72,7 @@ export const userTrendsDtoSchema = z.object({
   monthly_ratings: z.array(monthlyRatingDtoSchema),
   top_directors: z.array(directorStatDtoSchema),
   max_director_count: z.number(),
+  top_actors: z.array(actorStatDtoSchema).default([]),
   top_genres: z.array(genreStatDtoSchema).default([]),
   rating_distribution: z.array(z.number()).default([]),
   watch_medium_distribution: z.array(watchMediumStatDtoSchema).default([]),

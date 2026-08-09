@@ -125,6 +125,7 @@
     "noEntries": "No entries",
     "noTrends": "No trends yet",
     "topDirectors": "Top Directors",
+    "topActors": "Favorite Actors",
     "monthlyActivity": "Monthly Activity",
     "searchPlaceholder": "Search entries...",
     "watchedAgo": "Watched {{when}}"

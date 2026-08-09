@@ -24,7 +24,7 @@ use crate::{
     state::AppState,
 };
 use api_types::{
-    DiaryResponse, DirectorStatDto, GenreStatDto, MonthActivityDto, MonthlyRatingDto,
+    ActorStatDto, DiaryResponse, DirectorStatDto, GenreStatDto, MonthActivityDto, MonthlyRatingDto,
     ProfileResponse, UserProfileQueryParams, UserProfileResponse, UserStatsDto, UserSummaryDto,
     UserTrendsDto, UsersResponse, WatchMediumStatDto,
 };
@@ -425,6 +425,16 @@ fn trends_to_dto(t: domain::models::UserTrends) -> UserTrendsDto {
             .map(|m| WatchMediumStatDto {
                 medium: m.medium,
                 count: m.count,
+            })
+            .collect(),
+        top_actors: t
+            .top_actors
+            .into_iter()
+            .map(|a| ActorStatDto {
+                name: a.name,
+                profile_path: a.profile_path,
+                movie_count: a.movie_count,
+                score: a.score,
             })
             .collect(),
     }
