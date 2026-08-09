@@ -27,7 +27,7 @@ type DiaryCalendarProps = {
   onSelectEntry?: (entry: DiaryEntryDto) => void
 }
 
-const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]
+const WEEKDAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
 
 export function DiaryCalendar({ entries, onSelectEntry }: DiaryCalendarProps) {
   const [month, setMonth] = useState(() => startOfMonth(new Date()))
@@ -45,8 +45,8 @@ export function DiaryCalendar({ entries, onSelectEntry }: DiaryCalendarProps) {
   }, [entries])
 
   const days = useMemo(() => {
-    const start = startOfWeek(startOfMonth(month))
-    const end = endOfWeek(endOfMonth(month))
+    const start = startOfWeek(startOfMonth(month), { weekStartsOn: 1 })
+    const end = endOfWeek(endOfMonth(month), { weekStartsOn: 1 })
     return eachDayOfInterval({ start, end })
   }, [month])
 
