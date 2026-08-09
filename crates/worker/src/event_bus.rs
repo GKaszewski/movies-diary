@@ -4,8 +4,7 @@ use std::sync::Arc;
 use anyhow::Context;
 use domain::ports::{EventConsumer, EventPublisher};
 
-use crate::db::DbPool;
-use infra_wiring::EventBusBackend;
+use infra_wiring::{DbPool, EventBusBackend};
 
 pub async fn create(
     db_pool: &DbPool,

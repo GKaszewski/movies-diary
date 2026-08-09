@@ -1,10 +1,14 @@
 pub mod apply_mapping;
 pub mod apply_profile;
+pub mod apply_profile_and_map;
 pub mod cleanup;
 pub mod commands;
 pub mod create_session;
 pub mod delete_profile;
 pub mod deps;
 pub mod execute;
+pub mod get_mapping_stage;
+pub mod get_preview_stage;
+pub mod get_session_state;
 pub mod list_profiles;
 pub mod save_profile;

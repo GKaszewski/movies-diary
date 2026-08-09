@@ -6,15 +6,22 @@ use domain::testing::InMemoryWatchEventRepository;
 use domain::value_objects::UserId;
 use uuid::Uuid;
 
+use crate::integrations::deps::DismissWatchEventsDeps;
 use crate::integrations::{commands::DismissWatchEventsCommand, dismiss};
+
+fn deps(watch_events: &Arc<InMemoryWatchEventRepository>) -> DismissWatchEventsDeps {
+    DismissWatchEventsDeps {
+        watch_event_command: Arc::clone(watch_events) as _,
+        watch_event_query: Arc::clone(watch_events) as _,
+    }
+}
 
 #[tokio::test]
 async fn dismisses_empty_list_returns_zero() {
     let events = InMemoryWatchEventRepository::new();
 
     let result = dismiss::execute(
-        Arc::clone(&events) as _,
-        Arc::clone(&events) as _,
+        &deps(&events),
         DismissWatchEventsCommand {
             user_id: Uuid::new_v4(),
             event_ids: vec![],
@@ -31,8 +38,7 @@ async fn fails_when_event_not_found() {
     let events = InMemoryWatchEventRepository::new();
 
     let result = dismiss::execute(
-        Arc::clone(&events) as _,
-        Arc::clone(&events) as _,
+        &deps(&events),
         DismissWatchEventsCommand {
             user_id: Uuid::new_v4(),
             event_ids: vec![Uuid::new_v4()],
@@ -73,8 +79,7 @@ async fn dismisses_existing_events() {
     watch_events.save(&e2).await.unwrap();
 
     let result = dismiss::execute(
-        Arc::clone(&watch_events) as _,
-        Arc::clone(&watch_events) as _,
+        &deps(&watch_events),
         DismissWatchEventsCommand {
             user_id: uid,
             event_ids: vec![id1, id2],

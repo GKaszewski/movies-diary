@@ -1,7 +1,8 @@
 #[cfg(feature = "federation")]
 use api_types::{
     ActorListResponse, ActorUrlRequest, AddBlockedDomainRequest, BlockedActorResponse,
-    BlockedDomainResponse, FollowRequest, RemoteActorDto,
+    BlockedDomainResponse, FollowRelationResponse, FollowRequest, PendingCountResponse,
+    RemoteActorDto,
 };
 #[cfg(feature = "federation")]
 use utoipa::OpenApi;
@@ -13,6 +14,9 @@ use utoipa::OpenApi;
         crate::handlers::social::get_following,
         crate::handlers::social::get_followers,
         crate::handlers::social::get_pending_followers,
+        crate::handlers::social::get_pending_follower_count,
+        crate::handlers::social::get_pending_following,
+        crate::handlers::social::get_relationship,
         crate::handlers::social::follow,
         crate::handlers::social::unfollow,
         crate::handlers::social::accept_follower,
@@ -33,6 +37,8 @@ use utoipa::OpenApi;
         BlockedDomainResponse,
         AddBlockedDomainRequest,
         BlockedActorResponse,
+        FollowRelationResponse,
+        PendingCountResponse,
     ))
 )]
 pub struct SocialDoc;

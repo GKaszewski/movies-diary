@@ -29,11 +29,7 @@ pub(crate) fn build_export_response(
         ExportFormat::Json => ("application/json", "diary.json"),
     };
     let query = ExportQuery { user_id, format };
-    let stream = export_diary_uc::execute(
-        &state.app_ctx.repos.diary,
-        &state.app_ctx.services.diary_exporter,
-        query,
-    );
+    let stream = export_diary_uc::execute(&state.app_ctx.deps.diary.export_diary, query);
     let stream = stream.map(|r| {
         if let Err(ref e) = r {
             tracing::error!("diary export stream error: {e}");
@@ -146,16 +142,25 @@ pub(crate) async fn build_page_context(
     csrf_token: String,
 ) -> HtmlPageContext {
     let uuid = user_id.as_ref().map(|u| u.value());
-    let (user_email, is_admin) = if let Some(ref id) = user_id {
-        let user = state.app_ctx.repos.user.find_by_id(id).await.ok().flatten();
-        let email = user.as_ref().map(|u| u.email().value().to_string());
-        let admin = user
-            .as_ref()
-            .map(|u| matches!(u.role(), domain::models::UserRole::Admin))
-            .unwrap_or(false);
-        (email, admin)
+    // Page chrome (email/admin badge, pending-follow badge) degrades rather than
+    // blanking the page: a failed lookup or count logs a warning and falls back
+    // to a zeroed `PageViewer`, same as the previous silent `.unwrap_or(0)` — now
+    // logged and explicit, per the error policy in `get_page_viewer`'s doc comment.
+    let (user_email, is_admin, pending_follow_count) = if let Some(ref id) = user_id {
+        match application::users::get_page_viewer::execute(
+            &state.app_ctx.deps.users.get_page_viewer,
+            id.value(),
+        )
+        .await
+        {
+            Ok(viewer) => (viewer.email, viewer.is_admin, viewer.pending_follow_count),
+            Err(e) => {
+                tracing::warn!("get_page_viewer failed for {}: {e}", id.value());
+                (None, false, 0)
+            }
+        }
     } else {
-        (None, false)
+        (None, false, 0)
     };
     HtmlPageContext {
         user_email,
@@ -167,5 +172,6 @@ pub(crate) async fn build_page_context(
         canonical_url: state.app_ctx.config.base_url.clone(),
         csrf_token,
         page_rss_url: None,
+        pending_follow_count,
     }
 }

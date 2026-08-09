@@ -5,6 +5,9 @@ use domain::ports::WebhookTokenRepository;
 use domain::testing::InMemoryWebhookTokenRepository;
 use uuid::Uuid;
 
+use crate::integrations::deps::{
+    GenerateWebhookTokenDeps, GetWebhookTokensDeps, RevokeWebhookTokenDeps,
+};
 use crate::integrations::{
     commands::{GenerateWebhookTokenCommand, RevokeWebhookTokenCommand},
     generate_token, get_tokens,
@@ -19,7 +22,9 @@ async fn revokes_existing_token() {
     let user_id = Uuid::new_v4();
 
     let generated = generate_token::execute(
-        Arc::clone(&tokens),
+        &GenerateWebhookTokenDeps {
+            webhook_token: Arc::clone(&tokens),
+        },
         GenerateWebhookTokenCommand {
             user_id,
             provider: WatchEventSource::Jellyfin,
@@ -32,15 +37,22 @@ async fn revokes_existing_token() {
     let token_id = generated.token.id().value();
 
     revoke_token::execute(
-        Arc::clone(&tokens),
+        &RevokeWebhookTokenDeps {
+            webhook_token: Arc::clone(&tokens),
+        },
         RevokeWebhookTokenCommand { user_id, token_id },
     )
     .await
     .unwrap();
 
-    let remaining = get_tokens::execute(Arc::clone(&tokens), GetWebhookTokensQuery { user_id })
-        .await
-        .unwrap();
+    let remaining = get_tokens::execute(
+        &GetWebhookTokensDeps {
+            webhook_token: Arc::clone(&tokens),
+        },
+        GetWebhookTokensQuery { user_id },
+    )
+    .await
+    .unwrap();
 
     assert!(remaining.is_empty());
 }

@@ -8,7 +8,9 @@ use domain::value_objects::{MovieId, UserId};
 use uuid::Uuid;
 
 use crate::test_helpers::TestContextBuilder;
-use crate::watchlist::{commands::RemoveFromWatchlistCommand, remove};
+use crate::watchlist::{
+    commands::RemoveFromWatchlistCommand, deps::RemoveFromWatchlistDeps, remove,
+};
 
 #[tokio::test]
 async fn removes_entry_and_emits_event() {
@@ -24,9 +26,12 @@ async fn removes_entry_and_emits_event() {
         .await
         .unwrap();
 
+    let deps = RemoveFromWatchlistDeps {
+        watchlist: Arc::clone(&watchlist) as _,
+        event_publisher: Arc::clone(&events) as _,
+    };
     remove::execute(
-        Arc::clone(&watchlist) as _,
-        Arc::clone(&events) as _,
+        &deps,
         RemoveFromWatchlistCommand {
             user_id: uid,
             movie_id: mid,
@@ -47,9 +52,12 @@ async fn removes_entry_and_emits_event() {
 #[tokio::test]
 async fn fails_when_not_on_watchlist() {
     let b = TestContextBuilder::new();
+    let deps = RemoveFromWatchlistDeps {
+        watchlist: b.watchlist_repo.clone(),
+        event_publisher: b.event_publisher.clone(),
+    };
     let result = remove::execute(
-        b.watchlist_repo.clone(),
-        b.event_publisher.clone(),
+        &deps,
         RemoveFromWatchlistCommand {
             user_id: Uuid::new_v4(),
             movie_id: Uuid::new_v4(),

@@ -1,22 +1,20 @@
-use std::sync::Arc;
-
 use domain::{
     errors::DomainError,
     models::ReviewHistory,
-    ports::DiaryQuery,
     services::review_history::{ReviewHistoryAnalyzer, Trend},
     value_objects::MovieId,
 };
 
+use crate::diary::deps::GetReviewHistoryDeps;
 use crate::diary::queries::GetReviewHistoryQuery;
 
 pub async fn execute(
-    diary: &Arc<dyn DiaryQuery>,
+    deps: &GetReviewHistoryDeps,
     query: GetReviewHistoryQuery,
 ) -> Result<(ReviewHistory, Trend), DomainError> {
     let movie_id = MovieId::from_uuid(query.movie_id);
 
-    let mut history = diary.get_review_history(&movie_id).await?;
+    let mut history = deps.diary.get_review_history(&movie_id).await?;
 
     let trend = ReviewHistoryAnalyzer::rating_trend(&history)?;
 

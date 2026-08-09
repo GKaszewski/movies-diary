@@ -9,11 +9,11 @@ use uuid::Uuid;
 
 use application::wrapup::{
     commands::RequestWrapUpCommand,
-    delete as delete_wrapup, generate, get_wrapup,
+    delete as delete_wrapup, generate, get_ready_report, get_wrapup,
     list_wrapups::{self, ListWrapUpsQuery},
 };
 use domain::errors::DomainError;
-use domain::models::wrapup::{WrapUpRecord, WrapUpReport, WrapUpStatus};
+use domain::models::wrapup::{WrapUpRecord, WrapUpReport, WrapUpScope, WrapUpStatus};
 use domain::value_objects::WrapUpId;
 
 use crate::{
@@ -66,12 +66,7 @@ pub async fn post_generate(
         start_date: start,
         end_date: end,
     };
-    let id = generate::execute(
-        state.app_ctx.repos.wrapup_repo.clone(),
-        state.app_ctx.services.event_publisher.clone(),
-        cmd,
-    )
-    .await?;
+    let id = generate::execute(&state.app_ctx.deps.wrapup.generate, cmd).await?;
     Ok(Json(WrapUpGeneratedResponse {
         id: id.value().to_string(),
     }))
@@ -90,7 +85,7 @@ pub async fn get_list(
     user: AuthenticatedUser,
 ) -> Result<Json<WrapUpListResponse>, ApiError> {
     let records = list_wrapups::execute(
-        state.app_ctx.repos.wrapup_repo.clone(),
+        &state.app_ctx.deps.wrapup.list_wrapups,
         ListWrapUpsQuery {
             user_id: Some(user.0.value()),
         },
@@ -117,7 +112,7 @@ pub async fn get_status(
     Path(id): Path<Uuid>,
 ) -> Result<Json<WrapUpStatusResponse>, ApiError> {
     let record = get_wrapup::execute(
-        state.app_ctx.repos.wrapup_repo.clone(),
+        &state.app_ctx.deps.wrapup.get_wrapup,
         WrapUpId::from_uuid(id),
     )
     .await?
@@ -142,7 +137,7 @@ pub async fn get_report(
     Path(id): Path<Uuid>,
 ) -> impl IntoResponse {
     match get_wrapup::execute(
-        state.app_ctx.repos.wrapup_repo.clone(),
+        &state.app_ctx.deps.wrapup.get_wrapup,
         WrapUpId::from_uuid(id),
     )
     .await
@@ -177,7 +172,7 @@ pub async fn delete_wrapup_handler(
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, ApiError> {
     delete_wrapup::execute(
-        state.app_ctx.repos.wrapup_repo.clone(),
+        &state.app_ctx.deps.wrapup.delete_wrapup,
         WrapUpId::from_uuid(id),
     )
     .await?;
@@ -243,30 +238,15 @@ pub async fn get_user_wrapup_html(
     Path((user_id, year)): Path<(Uuid, i32)>,
     Extension(csrf): Extension<CsrfToken>,
 ) -> impl IntoResponse {
-    let start = match NaiveDate::from_ymd_opt(year, 1, 1) {
-        Some(d) => d,
-        None => return StatusCode::BAD_REQUEST.into_response(),
-    };
-    let end = match NaiveDate::from_ymd_opt(year + 1, 1, 1) {
-        Some(d) => d,
-        None => return StatusCode::BAD_REQUEST.into_response(),
-    };
-
-    let record = match state
-        .app_ctx
-        .repos
-        .wrapup_repo
-        .find_existing(Some(user_id), start, end)
-        .await
-    {
-        Ok(Some(r)) if r.status == WrapUpStatus::Ready => r,
-        _ => return StatusCode::NOT_FOUND.into_response(),
-    };
-
-    let report = match record.report {
-        Some(r) => r,
-        None => return StatusCode::NOT_FOUND.into_response(),
-    };
+    let scope = WrapUpScope::User(user_id);
+    let report =
+        match get_ready_report::execute(&state.app_ctx.deps.wrapup.get_ready_report, scope, year)
+            .await
+        {
+            Ok(report) => report,
+            Err(DomainError::ValidationError(_)) => return StatusCode::BAD_REQUEST.into_response(),
+            Err(_) => return StatusCode::NOT_FOUND.into_response(),
+        };
 
     let ctx = super::helpers::build_page_context(&state, viewer, csrf.0).await;
     render_wrapup(&report, year, &ctx)
@@ -278,29 +258,16 @@ pub async fn get_global_wrapup_html(
     Path(year): Path<i32>,
     Extension(csrf): Extension<CsrfToken>,
 ) -> impl IntoResponse {
-    let start = match NaiveDate::from_ymd_opt(year, 1, 1) {
-        Some(d) => d,
-        None => return StatusCode::BAD_REQUEST.into_response(),
-    };
-    let end = match NaiveDate::from_ymd_opt(year + 1, 1, 1) {
-        Some(d) => d,
-        None => return StatusCode::BAD_REQUEST.into_response(),
-    };
-
-    let record = match state
-        .app_ctx
-        .repos
-        .wrapup_repo
-        .find_existing(None, start, end)
-        .await
+    let report = match get_ready_report::execute(
+        &state.app_ctx.deps.wrapup.get_ready_report,
+        WrapUpScope::Global,
+        year,
+    )
+    .await
     {
-        Ok(Some(r)) if r.status == WrapUpStatus::Ready => r,
-        _ => return StatusCode::NOT_FOUND.into_response(),
-    };
-
-    let report = match record.report {
-        Some(r) => r,
-        None => return StatusCode::NOT_FOUND.into_response(),
+        Ok(report) => report,
+        Err(DomainError::ValidationError(_)) => return StatusCode::BAD_REQUEST.into_response(),
+        Err(_) => return StatusCode::NOT_FOUND.into_response(),
     };
 
     let ctx = super::helpers::build_page_context(&state, viewer, csrf.0).await;

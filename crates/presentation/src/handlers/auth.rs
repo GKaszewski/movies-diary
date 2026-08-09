@@ -7,11 +7,7 @@ use axum::{
 use chrono::Utc;
 
 use application::auth::{
-    commands::RegisterCommand,
-    deps::{LoginDeps, RefreshDeps, RegisterAndLoginDeps, RegisterDeps},
-    login as login_uc,
-    queries::LoginCommand,
-    register as register_uc,
+    commands::RegisterCommand, login as login_uc, queries::LoginCommand, register as register_uc,
 };
 
 use crate::{
@@ -56,15 +52,8 @@ pub async fn login(
     State(state): State<AppState>,
     Json(req): Json<LoginRequest>,
 ) -> Result<Json<LoginResponse>, ApiError> {
-    let deps = LoginDeps {
-        user: state.app_ctx.repos.user.clone(),
-        password_hasher: state.app_ctx.services.password_hasher.clone(),
-        auth: state.app_ctx.services.auth.clone(),
-        refresh_session: state.app_ctx.repos.refresh_session.clone(),
-        config: state.app_ctx.config.clone(),
-    };
     let result = login_uc::execute(
-        &deps,
+        &state.app_ctx.deps.auth.login,
         LoginCommand {
             email: req.email,
             password: req.password,
@@ -93,13 +82,8 @@ pub async fn register(
     State(state): State<AppState>,
     Json(req): Json<RegisterRequest>,
 ) -> Result<StatusCode, ApiError> {
-    let deps = RegisterDeps {
-        user: state.app_ctx.repos.user.clone(),
-        password_hasher: state.app_ctx.services.password_hasher.clone(),
-        config: state.app_ctx.config.clone(),
-    };
     register_uc::execute(
-        &deps,
+        &state.app_ctx.deps.auth.register,
         RegisterCommand {
             email: req.email,
             username: req.username,
@@ -123,12 +107,9 @@ pub async fn refresh(
     State(state): State<AppState>,
     Json(req): Json<RefreshRequest>,
 ) -> Result<Json<RefreshResponse>, ApiError> {
-    let deps = RefreshDeps {
-        refresh_session: state.app_ctx.repos.refresh_session.clone(),
-        auth: state.app_ctx.services.auth.clone(),
-        config: state.app_ctx.config.clone(),
-    };
-    let result = application::auth::refresh::execute(&deps, &req.refresh_token).await?;
+    let result =
+        application::auth::refresh::execute(&state.app_ctx.deps.auth.refresh, &req.refresh_token)
+            .await?;
     Ok(Json(RefreshResponse {
         token: result.token,
         refresh_token: result.refresh_token,
@@ -147,11 +128,8 @@ pub async fn api_logout(
     State(state): State<AppState>,
     Json(req): Json<LogoutRequest>,
 ) -> StatusCode {
-    let _ = application::auth::logout::execute(
-        state.app_ctx.repos.refresh_session.clone(),
-        &req.refresh_token,
-    )
-    .await;
+    let _ = application::auth::logout::execute(&state.app_ctx.deps.auth.logout, &req.refresh_token)
+        .await;
     StatusCode::NO_CONTENT
 }
 
@@ -172,6 +150,7 @@ pub async fn get_login_page(
         canonical_url: format!("{}/login", state.app_ctx.config.base_url),
         csrf_token: csrf.0,
         page_rss_url: None,
+        pending_follow_count: 0,
     };
     render_page(LoginTemplate {
         ctx: &ctx,
@@ -187,15 +166,8 @@ pub async fn post_login(
     if crate::csrf::mismatch(&csrf, &form.csrf_token) {
         return StatusCode::FORBIDDEN.into_response();
     }
-    let deps = LoginDeps {
-        user: state.app_ctx.repos.user.clone(),
-        password_hasher: state.app_ctx.services.password_hasher.clone(),
-        auth: state.app_ctx.services.auth.clone(),
-        refresh_session: state.app_ctx.repos.refresh_session.clone(),
-        config: state.app_ctx.config.clone(),
-    };
     match login_uc::execute(
-        &deps,
+        &state.app_ctx.deps.auth.login,
         LoginCommand {
             email: form.email,
             password: form.password,
@@ -242,6 +214,7 @@ pub async fn get_register_page(
         canonical_url: format!("{}/register", state.app_ctx.config.base_url),
         csrf_token: csrf.0,
         page_rss_url: None,
+        pending_follow_count: 0,
     };
     render_page(RegisterTemplate {
         ctx: &ctx,
@@ -261,15 +234,8 @@ pub async fn post_register(
     if crate::csrf::mismatch(&csrf, &form.csrf_token) {
         return StatusCode::FORBIDDEN.into_response();
     }
-    let deps = RegisterAndLoginDeps {
-        user: state.app_ctx.repos.user.clone(),
-        password_hasher: state.app_ctx.services.password_hasher.clone(),
-        auth: state.app_ctx.services.auth.clone(),
-        refresh_session: state.app_ctx.repos.refresh_session.clone(),
-        config: state.app_ctx.config.clone(),
-    };
     match application::auth::register_and_login::execute(
-        &deps,
+        &state.app_ctx.deps.auth.register_and_login,
         application::auth::commands::RegisterAndLoginCommand {
             email: form.email,
             username: form.username,

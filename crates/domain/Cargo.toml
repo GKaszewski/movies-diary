@@ -15,5 +15,8 @@ serde_json = { workspace = true }
 
 email_address = "0.2.9"
 
+[dev-dependencies]
+tokio = { workspace = true }
+
 [features]
 test-helpers = []

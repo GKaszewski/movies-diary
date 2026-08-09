@@ -1,28 +1,36 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use domain::{ports::UserRepository, value_objects::UserId};
+use domain::{
+    ports::UserRepository,
+    value_objects::{InstanceIdentity, UserId},
+};
 use k_ap::{ApProfileField, ApUser, ApUserRepository};
 use url::Url;
 
 pub struct DomainUserRepoAdapter {
     pub repo: Arc<dyn UserRepository>,
-    pub base_url: String,
+    pub instance: InstanceIdentity,
 }
 
 impl DomainUserRepoAdapter {
-    pub fn new(repo: Arc<dyn UserRepository>, base_url: String) -> Self {
-        Self { repo, base_url }
+    pub fn new(repo: Arc<dyn UserRepository>, instance: InstanceIdentity) -> Self {
+        Self { repo, instance }
     }
 
     fn build_user(&self, u: &domain::models::User) -> ApUser {
         let avatar_url = u
             .avatar_path()
-            .and_then(|p| Url::parse(&format!("{}/images/{}", self.base_url, p)).ok());
+            .and_then(|p| Url::parse(&self.instance.image_url_for(p)).ok());
         let banner_url = u
             .banner_path()
-            .and_then(|p| Url::parse(&format!("{}/images/{}", self.base_url, p)).ok());
-        let profile_url = Url::parse(&format!("{}/u/{}", self.base_url, u.username().value())).ok();
+            .and_then(|p| Url::parse(&self.instance.image_url_for(p)).ok());
+        let profile_url = Url::parse(&format!(
+            "{}/u/{}",
+            self.instance.base_url(),
+            u.username().value()
+        ))
+        .ok();
         ApUser {
             id: u.id().value(),
             username: u.username().value().to_string(),
@@ -46,12 +54,8 @@ impl DomainUserRepoAdapter {
             manually_approves_followers: true,
             discoverable: true,
             actor_type: Default::default(),
-            featured_url: Url::parse(&format!(
-                "{}/users/{}/featured",
-                self.base_url,
-                u.id().value()
-            ))
-            .ok(),
+            featured_url: Url::parse(&format!("{}/featured", self.instance.actor_url_for(u.id())))
+                .ok(),
         }
     }
 }

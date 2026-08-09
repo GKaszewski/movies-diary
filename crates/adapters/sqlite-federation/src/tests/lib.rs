@@ -1,6 +1,5 @@
 use super::*;
 use chrono::Utc;
-use domain::ports::FederationAdminQuery;
 use k_ap::AnnounceRepository;
 use sqlx::SqlitePool;
 
@@ -47,66 +46,4 @@ async fn duplicate_announce_is_ignored() {
     .await
     .unwrap();
     assert_eq!(repo.count_announces("https://local/r/1").await.unwrap(), 1);
-}
-
-async fn setup_db(pool: &SqlitePool) {
-    sqlx::query(
-        "CREATE TABLE IF NOT EXISTS ap_remote_actors (
-            url TEXT PRIMARY KEY,
-            handle TEXT NOT NULL,
-            inbox_url TEXT NOT NULL,
-            shared_inbox_url TEXT,
-            display_name TEXT,
-            avatar_url TEXT,
-            fetched_at TEXT NOT NULL
-        )",
-    )
-    .execute(pool)
-    .await
-    .unwrap();
-
-    sqlx::query(
-        "CREATE TABLE IF NOT EXISTS ap_following (
-            local_user_id TEXT NOT NULL,
-            remote_actor_url TEXT NOT NULL,
-            follow_activity_id TEXT NOT NULL,
-            status TEXT NOT NULL,
-            PRIMARY KEY (local_user_id, remote_actor_url)
-        )",
-    )
-    .execute(pool)
-    .await
-    .unwrap();
-}
-
-#[tokio::test]
-async fn test_list_all_followed_remote_actors_deduplicates() {
-    let pool = SqlitePool::connect(":memory:").await.unwrap();
-    setup_db(&pool).await;
-    let repo = SqliteFederationRepository::new(pool.clone());
-    let user1 = uuid::Uuid::new_v4();
-    let user2 = uuid::Uuid::new_v4();
-
-    sqlx::query(
-        "INSERT INTO ap_remote_actors (url, handle, inbox_url, fetched_at, display_name)
-         VALUES ('https://other.social/users/alice', 'alice@other.social', 'https://other.social/inbox', '2024-01-01', 'Alice')",
-    )
-    .execute(&pool)
-    .await
-    .unwrap();
-
-    sqlx::query(
-        "INSERT INTO ap_following (local_user_id, remote_actor_url, follow_activity_id, status)
-         VALUES (?, 'https://other.social/users/alice', 'act1', 'accepted'),
-                (?, 'https://other.social/users/alice', 'act2', 'accepted')",
-    )
-    .bind(user1.to_string())
-    .bind(user2.to_string())
-    .execute(&pool)
-    .await
-    .unwrap();
-
-    let actors = repo.list_all_followed_remote_actors().await.unwrap();
-    assert_eq!(actors.len(), 1);
-    assert_eq!(actors[0].handle, "alice@other.social");
 }

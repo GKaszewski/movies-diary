@@ -1,0 +1,64 @@
+//! Absorbs BOTH of `handlers/users.rs::get_profile_settings`'s repository calls:
+//! the user lookup (`repos.user.find_by_id`) and the profile_fields join
+//! (`repos.profile_fields.get_fields`) — plus the avatar/banner URL derivation via
+//! `InstanceIdentity`, following the same pattern `get_local_profile` uses.
+//!
+//! Error policy: profile fields are primary content for this page (it's the page
+//! whose entire job is editing them), not page chrome, so a failed join
+//! propagates as `Err` rather than silently degrading to an empty list.
+
+use domain::{errors::DomainError, value_objects::UserId};
+use uuid::Uuid;
+
+use crate::users::deps::GetProfileSettingsDeps;
+
+pub struct ProfileSettings {
+    pub username: String,
+    pub display_name: Option<String>,
+    pub bio: Option<String>,
+    pub avatar_url: Option<String>,
+    pub banner_url: Option<String>,
+    /// Not in the brief's interface sketch, but the deleted handler code read
+    /// `user.also_known_as()` and rendered it in `ProfileSettingsTemplate` — this
+    /// use case absorbs that read too, or the settings page would silently stop
+    /// showing it.
+    pub also_known_as: Option<String>,
+    pub fields: Vec<(String, String)>,
+}
+
+pub async fn execute(
+    deps: &GetProfileSettingsDeps,
+    user_id: Uuid,
+) -> Result<ProfileSettings, DomainError> {
+    let uid = UserId::from_uuid(user_id);
+    let user = deps
+        .user
+        .find_by_id(&uid)
+        .await?
+        .ok_or_else(|| DomainError::NotFound(format!("user {}", user_id)))?;
+
+    let avatar_url = user.avatar_path().map(|p| deps.instance.image_url_for(p));
+    let banner_url = user.banner_path().map(|p| deps.instance.image_url_for(p));
+
+    let fields = deps
+        .profile_fields
+        .get_fields(&uid)
+        .await?
+        .into_iter()
+        .map(|f| (f.name, f.value))
+        .collect();
+
+    Ok(ProfileSettings {
+        username: user.username().value().to_string(),
+        display_name: user.display_name().map(str::to_string),
+        bio: user.bio().map(str::to_string),
+        avatar_url,
+        banner_url,
+        also_known_as: user.also_known_as().map(str::to_string),
+        fields,
+    })
+}
+
+#[cfg(test)]
+#[path = "tests/get_profile_settings.rs"]
+mod tests;

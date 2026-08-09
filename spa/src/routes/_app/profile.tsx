@@ -46,6 +46,8 @@ function ProfilePage() {
         userId={auth.user_id}
         search={search}
         onSearchChange={setSearch}
+        bio={data.bio}
+        handle={data.handle}
         actions={
           <>
             <GoalSection goals={data.goals ?? []} />

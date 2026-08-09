@@ -2,7 +2,7 @@ use async_trait::async_trait;
 
 use crate::{
     errors::DomainError,
-    value_objects::{FollowStatus, SocialActor},
+    value_objects::{FollowRelation, FollowStatus, SocialActor},
 };
 
 #[async_trait]
@@ -50,31 +50,29 @@ pub trait FollowCommand: Send + Sync {
 
 #[async_trait]
 pub trait FollowQuery: Send + Sync {
-    async fn get_following(
-        &self,
-        user_id: uuid::Uuid,
-        base_url: &str,
-    ) -> Result<Vec<SocialActor>, DomainError>;
+    async fn get_following(&self, user_id: uuid::Uuid) -> Result<Vec<SocialActor>, DomainError>;
 
-    async fn get_followers(
-        &self,
-        user_id: uuid::Uuid,
-        base_url: &str,
-    ) -> Result<Vec<SocialActor>, DomainError>;
+    async fn get_followers(&self, user_id: uuid::Uuid) -> Result<Vec<SocialActor>, DomainError>;
 
     async fn get_pending_followers(
         &self,
         user_id: uuid::Uuid,
-        base_url: &str,
+    ) -> Result<Vec<SocialActor>, DomainError>;
+
+    async fn get_pending_following(
+        &self,
+        user_id: uuid::Uuid,
     ) -> Result<Vec<SocialActor>, DomainError>;
 
     async fn count_following(&self, user_id: uuid::Uuid) -> Result<usize, DomainError>;
 
     async fn count_followers(&self, user_id: uuid::Uuid) -> Result<usize, DomainError>;
 
-    async fn is_following(
+    async fn count_pending_followers(&self, user_id: uuid::Uuid) -> Result<usize, DomainError>;
+
+    async fn get_relation(
         &self,
-        follower_id: uuid::Uuid,
+        viewer_id: uuid::Uuid,
         target_actor_url: &str,
-    ) -> Result<bool, DomainError>;
+    ) -> Result<FollowRelation, DomainError>;
 }

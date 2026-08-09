@@ -306,6 +306,7 @@ version = "0.1.0"
 dependencies = [
  "domain",
  "serde",
+ "serde_json",
  "utoipa",
  "uuid",
 ]
@@ -1119,6 +1120,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "composition"
+version = "0.1.0"
+dependencies = [
+ "activitypub",
+ "anyhow",
+ "application",
+ "async-trait",
+ "auth",
+ "chrono",
+ "domain",
+ "infra-wiring",
+ "jellyfin",
+ "metadata",
+ "nats",
+ "object-storage",
+ "plex",
+ "poster-fetcher",
+ "postgres",
+ "postgres-event-queue",
+ "postgres-federation",
+ "postgres-search",
+ "postgres-social",
+ "sqlite",
+ "sqlite-event-queue",
+ "sqlite-federation",
+ "sqlite-search",
+ "sqlite-social",
+ "sqlx",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
 name = "concurrent-queue"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1621,6 +1655,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 2.0.18",
+ "tokio",
  "uuid",
 ]
 
@@ -3905,7 +3940,7 @@ dependencies = [
  "chrono",
  "domain",
  "futures",
- "postgres-federation",
+ "postgres-social",
  "serde",
  "serde_json",
  "sqlx",
@@ -3940,6 +3975,7 @@ dependencies = [
  "chrono",
  "domain",
  "k-ap",
+ "postgres-social",
  "serde_json",
  "sqlx",
  "tracing",
@@ -3952,6 +3988,18 @@ version = "0.1.0"
 dependencies = [
  "adapter-common",
  "async-trait",
+ "domain",
+ "sqlx",
+ "uuid",
+]
+
+[[package]]
+name = "postgres-social"
+version = "0.1.0"
+dependencies = [
+ "adapter-common",
+ "async-trait",
+ "chrono",
  "domain",
  "sqlx",
  "uuid",
@@ -3991,43 +4039,22 @@ checksum = "925383efa346730478fb4838dbe9137d2a47675ad789c546d150a6e1dd4ab31c"
 name = "presentation"
 version = "0.1.0"
 dependencies = [
- "activitypub",
  "anyhow",
  "api-types",
  "application",
  "async-trait",
- "auth",
  "axum",
  "axum-governor",
  "bytes",
  "chrono",
+ "composition",
  "domain",
  "dotenvy",
- "export",
  "futures",
- "http-body-util",
- "importer",
  "infer",
- "infra-wiring",
- "jellyfin",
- "metadata",
- "nats",
- "object-storage",
  "percent-encoding",
- "plex",
- "poster-fetcher",
- "postgres",
- "postgres-event-queue",
- "postgres-federation",
- "postgres-search",
- "rss 0.1.0",
  "serde",
  "serde_json",
- "sqlite",
- "sqlite-event-queue",
- "sqlite-federation",
- "sqlite-search",
- "sqlx",
  "template-askama",
  "tokio",
  "tower",
@@ -4948,6 +4975,50 @@ dependencies = [
 ]
 
 [[package]]
+name = "server"
+version = "0.1.0"
+dependencies = [
+ "activitypub",
+ "anyhow",
+ "application",
+ "async-trait",
+ "auth",
+ "axum",
+ "bytes",
+ "composition",
+ "domain",
+ "dotenvy",
+ "export",
+ "futures",
+ "http-body-util",
+ "importer",
+ "infra-wiring",
+ "metadata",
+ "nats",
+ "object-storage",
+ "poster-fetcher",
+ "postgres",
+ "postgres-event-queue",
+ "postgres-federation",
+ "postgres-search",
+ "postgres-social",
+ "presentation",
+ "rss 0.1.0",
+ "serde_json",
+ "sqlite",
+ "sqlite-event-queue",
+ "sqlite-federation",
+ "sqlite-search",
+ "sqlite-social",
+ "sqlx",
+ "tokio",
+ "tower",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+]
+
+[[package]]
 name = "sha1"
 version = "0.10.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5190,7 +5261,7 @@ dependencies = [
  "futures",
  "serde",
  "serde_json",
- "sqlite-federation",
+ "sqlite-social",
  "sqlx",
  "tokio",
  "tracing",
@@ -5224,6 +5295,7 @@ dependencies = [
  "domain",
  "k-ap",
  "serde_json",
+ "sqlite-social",
  "sqlx",
  "tokio",
  "tracing",
@@ -5236,6 +5308,19 @@ version = "0.1.0"
 dependencies = [
  "adapter-common",
  "async-trait",
+ "domain",
+ "sqlx",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
+name = "sqlite-social"
+version = "0.1.0"
+dependencies = [
+ "adapter-common",
+ "async-trait",
+ "chrono",
  "domain",
  "sqlx",
  "tokio",
@@ -7151,6 +7236,7 @@ dependencies = [
  "application",
  "async-trait",
  "auth",
+ "composition",
  "domain",
  "dotenvy",
  "export",

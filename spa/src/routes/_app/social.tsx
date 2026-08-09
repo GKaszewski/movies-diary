@@ -1,26 +1,31 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
-import { ArrowLeft, UserCheck, UserMinus, UserPlus, UserX, Users } from "lucide-react"
+import { ArrowLeft, Clock, UserCheck, UserMinus, UserPlus, UserX, Users, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { toast } from "sonner"
 import { useAuth } from "@/components/auth-provider"
 import { ActorList } from "@/components/actor-list"
+import { ConfirmDialog } from "@/components/confirm-dialog"
 import {
   useFollow,
   useFollowing,
   useFollowers,
   usePendingFollowers,
+  usePendingFollowing,
   useUnfollow,
+  useCancelFollow,
   useAcceptFollower,
   useRejectFollower,
   useRemoveFollower,
   useUserFollowing,
   useUserFollowers,
 } from "@/features/social"
+import type { RemoteActorDto } from "@/features/social"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 
 type SearchParams = { user?: string }
@@ -57,14 +62,31 @@ function SocialPage() {
 
 function OwnSocialTabs() {
   const { t } = useTranslation()
+  const { data: pendingFollowers } = usePendingFollowers()
+  const { data: pendingFollowing } = usePendingFollowing()
+  const pendingCount = pendingFollowers?.actors.length ?? 0
+  const requestedCount = pendingFollowing?.actors.length ?? 0
+
   return (
     <Tabs defaultValue="following">
       <TabsList className="w-full">
         <TabsTrigger value="following">{t("social.following")}</TabsTrigger>
+        <TabsTrigger value="requested">
+          {t("social.requested")}
+          {requestedCount > 0 && (
+            <Badge variant="secondary" className="ml-1.5 text-[10px]">{requestedCount}</Badge>
+          )}
+        </TabsTrigger>
         <TabsTrigger value="followers">{t("social.followers")}</TabsTrigger>
-        <TabsTrigger value="pending">{t("social.pending")}</TabsTrigger>
+        <TabsTrigger value="pending">
+          {t("social.pending")}
+          {pendingCount > 0 && (
+            <Badge variant="secondary" className="ml-1.5 text-[10px]">{pendingCount}</Badge>
+          )}
+        </TabsTrigger>
       </TabsList>
       <TabsContent value="following"><OwnFollowingTab /></TabsContent>
+      <TabsContent value="requested"><RequestedTab /></TabsContent>
       <TabsContent value="followers"><OwnFollowersTab /></TabsContent>
       <TabsContent value="pending"><PendingTab /></TabsContent>
     </Tabs>
@@ -162,6 +184,49 @@ function PendingTab() {
         </div>
       )}
     />
+  )
+}
+
+function RequestedTab() {
+  const { t } = useTranslation()
+  const { data, isPending } = usePendingFollowing()
+  const cancelMutation = useCancelFollow()
+  const [target, setTarget] = useState<RemoteActorDto | null>(null)
+
+  return (
+    <>
+      <ActorList
+        data={data}
+        isPending={isPending}
+        emptyIcon={Clock}
+        emptyTitle={t("social.noRequested")}
+        emptyDescription={t("social.noRequestedDesc")}
+        renderAction={(actor) => (
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-[10px]">{t("common.requested")}</Badge>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setTarget(actor)}
+              disabled={cancelMutation.isPending}
+            >
+              <X className="mr-1 size-3.5" />
+              {t("social.cancelRequest")}
+            </Button>
+          </div>
+        )}
+      />
+      <ConfirmDialog
+        open={!!target}
+        onOpenChange={(open) => !open && setTarget(null)}
+        title={t("social.cancelRequestConfirm")}
+        confirmLabel={t("social.cancelRequest")}
+        onConfirm={() => {
+          if (target) cancelMutation.mutate({ actor_url: target.url })
+          setTarget(null)
+        }}
+      />
+    </>
   )
 }
 

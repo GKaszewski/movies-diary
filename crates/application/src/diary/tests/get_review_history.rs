@@ -7,7 +7,10 @@ use domain::{
     value_objects::{MovieTitle, ReleaseYear},
 };
 
-use crate::{diary::get_review_history, diary::queries::GetReviewHistoryQuery};
+use crate::{
+    diary::deps::GetReviewHistoryDeps, diary::get_review_history,
+    diary::queries::GetReviewHistoryQuery,
+};
 
 #[tokio::test]
 async fn returns_empty_history() {
@@ -23,8 +26,9 @@ async fn returns_empty_history() {
     let diary = domain::testing::FakeDiaryQuery::new();
     diary.seed_history(movie, vec![]);
     let diary: Arc<dyn DiaryQuery> = diary;
+    let deps = GetReviewHistoryDeps { diary };
 
-    let (history, trend) = get_review_history::execute(&diary, GetReviewHistoryQuery { movie_id })
+    let (history, trend) = get_review_history::execute(&deps, GetReviewHistoryQuery { movie_id })
         .await
         .unwrap();
 

@@ -8,10 +8,22 @@ use uuid::Uuid;
 
 use crate::integrations::commands::{ConfirmWatchEventsCommand, WatchEventConfirmation};
 use crate::integrations::confirm;
+use crate::integrations::deps::ConfirmWatchEventsDeps;
 use crate::test_helpers::NoopReviewLogger;
 
 fn noop_logger() -> Arc<dyn crate::ports::ReviewLogger> {
     Arc::new(NoopReviewLogger)
+}
+
+fn deps(
+    watch_events: &Arc<InMemoryWatchEventRepository>,
+    review_logger: Arc<dyn crate::ports::ReviewLogger>,
+) -> ConfirmWatchEventsDeps {
+    ConfirmWatchEventsDeps {
+        watch_event_command: Arc::clone(watch_events) as _,
+        watch_event_query: Arc::clone(watch_events) as _,
+        review_logger,
+    }
 }
 
 #[tokio::test]
@@ -32,9 +44,7 @@ async fn confirms_watch_event_via_review_logger() {
     watch_events.save(&event).await.unwrap();
 
     let result = confirm::execute(
-        Arc::clone(&watch_events) as _,
-        Arc::clone(&watch_events) as _,
-        noop_logger(),
+        &deps(&watch_events, noop_logger()),
         ConfirmWatchEventsCommand {
             user_id: uid,
             confirmations: vec![WatchEventConfirmation {
@@ -55,9 +65,7 @@ async fn empty_confirmations_returns_zero() {
     let watch_events = InMemoryWatchEventRepository::new();
 
     let result = confirm::execute(
-        Arc::clone(&watch_events) as _,
-        Arc::clone(&watch_events) as _,
-        noop_logger(),
+        &deps(&watch_events, noop_logger()),
         ConfirmWatchEventsCommand {
             user_id: Uuid::new_v4(),
             confirmations: vec![],
@@ -87,9 +95,7 @@ async fn confirms_event_with_external_metadata_id_and_no_movie_id() {
     watch_events.save(&event).await.unwrap();
 
     let result = confirm::execute(
-        Arc::clone(&watch_events) as _,
-        Arc::clone(&watch_events) as _,
-        noop_logger(),
+        &deps(&watch_events, noop_logger()),
         ConfirmWatchEventsCommand {
             user_id: uid,
             confirmations: vec![WatchEventConfirmation {
@@ -124,9 +130,7 @@ async fn rejects_other_users_event() {
     watch_events.save(&event).await.unwrap();
 
     let result = confirm::execute(
-        Arc::clone(&watch_events) as _,
-        Arc::clone(&watch_events) as _,
-        noop_logger(),
+        &deps(&watch_events, noop_logger()),
         ConfirmWatchEventsCommand {
             user_id: intruder,
             confirmations: vec![WatchEventConfirmation {
@@ -146,9 +150,7 @@ async fn fails_when_event_not_found() {
     let watch_events = InMemoryWatchEventRepository::new();
 
     let result = confirm::execute(
-        Arc::clone(&watch_events) as _,
-        Arc::clone(&watch_events) as _,
-        noop_logger(),
+        &deps(&watch_events, noop_logger()),
         ConfirmWatchEventsCommand {
             user_id: Uuid::new_v4(),
             confirmations: vec![WatchEventConfirmation {
@@ -208,9 +210,7 @@ async fn confirms_event_with_movie_id() {
         ));
 
     let result = confirm::execute(
-        Arc::clone(&watch_events) as _,
-        Arc::clone(&watch_events) as _,
-        review_logger,
+        &deps(&watch_events, review_logger),
         ConfirmWatchEventsCommand {
             user_id: uid,
             confirmations: vec![WatchEventConfirmation {
@@ -244,9 +244,7 @@ async fn confirms_event_without_movie_id_and_without_external_metadata_id() {
     watch_events.save(&event).await.unwrap();
 
     let result = confirm::execute(
-        Arc::clone(&watch_events) as _,
-        Arc::clone(&watch_events) as _,
-        noop_logger(),
+        &deps(&watch_events, noop_logger()),
         ConfirmWatchEventsCommand {
             user_id: uid,
             confirmations: vec![WatchEventConfirmation {
@@ -293,9 +291,7 @@ async fn confirms_multiple_events() {
     watch_events.save(&event2).await.unwrap();
 
     let result = confirm::execute(
-        Arc::clone(&watch_events) as _,
-        Arc::clone(&watch_events) as _,
-        noop_logger(),
+        &deps(&watch_events, noop_logger()),
         ConfirmWatchEventsCommand {
             user_id: uid,
             confirmations: vec![
@@ -336,9 +332,7 @@ async fn confirms_event_without_year() {
     watch_events.save(&event).await.unwrap();
 
     let result = confirm::execute(
-        Arc::clone(&watch_events) as _,
-        Arc::clone(&watch_events) as _,
-        noop_logger(),
+        &deps(&watch_events, noop_logger()),
         ConfirmWatchEventsCommand {
             user_id: uid,
             confirmations: vec![WatchEventConfirmation {

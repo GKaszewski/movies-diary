@@ -30,3 +30,11 @@ pub struct ReindexSearchDeps {
     pub person_command: Arc<dyn PersonCommand>,
     pub person_query: Arc<dyn PersonQuery>,
 }
+
+pub struct GetMovieProfileDeps {
+    pub movie_profile: Arc<dyn MovieProfileRepository>,
+}
+
+pub struct GetMoviesDeps {
+    pub movie: Arc<dyn MovieQuery>,
+}

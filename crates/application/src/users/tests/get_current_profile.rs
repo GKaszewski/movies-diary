@@ -9,7 +9,7 @@ use uuid::Uuid;
 use crate::{
     auth::{commands::RegisterCommand, deps::RegisterDeps, register},
     test_helpers::TestContextBuilder,
-    users::{get_current_profile, queries::GetCurrentProfileQuery},
+    users::{deps::GetCurrentProfileDeps, get_current_profile, queries::GetCurrentProfileQuery},
 };
 
 #[tokio::test]
@@ -41,8 +41,9 @@ async fn returns_profile_for_existing_user() {
         .unwrap()
         .unwrap();
 
+    let deps = GetCurrentProfileDeps { user: user_repo };
     let profile = get_current_profile::execute(
-        user_repo,
+        &deps,
         GetCurrentProfileQuery {
             user_id: user.id().value(),
         },
@@ -58,8 +59,9 @@ async fn fails_for_nonexistent_user() {
     let b = TestContextBuilder::new();
     let user_repo = b.user_repo.clone();
 
+    let deps = GetCurrentProfileDeps { user: user_repo };
     let result = get_current_profile::execute(
-        user_repo,
+        &deps,
         GetCurrentProfileQuery {
             user_id: Uuid::new_v4(),
         },
@@ -97,8 +99,9 @@ async fn returns_profile_with_avatar_banner_and_fields() {
     let b = TestContextBuilder::new().with_users(Arc::clone(&users) as _);
     let user_repo = b.user_repo.clone();
 
+    let deps = GetCurrentProfileDeps { user: user_repo };
     let profile = get_current_profile::execute(
-        user_repo,
+        &deps,
         GetCurrentProfileQuery {
             user_id: uid.value(),
         },

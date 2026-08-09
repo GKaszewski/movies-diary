@@ -12,6 +12,10 @@ FROM rust:slim-bookworm AS builder
 WORKDIR /build
 
 # Cache dependency compilation separately from source
+#
+# Every workspace member's Cargo.toml must be listed here by hand — `cargo fetch`
+# below reads the whole workspace graph, so a missing manifest fails the build with
+# "failed to read .../Cargo.toml". Adding a crate to crates/ means adding a line here.
 COPY Cargo.toml Cargo.lock ./
 COPY .cargo ./.cargo
 COPY crates/adapters/activitypub/Cargo.toml       crates/adapters/activitypub/Cargo.toml
@@ -30,16 +34,20 @@ COPY crates/adapters/plex/Cargo.toml              crates/adapters/plex/Cargo.tom
 COPY crates/adapters/rss/Cargo.toml               crates/adapters/rss/Cargo.toml
 COPY crates/adapters/sqlite/Cargo.toml              crates/adapters/sqlite/Cargo.toml
 COPY crates/adapters/sqlite-federation/Cargo.toml   crates/adapters/sqlite-federation/Cargo.toml
+COPY crates/adapters/sqlite-social/Cargo.toml       crates/adapters/sqlite-social/Cargo.toml
 COPY crates/adapters/sqlite-event-queue/Cargo.toml  crates/adapters/sqlite-event-queue/Cargo.toml
 COPY crates/adapters/postgres/Cargo.toml            crates/adapters/postgres/Cargo.toml
 COPY crates/adapters/postgres-federation/Cargo.toml crates/adapters/postgres-federation/Cargo.toml
+COPY crates/adapters/postgres-social/Cargo.toml     crates/adapters/postgres-social/Cargo.toml
 COPY crates/adapters/postgres-event-queue/Cargo.toml crates/adapters/postgres-event-queue/Cargo.toml
 COPY crates/adapters/template-askama/Cargo.toml   crates/adapters/template-askama/Cargo.toml
 COPY crates/api-types/Cargo.toml                  crates/api-types/Cargo.toml
 COPY crates/application/Cargo.toml                crates/application/Cargo.toml
 COPY crates/adapters/tmdb-enrichment/Cargo.toml   crates/adapters/tmdb-enrichment/Cargo.toml
 COPY crates/domain/Cargo.toml                     crates/domain/Cargo.toml
+COPY crates/composition/Cargo.toml                crates/composition/Cargo.toml
 COPY crates/presentation/Cargo.toml               crates/presentation/Cargo.toml
+COPY crates/server/Cargo.toml                     crates/server/Cargo.toml
 COPY crates/tui/Cargo.toml                        crates/tui/Cargo.toml
 COPY crates/adapters/image-converter/Cargo.toml   crates/adapters/image-converter/Cargo.toml
 COPY crates/adapters/sqlite-search/Cargo.toml     crates/adapters/sqlite-search/Cargo.toml
@@ -71,7 +79,7 @@ COPY crates ./crates
 # To add NATS support (EVENT_BUS_BACKEND=nats):
 #   --build-arg FEATURES=sqlite,sqlite-federation,nats
 ARG FEATURES=sqlite,sqlite-federation
-RUN cargo build --release -p presentation -p worker --no-default-features --features "${FEATURES}"
+RUN cargo build --release -p server -p worker --no-default-features --features "${FEATURES}"
 
 # ----- runtime -----
 FROM debian:bookworm-slim
@@ -85,13 +93,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-COPY --from=builder /build/target/release/presentation ./presentation
+COPY --from=builder /build/target/release/server ./server
 COPY --from=builder /build/target/release/worker ./worker
 COPY static ./static
 COPY --from=spa-builder /spa/dist ./spa/dist
 
 EXPOSE 3000
 
-ENV RUST_LOG=presentation=info,tower_http=info
+ENV RUST_LOG=server=info,tower_http=info
 
-CMD ["./presentation"]
+CMD ["./server"]

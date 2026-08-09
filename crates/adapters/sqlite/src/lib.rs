@@ -32,7 +32,7 @@ pub use profile::SqliteMovieProfileRepository;
 pub use profile_fields::SqliteProfileFieldsRepository;
 pub use refresh_sessions::SqliteRefreshSessionAdapter;
 pub use review::SqliteReviewRepository;
-pub use sqlite_federation::SqliteApContentQuery;
+pub use sqlite_social::SqliteApContentQuery;
 pub use stats::SqliteStatsRepository;
 pub use users::SqliteUserRepository;
 pub use watch_event::{SqliteWatchEventRepository, SqliteWebhookTokenRepository};
@@ -118,7 +118,7 @@ pub async fn wire(database_url: &str) -> anyhow::Result<SqliteWireOutput> {
         goal_query: std::sync::Arc::new(goals::SqliteGoalRepository::new(pool.clone())) as _,
         user_settings: std::sync::Arc::clone(&user_settings_repo) as _,
         federation_settings: user_settings_repo as _,
-        remote_goal: std::sync::Arc::new(sqlite_federation::SqliteRemoteGoalRepository::new(
+        remote_goal: std::sync::Arc::new(sqlite_social::SqliteRemoteGoalRepository::new(
             pool.clone(),
         )) as _,
         deduplicator: std::sync::Arc::new(SqliteMovieDeduplicator::new(pool)) as _,

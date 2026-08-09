@@ -5,7 +5,9 @@ use domain::{
     events::DomainEvent,
     models::ReviewSource,
     ports::{DiaryQuery, EventPublisher, LocalApContentQuery, MovieQuery},
-    value_objects::{Comment, ExternalMetadataId, MovieId, Rating, ReviewId, UserId},
+    value_objects::{
+        Comment, ExternalMetadataId, InstanceIdentity, MovieId, Rating, ReviewId, UserId,
+    },
 };
 use k_ap::{AS_PUBLIC, ApContentReader, ApObjectHandler, LocalObject};
 use url::Url;
@@ -20,7 +22,7 @@ pub struct ReviewObjectHandler {
     pub diary_repo: Arc<dyn DiaryQuery>,
     pub review_store: Arc<dyn RemoteReviewRepository>,
     pub event_publisher: Arc<dyn EventPublisher>,
-    pub base_url: String,
+    pub instance: InstanceIdentity,
 }
 
 #[async_trait]
@@ -39,17 +41,17 @@ impl ApContentReader for ReviewObjectHandler {
             .await
             .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
-        let actor = actor_url(&self.base_url, user_id);
+        let actor = actor_url(&self.instance, user_id);
         let mut results = Vec::new();
         for entry in entries {
             let review = entry.review();
             let published =
                 chrono::DateTime::from_naive_utc_and_offset(*review.watched_at(), chrono::Utc);
             let movie = entry.movie();
-            let ap_id = review_url(&self.base_url, review.id());
+            let ap_id = review_url(&self.instance, review.id());
             let poster_url = movie
                 .poster_path()
-                .map(|p| format!("{}/images/{}", self.base_url, p.value()));
+                .map(|p| self.instance.image_url_for(p.value()));
 
             let obj = review_to_ap_object(
                 review,
@@ -62,7 +64,7 @@ impl ApContentReader for ReviewObjectHandler {
                         .external_metadata_id()
                         .map(|id| id.value().to_string()),
                     poster_url,
-                    base_url: self.base_url.clone(),
+                    base_url: self.instance.base_url().to_string(),
                 },
             );
             let follower_cc = format!("{}/followers", actor);

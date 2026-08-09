@@ -31,3 +31,7 @@ pub struct RegisterAndLoginDeps {
     pub refresh_session: Arc<dyn RefreshSessionRepository>,
     pub config: AppConfig,
 }
+
+pub struct LogoutDeps {
+    pub refresh_session: Arc<dyn RefreshSessionRepository>,
+}

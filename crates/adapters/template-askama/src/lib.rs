@@ -296,6 +296,7 @@ pub struct FollowingTemplate {
     pub ctx: HtmlPageContext,
     pub user_id: uuid::Uuid,
     pub actors: Vec<RemoteActorData>,
+    pub pending_actors: Vec<RemoteActorData>,
     pub error: Option<String>,
 }
 

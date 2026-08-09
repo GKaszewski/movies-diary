@@ -74,7 +74,8 @@ pub struct TestContextBuilder {
     pub user_settings_repo: Arc<dyn UserSettingsRepository>,
     pub review_logger: Arc<dyn ReviewLogger>,
     pub social_command: Arc<dyn domain::ports::SocialCommand>,
-    pub social_query_unified: Arc<dyn domain::ports::SocialQuery>,
+    pub social_query_unified: Arc<dyn domain::ports::FollowGraphQuery>,
+    pub block_query: Arc<dyn domain::ports::BlockQuery>,
     pub federation_admin: Arc<dyn domain::ports::FederationAdminQuery>,
     pub refresh_session_repo: Arc<dyn RefreshSessionRepository>,
     pub config: AppConfig,
@@ -127,6 +128,7 @@ impl TestContextBuilder {
             review_logger: Arc::new(NoopReviewLogger),
             social_command: Arc::clone(&social) as _,
             social_query_unified: Arc::clone(&social) as _,
+            block_query: Arc::clone(&social) as _,
             federation_admin: Arc::new(NoopFederationAdminQuery),
             refresh_session_repo: InMemoryRefreshSessionRepository::new(),
             config: AppConfig {

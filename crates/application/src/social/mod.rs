@@ -1,4 +1,11 @@
 pub mod commands;
+pub mod count_pending_followers;
 pub mod deps;
 pub mod execute;
-pub mod queries;
+pub mod get_blocked;
+pub mod get_followers;
+pub mod get_following;
+pub mod get_pending_followers;
+pub mod get_pending_following;
+pub mod get_relation;
+pub mod local_service;

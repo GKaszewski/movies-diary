@@ -12,21 +12,23 @@ use crate::{
     errors::DomainError,
     models::{
         FederationFlags, Goal, ImportProfile, ImportSession, Movie, MovieFilter, MovieProfile,
-        MovieSummary, ProfileField, RefreshSession, Review, User, UserSettings, UserSummary,
-        WatchEvent, WatchEventStatus, WatchlistEntry, WatchlistWithMovie, WebhookToken,
+        MovieSummary, ProfileField, RefreshSession, RemoteWatchlistEntry, Review, User,
+        UserSettings, UserSummary, WatchEvent, WatchEventStatus, WatchlistEntry,
+        WatchlistWithMovie, WebhookToken,
         collections::{PageParams, Paginated},
     },
     ports::{
-        GoalCommand, GoalQuery, ImportProfileRepository, ImportSessionRepository, MovieCommand,
-        MovieProfileRepository, MovieQuery, RefreshSessionRepository, ReviewRepository,
-        SocialCommand, SocialQuery, UserFederationSettingsQuery, UserProfileFieldsRepository,
-        UserRepository, UserSettingsRepository, WatchEventCommand, WatchEventQuery,
-        WatchlistRepository, WebhookTokenRepository,
+        BlockQuery, FollowGraphQuery, GoalCommand, GoalQuery, ImportProfileRepository,
+        ImportSessionRepository, MovieCommand, MovieProfileRepository, MovieQuery,
+        RefreshSessionRepository, RemoteWatchlistRepository, ReviewRepository, SocialCommand,
+        UserFederationSettingsQuery, UserProfileFieldsRepository, UserRepository,
+        UserSettingsRepository, WatchEventCommand, WatchEventQuery, WatchlistRepository,
+        WebhookTokenRepository,
     },
     value_objects::{
-        Email, ExternalMetadataId, GoalId, ImportProfileId, ImportSessionId, MovieId, MovieTitle,
-        ReleaseYear, ReviewId, SocialActor, SocialIdentity, UserId, Username, WatchEventId,
-        WebhookTokenId,
+        Email, ExternalMetadataId, FollowRelation, FollowStatus, GoalId, ImportProfileId,
+        ImportSessionId, MovieId, MovieTitle, ReleaseYear, ReviewId, SocialActor, SocialIdentity,
+        UserId, Username, WatchEventId, WebhookTokenId,
     },
 };
 
@@ -264,9 +266,13 @@ impl UserRepository for InMemoryUserRepository {
 
     async fn update_profile(
         &self,
-        _user_id: &UserId,
-        _profile: &crate::models::UserProfile,
+        user_id: &UserId,
+        profile: &crate::models::UserProfile,
     ) -> Result<(), DomainError> {
+        let mut store = self.store.lock().unwrap();
+        if let Some(user) = store.get_mut(&user_id.value()) {
+            user.update_profile(profile.clone());
+        }
         Ok(())
     }
 }
@@ -336,6 +342,78 @@ impl WatchlistRepository for InMemoryWatchlistRepository {
     async fn contains(&self, user_id: &UserId, movie_id: &MovieId) -> Result<bool, DomainError> {
         let key = (user_id.value(), movie_id.value());
         Ok(self.store.lock().unwrap().contains_key(&key))
+    }
+}
+
+// ── InMemoryRemoteWatchlistRepository ─────────────────────────────────────────
+
+/// Unlike `NoopRemoteWatchlistRepository`, this actually stores what it's given —
+/// needed by tests that must prove a federated-watchlist read returns real seeded
+/// data, not just an empty default that happens to match by coincidence.
+pub struct InMemoryRemoteWatchlistRepository {
+    store: Mutex<Vec<RemoteWatchlistEntry>>,
+}
+
+impl InMemoryRemoteWatchlistRepository {
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self {
+            store: Mutex::new(Vec::new()),
+        })
+    }
+
+    pub fn with_entries(entries: Vec<RemoteWatchlistEntry>) -> Arc<Self> {
+        Arc::new(Self {
+            store: Mutex::new(entries),
+        })
+    }
+}
+
+#[async_trait]
+impl RemoteWatchlistRepository for InMemoryRemoteWatchlistRepository {
+    async fn save(&self, entry: RemoteWatchlistEntry) -> Result<(), DomainError> {
+        self.store.lock().unwrap().push(entry);
+        Ok(())
+    }
+
+    async fn remove_by_ap_id(&self, ap_id: &str, actor_url: &str) -> Result<(), DomainError> {
+        self.store
+            .lock()
+            .unwrap()
+            .retain(|e| !(e.ap_id == ap_id && e.actor_url == actor_url));
+        Ok(())
+    }
+
+    async fn get_by_actor_url(
+        &self,
+        actor_url: &str,
+    ) -> Result<Vec<RemoteWatchlistEntry>, DomainError> {
+        Ok(self
+            .store
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|e| e.actor_url == actor_url)
+            .cloned()
+            .collect())
+    }
+
+    async fn remove_all_by_actor(&self, actor_url: &str) -> Result<(), DomainError> {
+        self.store
+            .lock()
+            .unwrap()
+            .retain(|e| e.actor_url != actor_url);
+        Ok(())
+    }
+
+    /// Real adapters derive `uuid` from the actor URL via a SQL-side hash — not
+    /// domain logic, so this fake doesn't replicate it. It simply returns
+    /// everything seeded, which is all callers in this workspace need: tests seed
+    /// exactly the entries for the owner under test.
+    async fn get_by_derived_uuid(
+        &self,
+        _uuid: Uuid,
+    ) -> Result<Vec<RemoteWatchlistEntry>, DomainError> {
+        Ok(self.store.lock().unwrap().clone())
     }
 }
 
@@ -1033,7 +1111,7 @@ impl SocialCommand for InMemorySocialRepository {
 }
 
 #[async_trait]
-impl SocialQuery for InMemorySocialRepository {
+impl FollowGraphQuery for InMemorySocialRepository {
     async fn get_following(&self, user: &UserId) -> Result<Vec<SocialActor>, DomainError> {
         let store = self.follows.lock().unwrap();
         Ok(store
@@ -1069,6 +1147,15 @@ impl SocialQuery for InMemorySocialRepository {
             .collect())
     }
 
+    async fn get_pending_following(&self, user: &UserId) -> Result<Vec<SocialActor>, DomainError> {
+        let store = self.follows.lock().unwrap();
+        Ok(store
+            .iter()
+            .filter(|(f, _, state)| *f == user.value() && *state == FollowState::Pending)
+            .map(|(_, t, _)| Self::identity_to_actor(t))
+            .collect())
+    }
+
     async fn count_following(&self, user: &UserId) -> Result<usize, DomainError> {
         let store = self.follows.lock().unwrap();
         Ok(store
@@ -1086,6 +1173,43 @@ impl SocialQuery for InMemorySocialRepository {
             .count())
     }
 
+    async fn count_pending_followers(&self, user: &UserId) -> Result<usize, DomainError> {
+        let store = self.follows.lock().unwrap();
+        let target = SocialIdentity::Local(user.clone());
+        Ok(store
+            .iter()
+            .filter(|(_, t, state)| *t == target && *state == FollowState::Pending)
+            .count())
+    }
+
+    async fn get_relation(
+        &self,
+        viewer: &UserId,
+        target: &SocialIdentity,
+    ) -> Result<FollowRelation, DomainError> {
+        let store = self.follows.lock().unwrap();
+        let viewer_identity = SocialIdentity::Local(viewer.clone());
+        let state_to_status = |s: &FollowState| match s {
+            FollowState::Pending => FollowStatus::Pending,
+            FollowState::Accepted => FollowStatus::Accepted,
+        };
+        Ok(FollowRelation {
+            following: store
+                .iter()
+                .find(|(f, t, _)| *f == viewer.value() && t == target)
+                .map(|(_, _, s)| state_to_status(s)),
+            followed_by: store
+                .iter()
+                .find(|(f, t, _)| {
+                    SocialIdentity::Local(UserId::from_uuid(*f)) == *target && *t == viewer_identity
+                })
+                .map(|(_, _, s)| state_to_status(s)),
+        })
+    }
+}
+
+#[async_trait]
+impl BlockQuery for InMemorySocialRepository {
     async fn get_blocked(&self, user: &UserId) -> Result<Vec<SocialActor>, DomainError> {
         let store = self.blocked.lock().unwrap();
         Ok(store
@@ -1093,16 +1217,5 @@ impl SocialQuery for InMemorySocialRepository {
             .filter(|(b, _)| *b == user.value())
             .map(|(_, t)| Self::identity_to_actor(t))
             .collect())
-    }
-
-    async fn is_following(
-        &self,
-        follower: &UserId,
-        target: &SocialIdentity,
-    ) -> Result<bool, DomainError> {
-        let store = self.follows.lock().unwrap();
-        Ok(store.iter().any(|(f, t, state)| {
-            *f == follower.value() && t == target && *state == FollowState::Accepted
-        }))
     }
 }

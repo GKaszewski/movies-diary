@@ -3,15 +3,14 @@ use std::sync::Arc;
 use domain::{
     events::DomainEvent,
     testing::{InMemorySocialRepository, NoopEventPublisher},
-    value_objects::{FollowTarget, SocialIdentity, UserId},
+    value_objects::{FollowStatus, FollowTarget, SocialIdentity, UserId},
 };
 use uuid::Uuid;
 
 use crate::social::{
     commands::SocialCmd,
     deps::{SocialCommandDeps, SocialQueryDeps},
-    execute::{execute_command, execute_query},
-    queries::SocialQry,
+    execute::execute_command,
 };
 
 fn make_cmd_deps() -> (
@@ -23,7 +22,6 @@ fn make_cmd_deps() -> (
     let events = NoopEventPublisher::new();
     let deps = SocialCommandDeps {
         social_command: Arc::clone(&social) as _,
-        social_query: Arc::clone(&social) as _,
         event_publisher: Arc::clone(&events) as _,
     };
     (social, events, deps)
@@ -312,62 +310,49 @@ async fn unblock_emits_actor_unblocked_event() {
 // ── Get following ───────────────────────────────────────────────────────────
 
 #[tokio::test]
-async fn returns_accepted_follows() {
-    let social = InMemorySocialRepository::new();
-    let events = NoopEventPublisher::new();
-    let cmd_deps = SocialCommandDeps {
-        social_command: Arc::clone(&social) as _,
-        social_query: Arc::clone(&social) as _,
-        event_publisher: Arc::clone(&events) as _,
-    };
+async fn get_following_returns_accepted_targets() {
+    let (social, _events, cmd_deps) = make_cmd_deps();
     let query_deps = SocialQueryDeps {
-        social_query: Arc::clone(&social) as _,
+        follow_graph: Arc::clone(&social) as _,
+        block_query: Arc::clone(&social) as _,
     };
-
-    let follower_id = Uuid::new_v4();
-    let target_id = Uuid::new_v4();
+    let follower = Uuid::new_v4();
+    let target = UserId::from_uuid(Uuid::new_v4());
 
     execute_command(
         &cmd_deps,
         SocialCmd::Follow {
-            follower_id,
-            target: FollowTarget::Identity(SocialIdentity::Local(UserId::from_uuid(target_id))),
+            follower_id: follower,
+            target: FollowTarget::Identity(SocialIdentity::Local(target.clone())),
         },
     )
     .await
     .unwrap();
 
-    // Pending follow should not appear
-    let following = execute_query(
-        &query_deps,
-        SocialQry::GetFollowing {
-            user_id: follower_id,
-        },
-    )
-    .await
-    .unwrap();
-    assert!(following.is_empty());
+    let before = crate::social::get_following::execute(&query_deps, follower)
+        .await
+        .unwrap();
+    assert!(
+        before.is_empty(),
+        "a pending follow must not appear in get_following"
+    );
 
-    // Accept, then it should appear
     execute_command(
         &cmd_deps,
         SocialCmd::AcceptFollow {
-            owner_id: target_id,
-            requester: SocialIdentity::Local(UserId::from_uuid(follower_id)),
+            owner_id: target.value(),
+            requester: SocialIdentity::Local(UserId::from_uuid(follower)),
         },
     )
     .await
     .unwrap();
 
-    let following = execute_query(
-        &query_deps,
-        SocialQry::GetFollowing {
-            user_id: follower_id,
-        },
-    )
-    .await
-    .unwrap();
-    assert_eq!(following.len(), 1);
+    let actors = crate::social::get_following::execute(&query_deps, follower)
+        .await
+        .unwrap();
+
+    assert_eq!(actors.len(), 1);
+    assert_eq!(actors[0].identity, SocialIdentity::Local(target));
 }
 
 // ── Get followers ───────────────────────────────────────────────────────────
@@ -378,11 +363,11 @@ async fn returns_accepted_followers() {
     let events = NoopEventPublisher::new();
     let cmd_deps = SocialCommandDeps {
         social_command: Arc::clone(&social) as _,
-        social_query: Arc::clone(&social) as _,
         event_publisher: Arc::clone(&events) as _,
     };
     let query_deps = SocialQueryDeps {
-        social_query: Arc::clone(&social) as _,
+        follow_graph: Arc::clone(&social) as _,
+        block_query: Arc::clone(&social) as _,
     };
 
     let follower_id = Uuid::new_v4();
@@ -408,7 +393,7 @@ async fn returns_accepted_followers() {
     .await
     .unwrap();
 
-    let followers = execute_query(&query_deps, SocialQry::GetFollowers { user_id: owner_id })
+    let followers = crate::social::get_followers::execute(&query_deps, owner_id)
         .await
         .unwrap();
     assert_eq!(followers.len(), 1);
@@ -422,11 +407,11 @@ async fn returns_only_pending_followers() {
     let events = NoopEventPublisher::new();
     let cmd_deps = SocialCommandDeps {
         social_command: Arc::clone(&social) as _,
-        social_query: Arc::clone(&social) as _,
         event_publisher: Arc::clone(&events) as _,
     };
     let query_deps = SocialQueryDeps {
-        social_query: Arc::clone(&social) as _,
+        follow_graph: Arc::clone(&social) as _,
+        block_query: Arc::clone(&social) as _,
     };
 
     let follower_id = Uuid::new_v4();
@@ -442,8 +427,254 @@ async fn returns_only_pending_followers() {
     .await
     .unwrap();
 
-    let pending = execute_query(&query_deps, SocialQry::GetPending { user_id: owner_id })
+    let pending = crate::social::get_pending_followers::execute(&query_deps, owner_id)
         .await
         .unwrap();
     assert_eq!(pending.len(), 1);
+}
+
+// ── get_relation ────────────────────────────────────────────────────────────
+
+#[tokio::test]
+async fn get_relation_reports_none_for_strangers() {
+    use domain::ports::FollowGraphQuery;
+
+    let (social, _events, _deps) = make_cmd_deps();
+    let rel = FollowGraphQuery::get_relation(
+        &*social,
+        &UserId::from_uuid(Uuid::new_v4()),
+        &SocialIdentity::Local(UserId::from_uuid(Uuid::new_v4())),
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(rel.following, None);
+    assert_eq!(rel.followed_by, None);
+}
+
+#[tokio::test]
+async fn get_relation_reports_pending_before_acceptance() {
+    use domain::ports::FollowGraphQuery;
+
+    let (social, _events, deps) = make_cmd_deps();
+    let a = Uuid::new_v4();
+    let b_id = UserId::from_uuid(Uuid::new_v4());
+
+    execute_command(
+        &deps,
+        SocialCmd::Follow {
+            follower_id: a,
+            target: FollowTarget::Identity(SocialIdentity::Local(b_id.clone())),
+        },
+    )
+    .await
+    .unwrap();
+
+    let rel = FollowGraphQuery::get_relation(
+        &*social,
+        &UserId::from_uuid(a),
+        &SocialIdentity::Local(b_id),
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(rel.following, Some(FollowStatus::Pending));
+    assert_eq!(rel.followed_by, None);
+}
+
+#[tokio::test]
+async fn get_relation_reports_accepted_in_both_directions_after_mutual_follow() {
+    use domain::ports::FollowGraphQuery;
+
+    let (social, _events, deps) = make_cmd_deps();
+    let a = Uuid::new_v4();
+    let b = Uuid::new_v4();
+    let a_id = UserId::from_uuid(a);
+    let b_id = UserId::from_uuid(b);
+
+    for (from, to) in [(a, b_id.clone()), (b, a_id.clone())] {
+        execute_command(
+            &deps,
+            SocialCmd::Follow {
+                follower_id: from,
+                target: FollowTarget::Identity(SocialIdentity::Local(to.clone())),
+            },
+        )
+        .await
+        .unwrap();
+        let owner = if from == a { b } else { a };
+        execute_command(
+            &deps,
+            SocialCmd::AcceptFollow {
+                owner_id: owner,
+                requester: SocialIdentity::Local(UserId::from_uuid(from)),
+            },
+        )
+        .await
+        .unwrap();
+    }
+
+    let rel = FollowGraphQuery::get_relation(&*social, &a_id, &SocialIdentity::Local(b_id))
+        .await
+        .unwrap();
+
+    assert_eq!(rel.following, Some(FollowStatus::Accepted));
+    assert_eq!(rel.followed_by, Some(FollowStatus::Accepted));
+}
+
+// ── get_pending_following ───────────────────────────────────────────────────
+
+#[tokio::test]
+async fn unaccepted_follow_appears_in_pending_following_not_in_following() {
+    use domain::ports::FollowGraphQuery;
+
+    let (social, _events, deps) = make_cmd_deps();
+    let viewer = Uuid::new_v4();
+    let target = UserId::from_uuid(Uuid::new_v4());
+
+    execute_command(
+        &deps,
+        SocialCmd::Follow {
+            follower_id: viewer,
+            target: FollowTarget::Identity(SocialIdentity::Local(target.clone())),
+        },
+    )
+    .await
+    .unwrap();
+
+    let pending = FollowGraphQuery::get_pending_following(&*social, &UserId::from_uuid(viewer))
+        .await
+        .unwrap();
+    assert_eq!(pending.len(), 1);
+    assert_eq!(pending[0].identity, SocialIdentity::Local(target.clone()));
+
+    let following = FollowGraphQuery::get_following(&*social, &UserId::from_uuid(viewer))
+        .await
+        .unwrap();
+    assert!(
+        following.is_empty(),
+        "an unaccepted follow must not appear in get_following"
+    );
+}
+
+// ── get_pending_following use case ──────────────────────────────────────────
+
+#[tokio::test]
+async fn get_pending_following_returns_unaccepted_targets_and_get_following_does_not() {
+    let (social, _events, cmd_deps) = make_cmd_deps();
+    let query_deps = SocialQueryDeps {
+        follow_graph: Arc::clone(&social) as _,
+        block_query: Arc::clone(&social) as _,
+    };
+    let follower = Uuid::new_v4();
+    let target = UserId::from_uuid(Uuid::new_v4());
+
+    execute_command(
+        &cmd_deps,
+        SocialCmd::Follow {
+            follower_id: follower,
+            target: FollowTarget::Identity(SocialIdentity::Local(target.clone())),
+        },
+    )
+    .await
+    .unwrap();
+    // deliberately NOT accepted
+
+    let pending = crate::social::get_pending_following::execute(&query_deps, follower)
+        .await
+        .unwrap();
+    let accepted = crate::social::get_following::execute(&query_deps, follower)
+        .await
+        .unwrap();
+
+    assert_eq!(pending.len(), 1);
+    assert_eq!(pending[0].identity, SocialIdentity::Local(target));
+    assert!(
+        accepted.is_empty(),
+        "a pending follow must not leak into get_following — the privacy invariant"
+    );
+}
+
+// ── count_pending_followers use case ────────────────────────────────────────
+
+#[tokio::test]
+async fn count_pending_followers_drops_as_requests_are_accepted() {
+    let (social, _events, cmd_deps) = make_cmd_deps();
+    let query_deps = SocialQueryDeps {
+        follow_graph: Arc::clone(&social) as _,
+        block_query: Arc::clone(&social) as _,
+    };
+    let owner = UserId::from_uuid(Uuid::new_v4());
+    let a = Uuid::new_v4();
+    let b = Uuid::new_v4();
+
+    for follower in [a, b] {
+        execute_command(
+            &cmd_deps,
+            SocialCmd::Follow {
+                follower_id: follower,
+                target: FollowTarget::Identity(SocialIdentity::Local(owner.clone())),
+            },
+        )
+        .await
+        .unwrap();
+    }
+
+    let before = crate::social::count_pending_followers::execute(&query_deps, owner.value())
+        .await
+        .unwrap();
+    assert_eq!(before, 2);
+
+    execute_command(
+        &cmd_deps,
+        SocialCmd::AcceptFollow {
+            owner_id: owner.value(),
+            requester: SocialIdentity::Local(UserId::from_uuid(a)),
+        },
+    )
+    .await
+    .unwrap();
+
+    let after = crate::social::count_pending_followers::execute(&query_deps, owner.value())
+        .await
+        .unwrap();
+    assert_eq!(
+        after, 1,
+        "accepting a request must remove it from the pending count"
+    );
+}
+
+// ── get_relation use case ───────────────────────────────────────────────────
+
+#[tokio::test]
+async fn get_relation_use_case_reports_direction_asymmetrically() {
+    let (social, _events, cmd_deps) = make_cmd_deps();
+    let query_deps = SocialQueryDeps {
+        follow_graph: Arc::clone(&social) as _,
+        block_query: Arc::clone(&social) as _,
+    };
+    let viewer = Uuid::new_v4();
+    let target = UserId::from_uuid(Uuid::new_v4());
+
+    execute_command(
+        &cmd_deps,
+        SocialCmd::Follow {
+            follower_id: viewer,
+            target: FollowTarget::Identity(SocialIdentity::Local(target.clone())),
+        },
+    )
+    .await
+    .unwrap();
+
+    let rel =
+        crate::social::get_relation::execute(&query_deps, viewer, SocialIdentity::Local(target))
+            .await
+            .unwrap();
+
+    assert_eq!(
+        rel.following,
+        Some(FollowStatus::Pending),
+        "viewer -> target"
+    );
+    assert_eq!(rel.followed_by, None, "target has not followed back");
 }

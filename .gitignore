@@ -13,7 +13,7 @@
 
 .worktrees/
 .superpowers/
-docs/
+docs/*
 !docs/adr/
 
 imgs/

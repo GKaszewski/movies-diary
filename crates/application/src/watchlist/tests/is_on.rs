@@ -7,7 +7,7 @@ use domain::value_objects::{MovieId, UserId};
 use uuid::Uuid;
 
 use crate::test_helpers::TestContextBuilder;
-use crate::watchlist::{is_on, queries::IsOnWatchlistQuery};
+use crate::watchlist::{deps::IsOnWatchlistDeps, is_on, queries::IsOnWatchlistQuery};
 
 #[tokio::test]
 async fn returns_true_when_present() {
@@ -22,8 +22,11 @@ async fn returns_true_when_present() {
         .await
         .unwrap();
 
+    let deps = IsOnWatchlistDeps {
+        watchlist: Arc::clone(&watchlist) as _,
+    };
     let result = is_on::execute(
-        Arc::clone(&watchlist) as _,
+        &deps,
         IsOnWatchlistQuery {
             user_id: uid,
             movie_id: mid,
@@ -38,8 +41,11 @@ async fn returns_true_when_present() {
 #[tokio::test]
 async fn returns_false_when_absent() {
     let b = TestContextBuilder::new();
+    let deps = IsOnWatchlistDeps {
+        watchlist: b.watchlist_repo.clone(),
+    };
     let result = is_on::execute(
-        b.watchlist_repo.clone(),
+        &deps,
         IsOnWatchlistQuery {
             user_id: Uuid::new_v4(),
             movie_id: Uuid::new_v4(),

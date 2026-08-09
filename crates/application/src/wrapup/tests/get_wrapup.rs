@@ -3,6 +3,7 @@ use domain::models::wrapup::{WrapUpRecord, WrapUpStatus};
 use domain::testing::InMemoryWrapUpRepository;
 use domain::value_objects::WrapUpId;
 
+use crate::wrapup::deps::GetWrapUpDeps;
 use crate::wrapup::get_wrapup;
 
 #[tokio::test]
@@ -21,7 +22,10 @@ async fn returns_record_when_exists() {
         completed_at: None,
     });
 
-    let result = get_wrapup::execute(repo.clone(), id).await.unwrap();
+    let deps = GetWrapUpDeps {
+        wrapup_repo: repo.clone(),
+    };
+    let result = get_wrapup::execute(&deps, id).await.unwrap();
     assert!(result.is_some());
     assert_eq!(result.unwrap().status, WrapUpStatus::Pending);
 }
@@ -29,7 +33,10 @@ async fn returns_record_when_exists() {
 #[tokio::test]
 async fn returns_none_when_missing() {
     let repo = InMemoryWrapUpRepository::new();
-    let result = get_wrapup::execute(repo.clone(), WrapUpId::generate())
+    let deps = GetWrapUpDeps {
+        wrapup_repo: repo.clone(),
+    };
+    let result = get_wrapup::execute(&deps, WrapUpId::generate())
         .await
         .unwrap();
     assert!(result.is_none());

@@ -4,6 +4,7 @@ use domain::testing::InMemoryWrapUpRepository;
 use domain::value_objects::WrapUpId;
 
 use crate::wrapup::delete;
+use crate::wrapup::deps::DeleteWrapUpDeps;
 
 #[tokio::test]
 async fn deletes_existing_wrapup() {
@@ -21,13 +22,19 @@ async fn deletes_existing_wrapup() {
         completed_at: None,
     });
 
-    delete::execute(repo.clone(), id).await.unwrap();
+    let deps = DeleteWrapUpDeps {
+        wrapup_repo: repo.clone(),
+    };
+    delete::execute(&deps, id).await.unwrap();
     assert_eq!(repo.store.lock().unwrap().len(), 0);
 }
 
 #[tokio::test]
 async fn fails_when_not_found() {
     let repo = InMemoryWrapUpRepository::new();
-    let result = delete::execute(repo.clone(), WrapUpId::generate()).await;
+    let deps = DeleteWrapUpDeps {
+        wrapup_repo: repo.clone(),
+    };
+    let result = delete::execute(&deps, WrapUpId::generate()).await;
     assert!(result.is_err());
 }

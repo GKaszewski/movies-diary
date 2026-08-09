@@ -41,6 +41,11 @@ jobs:
       - name: test
         run: cargo test
 
+      # Layering guards. These live in the Makefile and were previously local-only,
+      # so a PR could go green in CI while violating them.
+      - name: guards
+        run: make check-appcontext check-handler-deps check-handler-repos check-presentation-adapters check-federation-off-social check-social-crates-are-ap-free
+
   docker:
     name: Build & Push Docker Image
     runs-on: ubuntu-latest

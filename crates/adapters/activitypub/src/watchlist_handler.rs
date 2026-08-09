@@ -5,7 +5,7 @@ use chrono::DateTime;
 use domain::{
     models::{RemoteWatchlistEntry, WatchlistWithMovie},
     ports::{LocalApContentQuery, RemoteWatchlistRepository},
-    value_objects::UserId,
+    value_objects::{InstanceIdentity, UserId},
 };
 use k_ap::{AS_PUBLIC, ApContentReader, ApObjectHandler, LocalObject};
 use url::Url;
@@ -16,7 +16,7 @@ use crate::urls::{actor_url, watchlist_entry_url};
 pub struct WatchlistObjectHandler {
     pub remote_watchlist_repo: Arc<dyn RemoteWatchlistRepository>,
     pub content_query: Arc<dyn LocalApContentQuery>,
-    pub base_url: String,
+    pub instance: InstanceIdentity,
 }
 
 #[async_trait]
@@ -34,15 +34,15 @@ impl ApContentReader for WatchlistObjectHandler {
             .await
             .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
-        let actor = actor_url(&self.base_url, user_id);
+        let actor = actor_url(&self.instance, user_id);
         let follower_cc = format!("{}/followers", actor);
         let mut results = Vec::new();
         for WatchlistWithMovie { entry, movie } in entries {
-            let ap_id = watchlist_entry_url(&self.base_url, user_id, entry.movie_id.value());
+            let ap_id = watchlist_entry_url(&self.instance, user_id, entry.movie_id.value());
             let published = DateTime::from_naive_utc_and_offset(entry.added_at, chrono::Utc);
             let poster_url = movie
                 .poster_path()
-                .map(|p| format!("{}/images/{}", self.base_url, p.value()));
+                .map(|p| self.instance.image_url_for(p.value()));
             let obj = watchlist_to_ap_object(WatchlistApInput {
                 ap_id: ap_id.clone(),
                 actor_url: actor.clone(),
@@ -53,7 +53,7 @@ impl ApContentReader for WatchlistObjectHandler {
                     .map(|id| id.value().to_string()),
                 poster_url,
                 added_at: published,
-                base_url: self.base_url.clone(),
+                base_url: self.instance.base_url().to_string(),
             });
             results.push(LocalObject {
                 ap_id,

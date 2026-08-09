@@ -5,7 +5,11 @@ use uuid::Uuid;
 
 use crate::{
     test_helpers::TestContextBuilder,
-    users::{get_settings, update_settings::UpdateUserSettingsCommand},
+    users::{
+        deps::{GetSettingsDeps, UpdateSettingsDeps},
+        get_settings,
+        update_settings::UpdateUserSettingsCommand,
+    },
 };
 
 #[tokio::test]
@@ -16,7 +20,9 @@ async fn updates_federate_goals() {
     let uid = Uuid::nil();
 
     crate::users::update_settings::execute(
-        user_settings.clone(),
+        &UpdateSettingsDeps {
+            user_settings: user_settings.clone(),
+        },
         UpdateUserSettingsCommand {
             user_id: uid,
             federate_goals: false,
@@ -27,7 +33,9 @@ async fn updates_federate_goals() {
     .await
     .unwrap();
 
-    let settings = get_settings::execute(user_settings, uid).await.unwrap();
+    let settings = get_settings::execute(&GetSettingsDeps { user_settings }, uid)
+        .await
+        .unwrap();
     assert!(!settings.federate_goals());
     assert!(settings.federate_reviews());
     assert!(settings.federate_watchlist());
@@ -41,7 +49,9 @@ async fn updates_federate_reviews() {
     let uid = Uuid::nil();
 
     crate::users::update_settings::execute(
-        user_settings.clone(),
+        &UpdateSettingsDeps {
+            user_settings: user_settings.clone(),
+        },
         UpdateUserSettingsCommand {
             user_id: uid,
             federate_goals: true,
@@ -52,7 +62,9 @@ async fn updates_federate_reviews() {
     .await
     .unwrap();
 
-    let settings = get_settings::execute(user_settings, uid).await.unwrap();
+    let settings = get_settings::execute(&GetSettingsDeps { user_settings }, uid)
+        .await
+        .unwrap();
     assert!(settings.federate_goals());
     assert!(!settings.federate_reviews());
     assert!(settings.federate_watchlist());
@@ -66,7 +78,9 @@ async fn updates_federate_watchlist() {
     let uid = Uuid::nil();
 
     crate::users::update_settings::execute(
-        user_settings.clone(),
+        &UpdateSettingsDeps {
+            user_settings: user_settings.clone(),
+        },
         UpdateUserSettingsCommand {
             user_id: uid,
             federate_goals: true,
@@ -77,7 +91,9 @@ async fn updates_federate_watchlist() {
     .await
     .unwrap();
 
-    let settings = get_settings::execute(user_settings, uid).await.unwrap();
+    let settings = get_settings::execute(&GetSettingsDeps { user_settings }, uid)
+        .await
+        .unwrap();
     assert!(settings.federate_goals());
     assert!(settings.federate_reviews());
     assert!(!settings.federate_watchlist());

@@ -3,7 +3,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use domain::errors::DomainError;
 use domain::testing::InMemorySocialRepository;
-use domain::value_objects::{SocialActor, SocialIdentity, UserId};
+use domain::value_objects::{FollowRelation, SocialActor, SocialIdentity, UserId};
 
 use crate::{
     config::AppConfig, diary::deps::GetActivityFeedDeps, diary::get_activity_feed,
@@ -66,7 +66,7 @@ async fn returns_feed_with_following_filter() {
 struct FakeSocialWithFollowing(Vec<SocialActor>);
 
 #[async_trait]
-impl domain::ports::SocialQuery for FakeSocialWithFollowing {
+impl domain::ports::FollowGraphQuery for FakeSocialWithFollowing {
     async fn get_following(&self, _: &UserId) -> Result<Vec<SocialActor>, DomainError> {
         Ok(self.0.clone())
     }
@@ -76,17 +76,24 @@ impl domain::ports::SocialQuery for FakeSocialWithFollowing {
     async fn get_pending_followers(&self, _: &UserId) -> Result<Vec<SocialActor>, DomainError> {
         Ok(vec![])
     }
+    async fn get_pending_following(&self, _: &UserId) -> Result<Vec<SocialActor>, DomainError> {
+        Ok(vec![])
+    }
     async fn count_following(&self, _: &UserId) -> Result<usize, DomainError> {
         Ok(0)
     }
     async fn count_followers(&self, _: &UserId) -> Result<usize, DomainError> {
         Ok(0)
     }
-    async fn get_blocked(&self, _: &UserId) -> Result<Vec<SocialActor>, DomainError> {
-        Ok(vec![])
+    async fn count_pending_followers(&self, _: &UserId) -> Result<usize, DomainError> {
+        Ok(0)
     }
-    async fn is_following(&self, _: &UserId, _: &SocialIdentity) -> Result<bool, DomainError> {
-        Ok(false)
+    async fn get_relation(
+        &self,
+        _: &UserId,
+        _: &SocialIdentity,
+    ) -> Result<FollowRelation, DomainError> {
+        Ok(FollowRelation::default())
     }
 }
 

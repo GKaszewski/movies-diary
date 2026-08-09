@@ -58,13 +58,11 @@ impl PeriodicJob for WrapUpAutoGenerateJob {
                         start_date: start,
                         end_date: end,
                     };
-                    if let Err(e) = crate::wrapup::generate::execute(
-                        self.wrapup_repo.clone(),
-                        self.event_publisher.clone(),
-                        cmd,
-                    )
-                    .await
-                    {
+                    let deps = crate::wrapup::deps::GenerateWrapUpDeps {
+                        wrapup_repo: self.wrapup_repo.clone(),
+                        event_publisher: self.event_publisher.clone(),
+                    };
+                    if let Err(e) = crate::wrapup::generate::execute(&deps, cmd).await {
                         tracing::warn!(
                             "auto-generate wrapup for user {} failed: {e}",
                             user.user_id.value()
@@ -81,13 +79,11 @@ impl PeriodicJob for WrapUpAutoGenerateJob {
                 start_date: start,
                 end_date: end,
             };
-            if let Err(e) = crate::wrapup::generate::execute(
-                self.wrapup_repo.clone(),
-                self.event_publisher.clone(),
-                cmd,
-            )
-            .await
-            {
+            let deps = crate::wrapup::deps::GenerateWrapUpDeps {
+                wrapup_repo: self.wrapup_repo.clone(),
+                event_publisher: self.event_publisher.clone(),
+            };
+            if let Err(e) = crate::wrapup::generate::execute(&deps, cmd).await {
                 tracing::warn!("auto-generate global wrapup failed: {e}");
             }
         }

@@ -6,7 +6,7 @@ use domain::testing::InMemoryUserRepository;
 use crate::{
     auth::{
         commands::RegisterCommand,
-        deps::{LoginDeps, RefreshDeps, RegisterDeps},
+        deps::{LoginDeps, LogoutDeps, RefreshDeps, RegisterDeps},
         login, logout,
         queries::LoginCommand,
         refresh, register,
@@ -53,7 +53,10 @@ async fn logout_revokes_refresh_token() {
     .await
     .unwrap();
 
-    logout::execute(b.refresh_session_repo.clone(), &login_result.refresh_token)
+    let logout_deps = LogoutDeps {
+        refresh_session: b.refresh_session_repo.clone(),
+    };
+    logout::execute(&logout_deps, &login_result.refresh_token)
         .await
         .unwrap();
 
@@ -69,6 +72,9 @@ async fn logout_revokes_refresh_token() {
 #[tokio::test]
 async fn logout_with_unknown_token_succeeds() {
     let b = TestContextBuilder::new();
-    let result = logout::execute(b.refresh_session_repo.clone(), "nonexistent-token").await;
+    let logout_deps = LogoutDeps {
+        refresh_session: b.refresh_session_repo.clone(),
+    };
+    let result = logout::execute(&logout_deps, "nonexistent-token").await;
     assert!(result.is_ok());
 }

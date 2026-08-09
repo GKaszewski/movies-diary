@@ -7,7 +7,9 @@ use uuid::Uuid;
 
 use crate::{
     test_helpers::TestContextBuilder,
-    users::{commands::UpdateProfileFieldsCommand, update_profile_fields},
+    users::{
+        commands::UpdateProfileFieldsCommand, deps::UpdateProfileFieldsDeps, update_profile_fields,
+    },
 };
 
 #[tokio::test]
@@ -17,12 +19,13 @@ async fn saves_profile_fields() {
     let b = TestContextBuilder::new()
         .with_profile_fields(Arc::clone(&fields_repo) as _)
         .with_event_publisher(Arc::clone(&events) as _);
-    let profile_fields = b.profile_fields_repo.clone();
-    let event_publisher = b.event_publisher.clone();
+    let deps = UpdateProfileFieldsDeps {
+        profile_fields: b.profile_fields_repo.clone(),
+        event_publisher: b.event_publisher.clone(),
+    };
 
     update_profile_fields::execute(
-        profile_fields,
-        event_publisher,
+        &deps,
         UpdateProfileFieldsCommand {
             user_id: Uuid::nil(),
             fields: vec![
@@ -51,8 +54,10 @@ async fn saves_profile_fields() {
 #[tokio::test]
 async fn rejects_more_than_four_fields() {
     let b = TestContextBuilder::new();
-    let profile_fields = b.profile_fields_repo.clone();
-    let event_publisher = b.event_publisher.clone();
+    let deps = UpdateProfileFieldsDeps {
+        profile_fields: b.profile_fields_repo.clone(),
+        event_publisher: b.event_publisher.clone(),
+    };
 
     let fields: Vec<ProfileField> = (0..5)
         .map(|i| ProfileField {
@@ -62,8 +67,7 @@ async fn rejects_more_than_four_fields() {
         .collect();
 
     let result = update_profile_fields::execute(
-        profile_fields,
-        event_publisher,
+        &deps,
         UpdateProfileFieldsCommand {
             user_id: Uuid::nil(),
             fields,

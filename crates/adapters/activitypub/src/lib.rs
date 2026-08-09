@@ -1,9 +1,9 @@
 pub mod composite_handler;
 pub mod event_handler;
 pub mod federation_event_bridge;
+pub mod federation_ports;
 pub mod goal_handler;
 pub mod objects;
-pub mod port;
 pub mod remote_review_repository;
 pub mod review_handler;
 pub mod social_adapter;
@@ -22,7 +22,7 @@ pub use k_ap::{
 };
 
 pub use event_handler::ActivityPubEventHandler;
-pub use port::{ActivityPubPort, NoopActivityPubService};
+pub use federation_ports::ApServiceAdapter;
 pub use remote_review_repository::{RemoteReviewRepository, RemoteReviewUpdate};
 pub use review_handler::ReviewObjectHandler;
 pub use social_adapter::CompositeSocialAdapter;
@@ -41,7 +41,16 @@ pub struct FederationRepos {
 }
 
 pub struct ActivityPubWire {
-    pub service: std::sync::Arc<dyn ActivityPubPort>,
+    /// AP document serving. Prefer this over `service` from outside this crate.
+    pub document: std::sync::Arc<dyn domain::ports::ApDocumentPort>,
+    /// Instance domain blocklist. Prefer this over `service` from outside this crate.
+    pub blocklist: std::sync::Arc<dyn domain::ports::InstanceBlocklistPort>,
+    /// Post-follow content backfill. Prefer this over `service` from outside this crate.
+    pub backfill: std::sync::Arc<dyn domain::ports::ApBackfillPort>,
+    /// The concrete service, consumed by `crates/server` to construct
+    /// `CompositeSocialAdapter`. Everything else should use
+    /// `document`/`blocklist`/`backfill`.
+    pub service: std::sync::Arc<ActivityPubService>,
     pub router: axum::Router,
     pub event_handler: std::sync::Arc<dyn domain::ports::EventHandler>,
 }
@@ -64,7 +73,7 @@ pub struct ActivityPubDeps {
     pub federation_settings: std::sync::Arc<dyn domain::ports::UserFederationSettingsQuery>,
     pub follow_command: std::sync::Arc<dyn domain::ports::FollowCommand>,
     pub follow_query: std::sync::Arc<dyn domain::ports::FollowQuery>,
-    pub base_url: String,
+    pub instance: domain::value_objects::InstanceIdentity,
     pub allow_registration: bool,
     pub event_publisher: std::sync::Arc<dyn domain::ports::EventPublisher>,
 }
@@ -88,7 +97,7 @@ pub async fn wire(deps: ActivityPubDeps) -> anyhow::Result<ActivityPubWire> {
         federation_settings,
         follow_command: _,
         follow_query: _,
-        base_url,
+        instance,
         allow_registration,
         event_publisher,
     } = deps;
@@ -98,17 +107,17 @@ pub async fn wire(deps: ActivityPubDeps) -> anyhow::Result<ActivityPubWire> {
         diary_repo,
         review_store,
         event_publisher: std::sync::Arc::clone(&event_publisher),
-        base_url: base_url.clone(),
+        instance: instance.clone(),
     });
     let watchlist_handler = std::sync::Arc::new(watchlist_handler::WatchlistObjectHandler {
         remote_watchlist_repo,
         content_query: std::sync::Arc::clone(&local_ap_content),
-        base_url: base_url.clone(),
+        instance: instance.clone(),
     });
     let goal_handler = std::sync::Arc::new(goal_handler::GoalObjectHandler {
         remote_goal_repo,
         goal_repo: std::sync::Arc::clone(&goal_repo),
-        base_url: base_url.clone(),
+        instance: instance.clone(),
     });
     let composite = std::sync::Arc::new(composite_handler::CompositeObjectHandler {
         review: review_handler,
@@ -132,14 +141,14 @@ pub async fn wire(deps: ActivityPubDeps) -> anyhow::Result<ActivityPubWire> {
     );
 
     let concrete = std::sync::Arc::new(
-        ActivityPubService::builder(base_url.clone())
+        ActivityPubService::builder(instance.base_url().to_string())
             .activity_repo(activity_repo)
             .follow_repo(follow_repo)
             .actor_repo(actor_repo)
             .blocklist_repo(blocklist_repo)
             .user_repo(std::sync::Arc::new(DomainUserRepoAdapter::new(
                 user_repo,
-                base_url.clone(),
+                instance.clone(),
             )))
             .signed_fetch_actor_id(INSTANCE_ACTOR_ID)
             .content_reader(composite.clone() as std::sync::Arc<dyn ApContentReader>)
@@ -165,11 +174,20 @@ pub async fn wire(deps: ActivityPubDeps) -> anyhow::Result<ActivityPubWire> {
         goal_repo,
         stats_repo,
         federation_settings,
-        base_url,
+        instance,
     )) as std::sync::Arc<dyn domain::ports::EventHandler>;
 
+    let ports = std::sync::Arc::new(federation_ports::ApServiceAdapter::new(
+        std::sync::Arc::clone(&concrete),
+    ));
+
     Ok(ActivityPubWire {
-        service: concrete as std::sync::Arc<dyn ActivityPubPort>,
+        document: std::sync::Arc::clone(&ports)
+            as std::sync::Arc<dyn domain::ports::ApDocumentPort>,
+        blocklist: std::sync::Arc::clone(&ports)
+            as std::sync::Arc<dyn domain::ports::InstanceBlocklistPort>,
+        backfill: ports as std::sync::Arc<dyn domain::ports::ApBackfillPort>,
+        service: concrete,
         router,
         event_handler,
     })

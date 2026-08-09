@@ -1,22 +1,16 @@
-use std::sync::Arc;
-
 use domain::{
     errors::DomainError,
     models::WatchEventStatus,
-    ports::{WatchEventCommand, WatchEventQuery},
     value_objects::{UserId, WatchEventId},
 };
 
 use crate::{
     diary::commands::{LogReviewCommand, MovieInput},
-    integrations::commands::ConfirmWatchEventsCommand,
-    ports::ReviewLogger,
+    integrations::{commands::ConfirmWatchEventsCommand, deps::ConfirmWatchEventsDeps},
 };
 
 pub async fn execute(
-    watch_event_command: Arc<dyn WatchEventCommand>,
-    watch_event_query: Arc<dyn WatchEventQuery>,
-    review_logger: Arc<dyn ReviewLogger>,
+    deps: &ConfirmWatchEventsDeps,
     cmd: ConfirmWatchEventsCommand,
 ) -> Result<u32, DomainError> {
     let user_id = UserId::from_uuid(cmd.user_id);
@@ -24,7 +18,8 @@ pub async fn execute(
 
     for c in cmd.confirmations {
         let event_id = WatchEventId::from_uuid(c.watch_event_id);
-        let event = watch_event_query
+        let event = deps
+            .watch_event_query
             .get_by_id(&event_id)
             .await?
             .ok_or_else(|| DomainError::NotFound(format!("WatchEvent {}", c.watch_event_id)))?;
@@ -60,9 +55,9 @@ pub async fn execute(
             watch_medium: Some(domain::value_objects::WatchMedium::MediaServer),
         };
 
-        review_logger.log_review(review_cmd).await?;
+        deps.review_logger.log_review(review_cmd).await?;
 
-        watch_event_command
+        deps.watch_event_command
             .update_status(&event_id, WatchEventStatus::Confirmed)
             .await?;
 

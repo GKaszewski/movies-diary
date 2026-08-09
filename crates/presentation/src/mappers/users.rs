@@ -1,4 +1,4 @@
-use application::users::get_profile::PendingFollowerView;
+use application::users::get_local_profile::PendingFollowerView;
 use domain::models::RemoteActorInfo;
 use domain::models::UserSummary;
 use template_askama::{RemoteActorData, RemoteActorDisplay, UserSummaryView};

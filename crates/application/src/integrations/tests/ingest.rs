@@ -8,7 +8,7 @@ use domain::testing::{
 use uuid::Uuid;
 
 use crate::integrations::commands::{GenerateWebhookTokenCommand, IngestWatchEventCommand};
-use crate::integrations::deps::IngestWatchEventDeps;
+use crate::integrations::deps::{GenerateWebhookTokenDeps, IngestWatchEventDeps};
 use crate::integrations::{generate_token, ingest};
 
 struct FakeParser;
@@ -35,7 +35,9 @@ async fn ingests_watch_event() {
 
     let user_id = Uuid::new_v4();
     let generated = generate_token::execute(
-        Arc::clone(&tokens),
+        &GenerateWebhookTokenDeps {
+            webhook_token: Arc::clone(&tokens),
+        },
         GenerateWebhookTokenCommand {
             user_id,
             provider: WatchEventSource::Jellyfin,

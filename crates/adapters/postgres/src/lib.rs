@@ -28,7 +28,7 @@ pub use import_session::PostgresImportSessionRepository;
 pub use movie::PostgresMovieRepository;
 pub use movie_dedup::PostgresMovieDeduplicator;
 pub use persons::{PostgresPersonAdapter, create_person_adapter};
-pub use postgres_federation::PostgresApContentQuery;
+pub use postgres_social::PostgresApContentQuery;
 pub use profile::PostgresMovieProfileRepository;
 pub use profile_fields::PostgresProfileFieldsRepository;
 pub use refresh_sessions::PostgresRefreshSessionAdapter;
@@ -115,7 +115,7 @@ pub async fn wire(database_url: &str) -> anyhow::Result<PostgresWireOutput> {
         goal_query: std::sync::Arc::new(goals::PostgresGoalRepository::new(pool.clone())) as _,
         user_settings: std::sync::Arc::clone(&user_settings_repo) as _,
         federation_settings: user_settings_repo as _,
-        remote_goal: std::sync::Arc::new(postgres_federation::PostgresRemoteGoalRepository::new(
+        remote_goal: std::sync::Arc::new(postgres_social::PostgresRemoteGoalRepository::new(
             pool.clone(),
         )) as _,
         deduplicator: std::sync::Arc::new(PostgresMovieDeduplicator::new(pool)) as _,

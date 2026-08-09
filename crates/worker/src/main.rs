@@ -1,4 +1,3 @@
-mod db;
 mod event_bus;
 mod follow_backfill_handler;
 
@@ -7,7 +6,7 @@ use std::sync::Arc;
 use anyhow::Context;
 use application::{
     MovieDiscoveryIndexer, SearchCleanupHandler, SearchReindexHandler, config::AppConfig,
-    movies::deps::ReindexSearchDeps, worker::WorkerService,
+    worker::WorkerService,
 };
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -26,13 +25,38 @@ async fn main() -> anyhow::Result<()> {
     let database_url = std::env::var("DATABASE_URL").context("DATABASE_URL must be set")?;
     let backend = std::env::var("DATABASE_BACKEND").unwrap_or_else(|_| "sqlite".to_string());
     let app_config = AppConfig::from_env();
+    let instance = domain::value_objects::InstanceIdentity::new(app_config.base_url.clone());
 
     let metadata_client = metadata::create()?;
     let poster_fetcher = poster_fetcher::create()?;
     let object_storage = object_storage::create()?;
 
-    let db = db::connect(&database_url, &backend).await?;
+    // TMDb client detection happens before `build_worker_deps` so the optional
+    // person-enrichment port can be handed to `WorkerServices` up front.
+    let tmdb_client = match tmdb_enrichment::TmdbEnrichmentClient::from_env() {
+        Ok(client) => {
+            tracing::info!("TMDb enrichment enabled");
+            Some(Arc::new(client))
+        }
+        Err(e) => {
+            tracing::warn!("TMDb enrichment disabled: {e}");
+            None
+        }
+    };
+    let person_enrichment: Option<Arc<dyn PersonEnrichmentClient>> = tmdb_client
+        .clone()
+        .map(|c| c as Arc<dyn PersonEnrichmentClient>);
+
+    let db =
+        composition::factory::build_database_adapters(&backend, &database_url, &instance).await?;
     let (event_publisher_arc, consumer_arc) = event_bus::create(&db.db_pool).await?;
+
+    let worker_services = application::WorkerServices {
+        object_storage: Arc::clone(&object_storage),
+        event_publisher: Arc::clone(&event_publisher_arc),
+        person_enrichment,
+    };
+    let worker_deps = composition::build_worker_deps(&db, &worker_services);
 
     let image_ref_command = Arc::clone(&db.image_ref_command);
     let image_ref_query = Arc::clone(&db.image_ref_query);
@@ -46,7 +70,6 @@ async fn main() -> anyhow::Result<()> {
         fed_goal_repo,
         fed_stats_repo,
         fed_user_repo,
-        base_url,
         allow_registration,
     ) = (
         Arc::clone(&db.ap_content),
@@ -56,29 +79,29 @@ async fn main() -> anyhow::Result<()> {
         Arc::clone(&db.goal_query),
         Arc::clone(&db.stats),
         Arc::clone(&db.user),
-        app_config.base_url.clone(),
         app_config.allow_registration,
     );
     // Wire federation repos early to get remote_watchlist_repo for AppContext.
     #[cfg(feature = "federation")]
     let fed_repos = match &db.db_pool {
         #[cfg(feature = "sqlite-federation")]
-        db::DbPool::Sqlite(pool) => sqlite_federation::wire(pool.clone()),
+        composition::DbPool::Sqlite(pool) => {
+            sqlite_federation::wire(pool.clone(), instance.clone())
+        }
         #[cfg(feature = "postgres-federation")]
-        db::DbPool::Postgres(pool) => postgres_federation::wire(pool.clone()),
+        composition::DbPool::Postgres(pool) => {
+            postgres_federation::wire(pool.clone(), instance.clone())
+        }
     };
 
     let movie_command = db.movie_command;
     let movie_query = db.movie_query;
-    let deduplicator = db.deduplicator;
     let user = db.user;
     let import_session = db.import_session;
     let movie_profile = db.movie_profile;
     let watch_event_command = db.watch_event_command;
-    let person_command = db.person_command;
     let person_query = db.person_query;
     let search_command = db.search_command;
-    let wrapup_stats = db.wrapup_stats;
     let wrapup_repo = db.wrapup_repo;
     let remote_goal = db.remote_goal;
     let refresh_session = db.refresh_session;
@@ -97,25 +120,22 @@ async fn main() -> anyhow::Result<()> {
         Option<Arc<dyn PeriodicJob>>,
     );
     let (enrichment_handler, person_enrichment_handler, enrichment_job): EnrichmentParts =
-        match tmdb_enrichment::TmdbEnrichmentClient::from_env() {
-            Ok(client) => {
-                tracing::info!("TMDb enrichment enabled");
-                let client = Arc::new(client);
+        match tmdb_client {
+            Some(client) => {
                 let image_fetcher = poster_fetcher::create_image_fetcher()?;
                 let handler = Arc::new(application::movies::MovieEnrichmentHandler::new(
                     Arc::clone(&client) as Arc<dyn MovieEnrichmentClient>,
-                    Arc::clone(&movie_query),
-                    Arc::clone(&movie_profile),
-                    Arc::clone(&person_command),
-                    Arc::clone(&search_command),
+                    worker_deps.enrich_movie.movie_query.clone(),
+                    worker_deps.enrich_movie.movie_profile.clone(),
+                    worker_deps.enrich_movie.person_command.clone(),
+                    worker_deps.enrich_movie.search_command.clone(),
                     Arc::clone(&object_storage),
                     image_fetcher,
                 )) as Arc<dyn EventHandler>;
-                let person_enrichment_arc = Arc::clone(&client) as Arc<dyn PersonEnrichmentClient>;
                 let person_handler = Arc::new(application::person::PersonEnrichmentHandler::new(
-                    Arc::clone(&person_query),
-                    Some(person_enrichment_arc),
-                    Arc::clone(&person_command),
+                    worker_deps.enrich_person.person_query.clone(),
+                    worker_deps.enrich_person.person_enrichment.clone(),
+                    worker_deps.enrich_person.person_command.clone(),
                 )) as Arc<dyn EventHandler>;
                 let job = Arc::new(application::jobs::EnrichmentStalenessJob::new(
                     Arc::clone(&movie_profile),
@@ -123,10 +143,7 @@ async fn main() -> anyhow::Result<()> {
                 )) as Arc<dyn PeriodicJob>;
                 (Some(handler), Some(person_handler), Some(job))
             }
-            Err(e) => {
-                tracing::warn!("TMDb enrichment disabled: {e}");
-                (None, None, None)
-            }
+            None => (None, None, None),
         };
 
     // ── Image conversion ──────────────────────────────────────────────────────
@@ -142,9 +159,9 @@ async fn main() -> anyhow::Result<()> {
 
     let mut periodic_jobs: Vec<Arc<dyn PeriodicJob>> = vec![
         Arc::new(application::jobs::MovieDeduplicationJob::new(
-            Arc::clone(&movie_query),
-            Arc::clone(&deduplicator),
-            Arc::clone(&object_storage),
+            worker_deps.merge_duplicates.movie_query.clone(),
+            worker_deps.merge_duplicates.deduplicator.clone(),
+            worker_deps.merge_duplicates.object_storage.clone(),
         )),
         Arc::new(application::jobs::ImportSessionCleanupJob::new(
             import_session.clone(),
@@ -211,18 +228,13 @@ async fn main() -> anyhow::Result<()> {
         )) as Arc<dyn EventHandler>;
 
         let wrapup_handler = Arc::new(application::wrapup::event_handler::WrapUpEventHandler::new(
-            Arc::clone(&wrapup_repo),
-            Arc::clone(&event_publisher),
-            Arc::clone(&wrapup_stats),
+            worker_deps.handle_requested.wrapup_repo.clone(),
+            worker_deps.handle_requested.event_publisher.clone(),
+            worker_deps.handle_requested.wrapup_stats.clone(),
         )) as Arc<dyn EventHandler>;
 
-        let reindex_handler = Arc::new(SearchReindexHandler::new(ReindexSearchDeps {
-            movie_query: Arc::clone(&movie_query),
-            movie_profile: Arc::clone(&movie_profile),
-            search_command: Arc::clone(&search_command),
-            person_command: Arc::clone(&person_command),
-            person_query: Arc::clone(&person_query),
-        })) as Arc<dyn EventHandler>;
+        let reindex_handler = Arc::new(SearchReindexHandler::new(worker_deps.reindex_search))
+            as Arc<dyn EventHandler>;
 
         let mut h = vec![
             poster,
@@ -252,7 +264,7 @@ async fn main() -> anyhow::Result<()> {
                 user_repo: fed_user_repo,
                 follow_command: fed_repos.follow_command,
                 follow_query: fed_repos.follow_query,
-                base_url,
+                instance: instance.clone(),
                 allow_registration,
                 event_publisher: Arc::clone(&event_publisher),
                 federation_settings: std::sync::Arc::clone(&db.federation_settings),
@@ -262,7 +274,7 @@ async fn main() -> anyhow::Result<()> {
             tracing::info!("federation event handler registered");
             h.push(ap_wire.event_handler);
             h.push(Arc::new(follow_backfill_handler::FollowBackfillHandler {
-                ap_service: ap_wire.service,
+                backfill: ap_wire.backfill,
             }) as Arc<dyn EventHandler>);
         }
 

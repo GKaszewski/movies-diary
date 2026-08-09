@@ -200,3 +200,96 @@ fn watch_medium_display_round_trips() {
         assert_eq!(parsed, v);
     }
 }
+
+// ── InstanceIdentity ────────────────────────────────────────────────────────
+
+fn instance() -> InstanceIdentity {
+    InstanceIdentity::new("https://md.example")
+}
+
+#[test]
+fn instance_normalizes_trailing_slash() {
+    assert_eq!(
+        InstanceIdentity::new("https://md.example/").base_url(),
+        "https://md.example"
+    );
+    assert_eq!(
+        InstanceIdentity::new("https://md.example").base_url(),
+        "https://md.example"
+    );
+}
+
+#[test]
+fn instance_host_strips_scheme_and_path() {
+    assert_eq!(instance().host(), "md.example");
+    assert_eq!(
+        InstanceIdentity::new("http://localhost:3000").host(),
+        "localhost:3000"
+    );
+}
+
+#[test]
+fn instance_builds_actor_url_for_local_user() {
+    let uid = UserId::from_uuid(uuid::Uuid::nil());
+    assert_eq!(
+        instance().actor_url_for(&uid),
+        format!("https://md.example/users/{}", uuid::Uuid::nil())
+    );
+}
+
+#[test]
+fn instance_builds_handle_and_image_url() {
+    assert_eq!(instance().handle_for("gabriel"), "@gabriel@md.example");
+    assert_eq!(
+        instance().image_url_for("avatars/a.webp"),
+        "https://md.example/images/avatars/a.webp"
+    );
+}
+
+#[test]
+fn instance_identifies_own_actor_url_as_local() {
+    let uid = UserId::from_uuid(uuid::Uuid::new_v4());
+    let url = instance().actor_url_for(&uid);
+    assert_eq!(instance().identify(&url), SocialIdentity::Local(uid));
+}
+
+#[test]
+fn instance_identifies_foreign_actor_url_as_remote() {
+    let url = "https://other.example/users/bob";
+    assert_eq!(
+        instance().identify(url),
+        SocialIdentity::Remote {
+            actor_url: url.to_string()
+        }
+    );
+}
+
+#[test]
+fn instance_identifies_own_host_with_bad_uuid_as_remote() {
+    let url = "https://md.example/users/not-a-uuid";
+    assert_eq!(
+        instance().identify(url),
+        SocialIdentity::Remote {
+            actor_url: url.to_string()
+        }
+    );
+}
+
+#[test]
+fn instance_actor_url_round_trips_both_variants() {
+    let i = instance();
+    let local = SocialIdentity::Local(UserId::from_uuid(uuid::Uuid::new_v4()));
+    let remote = SocialIdentity::Remote {
+        actor_url: "https://other.example/users/bob".into(),
+    };
+    assert_eq!(i.identify(&i.actor_url_of(&local)), local);
+    assert_eq!(i.identify(&i.actor_url_of(&remote)), remote);
+}
+
+#[test]
+fn instance_rejects_prefix_collision() {
+    // A different instance whose base_url merely starts the same must not read as local.
+    let i = InstanceIdentity::new("https://md.example");
+    let url = "https://md.example.evil.test/users/00000000-0000-0000-0000-000000000000";
+    assert!(matches!(i.identify(url), SocialIdentity::Remote { .. }));
+}

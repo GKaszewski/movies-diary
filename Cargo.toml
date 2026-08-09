@@ -10,7 +10,9 @@ members = [
     "crates/adapters/sqlite",
     "crates/adapters/postgres",
     "crates/adapters/sqlite-federation",
+    "crates/adapters/sqlite-social",
     "crates/adapters/postgres-federation",
+    "crates/adapters/postgres-social",
     "crates/adapters/sqlite-event-queue",
     "crates/adapters/postgres-event-queue",
     "crates/adapters/template-askama",
@@ -23,7 +25,9 @@ members = [
     "crates/adapters/tmdb-enrichment",
     "crates/adapters/image-converter",
     "crates/domain",
+    "crates/composition",
     "crates/presentation",
+    "crates/server",
     "crates/tui",
     "crates/worker",
     "crates/adapters/importer",
@@ -68,6 +72,7 @@ api-types = { path = "crates/api-types" }
 domain = { path = "crates/domain" }
 tmdb-enrichment = { path = "crates/adapters/tmdb-enrichment" }
 application = { path = "crates/application" }
+composition = { path = "crates/composition" }
 presentation = { path = "crates/presentation" }
 auth = { path = "crates/adapters/auth" }
 metadata = { path = "crates/adapters/metadata" }
@@ -79,8 +84,10 @@ rss = { path = "crates/adapters/rss" }
 export = { path = "crates/adapters/export" }
 sqlite = { path = "crates/adapters/sqlite" }
 sqlite-federation = { path = "crates/adapters/sqlite-federation" }
+sqlite-social = { path = "crates/adapters/sqlite-social" }
 postgres = { path = "crates/adapters/postgres" }
 postgres-federation = { path = "crates/adapters/postgres-federation" }
+postgres-social = { path = "crates/adapters/postgres-social" }
 template-askama = { path = "crates/adapters/template-askama" }
 activitypub = { path = "crates/adapters/activitypub" }
 event-payload = { path = "crates/adapters/event-payload" }

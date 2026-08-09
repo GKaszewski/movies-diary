@@ -1,5 +1,5 @@
 use super::*;
-use crate::context::{AppContext, Repositories, Services};
+use crate::context::AppContext;
 use application::config::AppConfig;
 use axum::{
     Router,
@@ -7,6 +7,7 @@ use axum::{
     http::{Request, StatusCode},
     routing::get,
 };
+use composition::Repositories;
 use domain::{
     errors::DomainError,
     events::DomainEvent,
@@ -17,11 +18,12 @@ use domain::{
         collections::{PageParams, Paginated},
     },
     ports::{
-        AuthService, DiaryQuery, EventPublisher, MetadataClient, MovieCommand, MovieQuery,
-        ObjectStorage, PasswordHasher, PersonCommand, PersonQuery, PosterFetcherClient,
+        AuthService, DiaryQuery, EventPublisher, FollowGraphQuery, MetadataClient, MovieCommand,
+        MovieQuery, ObjectStorage, PasswordHasher, PersonCommand, PersonQuery, PosterFetcherClient,
         ReviewRepository, SearchCommand, SearchPort, StatsRepository, UserRepository,
         WatchlistRepository,
     },
+    testing::InMemoryUserRepository,
     value_objects::{
         Email, ExternalMetadataId, MovieId, MovieTitle, PasswordHash, PosterUrl, ReleaseYear,
         ReviewId, UserId,
@@ -761,71 +763,229 @@ impl application::ports::ReviewLogger for Panic {
     }
 }
 
-// --- Single state factory — only auth_service varies ---
+// --- Repositories factory — `Panic` stubs everywhere ---
 
-pub fn make_test_state(auth_service: Arc<dyn AuthService>) -> crate::state::AppState {
+pub(crate) fn test_repositories() -> Repositories {
     let repo = Arc::new(Panic);
+
+    Repositories {
+        movie_command: Arc::clone(&repo) as _,
+        movie_query: Arc::clone(&repo) as _,
+        review: Arc::clone(&repo) as _,
+        diary: Arc::clone(&repo) as _,
+        stats: Arc::clone(&repo) as _,
+        user: Arc::clone(&repo) as _,
+        import_session: Arc::clone(&repo) as _,
+        import_profile: Arc::clone(&repo) as _,
+        movie_profile: Arc::clone(&repo) as _,
+        watchlist: Arc::clone(&repo) as _,
+        watch_event_command: Arc::clone(&repo) as _,
+        watch_event_query: Arc::clone(&repo) as _,
+        webhook_token: Arc::clone(&repo) as _,
+        profile_fields: Arc::clone(&repo) as _,
+        person_command: Arc::clone(&repo) as _,
+        person_query: Arc::clone(&repo) as _,
+        search_port: Arc::clone(&repo) as _,
+        search_command: Arc::clone(&repo) as _,
+        remote_watchlist: Arc::clone(&repo) as _,
+        social_command: Arc::new(domain::ports::noop::NoopSocialCommand) as _,
+        follow_graph: Arc::new(domain::ports::noop::NoopSocialQuery) as _,
+        block_query: Arc::new(domain::ports::noop::NoopSocialQuery) as _,
+        federation_admin: Arc::new(domain::ports::noop::NoopFederationAdminQuery) as _,
+        wrapup_stats: Arc::clone(&repo) as _,
+        wrapup_repo: Arc::clone(&repo) as _,
+        goal_command: Arc::clone(&repo) as _,
+        goal_query: Arc::clone(&repo) as _,
+        user_settings: Arc::clone(&repo) as _,
+        remote_goal: Arc::clone(&repo) as _,
+        refresh_session: Arc::clone(&repo) as _,
+        federated_profile: None,
+    }
+}
+
+// --- Single state factory — builds `deps` from whatever `repos` it is given ---
+
+/// Builds an `AppState` from caller-supplied `repos`, running `composition::build_deps`
+/// AFTER any overrides the caller already applied to `repos`. This is the only place
+/// `deps` gets built for tests, so `repos` and `deps` can never disagree.
+pub(crate) fn build_test_state_from(
+    repos: Repositories,
+    auth_service: Arc<dyn AuthService>,
+) -> crate::state::AppState {
+    let repo = Arc::new(Panic);
+
+    let services = application::Services {
+        auth: auth_service,
+        password_hasher: Arc::clone(&repo) as _,
+        metadata: Arc::clone(&repo) as _,
+        poster_fetcher: Arc::clone(&repo) as _,
+        object_storage: Arc::clone(&repo) as _,
+        event_publisher: Arc::clone(&repo) as _,
+        diary_exporter: Arc::clone(&repo) as _,
+        document_parser: Arc::clone(&repo) as _,
+        review_logger: Arc::clone(&repo) as _,
+        person_enrichment: None,
+    };
+
+    let config = AppConfig {
+        allow_registration: false,
+        base_url: "http://localhost:3000".to_string(),
+        rate_limit: 20,
+        refresh_ttl_seconds: 2_592_000,
+        wrapup: application::config::WrapUpConfig {
+            font_path: None,
+            logo_path: None,
+            bg_dir: None,
+        },
+    };
+
+    let instance = domain::value_objects::InstanceIdentity::new("http://localhost:3000");
+
+    let deps = Arc::new(composition::build_deps(
+        &repos, &services, &config, &instance,
+    ));
+
     crate::state::AppState {
         app_ctx: AppContext {
-            repos: Repositories {
-                movie_command: Arc::clone(&repo) as _,
-                movie_query: Arc::clone(&repo) as _,
-                review: Arc::clone(&repo) as _,
-                diary: Arc::clone(&repo) as _,
-                stats: Arc::clone(&repo) as _,
-                user: Arc::clone(&repo) as _,
-                import_session: Arc::clone(&repo) as _,
-                import_profile: Arc::clone(&repo) as _,
-                movie_profile: Arc::clone(&repo) as _,
-                watchlist: Arc::clone(&repo) as _,
-                watch_event_command: Arc::clone(&repo) as _,
-                watch_event_query: Arc::clone(&repo) as _,
-                webhook_token: Arc::clone(&repo) as _,
-                profile_fields: Arc::clone(&repo) as _,
-                person_command: Arc::clone(&repo) as _,
-                person_query: Arc::clone(&repo) as _,
-                search_port: Arc::clone(&repo) as _,
-                search_command: Arc::clone(&repo) as _,
-                remote_watchlist: Arc::clone(&repo) as _,
-                social_command: Arc::new(domain::ports::noop::NoopSocialCommand) as _,
-                social_query_unified: Arc::new(domain::ports::noop::NoopSocialQuery) as _,
-                federation_admin: Arc::new(domain::ports::noop::NoopFederationAdminQuery) as _,
-                wrapup_stats: Arc::clone(&repo) as _,
-                wrapup_repo: Arc::clone(&repo) as _,
-                goal_command: Arc::clone(&repo) as _,
-                goal_query: Arc::clone(&repo) as _,
-                user_settings: Arc::clone(&repo) as _,
-                remote_goal: Arc::clone(&repo) as _,
-                refresh_session: Arc::clone(&repo) as _,
-                federated_profile: None,
-            },
-            services: Services {
-                auth: auth_service,
-                password_hasher: Arc::clone(&repo) as _,
-                metadata: Arc::clone(&repo) as _,
-                poster_fetcher: Arc::clone(&repo) as _,
-                object_storage: Arc::clone(&repo) as _,
-                event_publisher: Arc::clone(&repo) as _,
-                diary_exporter: Arc::clone(&repo) as _,
-                document_parser: Arc::clone(&repo) as _,
-                review_logger: Arc::clone(&repo) as _,
-                person_enrichment: None,
-                #[cfg(feature = "federation")]
-                ap_service: Arc::new(activitypub::NoopActivityPubService),
-            },
-            config: AppConfig {
-                allow_registration: false,
-                base_url: "http://localhost:3000".to_string(),
-                rate_limit: 20,
-                refresh_ttl_seconds: 2_592_000,
-                wrapup: application::config::WrapUpConfig {
-                    font_path: None,
-                    logo_path: None,
-                    bg_dir: None,
-                },
-            },
+            deps,
+            services,
+            config,
+            instance,
+            #[cfg(feature = "federation")]
+            ap_document: Arc::new(domain::ports::noop::NoopApDocument),
+            #[cfg(feature = "federation")]
+            ap_blocklist: Arc::new(domain::ports::noop::NoopInstanceBlocklist),
         },
         rss_renderer: Arc::new(Panic),
+    }
+}
+
+pub fn make_test_state(auth_service: Arc<dyn AuthService>) -> crate::state::AppState {
+    build_test_state_from(test_repositories(), auth_service)
+}
+
+/// Reusable default test `AppState`: `Panic` stubs everywhere, real prebuilt `deps`.
+/// Callers that need a specific stub swapped in should use one of the
+/// `test_app_state_with_*` constructors below, which inject BEFORE `build_deps`
+/// runs — mutating the returned `AppState` afterwards would only reach `repos`,
+/// not the prebuilt `deps`.
+pub(crate) fn test_app_state() -> crate::state::AppState {
+    make_test_state(Arc::new(Panic))
+}
+
+/// Test state with `person_query` overridden BEFORE `build_deps` runs, so the
+/// stub is visible from both `app_ctx.repos.person_query` and every prebuilt
+/// deps struct that carries a `person_query` (e.g. `deps.person.get_person`).
+pub(crate) fn test_app_state_with_person_query(
+    person_query: Arc<dyn PersonQuery>,
+) -> crate::state::AppState {
+    let mut repos = test_repositories();
+    repos.person_query = person_query;
+    build_test_state_from(repos, Arc::new(Panic))
+}
+
+/// Test state with `search_port` overridden BEFORE `build_deps` runs, so the
+/// stub is visible from both `app_ctx.repos.search_port` and any prebuilt deps
+/// struct that carries a `search_port`.
+pub(crate) fn test_app_state_with_search_port(
+    search_port: Arc<dyn SearchPort>,
+) -> crate::state::AppState {
+    let mut repos = test_repositories();
+    repos.search_port = search_port;
+    build_test_state_from(repos, Arc::new(Panic))
+}
+
+/// Test state with `follow_graph` overridden BEFORE `build_deps` runs, so the
+/// stub is visible from both `app_ctx.repos.follow_graph` and the prebuilt
+/// `deps.social.query` that the social handlers actually read from.
+pub(crate) fn test_app_state_with_follow_graph(
+    follow_graph: Arc<dyn FollowGraphQuery>,
+    auth_service: Arc<dyn AuthService>,
+) -> crate::state::AppState {
+    let mut repos = test_repositories();
+    repos.follow_graph = follow_graph;
+    build_test_state_from(repos, auth_service)
+}
+
+/// Test state with `user` overridden BEFORE `build_deps` runs, so the stub is
+/// visible from both `app_ctx.repos.user` and `deps.users.authorize_admin.user`
+/// — the field the `AdminApiUser`/`AdminUser` extractors now read through.
+pub(crate) fn test_app_state_with_user(
+    user: Arc<dyn UserRepository>,
+    auth_service: Arc<dyn AuthService>,
+) -> crate::state::AppState {
+    let mut repos = test_repositories();
+    repos.user = user;
+    build_test_state_from(repos, auth_service)
+}
+
+/// A `UserRepository` whose `find_by_id` always fails, for exercising the
+/// repository-error rejection path of the admin extractors. Every other
+/// method panics — the admin extractors only ever call `find_by_id`.
+pub(crate) struct ErroringUserRepo;
+#[async_trait::async_trait]
+impl UserRepository for ErroringUserRepo {
+    async fn find_by_email(
+        &self,
+        _: &domain::value_objects::Email,
+    ) -> Result<Option<domain::models::User>, DomainError> {
+        panic!()
+    }
+    async fn save(&self, _: &domain::models::User) -> Result<(), DomainError> {
+        panic!()
+    }
+    async fn find_by_id(&self, _: &UserId) -> Result<Option<domain::models::User>, DomainError> {
+        Err(DomainError::InfrastructureError("db down".into()))
+    }
+    async fn find_by_username(
+        &self,
+        _: &domain::value_objects::Username,
+    ) -> Result<Option<domain::models::User>, DomainError> {
+        panic!()
+    }
+    async fn list_with_stats(&self) -> Result<Vec<domain::models::UserSummary>, DomainError> {
+        panic!()
+    }
+    async fn update_profile(
+        &self,
+        _: &UserId,
+        _: &domain::models::UserProfile,
+    ) -> Result<(), DomainError> {
+        panic!()
+    }
+}
+
+/// Builds a bare `User` with the given role, for the admin/non-admin extractor
+/// tests — only `id()` and `role()` are read by `authorize_admin::execute`.
+fn make_user_with_role(id: UserId, role: domain::models::UserRole) -> domain::models::User {
+    domain::models::User::from_persistence(
+        id,
+        domain::value_objects::Email::new("extractor-test@example.com".into()).unwrap(),
+        domain::value_objects::Username::new("extractor_test_user".into()).unwrap(),
+        domain::value_objects::PasswordHash::new("hashed".into()).unwrap(),
+        role,
+        domain::models::UserProfile {
+            display_name: None,
+            bio: None,
+            avatar_path: None,
+            banner_path: None,
+            also_known_as: None,
+            profile_fields: vec![],
+        },
+    )
+}
+
+/// Auth stub that accepts any bearer token and resolves it to a fixed user id,
+/// for tests that need to authenticate as a specific user rather than merely
+/// exercise the unauthenticated-request path.
+pub(crate) struct AcceptingAuth(pub UserId);
+#[async_trait::async_trait]
+impl AuthService for AcceptingAuth {
+    async fn generate_token(&self, _: &UserId) -> Result<GeneratedToken, DomainError> {
+        panic!()
+    }
+    async fn validate_token(&self, _: &str) -> Result<UserId, DomainError> {
+        Ok(self.0.clone())
     }
 }
 
@@ -843,6 +1003,12 @@ async fn optional_cookie_handler(user: OptionalCookieUser) -> String {
 async fn required_cookie_handler(user: RequiredCookieUser) -> String {
     user.0.value().to_string()
 }
+async fn admin_api_handler(user: AdminApiUser) -> String {
+    user.0.value().to_string()
+}
+async fn admin_cookie_handler(user: AdminUser) -> String {
+    user.0.value().to_string()
+}
 
 fn router_protected(state: crate::state::AppState) -> Router {
     Router::new()
@@ -852,6 +1018,16 @@ fn router_protected(state: crate::state::AppState) -> Router {
 fn router_optional(state: crate::state::AppState) -> Router {
     Router::new()
         .route("/optional", get(optional_cookie_handler))
+        .with_state(state)
+}
+fn router_admin_api(state: crate::state::AppState) -> Router {
+    Router::new()
+        .route("/admin-api", get(admin_api_handler))
+        .with_state(state)
+}
+fn router_admin_cookie(state: crate::state::AppState) -> Router {
+    Router::new()
+        .route("/admin-cookie", get(admin_cookie_handler))
         .with_state(state)
 }
 fn router_required(state: crate::state::AppState) -> Router {
@@ -864,7 +1040,7 @@ fn router_required(state: crate::state::AppState) -> Router {
 
 #[tokio::test]
 async fn missing_auth_header_returns_401() {
-    let app = router_protected(make_test_state(Arc::new(Panic)));
+    let app = router_protected(test_app_state());
     let resp = app
         .oneshot(
             Request::builder()
@@ -879,7 +1055,7 @@ async fn missing_auth_header_returns_401() {
 
 #[tokio::test]
 async fn optional_cookie_user_returns_none_without_cookie() {
-    let app = router_optional(make_test_state(Arc::new(Panic)));
+    let app = router_optional(test_app_state());
     let resp = app
         .oneshot(
             Request::builder()
@@ -918,7 +1094,7 @@ async fn optional_cookie_user_returns_none_with_invalid_token() {
 
 #[tokio::test]
 async fn required_cookie_user_redirects_without_cookie() {
-    let app = router_required(make_test_state(Arc::new(Panic)));
+    let app = router_required(test_app_state());
     let resp = app
         .oneshot(
             Request::builder()
@@ -947,4 +1123,198 @@ async fn required_cookie_user_redirects_with_invalid_token() {
         .unwrap();
     assert_eq!(resp.status(), StatusCode::SEE_OTHER);
     assert_eq!(resp.headers().get("location").unwrap(), "/login");
+}
+
+// --- AdminApiUser / AdminUser: per-path rejection pinning ---
+//
+// These pin the exact rejection for every path `authorize_admin::execute` can
+// produce, now that both extractors go through it instead of calling
+// `repos.user.find_by_id` directly. Each test name states the path; the
+// asserted status is the byte-identical-to-before-this-task value recorded in
+// the task-4 report's before/after table.
+
+fn admin_id() -> UserId {
+    UserId::generate()
+}
+
+#[tokio::test]
+async fn admin_api_user_allows_an_admin_user() {
+    let id = admin_id();
+    let user_repo = InMemoryUserRepository::new();
+    user_repo.store.lock().unwrap().insert(
+        id.value(),
+        make_user_with_role(id.clone(), domain::models::UserRole::Admin),
+    );
+    let app = router_admin_api(test_app_state_with_user(
+        user_repo as _,
+        Arc::new(AcceptingAuth(id)),
+    ));
+    let resp = app
+        .oneshot(
+            Request::builder()
+                .uri("/admin-api")
+                .header("authorization", "Bearer anything")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+}
+
+#[tokio::test]
+async fn admin_api_user_rejects_a_non_admin_user() {
+    let id = admin_id();
+    let user_repo = InMemoryUserRepository::new();
+    user_repo.store.lock().unwrap().insert(
+        id.value(),
+        make_user_with_role(id.clone(), domain::models::UserRole::Standard),
+    );
+    let app = router_admin_api(test_app_state_with_user(
+        user_repo as _,
+        Arc::new(AcceptingAuth(id)),
+    ));
+    let resp = app
+        .oneshot(
+            Request::builder()
+                .uri("/admin-api")
+                .header("authorization", "Bearer anything")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn admin_api_user_rejects_an_unknown_user() {
+    let id = admin_id();
+    let user_repo = InMemoryUserRepository::new(); // empty — id is not in the store
+    let app = router_admin_api(test_app_state_with_user(
+        user_repo as _,
+        Arc::new(AcceptingAuth(id)),
+    ));
+    let resp = app
+        .oneshot(
+            Request::builder()
+                .uri("/admin-api")
+                .header("authorization", "Bearer anything")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn admin_api_user_surfaces_a_repository_error_as_500() {
+    let id = admin_id();
+    let app = router_admin_api(test_app_state_with_user(
+        Arc::new(ErroringUserRepo),
+        Arc::new(AcceptingAuth(id)),
+    ));
+    let resp = app
+        .oneshot(
+            Request::builder()
+                .uri("/admin-api")
+                .header("authorization", "Bearer anything")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
+}
+
+#[tokio::test]
+async fn admin_user_allows_an_admin_user() {
+    let id = admin_id();
+    let user_repo = InMemoryUserRepository::new();
+    user_repo.store.lock().unwrap().insert(
+        id.value(),
+        make_user_with_role(id.clone(), domain::models::UserRole::Admin),
+    );
+    let app = router_admin_cookie(test_app_state_with_user(
+        user_repo as _,
+        Arc::new(AcceptingAuth(id)),
+    ));
+    let resp = app
+        .oneshot(
+            Request::builder()
+                .uri("/admin-cookie")
+                .header("cookie", "token=anything")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+}
+
+#[tokio::test]
+async fn admin_user_rejects_a_non_admin_user() {
+    let id = admin_id();
+    let user_repo = InMemoryUserRepository::new();
+    user_repo.store.lock().unwrap().insert(
+        id.value(),
+        make_user_with_role(id.clone(), domain::models::UserRole::Standard),
+    );
+    let app = router_admin_cookie(test_app_state_with_user(
+        user_repo as _,
+        Arc::new(AcceptingAuth(id)),
+    ));
+    let resp = app
+        .oneshot(
+            Request::builder()
+                .uri("/admin-cookie")
+                .header("cookie", "token=anything")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn admin_user_rejects_an_unknown_user() {
+    let id = admin_id();
+    let user_repo = InMemoryUserRepository::new(); // empty — id is not in the store
+    let app = router_admin_cookie(test_app_state_with_user(
+        user_repo as _,
+        Arc::new(AcceptingAuth(id)),
+    ));
+    let resp = app
+        .oneshot(
+            Request::builder()
+                .uri("/admin-cookie")
+                .header("cookie", "token=anything")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn admin_user_surfaces_a_repository_error_as_500() {
+    let id = admin_id();
+    let app = router_admin_cookie(test_app_state_with_user(
+        Arc::new(ErroringUserRepo),
+        Arc::new(AcceptingAuth(id)),
+    ));
+    let resp = app
+        .oneshot(
+            Request::builder()
+                .uri("/admin-cookie")
+                .header("cookie", "token=anything")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
 }

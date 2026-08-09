@@ -90,10 +90,11 @@ Hexagonal (Ports & Adapters) with Domain-Driven Design:
 
 ```
 api-types           — shared REST API request/response DTOs (Serialize/Deserialize + utoipa schemas) + HtmlPageContext; used by presentation, tui, and template adapters
-infra-wiring        — shared infrastructure types (DbPool, EventBusBackend, AppConfig) used by both presentation and worker binaries
+infra-wiring        — shared infrastructure types (DbPool, EventBusBackend, AppConfig) used by both server and worker binaries
 domain              — pure types and CQRS port traits (MovieCommand/MovieQuery, WatchEventCommand/WatchEventQuery, GoalCommand/GoalQuery, DiaryQuery, PersonCommand/PersonQuery, SearchCommand/SearchPort, SocialCommand/SocialQuery, ImageFetcher, RssFeedRenderer), no external deps except serde
 application         — use cases (commands + queries), business logic orchestration; handlers delegate here for all domain logic; modules: auth, diary, goals, import, integrations, movies, person, search, social, users, watchlist, wrapup
-presentation        — Axum HTTP router, OpenAPI spec assembly, Swagger UI + Scalar serving, composition root for the HTTP process
+presentation        — Axum HTTP router, OpenAPI spec assembly, Swagger UI + Scalar serving; library crate, no binary of its own
+server              — owns the HTTP binary, backend-selection features (sqlite/postgres, federation), boots presentation's router
 worker              — standalone worker binary (event consumer, poster sync, federation)
 adapters/
   adapter-common       — shared row-to-domain conversions, sqlx error mapping, date/uuid parsing utils
@@ -159,12 +160,12 @@ Copy `.env.example` to `.env` and set the values below. Required fields must be 
 | `RATE_LIMIT` | `60` | No | Requests per minute per IP |
 | `ALLOW_REGISTRATION` | `true` | No | Set `false` to disable new sign-ups |
 | `SECURE_COOKIES` | `true` | No | Must be `true` when serving over HTTPS |
-| `RUST_LOG` | — | No | Log verbosity (e.g. `presentation=info,worker=info`) |
+| `RUST_LOG` | — | No | Log verbosity (e.g. `server=info,worker=info`) |
 | `CORS_ORIGINS` | `*` | No | Comma-separated allowed origins for SPA dev |
 | `EVENT_BUS_BACKEND` | `db` | No | `db` (default) or `nats` |
 | `NATS_URL` | — | NATS only | NATS connection URL (e.g. `nats://localhost:4222`) |
 
-The `worker` binary must run alongside `presentation` to process events:
+The `worker` binary must run alongside `server` to process events:
 
 ```bash
 cargo run -p worker
@@ -173,11 +174,11 @@ cargo run -p worker
 ## Run
 
 ```bash
-cargo run -p presentation   # HTTP server (0.0.0.0:3000)
+cargo run -p server         # HTTP server (0.0.0.0:3000)
 cargo run -p worker         # event worker (poster sync, in a separate terminal)
 ```
 
-The worker polls the event queue and must run alongside the presentation to process background tasks like poster fetching. Both processes share the same database.
+The worker polls the event queue and must run alongside the server to process background tasks like poster fetching. Both processes share the same database.
 
 ## API
 
@@ -249,7 +250,7 @@ This builds and starts the HTTP server (port 3000) and event worker. Data is per
 
 ### Manual docker run
 
-The image contains both `presentation` and `worker` binaries. Run them as separate containers sharing the same data volume:
+The image contains both `server` and `worker` binaries. Run them as separate containers sharing the same data volume:
 
 ```bash
 docker build -t movies-diary .

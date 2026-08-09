@@ -1,13 +1,16 @@
 use uuid::Uuid;
 
 use crate::test_helpers::TestContextBuilder;
-use crate::watchlist::{get, queries::GetWatchlistQuery};
+use crate::watchlist::{deps::GetWatchlistDeps, get, queries::GetWatchlistQuery};
 
 #[tokio::test]
 async fn returns_empty_page_for_new_user() {
     let b = TestContextBuilder::new();
+    let deps = GetWatchlistDeps {
+        watchlist: b.watchlist_repo.clone(),
+    };
     let result = get::execute(
-        b.watchlist_repo.clone(),
+        &deps,
         GetWatchlistQuery {
             user_id: Uuid::new_v4(),
             limit: None,

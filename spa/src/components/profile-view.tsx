@@ -41,7 +41,6 @@ export function ProfileView({
   userId,
   search,
   onSearchChange,
-  isFederated,
   bio,
   handle,
 }: ProfileViewProps) {
@@ -65,7 +64,7 @@ export function ProfileView({
         </Avatar>
         <div className="min-w-0 flex-1">
           <p className="font-semibold">{data.username}</p>
-          {isFederated && handle && (
+          {handle && (
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <Globe className="size-3" />
               <span>{handle}</span>

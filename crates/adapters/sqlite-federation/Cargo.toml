@@ -8,6 +8,7 @@ sqlx = { workspace = true }
 activitypub = { workspace = true }
 adapter-common = { workspace = true }
 k-ap = { version = "0.5.0", registry = "gitea" }
+sqlite-social = { workspace = true }
 domain = { workspace = true }
 anyhow = { workspace = true }
 serde_json = { workspace = true }

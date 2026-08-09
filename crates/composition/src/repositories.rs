@@ -1,0 +1,46 @@
+use std::sync::Arc;
+
+use domain::ports::{
+    BlockQuery, DiaryQuery, FederatedProfileQuery, FederationAdminQuery, FollowGraphQuery,
+    GoalCommand, GoalQuery, ImportProfileRepository, ImportSessionRepository, MovieCommand,
+    MovieProfileRepository, MovieQuery, PersonCommand, PersonQuery, RefreshSessionRepository,
+    RemoteGoalRepository, RemoteWatchlistRepository, ReviewRepository, SearchCommand, SearchPort,
+    SocialCommand, StatsRepository, UserProfileFieldsRepository, UserRepository,
+    UserSettingsRepository, WatchEventCommand, WatchEventQuery, WatchlistRepository,
+    WebhookTokenRepository, WrapUpRepository, WrapUpStatsQuery,
+};
+
+#[derive(Clone)]
+pub struct Repositories {
+    pub movie_command: Arc<dyn MovieCommand>,
+    pub movie_query: Arc<dyn MovieQuery>,
+    pub review: Arc<dyn ReviewRepository>,
+    pub diary: Arc<dyn DiaryQuery>,
+    pub stats: Arc<dyn StatsRepository>,
+    pub user: Arc<dyn UserRepository>,
+    pub import_session: Arc<dyn ImportSessionRepository>,
+    pub import_profile: Arc<dyn ImportProfileRepository>,
+    pub movie_profile: Arc<dyn MovieProfileRepository>,
+    pub watchlist: Arc<dyn WatchlistRepository>,
+    pub watch_event_command: Arc<dyn WatchEventCommand>,
+    pub watch_event_query: Arc<dyn WatchEventQuery>,
+    pub webhook_token: Arc<dyn WebhookTokenRepository>,
+    pub person_command: Arc<dyn PersonCommand>,
+    pub person_query: Arc<dyn PersonQuery>,
+    pub search_port: Arc<dyn SearchPort>,
+    pub search_command: Arc<dyn SearchCommand>,
+    pub profile_fields: Arc<dyn UserProfileFieldsRepository>,
+    pub remote_watchlist: Arc<dyn RemoteWatchlistRepository>,
+    pub social_command: Arc<dyn SocialCommand>,
+    pub follow_graph: Arc<dyn FollowGraphQuery>,
+    pub block_query: Arc<dyn BlockQuery>,
+    pub federation_admin: Arc<dyn FederationAdminQuery>,
+    pub wrapup_stats: Arc<dyn WrapUpStatsQuery>,
+    pub wrapup_repo: Arc<dyn WrapUpRepository>,
+    pub goal_command: Arc<dyn GoalCommand>,
+    pub goal_query: Arc<dyn GoalQuery>,
+    pub user_settings: Arc<dyn UserSettingsRepository>,
+    pub remote_goal: Arc<dyn RemoteGoalRepository>,
+    pub refresh_session: Arc<dyn RefreshSessionRepository>,
+    pub federated_profile: Option<Arc<dyn FederatedProfileQuery>>,
+}

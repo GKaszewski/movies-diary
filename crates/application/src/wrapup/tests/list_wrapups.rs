@@ -4,6 +4,7 @@ use domain::testing::InMemoryWrapUpRepository;
 use domain::value_objects::WrapUpId;
 use uuid::Uuid;
 
+use crate::wrapup::deps::ListWrapUpsDeps;
 use crate::wrapup::list_wrapups::{self, ListWrapUpsQuery};
 
 fn make_record(user_id: Option<Uuid>) -> WrapUpRecord {
@@ -31,7 +32,10 @@ async fn filters_by_user() {
         store.push(make_record(None));
     }
 
-    let result = list_wrapups::execute(repo.clone(), ListWrapUpsQuery { user_id: Some(uid) })
+    let deps = ListWrapUpsDeps {
+        wrapup_repo: repo.clone(),
+    };
+    let result = list_wrapups::execute(&deps, ListWrapUpsQuery { user_id: Some(uid) })
         .await
         .unwrap();
     assert_eq!(result.len(), 1);
@@ -48,7 +52,10 @@ async fn returns_global_when_no_user() {
         store.push(make_record(Some(Uuid::new_v4())));
     }
 
-    let result = list_wrapups::execute(repo.clone(), ListWrapUpsQuery { user_id: None })
+    let deps = ListWrapUpsDeps {
+        wrapup_repo: repo.clone(),
+    };
+    let result = list_wrapups::execute(&deps, ListWrapUpsQuery { user_id: None })
         .await
         .unwrap();
     assert_eq!(result.len(), 2);

@@ -9,11 +9,10 @@ use uuid::Uuid;
 use application::{
     diary::{
         commands::SyncPosterCommand,
-        deps::GetMovieSocialPageDeps,
         get_movie_social_page, get_review_history,
         queries::{GetMovieSocialPageQuery, GetReviewHistoryQuery},
     },
-    movies::{deps::SyncPosterDeps, get_movies, queries::GetMoviesQuery, sync_poster},
+    movies::{get_movies, queries::GetMoviesQuery, sync_poster},
     watchlist::{is_on as is_on_watchlist, queries::IsOnWatchlistQuery},
 };
 use domain::services::review_history::Trend;
@@ -48,7 +47,7 @@ pub async fn list_movies(
     Query(params): Query<MoviesQueryParams>,
 ) -> Result<Json<MoviesResponse>, ApiError> {
     let page = get_movies::execute(
-        state.app_ctx.repos.movie_query.clone(),
+        &state.app_ctx.deps.movies.get_movies,
         GetMoviesQuery {
             limit: params.limit,
             offset: params.offset,
@@ -84,7 +83,7 @@ pub async fn get_review_history(
     Path(movie_id): Path<Uuid>,
 ) -> Result<Json<ReviewHistoryResponse>, ApiError> {
     let (history, trend) = get_review_history::execute(
-        &state.app_ctx.repos.diary,
+        &state.app_ctx.deps.diary.get_review_history,
         GetReviewHistoryQuery { movie_id },
     )
     .await?;
@@ -121,16 +120,7 @@ pub async fn sync_poster(
     Path(movie_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, ApiError> {
     sync_poster::execute(
-        &SyncPosterDeps {
-            movie_command: state.app_ctx.repos.movie_command.clone(),
-            movie_query: state.app_ctx.repos.movie_query.clone(),
-            movie_profile: state.app_ctx.repos.movie_profile.clone(),
-            metadata: state.app_ctx.services.metadata.clone(),
-            poster_fetcher: state.app_ctx.services.poster_fetcher.clone(),
-            object_storage: state.app_ctx.services.object_storage.clone(),
-            event_publisher: state.app_ctx.services.event_publisher.clone(),
-            search_command: state.app_ctx.repos.search_command.clone(),
-        },
+        &state.app_ctx.deps.movies.sync_poster,
         SyncPosterCommand { movie_id },
     )
     .await?;
@@ -154,11 +144,7 @@ pub async fn get_movie_detail(
     let offset = params.offset.unwrap_or(0);
 
     let result = get_movie_social_page::execute(
-        &GetMovieSocialPageDeps {
-            movie_query: state.app_ctx.repos.movie_query.clone(),
-            diary: state.app_ctx.repos.diary.clone(),
-            movie_profile: state.app_ctx.repos.movie_profile.clone(),
-        },
+        &state.app_ctx.deps.diary.get_movie_social_page,
         GetMovieSocialPageQuery {
             movie_id,
             limit,
@@ -210,7 +196,7 @@ pub async fn get_movie_profile(
 ) -> impl IntoResponse {
     use application::movies::get_movie_profile;
     let query = get_movie_profile::GetMovieProfileQuery { movie_id };
-    match get_movie_profile::execute(state.app_ctx.repos.movie_profile.clone(), query).await {
+    match get_movie_profile::execute(&state.app_ctx.deps.movies.get_movie_profile, query).await {
         Ok(Some(result)) => {
             let p = result.profile;
             Json(MovieProfileResponse {
@@ -288,11 +274,7 @@ pub async fn get_movie_detail_html(
     let offset = params.offset.unwrap_or(0);
 
     match get_movie_social_page::execute(
-        &GetMovieSocialPageDeps {
-            movie_query: state.app_ctx.repos.movie_query.clone(),
-            diary: state.app_ctx.repos.diary.clone(),
-            movie_profile: state.app_ctx.repos.movie_profile.clone(),
-        },
+        &state.app_ctx.deps.diary.get_movie_social_page,
         GetMovieSocialPageQuery {
             movie_id,
             limit,
@@ -314,7 +296,7 @@ pub async fn get_movie_detail_html(
                 result.reviews.offset + result.reviews.limit < result.reviews.total_count as u32;
             let on_watchlist = match &user_id {
                 Some(uid) => is_on_watchlist::execute(
-                    state.app_ctx.repos.watchlist.clone(),
+                    &state.app_ctx.deps.watchlist.is_on_watchlist,
                     IsOnWatchlistQuery {
                         user_id: uid.value(),
                         movie_id,

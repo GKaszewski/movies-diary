@@ -11,6 +11,7 @@ import { Toaster } from "@/components/ui/sonner"
 import { BottomTabBar } from "@/components/bottom-tab-bar"
 import { ReviewSheet } from "@/components/review-sheet"
 import { getAuth } from "@/lib/auth"
+import { usePendingFollowerCount } from "@/features/social"
 
 export const Route = createFileRoute("/_app")({
   beforeLoad: () => {
@@ -39,6 +40,8 @@ function AppLayout() {
   const [logOpen, setLogOpen] = useState(false)
   const matches = useMatches()
   const routeKey = matches.at(-1)?.id ?? ""
+  const { data: pending } = usePendingFollowerCount()
+  const pendingCount = pending?.count ?? 0
 
   return (
     <div className="mx-auto min-h-svh max-w-lg">
@@ -47,7 +50,7 @@ function AppLayout() {
           <Outlet />
         </div>
       </main>
-      <BottomTabBar onLogTap={() => setLogOpen(true)} />
+      <BottomTabBar onLogTap={() => setLogOpen(true)} pendingCount={pendingCount} />
       <ReviewSheet mode="log" open={logOpen} onOpenChange={setLogOpen} />
       <Toaster position="top-center" />
     </div>

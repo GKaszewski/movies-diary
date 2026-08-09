@@ -10,8 +10,6 @@ use api_types::{
     CreateGoalRequest, GoalDto, GoalsResponse, UpdateGoalRequest, UpdateUserSettingsRequest,
     UserSettingsDto,
 };
-use application::goals::deps::{GoalCommandDeps, GoalQueryDeps};
-
 // ── Shared mapper ────────────────────────────────────────────────────────────
 
 pub fn goal_with_progress_to_dto(g: &domain::models::GoalWithProgress) -> GoalDto {
@@ -39,12 +37,8 @@ pub async fn list_goals(
     State(state): State<AppState>,
     user: AuthenticatedUser,
 ) -> Result<Json<GoalsResponse>, ApiError> {
-    let deps = GoalQueryDeps {
-        goal_query: state.app_ctx.repos.goal_query.clone(),
-        stats: state.app_ctx.repos.stats.clone(),
-    };
     let goals = application::goals::list::execute(
-        &deps,
+        &state.app_ctx.deps.goals.query,
         application::goals::queries::ListGoalsQuery {
             user_id: user.0.value(),
         },
@@ -69,14 +63,8 @@ pub async fn create_goal(
     user: AuthenticatedUser,
     Json(req): Json<CreateGoalRequest>,
 ) -> Result<Json<GoalDto>, ApiError> {
-    let deps = GoalCommandDeps {
-        goal_command: state.app_ctx.repos.goal_command.clone(),
-        goal_query: state.app_ctx.repos.goal_query.clone(),
-        stats: state.app_ctx.repos.stats.clone(),
-        event_publisher: state.app_ctx.services.event_publisher.clone(),
-    };
     let g = application::goals::create::execute(
-        &deps,
+        &state.app_ctx.deps.goals.command,
         application::goals::commands::CreateGoalCommand {
             user_id: user.0.value(),
             year: req.year,
@@ -103,14 +91,8 @@ pub async fn update_goal(
     Path(year): Path<u16>,
     Json(req): Json<UpdateGoalRequest>,
 ) -> Result<Json<GoalDto>, ApiError> {
-    let deps = GoalCommandDeps {
-        goal_command: state.app_ctx.repos.goal_command.clone(),
-        goal_query: state.app_ctx.repos.goal_query.clone(),
-        stats: state.app_ctx.repos.stats.clone(),
-        event_publisher: state.app_ctx.services.event_publisher.clone(),
-    };
     let g = application::goals::update::execute(
-        &deps,
+        &state.app_ctx.deps.goals.command,
         application::goals::commands::UpdateGoalCommand {
             user_id: user.0.value(),
             year,
@@ -135,14 +117,8 @@ pub async fn delete_goal(
     user: AuthenticatedUser,
     Path(year): Path<u16>,
 ) -> Result<StatusCode, ApiError> {
-    let deps = GoalCommandDeps {
-        goal_command: state.app_ctx.repos.goal_command.clone(),
-        goal_query: state.app_ctx.repos.goal_query.clone(),
-        stats: state.app_ctx.repos.stats.clone(),
-        event_publisher: state.app_ctx.services.event_publisher.clone(),
-    };
     application::goals::delete::execute(
-        &deps,
+        &state.app_ctx.deps.goals.command,
         application::goals::commands::DeleteGoalCommand {
             user_id: user.0.value(),
             year,
@@ -165,12 +141,8 @@ pub async fn get_user_goals(
     AuthenticatedUser(_viewer): AuthenticatedUser,
     Path(user_id): Path<Uuid>,
 ) -> Result<Json<GoalsResponse>, ApiError> {
-    let deps = GoalQueryDeps {
-        goal_query: state.app_ctx.repos.goal_query.clone(),
-        stats: state.app_ctx.repos.stats.clone(),
-    };
     let goals = application::goals::list::execute(
-        &deps,
+        &state.app_ctx.deps.goals.query,
         application::goals::queries::ListGoalsQuery { user_id },
     )
     .await?;
@@ -194,7 +166,7 @@ pub async fn get_settings(
     user: AuthenticatedUser,
 ) -> Result<Json<UserSettingsDto>, ApiError> {
     let settings = application::users::get_settings::execute(
-        state.app_ctx.repos.user_settings.clone(),
+        &state.app_ctx.deps.users.get_settings,
         user.0.value(),
     )
     .await?;
@@ -220,7 +192,7 @@ pub async fn update_settings(
     Json(req): Json<UpdateUserSettingsRequest>,
 ) -> Result<StatusCode, ApiError> {
     application::users::update_settings::execute(
-        state.app_ctx.repos.user_settings.clone(),
+        &state.app_ctx.deps.users.update_settings,
         application::users::update_settings::UpdateUserSettingsCommand {
             user_id: user.0.value(),
             federate_goals: req.federate_goals,

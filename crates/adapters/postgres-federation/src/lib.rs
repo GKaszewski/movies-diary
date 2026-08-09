@@ -1,17 +1,8 @@
 mod activity;
 mod actor;
-pub mod ap_content;
 mod blocklist;
-mod federated_profile;
 mod follow;
-mod follow_repository;
-pub mod remote_goals;
 mod review;
-mod social;
-mod watchlist;
-
-pub use ap_content::PostgresApContentQuery;
-pub use remote_goals::PostgresRemoteGoalRepository;
 
 use k_ap::{FollowerStatus, RemoteActor};
 use sqlx::{PgPool, Row};
@@ -72,23 +63,23 @@ impl PostgresFederationRepository {
     }
 }
 
-pub fn create_federated_profile_query(
+pub fn wire(
     pool: PgPool,
-) -> std::sync::Arc<dyn domain::ports::FederatedProfileQuery> {
-    std::sync::Arc::new(PostgresFederationRepository::new(pool))
-}
-
-pub fn wire(pool: PgPool) -> activitypub::FederationRepos {
-    let fed = std::sync::Arc::new(PostgresFederationRepository::new(pool));
+    instance: domain::value_objects::InstanceIdentity,
+) -> activitypub::FederationRepos {
+    let fed = std::sync::Arc::new(PostgresFederationRepository::new(pool.clone()));
+    let social = std::sync::Arc::new(postgres_social::PostgresSocialRepository::new(
+        pool, instance,
+    ));
     activitypub::FederationRepos {
         activity: std::sync::Arc::clone(&fed) as _,
         follow: std::sync::Arc::clone(&fed) as _,
         actor: std::sync::Arc::clone(&fed) as _,
         blocklist: std::sync::Arc::clone(&fed) as _,
-        admin_query: std::sync::Arc::clone(&fed) as _,
-        review_store: std::sync::Arc::clone(&fed) as _,
-        remote_watchlist: std::sync::Arc::clone(&fed) as _,
-        follow_command: std::sync::Arc::clone(&fed) as _,
-        follow_query: fed as _,
+        review_store: fed as _,
+        admin_query: std::sync::Arc::clone(&social) as _,
+        remote_watchlist: std::sync::Arc::clone(&social) as _,
+        follow_command: std::sync::Arc::clone(&social) as _,
+        follow_query: social as _,
     }
 }

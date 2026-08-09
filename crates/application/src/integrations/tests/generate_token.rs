@@ -5,6 +5,7 @@ use domain::ports::WebhookTokenRepository;
 use domain::testing::InMemoryWebhookTokenRepository;
 use uuid::Uuid;
 
+use crate::integrations::deps::GenerateWebhookTokenDeps;
 use crate::integrations::{commands::GenerateWebhookTokenCommand, generate_token};
 
 #[tokio::test]
@@ -13,7 +14,9 @@ async fn generates_token_and_saves() {
 
     let user_id = Uuid::new_v4();
     let result = generate_token::execute(
-        Arc::clone(&tokens),
+        &GenerateWebhookTokenDeps {
+            webhook_token: Arc::clone(&tokens),
+        },
         GenerateWebhookTokenCommand {
             user_id,
             provider: WatchEventSource::Jellyfin,

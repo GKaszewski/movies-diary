@@ -10,6 +10,7 @@ pub struct HtmlPageContext {
     pub canonical_url: String,
     pub csrf_token: String,
     pub page_rss_url: Option<String>,
+    pub pending_follow_count: usize,
 }
 
 impl HtmlPageContext {

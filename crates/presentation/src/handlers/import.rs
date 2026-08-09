@@ -13,17 +13,14 @@ use std::collections::HashMap;
 
 use crate::render::render_page;
 use application::import::{
-    apply_mapping as apply_import_mapping, apply_profile as apply_import_profile,
+    apply_mapping as apply_import_mapping, apply_profile_and_map,
     commands::{
-        ApplyImportMappingCommand, ApplyImportProfileCommand, CreateImportSessionCommand,
+        ApplyImportMappingCommand, ApplyProfileAndMapCommand, CreateImportSessionCommand,
         DeleteImportProfileCommand, ExecuteImportCommand, SaveImportProfileCommand,
     },
     create_session as create_import_session, delete_profile as delete_import_profile,
-    deps::{
-        ApplyMappingDeps, ApplyProfileDeps, CreateSessionDeps, ExecuteImportDeps, SaveProfileDeps,
-    },
-    execute as execute_import, list_profiles as list_import_profiles,
-    save_profile as save_import_profile,
+    execute as execute_import, get_mapping_stage, get_preview_stage, get_session_state,
+    list_profiles as list_import_profiles, save_profile as save_import_profile,
 };
 use domain::errors::DomainError;
 use domain::models::{
@@ -111,7 +108,7 @@ pub async fn get_import_page(
 ) -> impl IntoResponse {
     let ctx = super::helpers::build_page_context(&state, Some(user_id.clone()), csrf.0).await;
     let profiles =
-        list_import_profiles::execute(state.app_ctx.repos.import_profile.clone(), &user_id)
+        list_import_profiles::execute(&state.app_ctx.deps.import.list_profiles, &user_id)
             .await
             .unwrap_or_default()
             .into_iter()
@@ -163,10 +160,7 @@ pub async fn post_upload(
     };
 
     match create_import_session::execute(
-        &CreateSessionDeps {
-            import_session: state.app_ctx.repos.import_session.clone(),
-            document_parser: state.app_ctx.services.document_parser.clone(),
-        },
+        &state.app_ctx.deps.import.create_session,
         CreateImportSessionCommand {
             user_id: user_id.value(),
             bytes,
@@ -194,21 +188,17 @@ pub async fn get_mapping_page(
     else {
         return Redirect::to("/import").into_response();
     };
-    let Ok(Some(session)) = state
-        .app_ctx
-        .repos
-        .import_session
-        .get(&session_id, &user_id)
-        .await
+    let Ok(stage) = get_mapping_stage::execute(
+        &state.app_ctx.deps.import.get_mapping_stage,
+        session_id,
+        user_id.value(),
+    )
+    .await
     else {
-        return Redirect::to("/import").into_response();
-    };
-    let Some(parsed) = session.parsed_file else {
         return Redirect::to("/import").into_response();
     };
 
     let ctx = super::helpers::build_page_context(&state, Some(user_id), csrf.0).await;
-    let sample_rows: Vec<Vec<String>> = parsed.rows.into_iter().take(5).collect();
     let domain_fields: Vec<(&str, &str)> = vec![
         ("title", "Title"),
         ("release_year", "Release Year"),
@@ -221,8 +211,8 @@ pub async fn get_mapping_page(
     render_page(ImportMappingTemplate {
         ctx: &ctx,
         session_id: &session_id_str,
-        columns: &parsed.columns,
-        sample_rows: &sample_rows,
+        columns: &stage.columns,
+        sample_rows: &stage.sample_rows,
         domain_fields: &domain_fields,
         error: None,
     })
@@ -255,11 +245,7 @@ pub async fn post_mapping(
         .into_response();
     }
     match apply_import_mapping::execute(
-        &ApplyMappingDeps {
-            import_session: state.app_ctx.repos.import_session.clone(),
-            document_parser: state.app_ctx.services.document_parser.clone(),
-            movie_query: state.app_ctx.repos.movie_query.clone(),
-        },
+        &state.app_ctx.deps.import.apply_mapping,
         ApplyImportMappingCommand {
             user_id: user_id.value(),
             session_id: session_id.value(),
@@ -290,24 +276,25 @@ pub async fn get_preview_page(
     else {
         return Redirect::to("/import").into_response();
     };
-    let Ok(Some(session)) = state
-        .app_ctx
-        .repos
-        .import_session
-        .get(&session_id, &user_id)
-        .await
+    let Ok(stage) = get_preview_stage::execute(
+        &state.app_ctx.deps.import.get_preview_stage,
+        session_id,
+        user_id.value(),
+    )
+    .await
     else {
         return Redirect::to("/import").into_response();
     };
 
-    if session.row_results.is_none() {
-        return Redirect::to(&format!("/import/{}/mapping", session_id_str)).into_response();
-    }
+    let preview = match stage {
+        get_preview_stage::PreviewStage::Ready(preview) => preview,
+        get_preview_stage::PreviewStage::NotYetMapped => {
+            return Redirect::to(&format!("/import/{}/mapping", session_id_str)).into_response();
+        }
+    };
 
-    let parsed = session.parsed_file.unwrap_or_default();
-    let annotated: Vec<AnnotatedRow> = session.row_results.unwrap_or_default();
-
-    let rows: Vec<ImportPreviewRow> = annotated
+    let rows: Vec<ImportPreviewRow> = preview
+        .rows
         .iter()
         .enumerate()
         .map(|(i, a)| annotated_to_preview_row(i, a))
@@ -317,7 +304,7 @@ pub async fn get_preview_page(
     render_page(ImportPreviewTemplate {
         ctx: &ctx,
         session_id: &session_id_str,
-        columns: &parsed.columns,
+        columns: &preview.columns,
         rows: &rows,
     })
     .into_response()
@@ -353,10 +340,7 @@ pub async fn post_confirm(
         .filter(|n| !n.trim().is_empty());
     if let Some(name) = profile_name {
         let _ = save_import_profile::execute(
-            &SaveProfileDeps {
-                import_session: state.app_ctx.repos.import_session.clone(),
-                import_profile: state.app_ctx.repos.import_profile.clone(),
-            },
+            &state.app_ctx.deps.import.save_profile,
             SaveImportProfileCommand {
                 user_id: user_id.value(),
                 session_id: session_id.value(),
@@ -374,10 +358,7 @@ pub async fn post_confirm(
         .collect();
 
     match execute_import::execute(
-        &ExecuteImportDeps {
-            import_session: state.app_ctx.repos.import_session.clone(),
-            review_logger: state.app_ctx.services.review_logger.clone(),
-        },
+        &state.app_ctx.deps.import.execute_import,
         ExecuteImportCommand {
             user_id: user_id.value(),
             session_id: session_id.value(),
@@ -412,7 +393,7 @@ pub async fn post_delete_profile(
     }
     if let Ok(profile_id) = profile_id_str.parse::<uuid::Uuid>() {
         let _ = delete_import_profile::execute(
-            state.app_ctx.repos.import_profile.clone(),
+            &state.app_ctx.deps.import.delete_profile,
             DeleteImportProfileCommand {
                 user_id: user_id.value(),
                 profile_id,
@@ -498,10 +479,7 @@ pub async fn api_post_session(
         _ => FileFormat::Csv,
     };
     let r = create_import_session::execute(
-        &CreateSessionDeps {
-            import_session: state.app_ctx.repos.import_session.clone(),
-            document_parser: state.app_ctx.services.document_parser.clone(),
-        },
+        &state.app_ctx.deps.import.create_session,
         CreateImportSessionCommand {
             user_id: user_id.value(),
             bytes,
@@ -535,20 +513,17 @@ pub async fn api_get_session(
         .parse::<uuid::Uuid>()
         .map(ImportSessionId::from_uuid)
         .map_err(|_| DomainError::ValidationError("invalid session id".into()))?;
-    let session = state
-        .app_ctx
-        .repos
-        .import_session
-        .get(&session_id, &user_id)
-        .await?
-        .ok_or(DomainError::NotFound("session not found".into()))?;
-    let parsed = session.parsed_file.unwrap_or_default();
-    let row_count = parsed.rows.len();
+    let state_data = get_session_state::execute(
+        &state.app_ctx.deps.import.get_session_state,
+        session_id,
+        user_id.value(),
+    )
+    .await?;
     Ok(axum::Json(SessionStateResponse {
         session_id: session_id_str,
-        columns: parsed.columns,
-        has_mappings: session.field_mappings.is_some(),
-        row_count,
+        columns: state_data.columns,
+        has_mappings: state_data.has_mappings,
+        row_count: state_data.row_count,
     }))
 }
 
@@ -596,11 +571,7 @@ pub async fn api_put_mapping(
         .collect();
 
     let rows = apply_import_mapping::execute(
-        &ApplyMappingDeps {
-            import_session: state.app_ctx.repos.import_session.clone(),
-            document_parser: state.app_ctx.services.document_parser.clone(),
-            movie_query: state.app_ctx.repos.movie_query.clone(),
-        },
+        &state.app_ctx.deps.import.apply_mapping,
         ApplyImportMappingCommand {
             user_id: user_id.value(),
             session_id: session_id.value(),
@@ -621,15 +592,21 @@ pub async fn api_get_preview(
         .map(ImportSessionId::from_uuid)
         .map_err(|_| DomainError::ValidationError("invalid session id".into()))?;
 
-    let session = state
-        .app_ctx
-        .repos
-        .import_session
-        .get(&session_id, &user_id)
-        .await?
-        .ok_or(DomainError::NotFound("session not found".into()))?;
+    let stage = get_preview_stage::execute(
+        &state.app_ctx.deps.import.get_preview_stage,
+        session_id,
+        user_id.value(),
+    )
+    .await?;
 
-    let annotated: Vec<AnnotatedRow> = session.row_results.unwrap_or_default();
+    // Not-yet-mapped sessions render as an empty preview here (200, `rows: []`),
+    // matching this endpoint's behavior before the stage-gate moved into
+    // `get_preview_stage` — unlike the HTML handler, this API route never
+    // redirected on the same condition, so its response shape is unchanged.
+    let annotated: Vec<AnnotatedRow> = match stage {
+        get_preview_stage::PreviewStage::Ready(preview) => preview.rows,
+        get_preview_stage::PreviewStage::NotYetMapped => Vec::new(),
+    };
     let rows = annotated
         .iter()
         .enumerate()
@@ -689,10 +666,7 @@ pub async fn api_post_confirm(
         .map(ImportSessionId::from_uuid)
         .map_err(|_| DomainError::ValidationError("invalid session id".into()))?;
     let s = execute_import::execute(
-        &ExecuteImportDeps {
-            import_session: state.app_ctx.repos.import_session.clone(),
-            review_logger: state.app_ctx.services.review_logger.clone(),
-        },
+        &state.app_ctx.deps.import.execute_import,
         ExecuteImportCommand {
             user_id: user_id.value(),
             session_id: session_id.value(),
@@ -720,7 +694,7 @@ pub async fn api_get_profiles(
     AuthenticatedUser(user_id): AuthenticatedUser,
 ) -> Result<impl IntoResponse, ApiError> {
     let profiles =
-        list_import_profiles::execute(state.app_ctx.repos.import_profile.clone(), &user_id).await?;
+        list_import_profiles::execute(&state.app_ctx.deps.import.list_profiles, &user_id).await?;
     Ok(axum::Json(
         profiles
             .into_iter()
@@ -756,10 +730,7 @@ pub async fn api_post_profile(
         .map(ImportSessionId::from_uuid)
         .map_err(|_| DomainError::ValidationError("invalid session id".into()))?;
     let id = save_import_profile::execute(
-        &SaveProfileDeps {
-            import_session: state.app_ctx.repos.import_session.clone(),
-            import_profile: state.app_ctx.repos.import_profile.clone(),
-        },
+        &state.app_ctx.deps.import.save_profile,
         SaveImportProfileCommand {
             user_id: user_id.value(),
             session_id: session_id.value(),
@@ -791,7 +762,7 @@ pub async fn api_delete_profile(
         .parse::<uuid::Uuid>()
         .map_err(|_| DomainError::ValidationError("invalid profile id".into()))?;
     delete_import_profile::execute(
-        state.app_ctx.repos.import_profile.clone(),
+        &state.app_ctx.deps.import.delete_profile,
         DeleteImportProfileCommand {
             user_id: user_id.value(),
             profile_id,
@@ -828,40 +799,12 @@ pub async fn api_apply_profile(
         .parse::<uuid::Uuid>()
         .map_err(|_| DomainError::ValidationError("invalid profile id".into()))?;
 
-    apply_import_profile::execute(
-        &ApplyProfileDeps {
-            import_profile: state.app_ctx.repos.import_profile.clone(),
-            import_session: state.app_ctx.repos.import_session.clone(),
-        },
-        ApplyImportProfileCommand {
+    let rows = apply_profile_and_map::execute(
+        &state.app_ctx.deps.import.apply_profile_and_map,
+        ApplyProfileAndMapCommand {
             user_id: user_id.value(),
             session_id,
             profile_id,
-        },
-    )
-    .await?;
-
-    let session = state
-        .app_ctx
-        .repos
-        .import_session
-        .get(&ImportSessionId::from_uuid(session_id), &user_id)
-        .await?
-        .ok_or(DomainError::NotFound(
-            "session not found after profile apply".into(),
-        ))?;
-
-    let mappings = session.field_mappings.unwrap_or_default();
-    let rows = apply_import_mapping::execute(
-        &ApplyMappingDeps {
-            import_session: state.app_ctx.repos.import_session.clone(),
-            document_parser: state.app_ctx.services.document_parser.clone(),
-            movie_query: state.app_ctx.repos.movie_query.clone(),
-        },
-        ApplyImportMappingCommand {
-            user_id: user_id.value(),
-            session_id,
-            mappings,
         },
     )
     .await?;

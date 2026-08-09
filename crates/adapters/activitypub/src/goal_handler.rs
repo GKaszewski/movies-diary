@@ -5,7 +5,7 @@ use chrono::DateTime;
 use domain::{
     models::RemoteGoalEntry,
     ports::{GoalQuery, RemoteGoalRepository},
-    value_objects::UserId,
+    value_objects::{InstanceIdentity, UserId},
 };
 use k_ap::{AS_PUBLIC, ApContentReader, ApObjectHandler, LocalObject};
 use url::Url;
@@ -16,7 +16,7 @@ use crate::urls::{actor_url, goal_url};
 pub struct GoalObjectHandler {
     pub remote_goal_repo: Arc<dyn RemoteGoalRepository>,
     pub goal_repo: Arc<dyn GoalQuery>,
-    pub base_url: String,
+    pub instance: InstanceIdentity,
 }
 
 #[async_trait]
@@ -34,11 +34,11 @@ impl ApContentReader for GoalObjectHandler {
             .await
             .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
-        let actor = actor_url(&self.base_url, user_id);
+        let actor = actor_url(&self.instance, user_id);
         let follower_cc = format!("{}/followers", actor);
         let mut results = Vec::new();
         for goal in goals {
-            let ap_id = goal_url(&self.base_url, user_id, goal.year());
+            let ap_id = goal_url(&self.instance, user_id, goal.year());
             let published = DateTime::from_naive_utc_and_offset(*goal.created_at(), chrono::Utc);
             let obj = goal_to_ap_object(
                 ap_id.clone(),
@@ -46,7 +46,7 @@ impl ApContentReader for GoalObjectHandler {
                 goal.year(),
                 goal.target_count(),
                 0,
-                &self.base_url,
+                self.instance.base_url(),
             );
             results.push(LocalObject {
                 ap_id,

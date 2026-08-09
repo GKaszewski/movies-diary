@@ -38,3 +38,23 @@ pub struct FederatedProfile {
     pub avatar_url: Option<String>,
     pub banner_url: Option<String>,
 }
+
+/// A domain-blocklist entry as presented to admin surfaces. Mirrors what the
+/// federation adapter can supply; `blocked_at` is a pre-formatted string
+/// because that is what the underlying store returns and every consumer
+/// renders it verbatim.
+#[derive(Debug, Clone)]
+pub struct BlockedDomainInfo {
+    pub domain: String,
+    pub reason: Option<String>,
+    pub blocked_at: String,
+}
+
+/// A remote actor the local instance follows, reduced to the two fields any
+/// consumer actually reads. Deliberately narrower than the federation
+/// library's actor type — widening it is a decision, not an oversight.
+#[derive(Debug, Clone)]
+pub struct FollowedActorInfo {
+    pub url: String,
+    pub outbox_url: Option<String>,
+}

@@ -6,24 +6,9 @@ description = "Self-hosted movie diary with REST API and ActivityPub federation"
 license = "MIT"
 
 [features]
-default = ["sqlite", "sqlite-federation"]
-sqlite = ["dep:sqlite", "dep:sqlite-event-queue", "dep:sqlite-search", "infra-wiring/sqlite"]
-postgres = ["dep:postgres", "dep:postgres-event-queue", "dep:postgres-search", "infra-wiring/postgres"]
-nats = ["dep:nats", "infra-wiring/nats"]
+default = ["federation"]
 # Meta-feature: true when any federation adapter is active — keeps all #[cfg(feature = "federation")] gates working
 federation = ["application/federation"]
-sqlite-federation = [
-    "sqlite",
-    "dep:sqlite-federation",
-    "dep:activitypub",
-    "federation",
-]
-postgres-federation = [
-    "postgres",
-    "dep:postgres-federation",
-    "dep:activitypub",
-    "federation",
-]
 
 [dependencies]
 tower-http = { version = "0.6.8", features = ["cors", "fs", "trace", "tracing"] }
@@ -47,38 +32,14 @@ futures = { workspace = true }
 api-types = { workspace = true }
 domain = { workspace = true }
 application = { workspace = true }
-auth = { workspace = true }
-metadata = { workspace = true }
-poster-fetcher = { workspace = true }
-object-storage = { workspace = true }
 template-askama = { workspace = true }
-nats = { workspace = true, optional = true }
-rss = { workspace = true }
-export = { workspace = true }
-importer = { workspace = true }
-jellyfin = { workspace = true }
-plex = { workspace = true }
-sqlx = { workspace = true }
-infra-wiring = { workspace = true }
 utoipa = { version = "5.5.0", features = ["axum_extras", "uuid"] }
 utoipa-scalar = { version = "0.3.0", features = ["axum"], default-features = false }
 utoipa-swagger-ui = { version = "9.0.2", features = ["axum", "vendored"] }
-
-# Optional — database backends
-sqlite = { workspace = true, optional = true }
-postgres = { workspace = true, optional = true }
-sqlite-event-queue   = { workspace = true, optional = true }
-postgres-event-queue = { workspace = true, optional = true }
-sqlite-search        = { workspace = true, optional = true }
-postgres-search      = { workspace = true, optional = true }
-
-# Optional — federation
-activitypub = { workspace = true, optional = true }
-sqlite-federation = { workspace = true, optional = true }
-postgres-federation = { workspace = true, optional = true }
 
 [dev-dependencies]
 bytes = { workspace = true }
 futures = { workspace = true }
 tower = { version = "0.5", features = ["util"] }
-http-body-util = "0.1"
+domain = { workspace = true, features = ["test-helpers"] }
+composition = { workspace = true }

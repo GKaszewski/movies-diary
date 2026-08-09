@@ -5,7 +5,7 @@ use axum::{
 };
 
 use application::{
-    person::{deps::GetPersonDeps, get as get_person, get_credits as get_person_credits},
+    person::{get as get_person, get_credits as get_person_credits},
     search::execute as search_uc,
 };
 use domain::models::{PersonId, collections::PageParams};
@@ -45,7 +45,7 @@ pub async fn get_search(
         },
     };
 
-    match search_uc::execute(state.app_ctx.repos.search_port.clone(), query).await {
+    match search_uc::execute(&state.app_ctx.deps.search.execute, query).await {
         Ok(results) => axum::Json(SearchResponse {
             movies: PaginatedMovieHits {
                 items: results
@@ -101,11 +101,12 @@ pub async fn get_person_handler(
     State(state): State<AppState>,
     Path(id): Path<uuid::Uuid>,
 ) -> impl IntoResponse {
-    let deps = GetPersonDeps {
-        person_query: state.app_ctx.repos.person_query.clone(),
-        event_publisher: state.app_ctx.services.event_publisher.clone(),
-    };
-    match get_person::execute(&deps, PersonId::from_uuid(id)).await {
+    match get_person::execute(
+        &state.app_ctx.deps.person.get_person,
+        PersonId::from_uuid(id),
+    )
+    .await
+    {
         Ok(Some(person)) => {
             axum::Json(crate::mappers::search::person_to_dto(&person)).into_response()
         }
@@ -127,11 +128,12 @@ pub async fn get_person_credits_handler(
     State(state): State<AppState>,
     Path(id): Path<uuid::Uuid>,
 ) -> impl IntoResponse {
-    let deps = GetPersonDeps {
-        person_query: state.app_ctx.repos.person_query.clone(),
-        event_publisher: state.app_ctx.services.event_publisher.clone(),
-    };
-    match get_person_credits::execute(&deps, PersonId::from_uuid(id)).await {
+    match get_person_credits::execute(
+        &state.app_ctx.deps.person.get_person,
+        PersonId::from_uuid(id),
+    )
+    .await
+    {
         Ok(credits) => axum::Json(PersonCreditsDto {
             person: crate::mappers::search::person_to_dto(&credits.person),
             cast: credits

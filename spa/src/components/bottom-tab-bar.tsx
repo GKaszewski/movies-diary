@@ -3,7 +3,13 @@ import { useTranslation } from "react-i18next"
 import { Home, Search, BookOpen, User } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-export function BottomTabBar({ onLogTap }: { onLogTap: () => void }) {
+export function BottomTabBar({
+  onLogTap,
+  pendingCount = 0,
+}: {
+  onLogTap: () => void
+  pendingCount?: number
+}) {
   const { t } = useTranslation()
   const matchRoute = useMatchRoute()
 
@@ -55,7 +61,12 @@ export function BottomTabBar({ onLogTap }: { onLogTap: () => void }) {
                 active ? "text-foreground" : "text-muted-foreground",
               )}
             >
-              <tab.icon className="size-5" strokeWidth={active ? 2.5 : 2} />
+              <div className="relative">
+                <tab.icon className="size-5" strokeWidth={active ? 2.5 : 2} />
+                {tab.to === "/profile" && pendingCount > 0 && (
+                  <span className="absolute -right-1 -top-0.5 size-2 rounded-full bg-primary" />
+                )}
+              </div>
               <span className="text-[10px] font-medium">{tab.label}</span>
             </Link>
           )

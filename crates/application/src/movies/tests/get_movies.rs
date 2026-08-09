@@ -1,13 +1,14 @@
 use domain::testing::InMemoryMovieRepository;
 
-use crate::movies::{get_movies, queries::GetMoviesQuery};
+use crate::movies::{deps::GetMoviesDeps, get_movies, queries::GetMoviesQuery};
 
 #[tokio::test]
 async fn returns_empty_when_no_movies() {
     let movie = InMemoryMovieRepository::new();
+    let deps = GetMoviesDeps { movie };
 
     let result = get_movies::execute(
-        movie,
+        &deps,
         GetMoviesQuery {
             limit: None,
             offset: None,

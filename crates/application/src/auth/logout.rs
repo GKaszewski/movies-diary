@@ -1,12 +1,9 @@
-use std::sync::Arc;
+use domain::errors::DomainError;
 
-use domain::{errors::DomainError, ports::RefreshSessionRepository};
+use crate::auth::deps::LogoutDeps;
 
-pub async fn execute(
-    refresh_session: Arc<dyn RefreshSessionRepository>,
-    refresh_token: &str,
-) -> Result<(), DomainError> {
-    refresh_session.revoke(refresh_token).await
+pub async fn execute(deps: &LogoutDeps, refresh_token: &str) -> Result<(), DomainError> {
+    deps.refresh_session.revoke(refresh_token).await
 }
 
 #[cfg(test)]

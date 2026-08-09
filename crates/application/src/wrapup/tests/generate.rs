@@ -5,7 +5,20 @@ use domain::testing::{InMemoryWrapUpRepository, NoopEventPublisher};
 use domain::value_objects::WrapUpId;
 use uuid::Uuid;
 
+use std::sync::Arc;
+
+use crate::wrapup::deps::GenerateWrapUpDeps;
 use crate::wrapup::{commands::RequestWrapUpCommand, generate};
+
+fn deps(
+    repo: &Arc<InMemoryWrapUpRepository>,
+    events: &Arc<NoopEventPublisher>,
+) -> GenerateWrapUpDeps {
+    GenerateWrapUpDeps {
+        wrapup_repo: Arc::clone(repo) as _,
+        event_publisher: Arc::clone(events) as _,
+    }
+}
 
 fn past_cmd() -> RequestWrapUpCommand {
     RequestWrapUpCommand {
@@ -20,7 +33,7 @@ async fn creates_pending_record_and_emits_event() {
     let repo = InMemoryWrapUpRepository::new();
     let events = NoopEventPublisher::new();
 
-    let id = generate::execute(repo.clone(), events.clone(), past_cmd())
+    let id = generate::execute(&deps(&repo, &events), past_cmd())
         .await
         .unwrap();
 
@@ -54,7 +67,7 @@ async fn reuses_existing_ready_wrapup() {
     });
     let events = NoopEventPublisher::new();
 
-    let id = generate::execute(repo.clone(), events.clone(), past_cmd())
+    let id = generate::execute(&deps(&repo, &events), past_cmd())
         .await
         .unwrap();
     assert_eq!(id, existing_id);
@@ -78,7 +91,7 @@ async fn replaces_failed_wrapup() {
 
     let events = NoopEventPublisher::new();
 
-    let id = generate::execute(repo.clone(), events.clone(), past_cmd())
+    let id = generate::execute(&deps(&repo, &events), past_cmd())
         .await
         .unwrap();
 
@@ -93,8 +106,7 @@ async fn rejects_future_end_date() {
     let repo = InMemoryWrapUpRepository::new();
     let events = NoopEventPublisher::new();
     let err = generate::execute(
-        repo.clone(),
-        events.clone(),
+        &deps(&repo, &events),
         RequestWrapUpCommand {
             user_id: None,
             start_date: NaiveDate::from_ymd_opt(2030, 1, 1).unwrap(),

@@ -8,14 +8,16 @@ use domain::{
     value_objects::MovieId,
 };
 
+use crate::movies::deps::GetMovieProfileDeps;
 use crate::movies::get_movie_profile::{self, GetMovieProfileQuery};
 
 #[tokio::test]
 async fn returns_none_when_no_profile() {
     let movie_profile = InMemoryMovieProfileRepository::new();
+    let deps = GetMovieProfileDeps { movie_profile };
 
     let result = get_movie_profile::execute(
-        movie_profile,
+        &deps,
         GetMovieProfileQuery {
             movie_id: Uuid::new_v4(),
         },
@@ -64,8 +66,11 @@ async fn returns_profile_with_cast_and_crew() {
     };
     profile_repo.upsert(&profile).await.unwrap();
 
+    let deps = GetMovieProfileDeps {
+        movie_profile: profile_repo.clone(),
+    };
     let result = get_movie_profile::execute(
-        profile_repo.clone(),
+        &deps,
         GetMovieProfileQuery {
             movie_id: movie_id.value(),
         },

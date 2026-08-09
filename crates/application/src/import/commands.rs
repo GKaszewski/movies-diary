@@ -31,6 +31,12 @@ pub struct ApplyImportProfileCommand {
     pub profile_id: Uuid,
 }
 
+pub struct ApplyProfileAndMapCommand {
+    pub user_id: Uuid,
+    pub session_id: Uuid,
+    pub profile_id: Uuid,
+}
+
 pub struct DeleteImportProfileCommand {
     pub user_id: Uuid,
     pub profile_id: Uuid,

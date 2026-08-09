@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct FollowRequest {
@@ -15,6 +16,9 @@ pub struct RemoteActorDto {
     pub handle: String,
     pub display_name: Option<String>,
     pub url: String,
+    /// `Some` for local actors, so the SPA can link internally to `/users/{id}`.
+    pub user_id: Option<Uuid>,
+    pub avatar_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
@@ -41,4 +45,63 @@ pub struct BlockedActorResponse {
     pub handle: String,
     pub display_name: Option<String>,
     pub avatar_url: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, utoipa::ToSchema, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum FollowStateDto {
+    None,
+    Pending,
+    Accepted,
+    Rejected,
+}
+
+impl From<Option<domain::value_objects::FollowStatus>> for FollowStateDto {
+    fn from(s: Option<domain::value_objects::FollowStatus>) -> Self {
+        use domain::value_objects::FollowStatus as F;
+        match s {
+            None => Self::None,
+            Some(F::Pending) => Self::Pending,
+            Some(F::Accepted) => Self::Accepted,
+            Some(F::Rejected) => Self::Rejected,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct FollowRelationResponse {
+    pub following: FollowStateDto,
+    pub followed_by: FollowStateDto,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct PendingCountResponse {
+    pub count: usize,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Task 7's SPA zod schema parses these exact lowercase literals —
+    /// a casing or naming drift here breaks the SPA at runtime.
+    #[test]
+    fn follow_state_dto_serializes_to_lowercase_strings() {
+        assert_eq!(
+            serde_json::to_string(&FollowStateDto::None).unwrap(),
+            "\"none\""
+        );
+        assert_eq!(
+            serde_json::to_string(&FollowStateDto::Pending).unwrap(),
+            "\"pending\""
+        );
+        assert_eq!(
+            serde_json::to_string(&FollowStateDto::Accepted).unwrap(),
+            "\"accepted\""
+        );
+        assert_eq!(
+            serde_json::to_string(&FollowStateDto::Rejected).unwrap(),
+            "\"rejected\""
+        );
+    }
 }

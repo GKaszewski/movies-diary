@@ -8,7 +8,7 @@ use domain::{
         GoalQuery, LocalApContentQuery, MovieQuery, ReviewRepository, StatsRepository,
         UserFederationSettingsQuery,
     },
-    value_objects::{MovieId, ReviewId, UserId},
+    value_objects::{InstanceIdentity, MovieId, ReviewId, UserId},
 };
 use std::sync::Arc;
 
@@ -25,7 +25,7 @@ pub struct ActivityPubEventHandler {
     goal_repo: Arc<dyn GoalQuery>,
     stats_repo: Arc<dyn StatsRepository>,
     federation_settings: Arc<dyn UserFederationSettingsQuery>,
-    base_url: String,
+    instance: InstanceIdentity,
 }
 
 impl ActivityPubEventHandler {
@@ -38,7 +38,7 @@ impl ActivityPubEventHandler {
         goal_repo: Arc<dyn GoalQuery>,
         stats_repo: Arc<dyn StatsRepository>,
         federation_settings: Arc<dyn UserFederationSettingsQuery>,
-        base_url: String,
+        instance: InstanceIdentity,
     ) -> Self {
         Self {
             ap_service,
@@ -48,7 +48,7 @@ impl ActivityPubEventHandler {
             goal_repo,
             stats_repo,
             federation_settings,
-            base_url,
+            instance,
         }
     }
 }
@@ -140,7 +140,7 @@ impl EventHandler for ActivityPubEventHandler {
                 .await
                 .map_err(|e| DomainError::InfrastructureError(e.to_string())),
             DomainEvent::UserDeleted { user_id } => {
-                let ap_id = actor_url(&self.base_url, user_id.value());
+                let ap_id = actor_url(&self.instance, user_id.value());
                 self.ap_service
                     .broadcast_delete_to_followers(user_id.value(), ap_id)
                     .await
@@ -179,8 +179,8 @@ impl ActivityPubEventHandler {
             None => return Ok(()),
         };
 
-        let ap_id = review_url(&self.base_url, review_id);
-        let actor = actor_url(&self.base_url, user_id.value());
+        let ap_id = review_url(&self.instance, review_id);
+        let actor = actor_url(&self.instance, user_id.value());
 
         let movie = self
             .movie_repo
@@ -210,8 +210,8 @@ impl ActivityPubEventHandler {
                 poster_url: movie
                     .as_ref()
                     .and_then(|m| m.poster_path())
-                    .map(|p| format!("{}/images/{}", self.base_url, p.value())),
-                base_url: self.base_url.clone(),
+                    .map(|p| self.instance.image_url_for(p.value())),
+                base_url: self.instance.base_url().to_string(),
             },
         );
         let json = serde_json::to_value(obj)?;
@@ -245,8 +245,8 @@ impl ActivityPubEventHandler {
             None => return Ok(()),
         };
 
-        let ap_id = review_url(&self.base_url, review_id);
-        let actor = actor_url(&self.base_url, user_id.value());
+        let ap_id = review_url(&self.instance, review_id);
+        let actor = actor_url(&self.instance, user_id.value());
 
         let movie = self
             .movie_repo
@@ -276,8 +276,8 @@ impl ActivityPubEventHandler {
                 poster_url: movie
                     .as_ref()
                     .and_then(|m| m.poster_path())
-                    .map(|p| format!("{}/images/{}", self.base_url, p.value())),
-                base_url: self.base_url.clone(),
+                    .map(|p| self.instance.image_url_for(p.value())),
+                base_url: self.instance.base_url().to_string(),
             },
         );
         let json = serde_json::to_value(obj)?;
@@ -294,7 +294,7 @@ impl ActivityPubEventHandler {
         user_id: &UserId,
         review_id: &ReviewId,
     ) -> anyhow::Result<()> {
-        let ap_id = review_url(&self.base_url, review_id);
+        let ap_id = review_url(&self.instance, review_id);
         self.ap_service
             .broadcast_delete_to_followers(user_id.value(), ap_id)
             .await?;
@@ -320,8 +320,8 @@ impl ActivityPubEventHandler {
         }
 
         use crate::urls::watchlist_entry_url;
-        let ap_id = watchlist_entry_url(&self.base_url, user_id.value(), movie_id.value());
-        let actor = actor_url(&self.base_url, user_id.value());
+        let ap_id = watchlist_entry_url(&self.instance, user_id.value(), movie_id.value());
+        let actor = actor_url(&self.instance, user_id.value());
 
         let poster_url = self
             .movie_repo
@@ -331,7 +331,7 @@ impl ActivityPubEventHandler {
             .flatten()
             .and_then(|m| {
                 m.poster_path()
-                    .map(|p| format!("{}/images/{}", self.base_url, p.value()))
+                    .map(|p| self.instance.image_url_for(p.value()))
             });
 
         let added_at_utc =
@@ -344,7 +344,7 @@ impl ActivityPubEventHandler {
             external_metadata_id: external_metadata_id.clone(),
             poster_url,
             added_at: added_at_utc,
-            base_url: self.base_url.clone(),
+            base_url: self.instance.base_url().to_string(),
         });
         let json = serde_json::to_value(obj)?;
 
@@ -360,7 +360,7 @@ impl ActivityPubEventHandler {
         movie_id: &domain::value_objects::MovieId,
     ) -> anyhow::Result<()> {
         use crate::urls::watchlist_entry_url;
-        let ap_id = watchlist_entry_url(&self.base_url, user_id.value(), movie_id.value());
+        let ap_id = watchlist_entry_url(&self.instance, user_id.value(), movie_id.value());
         self.ap_service
             .broadcast_delete_to_followers(user_id.value(), ap_id)
             .await?;
@@ -383,7 +383,7 @@ impl ActivityPubEventHandler {
             .map(|id| id.value().to_string());
         let poster_url = movie
             .poster_path()
-            .map(|p| format!("{}/images/{}", self.base_url, p.value()));
+            .map(|p| self.instance.image_url_for(p.value()));
 
         for entry in entries {
             let review = entry.review();
@@ -398,8 +398,8 @@ impl ActivityPubEventHandler {
                 continue;
             }
 
-            let ap_id = review_url(&self.base_url, review.id());
-            let actor = actor_url(&self.base_url, user_id.value());
+            let ap_id = review_url(&self.instance, review.id());
+            let actor = actor_url(&self.instance, user_id.value());
 
             let obj = review_to_ap_object(
                 review,
@@ -410,7 +410,7 @@ impl ActivityPubEventHandler {
                     release_year: movie.release_year().value(),
                     external_metadata_id: external_metadata_id.clone(),
                     poster_url: poster_url.clone(),
-                    base_url: self.base_url.clone(),
+                    base_url: self.instance.base_url().to_string(),
                 },
             );
             let json = serde_json::to_value(obj)?;
@@ -450,15 +450,15 @@ impl ActivityPubEventHandler {
             .count_reviews_in_year(user_id, year)
             .await
             .unwrap_or(0);
-        let ap_id = goal_url(&self.base_url, user_id.value(), year);
-        let actor = actor_url(&self.base_url, user_id.value());
+        let ap_id = goal_url(&self.instance, user_id.value(), year);
+        let actor = actor_url(&self.instance, user_id.value());
         let obj = goal_to_ap_object(
             ap_id,
             actor,
             year,
             goal.target_count(),
             current,
-            &self.base_url,
+            self.instance.base_url(),
         );
         let json = serde_json::to_value(obj)?;
         self.ap_service
@@ -488,9 +488,16 @@ impl ActivityPubEventHandler {
             .await
             .unwrap_or(0);
 
-        let ap_id = goal_url(&self.base_url, user_id.value(), year);
-        let actor = actor_url(&self.base_url, user_id.value());
-        let obj = goal_to_ap_object(ap_id, actor, year, target_count, current, &self.base_url);
+        let ap_id = goal_url(&self.instance, user_id.value(), year);
+        let actor = actor_url(&self.instance, user_id.value());
+        let obj = goal_to_ap_object(
+            ap_id,
+            actor,
+            year,
+            target_count,
+            current,
+            self.instance.base_url(),
+        );
         let json = serde_json::to_value(obj)?;
         if is_create {
             self.ap_service
@@ -513,7 +520,7 @@ impl ActivityPubEventHandler {
         if !flags.goals {
             return Ok(());
         }
-        let ap_id = goal_url(&self.base_url, user_id.value(), year);
+        let ap_id = goal_url(&self.instance, user_id.value(), year);
         self.ap_service
             .broadcast_delete_to_followers(user_id.value(), ap_id)
             .await?;

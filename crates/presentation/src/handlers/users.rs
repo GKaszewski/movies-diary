@@ -9,12 +9,12 @@ use axum::{
 use uuid::Uuid;
 
 use application::users::{
-    deps::{GetProfileDeps, UpdateProfileDeps},
-    get_profile as get_user_profile_uc, get_users,
+    get_federated_profile, get_federated_profile_stats, get_local_profile,
+    get_profile_settings as get_profile_settings_uc, get_users,
     queries::{GetUserProfileQuery, GetUsersQuery},
-    update_profile, update_profile_fields,
+    resolve_username_to_id, update_profile, update_profile_fields,
 };
-use domain::value_objects::UserId;
+use domain::{errors::DomainError, value_objects::Username};
 
 use crate::{
     csrf::CsrfToken,
@@ -53,24 +53,20 @@ pub async fn get_profile(
     AuthenticatedUser(user_id): AuthenticatedUser,
 ) -> Result<Json<ProfileResponse>, ApiError> {
     let profile = application::users::get_current_profile::execute(
-        state.app_ctx.repos.user.clone(),
+        &state.app_ctx.deps.users.get_current_profile,
         application::users::queries::GetCurrentProfileQuery {
             user_id: user_id.value(),
         },
     )
     .await?;
-    let base_url = &state.app_ctx.config.base_url;
+    let instance = &state.app_ctx.instance;
     Ok(Json(ProfileResponse {
         profile: api_types::UserProfileBase {
             username: profile.username,
             display_name: profile.display_name,
             bio: profile.bio,
-            avatar_url: profile
-                .avatar_path
-                .map(|p| format!("{}/images/{}", base_url, p)),
-            banner_url: profile
-                .banner_path
-                .map(|p| format!("{}/images/{}", base_url, p)),
+            avatar_url: profile.avatar_path.map(|p| instance.image_url_for(&p)),
+            banner_url: profile.banner_path.map(|p| instance.image_url_for(&p)),
         },
         also_known_as: profile.also_known_as,
         fields: profile
@@ -113,12 +109,7 @@ pub async fn update_profile_handler(
         also_known_as: data.also_known_as,
     };
 
-    let deps = UpdateProfileDeps {
-        user: state.app_ctx.repos.user.clone(),
-        object_storage: state.app_ctx.services.object_storage.clone(),
-        event_publisher: state.app_ctx.services.event_publisher.clone(),
-    };
-    match update_profile::execute(&deps, cmd).await {
+    match update_profile::execute(&state.app_ctx.deps.users.update_profile, cmd).await {
         Ok(()) => StatusCode::NO_CONTENT.into_response(),
         Err(e) => crate::errors::domain_error_response(e),
     }
@@ -159,12 +150,7 @@ pub async fn update_profile_fields_handler(
         fields,
     };
 
-    match update_profile_fields::execute(
-        state.app_ctx.repos.profile_fields.clone(),
-        state.app_ctx.services.event_publisher.clone(),
-        cmd,
-    )
-    .await
+    match update_profile_fields::execute(&state.app_ctx.deps.users.update_profile_fields, cmd).await
     {
         Ok(()) => StatusCode::NO_CONTENT.into_response(),
         Err(e) => crate::errors::domain_error_response(e),
@@ -176,11 +162,8 @@ pub async fn update_profile_fields_handler(
     responses((status = 200, body = UsersResponse)),
 )]
 pub async fn list_users(State(state): State<AppState>) -> Result<Json<UsersResponse>, ApiError> {
-    let deps = application::users::deps::GetUsersListDeps {
-        user: state.app_ctx.repos.user.clone(),
-        federation_admin: state.app_ctx.repos.federation_admin.clone(),
-    };
-    let result = get_users::execute(&deps, GetUsersQuery).await?;
+    let result =
+        get_users::execute(&state.app_ctx.deps.users.get_users_list, GetUsersQuery).await?;
     Ok(Json(UsersResponse {
         users: result
             .users
@@ -220,44 +203,15 @@ pub async fn get_user_profile(
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
-    let local_user = match state
-        .app_ctx
-        .repos
-        .user
-        .find_by_id(&UserId::from_uuid(user_id))
-        .await
-    {
-        Ok(u) => u,
-        Err(e) => {
-            return crate::errors::domain_error_response(e);
-        }
-    };
-
-    if local_user.is_none() {
-        if let Some(ref fed_query) = state.app_ctx.repos.federated_profile
-            && let Ok(Some(fed)) = fed_query.get_federated_profile(user_id).await
-        {
-            return build_federated_profile_response(&state, user_id, fed, profile_view, &params)
-                .await;
-        }
-        return StatusCode::NOT_FOUND.into_response();
-    }
-    let user = local_user.unwrap();
-
-    let get_profile_deps = GetProfileDeps {
-        stats: state.app_ctx.repos.stats.clone(),
-        diary: state.app_ctx.repos.diary.clone(),
-        social_query: state.app_ctx.repos.social_query_unified.clone(),
-    };
-    let profile = match get_user_profile_uc::execute(
-        &get_profile_deps,
+    let profile = match get_local_profile::execute(
+        &state.app_ctx.deps.users.get_local_profile,
         GetUserProfileQuery {
             user_id,
             view: profile_view,
             limit: params.limit,
             offset: params.offset,
             sort_by: domain::models::FeedSortBy::Date,
-            search: params.search,
+            search: params.search.clone(),
             is_own_profile: viewer_id.value() == user_id,
             include_remote: false,
         },
@@ -265,6 +219,24 @@ pub async fn get_user_profile(
     .await
     {
         Ok(p) => p,
+        Err(DomainError::NotFound(_)) => {
+            if let Ok(Some(fed)) = get_federated_profile::execute(
+                &state.app_ctx.deps.users.get_federated_profile,
+                user_id,
+            )
+            .await
+            {
+                return build_federated_profile_response(
+                    &state,
+                    user_id,
+                    fed,
+                    profile_view,
+                    &params,
+                )
+                .await;
+            }
+            return StatusCode::NOT_FOUND.into_response();
+        }
         Err(e) => return crate::errors::domain_error_response(e),
     };
 
@@ -306,15 +278,11 @@ pub async fn get_user_profile(
     Json(UserProfileResponse {
         user_id,
         profile: api_types::UserProfileBase {
-            username: user.username().value().to_string(),
-            avatar_url: user
-                .avatar_path()
-                .map(|p| format!("{}/images/{}", state.app_ctx.config.base_url, p)),
-            banner_url: user
-                .banner_path()
-                .map(|p| format!("{}/images/{}", state.app_ctx.config.base_url, p)),
-            display_name: None,
-            bio: None,
+            username: profile.identity.username.clone(),
+            avatar_url: profile.identity.avatar_url.clone(),
+            banner_url: profile.identity.banner_url.clone(),
+            display_name: profile.identity.display_name.clone(),
+            bio: profile.identity.bio.clone(),
         },
         stats: UserStatsDto {
             total_movies: profile.stats.total_movies,
@@ -327,10 +295,7 @@ pub async fn get_user_profile(
         view_data,
         goals: {
             let goals_list = application::goals::list::execute(
-                &application::goals::deps::GoalQueryDeps {
-                    goal_query: state.app_ctx.repos.goal_query.clone(),
-                    stats: state.app_ctx.repos.stats.clone(),
-                },
+                &state.app_ctx.deps.goals.query,
                 application::goals::queries::ListGoalsQuery { user_id },
             )
             .await
@@ -342,8 +307,8 @@ pub async fn get_user_profile(
             }
         },
         is_federated: false,
-        handle: None,
-        actor_url: None,
+        handle: Some(profile.identity.handle.clone()),
+        actor_url: Some(profile.identity.actor_url.clone()),
     })
     .into_response()
 }
@@ -355,13 +320,8 @@ async fn build_federated_profile_response(
     profile_view: application::users::queries::ProfileView,
     params: &UserProfileQueryParams,
 ) -> axum::response::Response {
-    let get_profile_deps = GetProfileDeps {
-        stats: state.app_ctx.repos.stats.clone(),
-        diary: state.app_ctx.repos.diary.clone(),
-        social_query: state.app_ctx.repos.social_query_unified.clone(),
-    };
-    let profile = match get_user_profile_uc::execute(
-        &get_profile_deps,
+    let profile = match get_federated_profile_stats::execute(
+        &state.app_ctx.deps.users.get_federated_profile_stats,
         GetUserProfileQuery {
             user_id,
             view: profile_view,
@@ -481,12 +441,8 @@ pub async fn get_users_list(
     ctx.page_title = "Members — Movies Diary".to_string();
     ctx.canonical_url = format!("{}/users", state.app_ctx.config.base_url);
 
-    let users_deps = application::users::deps::GetUsersListDeps {
-        user: state.app_ctx.repos.user.clone(),
-        federation_admin: state.app_ctx.repos.federation_admin.clone(),
-    };
     match application::users::get_users::execute(
-        &users_deps,
+        &state.app_ctx.deps.users.get_users_list,
         application::users::queries::GetUsersQuery,
     )
     .await
@@ -517,14 +473,14 @@ pub async fn get_user_by_username(
     State(state): State<AppState>,
     Path(username): Path<String>,
 ) -> impl IntoResponse {
-    let uname = match domain::value_objects::Username::new(username) {
+    let uname = match Username::new(username) {
         Ok(u) => u,
         Err(_) => return StatusCode::NOT_FOUND.into_response(),
     };
-    match state.app_ctx.repos.user.find_by_username(&uname).await {
-        Ok(Some(user)) => {
-            axum::response::Redirect::permanent(&format!("/users/{}", user.id().value()))
-                .into_response()
+    match resolve_username_to_id::execute(&state.app_ctx.deps.users.resolve_username, &uname).await
+    {
+        Ok(Some(uid)) => {
+            axum::response::Redirect::permanent(&format!("/users/{}", uid.value())).into_response()
         }
         _ => StatusCode::NOT_FOUND.into_response(),
     }
@@ -607,10 +563,7 @@ async fn fetch_profile_goals(
     user_id: Uuid,
 ) -> Vec<template_askama::GoalViewData> {
     let goals_list = application::goals::list::execute(
-        &application::goals::deps::GoalQueryDeps {
-            goal_query: state.app_ctx.repos.goal_query.clone(),
-            stats: state.app_ctx.repos.stats.clone(),
-        },
+        &state.app_ctx.deps.goals.query,
         application::goals::queries::ListGoalsQuery { user_id },
     )
     .await
@@ -647,8 +600,7 @@ pub async fn get_user_profile_html(
         if accept.contains("application/activity+json") || accept.contains("application/ld+json") {
             return match state
                 .app_ctx
-                .services
-                .ap_service
+                .ap_document
                 .actor_json(&profile_user_uuid.to_string())
                 .await
             {
@@ -681,25 +633,6 @@ pub async fn get_user_profile_html(
         }
     };
 
-    let profile_user = match state
-        .app_ctx
-        .repos
-        .user
-        .find_by_id(&domain::value_objects::UserId::from_uuid(profile_user_uuid))
-        .await
-    {
-        Ok(Some(u)) => u,
-        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
-        Err(e) => return crate::errors::domain_error_response(e),
-    };
-
-    let display_name = profile_user.username().value();
-    ctx.page_title = format!("{}'s Diary — Movies Diary", display_name);
-    ctx.canonical_url = format!(
-        "{}/users/{}",
-        state.app_ctx.config.base_url, profile_user_uuid
-    );
-
     let sort_by_str = match params.sort_by.as_str() {
         "date_asc" => "date_asc",
         "rating" => "rating",
@@ -727,19 +660,25 @@ pub async fn get_user_profile_html(
         include_remote: false,
     };
 
-    let html_profile_deps = GetProfileDeps {
-        stats: state.app_ctx.repos.stats.clone(),
-        diary: state.app_ctx.repos.diary.clone(),
-        social_query: state.app_ctx.repos.social_query_unified.clone(),
-    };
-    match application::users::get_profile::execute(&html_profile_deps, query).await {
+    match get_local_profile::execute(&state.app_ctx.deps.users.get_local_profile, query).await {
         Ok(profile) => {
+            ctx.page_title = format!("{}'s Diary — Movies Diary", profile.identity.username);
+            ctx.canonical_url = format!(
+                "{}/users/{}",
+                state.app_ctx.config.base_url, profile_user_uuid
+            );
+
             let pag = compute_pagination(profile.entries.as_ref());
             if !is_own_profile {
                 ctx.page_rss_url = Some(format!("/users/{}/feed.rss", profile_user_uuid));
             }
-            let email = profile_user.email().value().to_string();
-            let display_name = email.split('@').next().unwrap_or("?").to_string();
+            let display_name = profile
+                .identity
+                .email
+                .split('@')
+                .next()
+                .unwrap_or("?")
+                .to_string();
             let stats_disp = build_stats_display(&profile.stats);
             let history = profile.history.map(application::users::group_by_month);
             let heatmap = history.as_deref().map(build_heatmap).unwrap_or_default();
@@ -809,6 +748,7 @@ pub async fn get_user_profile_html(
                 .into_response()
             }
         }
+        Err(DomainError::NotFound(_)) => StatusCode::NOT_FOUND.into_response(),
         Err(e) => crate::errors::domain_error_response(e),
     }
 }
@@ -828,43 +768,26 @@ pub async fn get_profile_settings(
     ctx.page_title = "Profile Settings — Movies Diary".to_string();
     ctx.canonical_url = format!("{}/settings/profile", state.app_ctx.config.base_url);
 
-    let user = match state.app_ctx.repos.user.find_by_id(&user_id).await {
-        Ok(Some(u)) => u,
-        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+    let settings = match get_profile_settings_uc::execute(
+        &state.app_ctx.deps.users.get_profile_settings,
+        user_id.value(),
+    )
+    .await
+    {
+        Ok(s) => s,
+        Err(DomainError::NotFound(_)) => return StatusCode::NOT_FOUND.into_response(),
         Err(e) => return crate::errors::domain_error_response(e),
     };
 
-    let base_url = &state.app_ctx.config.base_url;
-    let avatar_url = user
-        .avatar_path()
-        .map(|path| format!("{}/images/{}", base_url, path));
-    let banner_url = user
-        .banner_path()
-        .map(|path| format!("{}/images/{}", base_url, path));
-
-    let profile_fields: Vec<(String, String)> = state
-        .app_ctx
-        .repos
-        .profile_fields
-        .get_fields(&user_id)
-        .await
-        .unwrap_or_default()
-        .into_iter()
-        .map(|f| (f.name, f.value))
-        .collect();
-
     let saved = params.saved.as_deref() == Some("1");
-
-    let bio = user.bio().map(|s| s.to_string());
-    let also_known_as = user.also_known_as().map(|s| s.to_string());
 
     render_page(ProfileSettingsTemplate {
         ctx: &ctx,
-        bio: bio.as_deref(),
-        avatar_url: avatar_url.as_deref(),
-        banner_url: banner_url.as_deref(),
-        also_known_as: also_known_as.as_deref(),
-        profile_fields: &profile_fields,
+        bio: settings.bio.as_deref(),
+        avatar_url: settings.avatar_url.as_deref(),
+        banner_url: settings.banner_url.as_deref(),
+        also_known_as: settings.also_known_as.as_deref(),
+        profile_fields: &settings.fields,
         saved,
         embed_url: format!(
             "{}/users/{}?embed=true",
@@ -892,12 +815,7 @@ pub async fn post_profile_settings(
         banner_content_type: data.banner_content_type,
         also_known_as: data.also_known_as,
     };
-    let update_deps = UpdateProfileDeps {
-        user: state.app_ctx.repos.user.clone(),
-        object_storage: state.app_ctx.services.object_storage.clone(),
-        event_publisher: state.app_ctx.services.event_publisher.clone(),
-    };
-    if let Err(e) = update_profile::execute(&update_deps, cmd).await {
+    if let Err(e) = update_profile::execute(&state.app_ctx.deps.users.update_profile, cmd).await {
         tracing::error!("update_profile error: {:?}", e);
         return axum::response::Redirect::to(&format!(
             "/settings/profile?error={}",
@@ -925,12 +843,9 @@ pub async fn post_profile_settings(
         user_id: user_id.value(),
         fields,
     };
-    if let Err(e) = update_profile_fields::execute(
-        state.app_ctx.repos.profile_fields.clone(),
-        state.app_ctx.services.event_publisher.clone(),
-        fields_cmd,
-    )
-    .await
+    if let Err(e) =
+        update_profile_fields::execute(&state.app_ctx.deps.users.update_profile_fields, fields_cmd)
+            .await
     {
         tracing::error!("update_profile_fields error: {:?}", e);
         return axum::response::Redirect::to(&format!(

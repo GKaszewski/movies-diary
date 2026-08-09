@@ -1,18 +1,8 @@
 mod activity;
 mod actor;
 mod blocklist;
-mod federated_profile;
 mod follow;
-mod follow_repository;
 mod review;
-mod social;
-mod watchlist;
-
-pub mod ap_content;
-pub mod remote_goals;
-
-pub use ap_content::SqliteApContentQuery;
-pub use remote_goals::SqliteRemoteGoalRepository;
 
 use k_ap::{FollowerStatus, RemoteActor};
 use sqlx::SqlitePool;
@@ -84,24 +74,22 @@ impl SqliteFederationRepository {
     }
 }
 
-pub fn create_federated_profile_query(
+pub fn wire(
     pool: SqlitePool,
-) -> std::sync::Arc<dyn domain::ports::FederatedProfileQuery> {
-    std::sync::Arc::new(SqliteFederationRepository::new(pool))
-}
-
-pub fn wire(pool: SqlitePool) -> activitypub::FederationRepos {
-    let fed = std::sync::Arc::new(SqliteFederationRepository::new(pool));
+    instance: domain::value_objects::InstanceIdentity,
+) -> activitypub::FederationRepos {
+    let fed = std::sync::Arc::new(SqliteFederationRepository::new(pool.clone()));
+    let social = std::sync::Arc::new(sqlite_social::SqliteSocialRepository::new(pool, instance));
     activitypub::FederationRepos {
         activity: std::sync::Arc::clone(&fed) as _,
         follow: std::sync::Arc::clone(&fed) as _,
         actor: std::sync::Arc::clone(&fed) as _,
         blocklist: std::sync::Arc::clone(&fed) as _,
-        admin_query: std::sync::Arc::clone(&fed) as _,
-        review_store: std::sync::Arc::clone(&fed) as _,
-        remote_watchlist: std::sync::Arc::clone(&fed) as _,
-        follow_command: std::sync::Arc::clone(&fed) as _,
-        follow_query: fed as _,
+        review_store: fed as _,
+        admin_query: std::sync::Arc::clone(&social) as _,
+        remote_watchlist: std::sync::Arc::clone(&social) as _,
+        follow_command: std::sync::Arc::clone(&social) as _,
+        follow_query: social as _,
     }
 }
 

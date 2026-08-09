@@ -5,17 +5,30 @@ edition = "2024"
 
 [features]
 default = ["sqlite", "sqlite-federation"]
-sqlite = ["dep:sqlite", "dep:sqlite-event-queue", "dep:sqlite-search", "infra-wiring/sqlite"]
-postgres = ["dep:postgres", "dep:postgres-event-queue", "dep:postgres-search", "infra-wiring/postgres"]
-nats = ["dep:nats", "infra-wiring/nats"]
+sqlite = ["dep:sqlite", "dep:sqlite-event-queue", "dep:sqlite-search", "infra-wiring/sqlite", "composition/sqlite"]
+postgres = ["dep:postgres", "dep:postgres-event-queue", "dep:postgres-search", "infra-wiring/postgres", "composition/postgres"]
+nats = ["dep:nats", "infra-wiring/nats", "composition/nats"]
 federation = ["application/federation"]
-sqlite-federation = ["sqlite", "dep:sqlite-federation", "dep:activitypub", "federation"]
-postgres-federation = ["postgres", "dep:postgres-federation", "dep:activitypub", "federation"]
+sqlite-federation = [
+    "sqlite",
+    "dep:sqlite-federation",
+    "dep:activitypub",
+    "federation",
+    "composition/sqlite-federation",
+]
+postgres-federation = [
+    "postgres",
+    "dep:postgres-federation",
+    "dep:activitypub",
+    "federation",
+    "composition/postgres-federation",
+]
 
 [dependencies]
 domain = { workspace = true }
 application = { workspace = true }
-tokio = { workspace = true }
+composition = { workspace = true }
+tokio = { workspace = true, features = ["signal"] }
 anyhow = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }

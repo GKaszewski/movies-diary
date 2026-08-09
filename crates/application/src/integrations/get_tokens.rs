@@ -1,17 +1,13 @@
-use std::sync::Arc;
+use domain::{errors::DomainError, models::WebhookToken, value_objects::UserId};
 
-use domain::{
-    errors::DomainError, models::WebhookToken, ports::WebhookTokenRepository, value_objects::UserId,
-};
-
-use crate::integrations::queries::GetWebhookTokensQuery;
+use crate::integrations::{deps::GetWebhookTokensDeps, queries::GetWebhookTokensQuery};
 
 pub async fn execute(
-    webhook_token: Arc<dyn WebhookTokenRepository>,
+    deps: &GetWebhookTokensDeps,
     query: GetWebhookTokensQuery,
 ) -> Result<Vec<WebhookToken>, DomainError> {
     let user_id = UserId::from_uuid(query.user_id);
-    webhook_token.list_by_user(&user_id).await
+    deps.webhook_token.list_by_user(&user_id).await
 }
 
 #[cfg(test)]

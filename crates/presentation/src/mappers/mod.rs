@@ -3,7 +3,5 @@ pub mod import;
 pub mod integrations;
 pub mod movies;
 pub mod search;
-#[cfg(feature = "federation")]
-pub mod social;
 pub mod users;
 pub mod watchlist;

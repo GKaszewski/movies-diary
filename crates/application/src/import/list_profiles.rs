@@ -1,15 +1,11 @@
-use std::sync::Arc;
-
-use domain::{
-    errors::DomainError, models::ImportProfile, ports::ImportProfileRepository,
-    value_objects::UserId,
-};
+use crate::import::deps::ListImportProfilesDeps;
+use domain::{errors::DomainError, models::ImportProfile, value_objects::UserId};
 
 pub async fn execute(
-    import_profile: Arc<dyn ImportProfileRepository>,
+    deps: &ListImportProfilesDeps,
     user_id: &UserId,
 ) -> Result<Vec<ImportProfile>, DomainError> {
-    import_profile.list_for_user(user_id).await
+    deps.import_profile.list_for_user(user_id).await
 }
 
 #[cfg(test)]

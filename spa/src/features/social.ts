@@ -6,8 +6,19 @@ export const remoteActorDtoSchema = z.object({
   handle: z.string(),
   display_name: z.string().optional(),
   url: z.string(),
+  user_id: z.string().nullish(),
+  avatar_url: z.string().nullish(),
 })
 export type RemoteActorDto = z.infer<typeof remoteActorDtoSchema>
+
+export const followStateSchema = z.enum(["none", "pending", "accepted", "rejected"])
+export type FollowState = z.infer<typeof followStateSchema>
+
+export const followRelationSchema = z.object({
+  following: followStateSchema,
+  followed_by: followStateSchema,
+})
+export type FollowRelation = z.infer<typeof followRelationSchema>
 
 export const actorListResponseSchema = z.object({
   actors: z.array(remoteActorDtoSchema),
@@ -45,6 +56,11 @@ export const blockedActorResponseSchema = z.object({
 })
 export type BlockedActorResponse = z.infer<typeof blockedActorResponseSchema>
 
+export const pendingCountResponseSchema = z.object({
+  count: z.number(),
+})
+export type PendingCountResponse = z.infer<typeof pendingCountResponseSchema>
+
 function getFollowing() {
   return get<ActorListResponse>("/social/following")
 }
@@ -63,6 +79,18 @@ function getUserFollowers(userId: string) {
 
 function getPendingFollowers() {
   return get<ActorListResponse>("/social/followers/pending")
+}
+
+function getPendingFollowerCount() {
+  return get<PendingCountResponse>("/social/followers/pending/count")
+}
+
+function getPendingFollowing() {
+  return get<ActorListResponse>("/social/following/pending")
+}
+
+function getRelationship(actorUrl: string) {
+  return get<FollowRelation>(`/social/relationship?actor_url=${encodeURIComponent(actorUrl)}`)
 }
 
 function follow(data: FollowRequest) {
@@ -113,6 +141,9 @@ export const socialKeys = {
   following: ["following"] as const,
   followers: ["followers"] as const,
   pending: ["followers-pending"] as const,
+  pendingCount: ["followers-pending-count"] as const,
+  pendingFollowing: ["following-pending"] as const,
+  relationship: (url: string) => ["relationship", url] as const,
   userFollowing: (id: string) => ["following", id] as const,
   userFollowers: (id: string) => ["followers", id] as const,
   blockedDomains: ["blocked-domains"] as const,
@@ -156,12 +187,35 @@ export function usePendingFollowers() {
   })
 }
 
+export function usePendingFollowerCount() {
+  return useQuery({
+    queryKey: socialKeys.pendingCount,
+    queryFn: getPendingFollowerCount,
+  })
+}
+
+export function usePendingFollowing() {
+  return useQuery({
+    queryKey: socialKeys.pendingFollowing,
+    queryFn: getPendingFollowing,
+  })
+}
+
+export function useRelationship(actorUrl?: string) {
+  return useQuery({
+    queryKey: socialKeys.relationship(actorUrl ?? ""),
+    queryFn: () => getRelationship(actorUrl!),
+    enabled: !!actorUrl,
+  })
+}
+
 export function useFollow() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (data: FollowRequest) => follow(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: socialKeys.following })
+      qc.invalidateQueries({ queryKey: ["relationship"] })
     },
   })
 }
@@ -172,6 +226,18 @@ export function useUnfollow() {
     mutationFn: (data: ActorUrlRequest) => unfollow(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: socialKeys.following })
+      qc.invalidateQueries({ queryKey: ["relationship"] })
+    },
+  })
+}
+
+export function useCancelFollow() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: ActorUrlRequest) => unfollow(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: socialKeys.pendingFollowing })
+      qc.invalidateQueries({ queryKey: ["relationship"] })
     },
   })
 }
@@ -182,7 +248,9 @@ export function useAcceptFollower() {
     mutationFn: (data: ActorUrlRequest) => acceptFollower(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: socialKeys.pending })
+      qc.invalidateQueries({ queryKey: socialKeys.pendingCount })
       qc.invalidateQueries({ queryKey: socialKeys.followers })
+      qc.invalidateQueries({ queryKey: ["relationship"] })
     },
   })
 }
@@ -193,6 +261,8 @@ export function useRejectFollower() {
     mutationFn: (data: ActorUrlRequest) => rejectFollower(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: socialKeys.pending })
+      qc.invalidateQueries({ queryKey: socialKeys.pendingCount })
+      qc.invalidateQueries({ queryKey: ["relationship"] })
     },
   })
 }
@@ -203,6 +273,7 @@ export function useRemoveFollower() {
     mutationFn: (data: ActorUrlRequest) => removeFollower(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: socialKeys.followers })
+      qc.invalidateQueries({ queryKey: ["relationship"] })
     },
   })
 }

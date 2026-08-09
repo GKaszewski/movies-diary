@@ -208,7 +208,10 @@ impl MovieProfileRepository for SqliteMovieProfileRepository {
             name: r.try_get("name").unwrap_or_default(),
             character: r.try_get("character").unwrap_or_default(),
             billing_order: r.try_get::<i64, _>("billing_order").unwrap_or(0) as u32,
-            profile_path: r.try_get("profile_path").ok(),
+            profile_path: r
+                .try_get::<Option<String>, _>("profile_path")
+                .ok()
+                .flatten(),
         })
         .collect();
 
@@ -226,31 +229,40 @@ impl MovieProfileRepository for SqliteMovieProfileRepository {
             name: r.try_get("name").unwrap_or_default(),
             job: r.try_get("job").unwrap_or_default(),
             department: r.try_get("department").unwrap_or_default(),
-            profile_path: r.try_get("profile_path").ok(),
+            profile_path: r
+                .try_get::<Option<String>, _>("profile_path")
+                .ok()
+                .flatten(),
         })
         .collect();
 
         Ok(Some(MovieProfile {
             movie_id: id.clone(),
             tmdb_id: row.try_get::<i64, _>("tmdb_id").unwrap_or(0) as u64,
-            imdb_id: row.try_get("imdb_id").ok(),
-            overview: row.try_get("overview").ok(),
-            tagline: row.try_get("tagline").ok(),
+            imdb_id: row.try_get::<Option<String>, _>("imdb_id").ok().flatten(),
+            overview: row.try_get::<Option<String>, _>("overview").ok().flatten(),
+            tagline: row.try_get::<Option<String>, _>("tagline").ok().flatten(),
             runtime_minutes: row
                 .try_get::<Option<i64>, _>("runtime_minutes")
                 .ok()
                 .flatten()
                 .map(|v| v as u32),
-            budget_usd: row.try_get("budget_usd").ok(),
-            revenue_usd: row.try_get("revenue_usd").ok(),
-            vote_average: row.try_get("vote_average").ok(),
+            budget_usd: row.try_get::<Option<i64>, _>("budget_usd").ok().flatten(),
+            revenue_usd: row.try_get::<Option<i64>, _>("revenue_usd").ok().flatten(),
+            vote_average: row.try_get::<Option<f64>, _>("vote_average").ok().flatten(),
             vote_count: row
                 .try_get::<Option<i64>, _>("vote_count")
                 .ok()
                 .flatten()
                 .map(|v| v as u32),
-            original_language: row.try_get("original_language").ok(),
-            collection_name: row.try_get("collection_name").ok(),
+            original_language: row
+                .try_get::<Option<String>, _>("original_language")
+                .ok()
+                .flatten(),
+            collection_name: row
+                .try_get::<Option<String>, _>("collection_name")
+                .ok()
+                .flatten(),
             genres,
             keywords,
             cast,
@@ -286,3 +298,7 @@ impl MovieProfileRepository for SqliteMovieProfileRepository {
             .collect())
     }
 }
+
+#[cfg(test)]
+#[path = "tests/profile.rs"]
+mod tests;

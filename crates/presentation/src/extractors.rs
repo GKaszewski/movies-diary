@@ -111,17 +111,17 @@ where
         let AuthenticatedUser(user_id) =
             AuthenticatedUser::from_request_parts(parts, state).await?;
         let app_state = AppState::from_ref(state);
-        let user = app_state
-            .app_ctx
-            .repos
-            .user
-            .find_by_id(&user_id)
-            .await
-            .map_err(ApiError)?
-            .ok_or_else(|| ApiError(DomainError::NotFound("user not found".into())))?;
-        match user.role() {
-            domain::models::UserRole::Admin => Ok(AdminApiUser(user_id)),
-            _ => Err(ApiError(DomainError::Forbidden("admin only".into()))),
+        let is_admin = application::users::authorize_admin::execute(
+            &app_state.app_ctx.deps.users.authorize_admin,
+            user_id.value(),
+        )
+        .await
+        .map_err(ApiError)?
+        .ok_or_else(|| ApiError(DomainError::NotFound("user not found".into())))?;
+        if is_admin {
+            Ok(AdminApiUser(user_id))
+        } else {
+            Err(ApiError(DomainError::Forbidden("admin only".into())))
         }
     }
 }
@@ -139,17 +139,17 @@ where
         let app_state = AppState::from_ref(state);
         let RequiredCookieUser(user_id) =
             RequiredCookieUser::from_request_parts(parts, state).await?;
-        let user = app_state
-            .app_ctx
-            .repos
-            .user
-            .find_by_id(&user_id)
-            .await
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
-            .ok_or_else(|| StatusCode::UNAUTHORIZED.into_response())?;
-        match user.role() {
-            domain::models::UserRole::Admin => Ok(AdminUser(user_id)),
-            _ => Err(StatusCode::FORBIDDEN.into_response()),
+        let is_admin = application::users::authorize_admin::execute(
+            &app_state.app_ctx.deps.users.authorize_admin,
+            user_id.value(),
+        )
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
+        .ok_or_else(|| StatusCode::UNAUTHORIZED.into_response())?;
+        if is_admin {
+            Ok(AdminUser(user_id))
+        } else {
+            Err(StatusCode::FORBIDDEN.into_response())
         }
     }
 }

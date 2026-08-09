@@ -1,7 +1,6 @@
-use std::sync::Arc;
+use domain::errors::DomainError;
 
-use domain::{errors::DomainError, ports::UserRepository};
-
+use crate::users::deps::GetCurrentProfileDeps;
 use crate::users::queries::GetCurrentProfileQuery;
 
 pub struct ProfileFieldData {
@@ -21,11 +20,12 @@ pub struct CurrentProfileData {
 }
 
 pub async fn execute(
-    user: Arc<dyn UserRepository>,
+    deps: &GetCurrentProfileDeps,
     query: GetCurrentProfileQuery,
 ) -> Result<CurrentProfileData, DomainError> {
     let user_id = domain::value_objects::UserId::from_uuid(query.user_id);
-    let found = user
+    let found = deps
+        .user
         .find_by_id(&user_id)
         .await?
         .ok_or_else(|| DomainError::NotFound("User not found".into()))?;

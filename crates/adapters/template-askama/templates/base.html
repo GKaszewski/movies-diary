@@ -34,7 +34,7 @@
         <a href="/">Feed</a>
         <a href="/users">Users</a>
         {% if let Some(uid) = ctx.user_id %}
-        <a href="/users/{{ uid }}">Profile</a>
+        <a href="/users/{{ uid }}">Profile{% if ctx.pending_follow_count > 0 %} ({{ ctx.pending_follow_count }}){% endif %}</a>
         <a href="/reviews/new">Add Review</a>
         <a href="/import">Import</a>
         <a href="/watch-queue">Queue</a>

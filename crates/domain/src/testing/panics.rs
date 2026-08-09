@@ -7,14 +7,15 @@ use crate::{
         FeedEntry, FeedSortBy, FieldMapping, FileFormat, FollowingFilter, ImportError,
         ImportProfile, ImportSession, IndexableDocument, MovieProfile, MovieStats, ParsedFile,
         Person, PersonCredits, PersonEnrichmentData, PersonId, RefreshSession, RemoteActorInfo,
-        ReviewHistory, SearchQuery, SearchResults, UserStats, UserTrends,
+        ReviewHistory, SearchQuery, SearchResults, UserStats, UserTrends, WatchlistEntry,
+        WatchlistWithMovie,
         collections::{PageParams, Paginated},
     },
     ports::{
         DiaryExporter, DiaryQuery, DocumentParser, ImportProfileRepository,
         ImportSessionRepository, MovieProfileRepository, PersonCommand, PersonQuery,
         PosterFetcherClient, RefreshSessionRepository, SearchCommand, SearchPort, StatsRepository,
-        UserProfileFieldsRepository,
+        UserProfileFieldsRepository, WatchlistRepository,
     },
     value_objects::{ImportProfileId, ImportSessionId, MovieId, PosterUrl, UserId},
 };
@@ -277,6 +278,31 @@ impl DocumentParser for PanicDocumentParser {
     }
     fn apply_mapping(&self, _: &ParsedFile, _: &[FieldMapping]) -> Vec<AnnotatedRow> {
         panic!("PanicDocumentParser called")
+    }
+}
+
+pub struct PanicWatchlistRepository;
+
+#[async_trait]
+impl WatchlistRepository for PanicWatchlistRepository {
+    async fn add(&self, _: &WatchlistEntry) -> Result<(), DomainError> {
+        panic!("PanicWatchlistRepository called")
+    }
+    async fn remove(&self, _: &UserId, _: &MovieId) -> Result<(), DomainError> {
+        panic!("PanicWatchlistRepository called")
+    }
+    async fn remove_if_present(&self, _: &UserId, _: &MovieId) -> Result<bool, DomainError> {
+        panic!("PanicWatchlistRepository called")
+    }
+    async fn get_for_user(
+        &self,
+        _: &UserId,
+        _: &PageParams,
+    ) -> Result<Paginated<WatchlistWithMovie>, DomainError> {
+        panic!("PanicWatchlistRepository called")
+    }
+    async fn contains(&self, _: &UserId, _: &MovieId) -> Result<bool, DomainError> {
+        panic!("PanicWatchlistRepository called")
     }
 }
 

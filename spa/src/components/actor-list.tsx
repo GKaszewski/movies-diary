@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Link } from "@tanstack/react-router"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { EmptyState } from "@/components/empty-state"
@@ -28,9 +29,9 @@ export function ActorList({ data, isPending, emptyIcon, emptyTitle, emptyDescrip
 }
 
 function actorHandle(actor: RemoteActorDto): string {
+  if (actor.handle.startsWith("@")) return actor.handle
   try {
-    const host = new URL(actor.url).host
-    return `@${actor.handle}@${host}`
+    return `@${actor.handle}@${new URL(actor.url).host}`
   } catch {
     return `@${actor.handle}`
   }
@@ -39,16 +40,31 @@ function actorHandle(actor: RemoteActorDto): string {
 function ActorCard({ actor, action }: { actor: RemoteActorDto; action?: React.ReactNode }) {
   const initial = (actor.display_name || actor.handle)[0]?.toUpperCase() ?? "?"
 
+  const identity = (
+    <div className="flex min-w-0 flex-1 items-center gap-3">
+      <Avatar>
+        {actor.avatar_url && <AvatarImage src={actor.avatar_url} />}
+        <AvatarFallback>{initial}</AvatarFallback>
+      </Avatar>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold">{actor.display_name || actor.handle}</p>
+        <p className="truncate text-xs text-muted-foreground">{actorHandle(actor)}</p>
+      </div>
+    </div>
+  )
+
   return (
     <Card size="sm">
       <CardContent className="flex items-center gap-3">
-        <Avatar>
-          <AvatarFallback>{initial}</AvatarFallback>
-        </Avatar>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">{actor.display_name || actor.handle}</p>
-          <p className="truncate text-xs text-muted-foreground">{actorHandle(actor)}</p>
-        </div>
+        {actor.user_id ? (
+          <Link to="/users/$id" params={{ id: actor.user_id }} className="min-w-0 flex-1">
+            {identity}
+          </Link>
+        ) : (
+          <a href={actor.url} target="_blank" rel="noopener noreferrer" className="min-w-0 flex-1">
+            {identity}
+          </a>
+        )}
         {action}
       </CardContent>
     </Card>

@@ -4,6 +4,7 @@ pub mod delete;
 pub mod deps;
 pub mod event_handler;
 pub mod generate;
+pub mod get_ready_report;
 pub mod get_wrapup;
 pub mod handle_requested;
 pub mod list_wrapups;

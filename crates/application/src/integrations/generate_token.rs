@@ -1,11 +1,7 @@
-use std::sync::Arc;
-
-use domain::{
-    errors::DomainError, models::WebhookToken, ports::WebhookTokenRepository, value_objects::UserId,
-};
+use domain::{errors::DomainError, models::WebhookToken, value_objects::UserId};
 use sha2::{Digest, Sha256};
 
-use crate::integrations::commands::GenerateWebhookTokenCommand;
+use crate::integrations::{commands::GenerateWebhookTokenCommand, deps::GenerateWebhookTokenDeps};
 
 pub struct GeneratedWebhookToken {
     pub token_plaintext: String,
@@ -13,7 +9,7 @@ pub struct GeneratedWebhookToken {
 }
 
 pub async fn execute(
-    webhook_token: Arc<dyn WebhookTokenRepository>,
+    deps: &GenerateWebhookTokenDeps,
     cmd: GenerateWebhookTokenCommand,
 ) -> Result<GeneratedWebhookToken, DomainError> {
     let plaintext = generate_random_token();
@@ -22,7 +18,7 @@ pub async fn execute(
     let user_id = UserId::from_uuid(cmd.user_id);
     let token = WebhookToken::new(user_id, hash, cmd.provider, cmd.label);
 
-    webhook_token.save(&token).await?;
+    deps.webhook_token.save(&token).await?;
 
     Ok(GeneratedWebhookToken {
         token_plaintext: plaintext,

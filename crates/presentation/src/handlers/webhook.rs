@@ -15,10 +15,9 @@ use application::integrations::{
         ConfirmWatchEventsCommand, DismissWatchEventsCommand, GenerateWebhookTokenCommand,
         IngestWatchEventCommand, RevokeWebhookTokenCommand, WatchEventConfirmation,
     },
-    confirm as confirm_watch_events,
-    deps::IngestWatchEventDeps,
-    dismiss as dismiss_watch_events, generate_token as generate_webhook_token,
-    get_queue as get_watch_queue, get_tokens as get_webhook_tokens, ingest as ingest_watch_event,
+    confirm as confirm_watch_events, dismiss as dismiss_watch_events,
+    generate_token as generate_webhook_token, get_queue as get_watch_queue,
+    get_tokens as get_webhook_tokens, ingest as ingest_watch_event,
     queries::{GetWatchQueueQuery, GetWebhookTokensQuery},
     revoke_token as revoke_webhook_token,
 };
@@ -72,7 +71,12 @@ pub async fn post_jellyfin_webhook(
         source: WatchEventSource::Jellyfin,
     };
 
-    run_ingest(&state, cmd, &jellyfin::JellyfinParser).await
+    run_ingest(
+        &state,
+        cmd,
+        &*state.app_ctx.deps.integrations.jellyfin_parser,
+    )
+    .await
 }
 
 // ── Plex webhook (multipart form data with `payload` JSON field) ──────────────
@@ -119,7 +123,7 @@ pub async fn post_plex_webhook(
         source: WatchEventSource::Plex,
     };
 
-    run_ingest(&state, cmd, &plex::PlexParser).await
+    run_ingest(&state, cmd, &*state.app_ctx.deps.integrations.plex_parser).await
 }
 
 async fn run_ingest(
@@ -127,13 +131,13 @@ async fn run_ingest(
     cmd: IngestWatchEventCommand,
     parser: &dyn domain::ports::MediaServerParser,
 ) -> StatusCode {
-    let deps = IngestWatchEventDeps {
-        webhook_token: state.app_ctx.repos.webhook_token.clone(),
-        watch_event_command: state.app_ctx.repos.watch_event_command.clone(),
-        watch_event_query: state.app_ctx.repos.watch_event_query.clone(),
-        event_publisher: state.app_ctx.services.event_publisher.clone(),
-    };
-    match ingest_watch_event::execute(&deps, cmd, parser).await {
+    match ingest_watch_event::execute(
+        &state.app_ctx.deps.integrations.ingest_watch_event,
+        cmd,
+        parser,
+    )
+    .await
+    {
         Ok(()) => StatusCode::OK,
         Err(e) => crate::errors::domain_error_status(&e),
     }
@@ -166,8 +170,11 @@ pub async fn post_generate_webhook_token(
         label: req.label,
     };
 
-    let result =
-        generate_webhook_token::execute(state.app_ctx.repos.webhook_token.clone(), cmd).await?;
+    let result = generate_webhook_token::execute(
+        &state.app_ctx.deps.integrations.generate_webhook_token,
+        cmd,
+    )
+    .await?;
 
     let base_url = &state.app_ctx.config.base_url;
     let webhook_url = format!("{base_url}/api/v1/webhooks/{provider}");
@@ -195,7 +202,8 @@ pub async fn get_webhook_tokens(
         user_id: user.0.value(),
     };
     let tokens =
-        get_webhook_tokens::execute(state.app_ctx.repos.webhook_token.clone(), query).await?;
+        get_webhook_tokens::execute(&state.app_ctx.deps.integrations.get_webhook_tokens, query)
+            .await?;
 
     let dtos = tokens
         .into_iter()
@@ -230,7 +238,8 @@ pub async fn delete_webhook_token(
         user_id: user.0.value(),
         token_id: id,
     };
-    revoke_webhook_token::execute(state.app_ctx.repos.webhook_token.clone(), cmd).await?;
+    revoke_webhook_token::execute(&state.app_ctx.deps.integrations.revoke_webhook_token, cmd)
+        .await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -252,7 +261,7 @@ pub async fn get_watch_queue(
         user_id: user.0.value(),
     };
     let events =
-        get_watch_queue::execute(state.app_ctx.repos.watch_event_query.clone(), query).await?;
+        get_watch_queue::execute(&state.app_ctx.deps.integrations.get_watch_queue, query).await?;
 
     let dtos = events
         .into_iter()
@@ -297,13 +306,9 @@ pub async fn post_confirm_watch_events(
             .collect(),
     };
 
-    let confirmed = confirm_watch_events::execute(
-        state.app_ctx.repos.watch_event_command.clone(),
-        state.app_ctx.repos.watch_event_query.clone(),
-        state.app_ctx.services.review_logger.clone(),
-        cmd,
-    )
-    .await?;
+    let confirmed =
+        confirm_watch_events::execute(&state.app_ctx.deps.integrations.confirm_watch_events, cmd)
+            .await?;
     Ok(Json(ConfirmWatchResponse { confirmed }))
 }
 
@@ -327,11 +332,8 @@ pub async fn post_dismiss_watch_events(
         event_ids: req.event_ids,
     };
 
-    let dismissed = dismiss_watch_events::execute(
-        state.app_ctx.repos.watch_event_command.clone(),
-        state.app_ctx.repos.watch_event_query.clone(),
-        cmd,
-    )
-    .await?;
+    let dismissed =
+        dismiss_watch_events::execute(&state.app_ctx.deps.integrations.dismiss_watch_events, cmd)
+            .await?;
     Ok(Json(DismissWatchResponse { dismissed }))
 }

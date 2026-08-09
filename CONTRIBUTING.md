@@ -10,7 +10,7 @@ Thanks for your interest in Movies Diary! This is a personal project but contrib
 4. Run the backend and worker:
 
 ```bash
-cargo run -p presentation   # HTTP server on :3000
+cargo run -p server         # HTTP server on :3000
 cargo run -p worker          # event worker (separate terminal)
 ```
 
@@ -44,7 +44,7 @@ The project follows hexagonal (ports & adapters) architecture. See `architecture
 **Key rules:**
 - Presentation handlers never touch repositories directly — all domain logic goes through use cases in the `application` crate
 - Application use cases return raw domain data — URL formatting, date display, and view model assembly belong in presentation mappers (`presentation/src/mappers/`)
-- Use cases called from presentation handlers take `&AppContext`. Functions called from adapter event handlers take individual `Arc<dyn Trait>` params to keep adapter dependencies explicit
+- Use cases called from presentation handlers take a `&FooDeps` struct (registered in `application::Deps`, built by `composition::build_deps`) — never `&AppContext` itself, which `application` cannot even depend on. A few keep individual `Arc<dyn Trait>` params instead: `enrich_movie` and `request_enrichment` because they are called from adapters rather than handlers, and `diary::log_review` because its one extra dependency comes from `Services` rather than a repository. `wrapup::compute`, `import::cleanup` and `integrations::cleanup` also take individual params, but they are only ever called from jobs. See ADR-0007 for the exact list and why each is legitimate
 
 ```
 domain         → pure types, traits (ports), zero deps

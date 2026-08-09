@@ -7,14 +7,21 @@ use domain::testing::InMemoryWatchEventRepository;
 use domain::value_objects::UserId;
 use uuid::Uuid;
 
+use crate::integrations::deps::GetWatchQueueDeps;
 use crate::integrations::{get_queue, queries::GetWatchQueueQuery};
+
+fn deps(events: &Arc<InMemoryWatchEventRepository>) -> GetWatchQueueDeps {
+    GetWatchQueueDeps {
+        watch_event_query: Arc::clone(events) as _,
+    }
+}
 
 #[tokio::test]
 async fn returns_empty_when_no_events() {
     let events = InMemoryWatchEventRepository::new();
 
     let result = get_queue::execute(
-        Arc::clone(&events) as _,
+        &deps(&events),
         GetWatchQueueQuery {
             user_id: Uuid::new_v4(),
         },
@@ -41,7 +48,7 @@ async fn returns_pending_events() {
     );
     events.save(&event).await.unwrap();
 
-    let result = get_queue::execute(Arc::clone(&events) as _, GetWatchQueueQuery { user_id })
+    let result = get_queue::execute(&deps(&events), GetWatchQueueQuery { user_id })
         .await
         .unwrap();
 

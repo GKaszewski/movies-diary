@@ -85,12 +85,14 @@ impl MetadataClient for FakeMetadataClient {
 
 pub struct FakeDiaryQuery {
     histories: Mutex<HashMap<Uuid, (Movie, Vec<Review>)>>,
+    diary_page: Mutex<Option<Paginated<DiaryEntry>>>,
 }
 
 impl FakeDiaryQuery {
     pub fn new() -> Arc<Self> {
         Arc::new(Self {
             histories: Mutex::new(HashMap::new()),
+            diary_page: Mutex::new(None),
         })
     }
 
@@ -100,6 +102,13 @@ impl FakeDiaryQuery {
             .unwrap()
             .insert(movie.id().value(), (movie, reviews));
     }
+
+    /// Configures what `query_diary` returns. Without this, `query_diary` keeps
+    /// its original always-empty behavior — this is purely opt-in for tests that
+    /// need to prove entries actually flow through a use case.
+    pub fn set_diary_page(&self, page: Paginated<DiaryEntry>) {
+        *self.diary_page.lock().unwrap() = Some(page);
+    }
 }
 
 #[async_trait]
@@ -108,12 +117,17 @@ impl DiaryQuery for FakeDiaryQuery {
         &self,
         _filter: &DiaryFilter,
     ) -> Result<Paginated<DiaryEntry>, DomainError> {
-        Ok(Paginated {
-            items: vec![],
-            total_count: 0,
-            limit: 10,
-            offset: 0,
-        })
+        Ok(self
+            .diary_page
+            .lock()
+            .unwrap()
+            .clone()
+            .unwrap_or(Paginated {
+                items: vec![],
+                total_count: 0,
+                limit: 10,
+                offset: 0,
+            }))
     }
 
     async fn query_activity_feed(

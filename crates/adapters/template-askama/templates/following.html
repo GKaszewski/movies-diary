@@ -10,6 +10,28 @@
   <input type="text" name="handle" placeholder="@user@instance.tld" required>
   <button type="submit">Follow</button>
 </form>
+{% if !pending_actors.is_empty() %}
+<h3>Requested ({{ pending_actors.len() }})</h3>
+<ul class="following-list">
+{% for actor in pending_actors %}
+<li class="following-item">
+  {% if let Some(avatar) = actor.avatar_url %}
+  <img src="{{ avatar }}" alt="" style="width:32px;height:32px;border-radius:50%;vertical-align:middle;margin-right:6px" />
+  {% endif %}
+  <strong>{{ actor.handle }}</strong>
+  {% if let Some(name) = actor.display_name %}
+  ({{ name }})
+  {% endif %}
+  <a href="{{ actor.url }}" target="_blank" rel="noopener noreferrer">View profile ↗</a>
+  <form method="POST" action="/users/{{ user_id }}/unfollow" style="display:inline">
+    <input type="hidden" name="actor_url" value="{{ actor.url }}">
+    <input type="hidden" name="_csrf" value="{{ ctx.csrf_token }}">
+    <button type="submit">Cancel request</button>
+  </form>
+</li>
+{% endfor %}
+</ul>
+{% endif %}
 {% if actors.is_empty() %}
 <p>Not following anyone yet. Follow remote users from your <a href="/users/{{ user_id }}">profile page</a>.</p>
 {% else %}

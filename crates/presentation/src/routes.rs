@@ -184,22 +184,22 @@ fn html_routes(rate_limit: u64) -> Router<AppState> {
             routing::get(handlers::wrapup::get_global_wrapup_html),
         );
 
+    let base = base.merge(social_html_routes());
     #[cfg(feature = "federation")]
     let base = base.merge(federation_html_routes());
 
     base.layer(axum::middleware::from_fn(crate::csrf::csrf_middleware))
 }
 
-#[cfg(feature = "federation")]
-fn federation_html_routes() -> Router<AppState> {
-    Router::new()
+fn social_html_routes() -> Router<AppState> {
+    let base = Router::new()
         .route(
             "/users/{id}/follow",
-            routing::post(handlers::social::follow_remote_user),
+            routing::post(handlers::social::follow_user),
         )
         .route(
             "/users/{id}/unfollow",
-            routing::post(handlers::social::unfollow_remote_user),
+            routing::post(handlers::social::unfollow_user),
         )
         .route(
             "/users/{id}/followers/accept",
@@ -210,12 +210,8 @@ fn federation_html_routes() -> Router<AppState> {
             routing::post(handlers::social::reject_follower_html),
         )
         .route(
-            "/users/{id}/followers",
-            routing::get(handlers::social::get_followers_collection),
-        )
-        .route(
-            "/users/{id}/following",
-            routing::get(handlers::social::get_following_collection),
+            "/users/{id}/followers/remove",
+            routing::post(handlers::social::remove_follower_html),
         )
         .route(
             "/users/{id}/following-list",
@@ -224,10 +220,40 @@ fn federation_html_routes() -> Router<AppState> {
         .route(
             "/users/{id}/followers-list",
             routing::get(handlers::social::get_followers_page),
+        );
+
+    #[cfg(not(feature = "federation"))]
+    let base = base
+        .route(
+            "/users/{id}/followers",
+            routing::get(
+                |axum::extract::Path(id): axum::extract::Path<uuid::Uuid>| async move {
+                    axum::response::Redirect::permanent(&format!("/users/{}/followers-list", id))
+                },
+            ),
         )
         .route(
-            "/users/{id}/followers/remove",
-            routing::post(handlers::social::remove_follower_html),
+            "/users/{id}/following",
+            routing::get(
+                |axum::extract::Path(id): axum::extract::Path<uuid::Uuid>| async move {
+                    axum::response::Redirect::permanent(&format!("/users/{}/following-list", id))
+                },
+            ),
+        );
+
+    base
+}
+
+#[cfg(feature = "federation")]
+fn federation_html_routes() -> Router<AppState> {
+    Router::new()
+        .route(
+            "/users/{id}/followers",
+            routing::get(handlers::social::get_followers_collection),
+        )
+        .route(
+            "/users/{id}/following",
+            routing::get(handlers::social::get_following_collection),
         )
         .route(
             "/admin/blocked-domains",
@@ -455,6 +481,7 @@ fn api_routes(rate_limit: u64) -> Router<AppState> {
             routing::get(handlers::goals::get_settings).put(handlers::goals::update_settings),
         );
 
+    let base = base.merge(social_api_routes());
     #[cfg(feature = "federation")]
     let base = base.merge(federation_api_routes());
 
@@ -481,8 +508,7 @@ fn api_routes(rate_limit: u64) -> Router<AppState> {
         .layer(cors_layer())
 }
 
-#[cfg(feature = "federation")]
-fn federation_api_routes() -> Router<AppState> {
+fn social_api_routes() -> Router<AppState> {
     Router::new()
         .route(
             "/social/following",
@@ -495,6 +521,18 @@ fn federation_api_routes() -> Router<AppState> {
         .route(
             "/social/followers/pending",
             routing::get(handlers::social::get_pending_followers),
+        )
+        .route(
+            "/social/followers/pending/count",
+            routing::get(handlers::social::get_pending_follower_count),
+        )
+        .route(
+            "/social/following/pending",
+            routing::get(handlers::social::get_pending_following),
+        )
+        .route(
+            "/social/relationship",
+            routing::get(handlers::social::get_relationship),
         )
         .route("/social/follow", routing::post(handlers::social::follow))
         .route(
@@ -513,6 +551,19 @@ fn federation_api_routes() -> Router<AppState> {
             "/social/followers/remove",
             routing::post(handlers::social::remove_follower),
         )
+        .route(
+            "/users/{id}/following",
+            routing::get(handlers::social::get_user_following),
+        )
+        .route(
+            "/users/{id}/followers",
+            routing::get(handlers::social::get_user_followers),
+        )
+}
+
+#[cfg(feature = "federation")]
+fn federation_api_routes() -> Router<AppState> {
+    Router::new()
         .route(
             "/admin/blocked-domains",
             routing::get(handlers::social::get_blocked_domains_admin)
@@ -533,13 +584,5 @@ fn federation_api_routes() -> Router<AppState> {
         .route(
             "/social/blocked",
             routing::get(handlers::social::get_blocked_actors_api),
-        )
-        .route(
-            "/users/{id}/following",
-            routing::get(handlers::social::get_user_following),
-        )
-        .route(
-            "/users/{id}/followers",
-            routing::get(handlers::social::get_user_followers),
         )
 }
