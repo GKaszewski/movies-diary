@@ -6,23 +6,6 @@ use domain::{
 
 use crate::wrapup::deps::GetReadyReportDeps;
 
-/// Absorbs the year -> date-range conversion and the `status == Ready` +
-/// `report.is_some()` gating both HTML wrap-up handlers used to do by hand.
-///
-/// Takes `domain::models::wrapup::WrapUpScope` directly (the same type
-/// `wrapup::handle_requested` already matches on) rather than a second,
-/// use-case-local `WrapUpScope` — there is exactly one concept here, one type.
-/// `None` can no longer be silently passed for "global": callers must pick
-/// `WrapUpScope::User(uid)` or `WrapUpScope::Global` explicitly.
-///
-/// Error shape mirrors the deleted handlers exactly:
-/// - An unrepresentable `year` (can't form a valid `NaiveDate`) is
-///   `ValidationError` — the handlers used this to return a bare 400.
-/// - Everything else — no record, a record whose `status` isn't `Ready`, a
-///   `Ready` record with `report: None`, or even a repository error — collapses
-///   to `NotFound`, matching the old handlers' `_ => return StatusCode::NOT_FOUND`
-///   catch-all (which really did swallow repo errors into a 404, not just the
-///   "not ready yet" cases; preserved here rather than tidied).
 pub async fn execute(
     deps: &GetReadyReportDeps,
     scope: WrapUpScope,

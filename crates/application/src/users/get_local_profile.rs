@@ -30,10 +30,6 @@ pub struct ProfileIdentity {
     pub actor_url: String,
     pub avatar_url: Option<String>,
     pub banner_url: Option<String>,
-    /// Only the HTML profile handler reads this (it derives its "display name"
-    /// from the email's local part, not from `username` — see
-    /// `handlers/users.rs::get_user_profile_html`). Sourced from the same local
-    /// `User` row as every other identity field.
     pub email: String,
 }
 

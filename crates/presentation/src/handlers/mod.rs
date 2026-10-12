@@ -4,6 +4,7 @@ pub mod goals;
 mod helpers;
 pub mod images;
 pub mod import;
+pub mod insights;
 pub mod integrations;
 pub mod movies;
 pub mod rss;

@@ -14,7 +14,6 @@ pub mod watchlist_handler;
 pub const INSTANCE_ACTOR_ID: uuid::Uuid =
     uuid::Uuid::from_bytes([0, 0, 0, 0, 0, 0, 0x40, 0, 0x80, 0, 0, 0, 0, 0, 0, 0]);
 
-// Re-export the generic base types that callers need
 pub use k_ap::{
     ActivityPubService, ActivityRepository, ActorRepository, ApContentReader, ApFederationConfig,
     ApObjectHandler, ApUser, ApUserRepository, BlocklistRepository, FederationData,
@@ -41,15 +40,9 @@ pub struct FederationRepos {
 }
 
 pub struct ActivityPubWire {
-    /// AP document serving. Prefer this over `service` from outside this crate.
     pub document: std::sync::Arc<dyn domain::ports::ApDocumentPort>,
-    /// Instance domain blocklist. Prefer this over `service` from outside this crate.
     pub blocklist: std::sync::Arc<dyn domain::ports::InstanceBlocklistPort>,
-    /// Post-follow content backfill. Prefer this over `service` from outside this crate.
     pub backfill: std::sync::Arc<dyn domain::ports::ApBackfillPort>,
-    /// The concrete service, consumed by `crates/server` to construct
-    /// `CompositeSocialAdapter`. Everything else should use
-    /// `document`/`blocklist`/`backfill`.
     pub service: std::sync::Arc<ActivityPubService>,
     pub router: axum::Router,
     pub event_handler: std::sync::Arc<dyn domain::ports::EventHandler>,

@@ -12,6 +12,7 @@ pub mod goal;
 pub mod import;
 pub mod import_profile;
 pub mod import_session;
+pub mod insights;
 pub mod person;
 pub mod remote_goal;
 pub mod remote_watchlist;
@@ -24,6 +25,7 @@ pub mod wrapup;
 pub use enrichment::*;
 pub use federation::*;
 pub use feed::*;
+pub use insights::*;
 pub use movie::*;
 pub use review::*;
 pub use stats::{

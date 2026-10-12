@@ -11,14 +11,6 @@ pub use remote_goals::SqliteRemoteGoalRepository;
 
 use sqlx::SqlitePool;
 
-/// SQLite-backed implementations of the *domain* social ports.
-///
-/// Deliberately separate from `sqlite-federation`: this crate knows nothing
-/// about ActivityPub, which is what allows a build with the `federation`
-/// feature off to exclude the federation stack entirely. See ADR-0009.
-///
-/// Shares the `ap_followers` / `ap_following` tables with
-/// `sqlite-federation`; neither crate owns migrations.
 pub struct SqliteSocialRepository {
     pub(crate) pool: SqlitePool,
     pub(crate) instance: domain::value_objects::InstanceIdentity,

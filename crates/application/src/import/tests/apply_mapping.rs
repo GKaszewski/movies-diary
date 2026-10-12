@@ -86,8 +86,6 @@ async fn fails_when_session_not_found() {
     assert!(result.is_err());
 }
 
-/// A document parser that returns rows with specific field values for testing
-/// the mark_duplicates logic.
 struct DuplicateTestParser {
     rows: Vec<ImportRow>,
 }

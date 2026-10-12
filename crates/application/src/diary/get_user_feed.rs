@@ -7,9 +7,6 @@ use crate::diary::deps::{GetDiaryDeps, GetUserFeedDeps};
 use crate::diary::get_diary;
 use crate::diary::queries::GetDiaryQuery;
 
-/// The RSS feed's author line — derived the same way the deleted handler code
-/// derived its page title: from the local part of the user's email, not their
-/// username.
 pub struct FeedAuthor {
     pub display_name: String,
 }

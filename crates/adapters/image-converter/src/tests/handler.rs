@@ -130,8 +130,6 @@ async fn converts_jpeg_to_avif_and_swaps_key() {
         vec![("avatars/u1".into(), "avatars/u1.avif".into())]
     );
     assert!(storage.get("avatars/u1.avif").await.is_ok());
-    // Old raw key deleted — fallback resolves to .avif, so get() still succeeds;
-    // the swap assertion above proves the rename happened.
 }
 
 #[tokio::test]

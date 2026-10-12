@@ -7,7 +7,6 @@ use crate::{
 
 // ── NoopRemoteWatchlistRepository ─────────────────────────────────────────────
 
-/// Stub used when federation is disabled — every operation is a no-op.
 pub struct NoopRemoteWatchlistRepository;
 
 #[async_trait]
@@ -113,7 +112,6 @@ impl super::BlockQuery for NoopSocialQuery {
 
 // ── NoopFederationAdminQuery ─────────────────────────────────────────────────
 
-/// Stub used when federation is disabled — returns empty results.
 pub struct NoopFederationAdminQuery;
 
 #[async_trait]
@@ -127,7 +125,6 @@ impl super::FederationAdminQuery for NoopFederationAdminQuery {
 
 // ── NoopApDocument ───────────────────────────────────────────────────────────
 
-/// Stub used when federation is disabled — every operation is a no-op.
 pub struct NoopApDocument;
 
 #[async_trait]
@@ -153,7 +150,6 @@ impl super::ApDocumentPort for NoopApDocument {
 
 // ── NoopInstanceBlocklist ────────────────────────────────────────────────────
 
-/// Stub used when federation is disabled — every operation is a no-op.
 pub struct NoopInstanceBlocklist;
 
 #[async_trait]
@@ -173,7 +169,6 @@ impl super::InstanceBlocklistPort for NoopInstanceBlocklist {
 
 // ── NoopApBackfill ───────────────────────────────────────────────────────────
 
-/// Stub used when federation is disabled — every operation is a no-op.
 pub struct NoopApBackfill;
 
 #[async_trait]

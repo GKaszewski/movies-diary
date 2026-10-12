@@ -99,7 +99,6 @@ impl ReviewRow {
     }
 }
 
-// Used by query_diary JOIN — r.id aliased to review_id to avoid ambiguity with m.id
 #[derive(sqlx::FromRow)]
 pub(crate) struct DiaryRow {
     pub id: String,
@@ -173,7 +172,6 @@ impl MovieStatsRow {
     }
 }
 
-// Like DiaryRow but includes user_email from JOIN with users table
 #[derive(sqlx::FromRow)]
 pub(crate) struct FeedRow {
     pub id: String,

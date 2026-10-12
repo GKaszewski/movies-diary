@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
-import { ChevronDown, ChevronRight, Plus, Settings, Sparkles } from "lucide-react"
+import { ChevronDown, ChevronRight, Lightbulb, Plus, Settings, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ProfileView, ProfileSkeleton } from "@/components/profile-view"
 import { useAuth } from "@/components/auth-provider"
@@ -51,6 +51,15 @@ function ProfilePage() {
         actions={
           <>
             <GoalSection goals={data.goals ?? []} />
+            <Link to="/insights" className="block">
+              <Button variant="outline" size="sm" className="w-full justify-between">
+                <span className="flex items-center gap-2">
+                  <Lightbulb className="size-4 text-primary" />
+                  {t("insights.title")}
+                </span>
+                <ChevronRight className="size-4 text-muted-foreground" />
+              </Button>
+            </Link>
             <Link to="/social" className="block">
               <Button variant="outline" size="sm" className="w-full justify-between">
                 <span>{t("profile.followingFollowers")}</span>

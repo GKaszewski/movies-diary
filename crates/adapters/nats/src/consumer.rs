@@ -153,7 +153,6 @@ impl NatsJetStreamConsumer {
 
                     tracing::debug!("message sent to consumer channel");
                 }
-                // messages() stream ended (fetch expired in strict mode) — restart
             }
         });
 

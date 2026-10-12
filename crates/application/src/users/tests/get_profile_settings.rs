@@ -8,10 +8,6 @@ use crate::test_helpers::TestContextBuilder;
 use crate::users::deps::GetProfileSettingsDeps;
 use crate::users::get_profile_settings;
 
-/// `get_profile_settings` absorbs BOTH of the handler's calls: the user lookup
-/// (`repos.user.find_by_id`) and the profile_fields join
-/// (`repos.profile_fields.get_fields`). This proves the join actually moved in,
-/// not just the user lookup.
 #[tokio::test]
 async fn get_profile_settings_includes_profile_fields() {
     let b = TestContextBuilder::new();

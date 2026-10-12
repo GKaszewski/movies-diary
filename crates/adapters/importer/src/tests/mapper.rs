@@ -7,7 +7,7 @@ fn sample_file() -> ParsedFile {
         rows: vec![
             vec!["Inception".into(), "10".into(), "2024-01-15".into()],
             vec!["Dune".into(), "8".into(), "2024-02-20".into()],
-            vec!["".into(), "3".into(), "2024-03-01".into()], // missing title → invalid
+            vec!["".into(), "3".into(), "2024-03-01".into()],
         ],
     }
 }
@@ -36,10 +36,8 @@ fn full_mappings() -> Vec<FieldMapping> {
 fn maps_valid_rows() {
     let results = apply_mapping(&sample_file(), &full_mappings());
     assert_eq!(results.len(), 3);
-    // First two rows are valid
     assert!(matches!(results[0].result, RowResult::Valid(_)));
     assert!(matches!(results[1].result, RowResult::Valid(_)));
-    // is_duplicate defaults to false
     assert!(!results[0].is_duplicate);
 }
 
@@ -47,7 +45,6 @@ fn maps_valid_rows() {
 fn applies_rating_scale_transform() {
     let results = apply_mapping(&sample_file(), &full_mappings());
     if let RowResult::Valid(row) = &results[0].result {
-        // 10 * 0.5 = 5
         assert_eq!(row.rating.as_deref(), Some("5"));
     } else {
         panic!("expected Valid");
@@ -57,7 +54,6 @@ fn applies_rating_scale_transform() {
 #[test]
 fn marks_missing_required_fields_invalid() {
     let results = apply_mapping(&sample_file(), &full_mappings());
-    // Row 2 has empty title
     assert!(matches!(results[2].result, RowResult::Invalid { .. }));
 }
 
@@ -74,7 +70,6 @@ fn ignores_unmapped_columns() {
     };
     let results = apply_mapping(&file, &mappings);
     assert_eq!(results.len(), 1);
-    // Missing rating and watched_at → invalid
     assert!(matches!(results[0].result, RowResult::Invalid { .. }));
 }
 
@@ -90,7 +85,6 @@ fn nonexistent_source_column_skipped() {
         rows: vec![vec!["Inception".into()]],
     };
     let results = apply_mapping(&file, &mappings);
-    // Column not found → field not set → invalid (missing title, rating, watched_at)
     assert!(matches!(results[0].result, RowResult::Invalid { .. }));
 }
 
@@ -107,7 +101,6 @@ fn collects_all_errors_not_just_first() {
             domain_field: DomainField::Rating,
             transform: Transform::RatingScale(0.5),
         },
-        // no watched_at mapping
     ];
     let file = ParsedFile {
         columns: vec!["Name".into(), "Stars".into()],

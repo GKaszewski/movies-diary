@@ -7,9 +7,6 @@ use domain::ports::{
 
 use crate::ports::ReviewLogger;
 
-/// Services the application layer needs, assembled by the composition root.
-/// Adapter-typed ports do not belong here — the AP port inversion removed the
-/// last of them; see ADR-0008.
 #[derive(Clone)]
 pub struct Services {
     pub auth: Arc<dyn AuthService>,

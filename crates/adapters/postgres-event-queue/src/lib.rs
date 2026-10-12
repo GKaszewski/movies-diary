@@ -114,7 +114,6 @@ impl EventConsumer for PostgresEventQueue {
                                 return;
                             }
                         }
-                        // no sleep — re-poll immediately when batch was non-empty
                     }
                 }
             }
@@ -140,7 +139,6 @@ async fn claim_batch(
     pool: &PgPool,
     config: &DbEventQueueConfig,
 ) -> Result<Vec<QueueRow>, DomainError> {
-    // CTE with FOR UPDATE SKIP LOCKED — atomic and safe for multiple workers
     let rows = sqlx::query_as::<_, QueueRow>(
         r#"
         WITH claimed AS (

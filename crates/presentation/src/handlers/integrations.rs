@@ -24,7 +24,7 @@ use crate::{
 };
 use template_askama::{IntegrationsTemplate, WatchQueueTemplate};
 
-use super::helpers::{build_page_context, encode_error};
+use super::helpers::{build_page_context, encode_domain_error};
 
 // ── HTML ─────────────────────────────────────────────────────────────────────
 
@@ -184,7 +184,7 @@ pub async fn post_confirm_single(
     {
         Ok(_) => Redirect::to("/watch-queue").into_response(),
         Err(e) => {
-            let msg = encode_error(&e.to_string());
+            let msg = encode_domain_error(&e);
             Redirect::to(&format!("/watch-queue?error={msg}")).into_response()
         }
     }
@@ -211,7 +211,7 @@ pub async fn post_dismiss_single(
     {
         Ok(_) => Redirect::to("/watch-queue").into_response(),
         Err(e) => {
-            let msg = encode_error(&e.to_string());
+            let msg = encode_domain_error(&e);
             Redirect::to(&format!("/watch-queue?error={msg}")).into_response()
         }
     }

@@ -37,7 +37,6 @@ impl MovieDeduplicator for SqliteMovieDeduplicator {
             .await
             .map_err(adapter_common::map_sqlx_error)?;
 
-        // 1. Upsert canonical movie record
         sqlx::query(
             "INSERT INTO movies (id, external_metadata_id, title, release_year, director, poster_path)
              VALUES (?, ?, ?, ?, ?, ?)
@@ -48,7 +47,6 @@ impl MovieDeduplicator for SqliteMovieDeduplicator {
         .bind(&new).bind(&ext_id).bind(&title).bind(year).bind(&director).bind(&poster)
         .execute(&mut *tx).await.map_err(adapter_common::map_sqlx_error)?;
 
-        // 2. Re-point simple FK tables
         let reviews = sqlx::query("UPDATE reviews SET movie_id = ? WHERE movie_id = ?")
             .bind(&new)
             .bind(&old)
@@ -73,7 +71,6 @@ impl MovieDeduplicator for SqliteMovieDeduplicator {
             .map_err(adapter_common::map_sqlx_error)?
             .rows_affected();
 
-        // 3. Re-point movie_profiles (PK — move only if canonical has none)
         let profiles = sqlx::query("UPDATE movie_profiles SET movie_id = ? WHERE movie_id = ?")
             .bind(&new)
             .bind(&old)
@@ -82,8 +79,6 @@ impl MovieDeduplicator for SqliteMovieDeduplicator {
             .map_err(adapter_common::map_sqlx_error)?
             .rows_affected();
 
-        // 4. Re-point enrichment tables with composite PKs (INSERT OR IGNORE + DELETE)
-        //    Canonical's existing rows win on conflict — old duplicates are discarded.
         sqlx::query(
             "INSERT OR IGNORE INTO movie_genres (movie_id, tmdb_id, name)
              SELECT ?, tmdb_id, name FROM movie_genres WHERE movie_id = ?",
@@ -134,7 +129,6 @@ impl MovieDeduplicator for SqliteMovieDeduplicator {
             .await
             .map_err(adapter_common::map_sqlx_error)?;
 
-        // 5. Delete the now-empty old movie record (remaining cascades are safe: all FKs cleared above)
         sqlx::query("DELETE FROM movies WHERE id = ?")
             .bind(&old)
             .execute(&mut *tx)

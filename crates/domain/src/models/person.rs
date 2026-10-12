@@ -12,7 +12,6 @@ impl ExternalPersonId {
         &self.0
     }
 
-    /// Parse the TMDb numeric ID from "tmdb:12345". Returns None for other formats.
     pub fn tmdb_id(&self) -> Option<i64> {
         self.0.strip_prefix("tmdb:").and_then(|s| s.parse().ok())
     }

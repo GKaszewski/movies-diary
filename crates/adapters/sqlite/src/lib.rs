@@ -5,6 +5,7 @@ mod goals;
 mod image_ref;
 mod import_profile;
 mod import_session;
+mod insights;
 mod migrations;
 mod models;
 mod movie;
@@ -25,6 +26,7 @@ pub use diary::SqliteDiaryRepository;
 pub use image_ref::{SqliteImageRefAdapter, create_image_ref};
 pub use import_profile::SqliteImportProfileRepository;
 pub use import_session::SqliteImportSessionRepository;
+pub use insights::SqliteInsightsQuery;
 pub use movie::SqliteMovieRepository;
 pub use movie_dedup::SqliteMovieDeduplicator;
 pub use persons::{SqlitePersonAdapter, create_person_adapter};
@@ -64,6 +66,7 @@ pub struct SqliteWireOutput {
     pub ap_content: std::sync::Arc<dyn domain::ports::LocalApContentQuery>,
     pub wrapup_repo: std::sync::Arc<dyn domain::ports::WrapUpRepository>,
     pub wrapup_stats: std::sync::Arc<dyn domain::ports::WrapUpStatsQuery>,
+    pub insights: std::sync::Arc<dyn domain::ports::InsightsQuery>,
     pub goal_command: std::sync::Arc<dyn domain::ports::GoalCommand>,
     pub goal_query: std::sync::Arc<dyn domain::ports::GoalQuery>,
     pub user_settings: std::sync::Arc<dyn domain::ports::UserSettingsRepository>,
@@ -114,6 +117,7 @@ pub async fn wire(database_url: &str) -> anyhow::Result<SqliteWireOutput> {
         ap_content: std::sync::Arc::new(SqliteApContentQuery::new(pool.clone())) as _,
         wrapup_repo: std::sync::Arc::new(SqliteWrapUpRepository::new(pool.clone())) as _,
         wrapup_stats: std::sync::Arc::new(SqliteWrapUpStatsQuery::new(pool.clone())) as _,
+        insights: std::sync::Arc::new(SqliteInsightsQuery::new(pool.clone())) as _,
         goal_command: std::sync::Arc::new(goals::SqliteGoalRepository::new(pool.clone())) as _,
         goal_query: std::sync::Arc::new(goals::SqliteGoalRepository::new(pool.clone())) as _,
         user_settings: std::sync::Arc::clone(&user_settings_repo) as _,

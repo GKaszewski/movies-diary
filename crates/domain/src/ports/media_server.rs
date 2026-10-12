@@ -12,7 +12,6 @@ pub trait MediaServerParser: Send + Sync {
     -> Result<Option<ParsedPlaybackEvent>, DomainError>;
 }
 
-/// Write port — mutates watch events.
 #[async_trait]
 pub trait WatchEventCommand: Send + Sync {
     async fn save(&self, event: &WatchEvent) -> Result<(), DomainError>;
@@ -32,7 +31,6 @@ pub trait WatchEventCommand: Send + Sync {
     ) -> Result<u64, DomainError>;
 }
 
-/// Read port — queries watch events. No mutations.
 #[async_trait]
 pub trait WatchEventQuery: Send + Sync {
     async fn list_pending(&self, user_id: &UserId) -> Result<Vec<WatchEvent>, DomainError>;

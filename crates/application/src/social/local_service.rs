@@ -13,13 +13,6 @@ use domain::{
     },
 };
 
-/// The subset of `SocialCommand`/`FollowGraphQuery`/`BlockQuery` that a single
-/// instance can serve with only its own database — no ActivityPub involved.
-///
-/// This is the local half of `activitypub::CompositeSocialAdapter`, extracted
-/// here so `application` needs no dependency on the `activitypub` crate to
-/// offer it. It implements `domain::ports::LocalSocial` via that trait's
-/// blanket impl over the five ports below.
 pub struct LocalSocialService {
     user_repo: Arc<dyn UserRepository>,
     follow_command: Arc<dyn FollowCommand>,

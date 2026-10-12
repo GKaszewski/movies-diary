@@ -27,7 +27,7 @@ impl ConversionBackfillJob {
 #[async_trait]
 impl PeriodicJob for ConversionBackfillJob {
     fn interval(&self) -> Duration {
-        Duration::from_secs(60 * 60 * 24) // 24h
+        Duration::from_secs(60 * 60 * 24)
     }
 
     async fn run(&self) -> Result<(), DomainError> {

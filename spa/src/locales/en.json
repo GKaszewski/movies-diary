@@ -258,6 +258,28 @@
     "plexStep2": "Add the URL above, replacing YOUR_TOKEN with your generated token",
     "plexStep3": "Plex sends scrobble events when a movie is watched to 90%+ (requires Plex Pass)"
   },
+  "insights": {
+    "title": "Insights",
+    "subtitle": "Patterns your diary reveals",
+    "emptyTitle": "No insights yet",
+    "emptyDesc": "Insights appear once there is enough data to say something honest — keep logging films.",
+    "taste": "Your taste",
+    "seasons": "Seasons",
+    "mediums": "How you watch",
+    "rhythm": "When you watch",
+    "ratingLiftUp": "You rate <hl>{{genre}}</hl> higher than your own average — <hl>{{genreAvg}}</hl>★ vs <hl>{{userAvg}}</hl>★",
+    "ratingLiftDown": "You rate <hl>{{genre}}</hl> lower than your own average — <hl>{{genreAvg}}</hl>★ vs <hl>{{userAvg}}</hl>★",
+    "yourAverage": "your average",
+    "seasonality": "<hl>{{genre}}</hl> is your <hl>{{month}}</hl> genre — <hl>{{multiplier}}</hl>× your yearly baseline",
+    "mediumTiming": "You watch <hl>{{medium}}</hl> on weekends <hl>{{multiplier}}</hl>× more than your baseline",
+    "weekends": "weekends",
+    "yourBaseline": "your baseline",
+    "rhythmBody": "You watch mostly <hl>{{start}}</hl>–<hl>{{end}}</hl> on <hl>{{days}}</hl>",
+    "filmsSample_one": "{{count}} film",
+    "filmsSample_other": "{{count}} films",
+    "watchesSample_one": "{{count}} watch",
+    "watchesSample_other": "{{count}} watches"
+  },
   "wrapup": {
     "title": "Year Wrap-Up",
     "noWrapUps": "No wrap-ups",

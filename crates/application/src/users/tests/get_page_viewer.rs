@@ -34,9 +34,6 @@ async fn setup_user(b: &TestContextBuilder, email: &str, username: &str) -> uuid
     user.id().value()
 }
 
-/// `get_page_viewer` absorbs `helpers.rs::build_page_context`'s inline pending-count
-/// computation. It must reuse `FollowGraphQuery::count_pending_followers` rather than
-/// re-deriving the count from raw follow rows.
 #[tokio::test]
 async fn get_page_viewer_reports_pending_follower_count() {
     let b = TestContextBuilder::new();

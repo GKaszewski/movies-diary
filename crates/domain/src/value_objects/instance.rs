@@ -1,14 +1,11 @@
 use super::{SocialIdentity, UserId};
 
-/// This instance's own identity on the network. Owns every URL and handle
-/// derivation that used to be spelled with a bare `base_url: &str`.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct InstanceIdentity {
     base_url: String,
 }
 
 impl InstanceIdentity {
-    /// Normalizes away a trailing slash so every derived URL has exactly one.
     pub fn new(base_url: impl Into<String>) -> Self {
         Self {
             base_url: base_url.into().trim_end_matches('/').to_string(),
@@ -19,7 +16,6 @@ impl InstanceIdentity {
         &self.base_url
     }
 
-    /// Host and port, as it appears in a fediverse handle.
     pub fn host(&self) -> &str {
         self.base_url
             .split("://")
@@ -47,7 +43,6 @@ impl InstanceIdentity {
         }
     }
 
-    /// Inverse of `actor_url_of`: decides whether an actor URL is ours.
     pub fn identify(&self, actor_url: &str) -> SocialIdentity {
         let prefix = format!("{}/users/", self.base_url);
         if let Some(uuid_str) = actor_url.strip_prefix(&prefix)

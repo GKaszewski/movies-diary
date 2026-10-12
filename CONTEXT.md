@@ -36,6 +36,10 @@ _Avoid_: Challenge, resolution, target
 A generated summary report of viewing activity over a date range — statistics, trends, highlights, top directors/actors/genres. Can be personal (one user) or global (all users). Generated asynchronously. Shown to users as "Year in Review."
 _Avoid_: Stats page, recap, summary
 
+**Insight**:
+A statement about a user's viewing behavior derived from their Reviews and linked Movie metadata, produced by correlation analysis. Always a comparison — relative to the user's own baseline (their average rating, their genre frequencies, their typical hours) — never a plain ranking or count. "You rate thrillers higher than your average" is an Insight; "thriller is your top genre" is a statistic.
+_Avoid_: Correlation (implementation), fun fact, finding
+
 **User**:
 A registered account with a username, email, and profile (display name, bio, avatar, banner). Can be Standard or Admin.
 _Avoid_: Account, member, profile (as a synonym for the whole User)

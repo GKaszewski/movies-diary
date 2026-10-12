@@ -9,14 +9,12 @@ use crate::{
     value_objects::{ExternalMetadataId, MovieId, MovieTitle, PosterUrl, ReleaseYear},
 };
 
-/// Write port — mutates the movies table.
 #[async_trait]
 pub trait MovieCommand: Send + Sync {
     async fn upsert_movie(&self, movie: &Movie) -> Result<(), DomainError>;
     async fn delete_movie(&self, movie_id: &MovieId) -> Result<(), DomainError>;
 }
 
-/// Read port — queries movies. No mutations.
 #[async_trait]
 pub trait MovieQuery: Send + Sync {
     async fn get_movie_by_external_id(
@@ -42,7 +40,6 @@ pub trait MovieQuery: Send + Sync {
         page: &PageParams,
         filter: &MovieFilter,
     ) -> Result<Paginated<MovieSummary>, DomainError>;
-    /// Returns all movies that have an external_metadata_id set. Used for deduplication.
     async fn list_movies_with_external_id(&self) -> Result<Vec<Movie>, DomainError>;
 }
 
@@ -62,14 +59,11 @@ pub trait MetadataClient: Send + Sync {
 pub trait MovieProfileRepository: Send + Sync {
     async fn upsert(&self, profile: &MovieProfile) -> Result<(), DomainError>;
     async fn get_by_movie_id(&self, id: &MovieId) -> Result<Option<MovieProfile>, DomainError>;
-    /// Returns (movie_id, external_metadata_id) for movies with no profile or a stale one
-    /// (enriched_at older than 30 days).
     async fn list_stale(&self) -> Result<Vec<(MovieId, String)>, DomainError>;
 }
 
 #[async_trait]
 pub trait MovieEnrichmentClient: Send + Sync {
-    /// Resolves an external ID (TMDb or IMDb) and fetches the full movie profile.
     async fn fetch_profile(
         &self,
         movie_id: MovieId,
@@ -79,9 +73,6 @@ pub trait MovieEnrichmentClient: Send + Sync {
 
 #[async_trait]
 pub trait MovieDeduplicator: Send + Sync {
-    /// Atomically re-points all foreign keys (reviews, watchlist entries, movie profiles)
-    /// from `old_id` to `canonical_id`, upserts the canonical movie record, then deletes
-    /// the old duplicate. Returns the number of rows re-pointed across all tables.
     async fn merge_into_canonical(
         &self,
         old_id: &MovieId,

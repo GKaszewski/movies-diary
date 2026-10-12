@@ -11,9 +11,6 @@ pub trait EventPublisher: Send + Sync {
 }
 
 pub trait EventConsumer: Send + Sync {
-    /// Returns a stream of event envelopes. Each envelope carries a domain event
-    /// and an ack handle — callers ack after successful dispatch, nack on failure.
-    /// Implementations decide transport (NATS, DB queue, in-memory channel).
     fn consume(&self) -> futures::stream::BoxStream<'_, Result<EventEnvelope, DomainError>>;
 }
 

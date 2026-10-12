@@ -9,8 +9,6 @@ use sqlx::SqlitePool;
 async fn setup(pool: &SqlitePool) {
     sqlx::migrate!("./migrations").run(pool).await.unwrap();
 
-    // carol is a remote actor; we still need a non-null user_id for the schema,
-    // so we create a local "ghost" user and link the remote review via remote_actor_url.
     sqlx::query(
         "INSERT INTO users (id, email, username, password_hash, created_at) VALUES
          ('11111111-1111-1111-1111-111111111111', 'alice@example.com', 'alice', 'hash', '2024-01-01 00:00:00'),
@@ -31,7 +29,6 @@ async fn setup(pool: &SqlitePool) {
     .await
     .unwrap();
 
-    // carol's review: local user_id=33333333, remote_actor_url set → remote review
     sqlx::query(
         "INSERT INTO reviews (id, movie_id, user_id, rating, watched_at, created_at, remote_actor_url) VALUES
          ('a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11111111-1111-1111-1111-111111111111', 5, '2024-01-01 00:00:00', '2024-01-01 00:00:00', NULL),
@@ -97,7 +94,7 @@ async fn test_following_filter() {
         .await
         .unwrap();
 
-    assert_eq!(result.items.len(), 2); // alice + carol, NOT bob
+    assert_eq!(result.items.len(), 2);
     let titles: Vec<String> = result
         .items
         .iter()
@@ -113,7 +110,6 @@ async fn test_get_movie_stats_local() {
     setup(&pool).await;
     let repo = SqliteDiaryRepository::new(pool);
 
-    // Inception: 1 local review, rating=5, no federated
     let movie_id = domain::value_objects::MovieId::from_uuid(
         uuid::Uuid::parse_str("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa").unwrap(),
     );
@@ -122,8 +118,8 @@ async fn test_get_movie_stats_local() {
     assert_eq!(stats.total_count, 1);
     assert_eq!(stats.federated_count, 0);
     assert!((stats.avg_rating.unwrap() - 5.0).abs() < 0.001);
-    assert_eq!(stats.rating_histogram[4], 1); // 5★ bucket
-    assert_eq!(stats.rating_histogram[0], 0); // 1★ bucket
+    assert_eq!(stats.rating_histogram[4], 1);
+    assert_eq!(stats.rating_histogram[0], 0);
 }
 
 #[tokio::test]
@@ -176,7 +172,6 @@ async fn test_get_movie_social_feed_pagination() {
     let movie_id = domain::value_objects::MovieId::from_uuid(
         uuid::Uuid::parse_str("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa").unwrap(),
     );
-    // offset beyond results: total_count still correct, items empty
     let page = PageParams::new(Some(10), Some(5)).unwrap();
     let result = repo.get_movie_social_feed(&movie_id, &page).await.unwrap();
 
@@ -190,7 +185,6 @@ async fn test_get_movie_stats_federated() {
     setup(&pool).await;
     let repo = SqliteDiaryRepository::new(pool);
 
-    // Dune: 1 federated review, rating=4
     let movie_id = domain::value_objects::MovieId::from_uuid(
         uuid::Uuid::parse_str("cccccccc-cccc-cccc-cccc-cccccccccccc").unwrap(),
     );
@@ -198,8 +192,8 @@ async fn test_get_movie_stats_federated() {
 
     assert_eq!(stats.total_count, 1);
     assert_eq!(stats.federated_count, 1);
-    assert_eq!(stats.rating_histogram[3], 1); // 4★ bucket
-    assert_eq!(stats.rating_histogram[4], 0); // 5★ bucket
+    assert_eq!(stats.rating_histogram[3], 1);
+    assert_eq!(stats.rating_histogram[4], 0);
 }
 
 #[tokio::test]
@@ -208,7 +202,6 @@ async fn count_local_posts_excludes_remote_reviews() {
     setup(&pool).await;
     let repo = SqliteDiaryRepository::new(pool);
 
-    // setup() seeds 3 reviews: 2 local (alice, bob) + 1 remote (carol)
     let count = repo.count_local_posts().await.unwrap();
     assert_eq!(count, 2);
 }

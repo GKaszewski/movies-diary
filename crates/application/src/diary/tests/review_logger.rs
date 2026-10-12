@@ -242,8 +242,6 @@ async fn watchlist_not_present_does_not_publish_removed() {
     );
 }
 
-/// A metadata client that returns a movie with an external_metadata_id,
-/// triggering the MovieDiscovered event path.
 struct MetadataClientWithExternalId;
 
 #[async_trait]

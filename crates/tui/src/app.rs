@@ -375,8 +375,6 @@ pub fn parse_csv(content: &str) -> Vec<ParsedRow> {
     rows
 }
 
-/// Returns a mutable reference to whichever text field currently has focus,
-/// or `None` if the active widget is non-textual (e.g. a rating spinner).
 fn focused_input(app: &mut App) -> Option<&mut String> {
     match &mut app.screen {
         Screen::Setup(s) => Some(&mut s.api_url),

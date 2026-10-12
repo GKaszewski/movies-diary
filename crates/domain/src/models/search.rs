@@ -42,13 +42,9 @@ pub struct PersonSearchHit {
     pub name: String,
     pub known_for_department: Option<String>,
     pub profile_path: Option<String>,
-    /// Top movie titles this person is known for — populated at query time
-    /// by joining relational tables, never from the index.
     pub known_for_titles: Vec<String>,
 }
 
-/// Document submitted to the search index.
-/// Add a new variant here to make a new entity type searchable — the port never changes.
 pub enum IndexableDocument {
     Movie {
         id: MovieId,
@@ -58,7 +54,6 @@ pub enum IndexableDocument {
     Person {
         id: PersonId,
         person: Box<Person>,
-        // known_for_titles intentionally absent — no reads inside a command flow
     },
 }
 

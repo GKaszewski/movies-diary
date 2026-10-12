@@ -11,14 +11,6 @@ pub use remote_goals::PostgresRemoteGoalRepository;
 
 use sqlx::PgPool;
 
-/// Postgres-backed implementations of the *domain* social ports.
-///
-/// Deliberately separate from `postgres-federation`: this crate knows nothing
-/// about ActivityPub, which is what allows a build with the `federation`
-/// feature off to exclude the federation stack entirely. See ADR-0009.
-///
-/// Shares the `ap_followers` / `ap_following` tables with
-/// `postgres-federation`; neither crate owns migrations.
 pub struct PostgresSocialRepository {
     pub(crate) pool: PgPool,
     pub(crate) instance: domain::value_objects::InstanceIdentity,

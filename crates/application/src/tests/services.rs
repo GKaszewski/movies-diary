@@ -6,10 +6,6 @@ use domain::testing::{
 };
 use std::sync::Arc;
 
-/// Services must be constructible from domain ports alone — no adapter types.
-/// If this file ever needs an adapter crate import, the boundary has regressed.
-/// Asserts on Clone specifically: AppState is Clone, so a Services that clones
-/// its Arcs by value instead of sharing them would silently duplicate state.
 #[test]
 fn services_clone_shares_the_same_port_instances() {
     let logger: Arc<dyn crate::ports::ReviewLogger> = Arc::new(NoopReviewLogger);

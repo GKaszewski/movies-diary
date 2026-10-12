@@ -8,6 +8,19 @@ pub(crate) fn encode_error(msg: &str) -> String {
     utf8_percent_encode(msg, NON_ALPHANUMERIC).to_string()
 }
 
+/// Error text for a classic-page `?error=` redirect. Infrastructure failures
+/// are logged here — the redirect is their only exit, so nothing else would —
+/// and shown to the user generically, never with internal detail.
+pub(crate) fn encode_domain_error(e: &domain::errors::DomainError) -> String {
+    match e {
+        domain::errors::DomainError::InfrastructureError(_) => {
+            tracing::error!("Internal error: {e}");
+            encode_error("Something went wrong, please try again")
+        }
+        _ => encode_error(&e.to_string()),
+    }
+}
+
 pub(crate) fn build_export_response(
     format_str: &str,
     user_id: uuid::Uuid,

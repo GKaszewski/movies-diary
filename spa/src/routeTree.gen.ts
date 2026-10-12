@@ -16,6 +16,7 @@ import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppSocialRouteImport } from './routes/_app/social'
 import { Route as AppSearchRouteImport } from './routes/_app/search'
 import { Route as AppProfileRouteImport } from './routes/_app/profile'
+import { Route as AppInsightsRouteImport } from './routes/_app/insights'
 import { Route as AppDiaryRouteImport } from './routes/_app/diary'
 import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings/index'
 import { Route as AppWrapupIdRouteImport } from './routes/_app/wrapup.$id'
@@ -61,6 +62,11 @@ const AppSearchRoute = AppSearchRouteImport.update({
 const AppProfileRoute = AppProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppInsightsRoute = AppInsightsRouteImport.update({
+  id: '/insights',
+  path: '/insights',
   getParentRoute: () => AppRoute,
 } as any)
 const AppDiaryRoute = AppDiaryRouteImport.update({
@@ -129,6 +135,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/diary': typeof AppDiaryRoute
+  '/insights': typeof AppInsightsRoute
   '/profile': typeof AppProfileRoute
   '/search': typeof AppSearchRoute
   '/social': typeof AppSocialRoute
@@ -148,6 +155,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/diary': typeof AppDiaryRoute
+  '/insights': typeof AppInsightsRoute
   '/profile': typeof AppProfileRoute
   '/search': typeof AppSearchRoute
   '/social': typeof AppSocialRoute
@@ -170,6 +178,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/_app/diary': typeof AppDiaryRoute
+  '/_app/insights': typeof AppInsightsRoute
   '/_app/profile': typeof AppProfileRoute
   '/_app/search': typeof AppSearchRoute
   '/_app/social': typeof AppSocialRoute
@@ -193,6 +202,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/diary'
+    | '/insights'
     | '/profile'
     | '/search'
     | '/social'
@@ -212,6 +222,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/diary'
+    | '/insights'
     | '/profile'
     | '/search'
     | '/social'
@@ -233,6 +244,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/_app/diary'
+    | '/_app/insights'
     | '/_app/profile'
     | '/_app/search'
     | '/_app/social'
@@ -305,6 +317,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof AppProfileRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/insights': {
+      id: '/_app/insights'
+      path: '/insights'
+      fullPath: '/insights'
+      preLoaderRoute: typeof AppInsightsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/diary': {
@@ -396,6 +415,7 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppDiaryRoute: typeof AppDiaryRoute
+  AppInsightsRoute: typeof AppInsightsRoute
   AppProfileRoute: typeof AppProfileRoute
   AppSearchRoute: typeof AppSearchRoute
   AppSocialRoute: typeof AppSocialRoute
@@ -415,6 +435,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppDiaryRoute: AppDiaryRoute,
+  AppInsightsRoute: AppInsightsRoute,
   AppProfileRoute: AppProfileRoute,
   AppSearchRoute: AppSearchRoute,
   AppSocialRoute: AppSocialRoute,

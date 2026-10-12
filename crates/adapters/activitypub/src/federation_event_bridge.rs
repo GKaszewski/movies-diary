@@ -64,7 +64,6 @@ impl k_ap::EventPublisher for FederationEventBridge {
 
                 if let Some(outbox) = outbox_url {
                     tracing::info!(outbox = %outbox, "importing remote outbox after follow accepted");
-                    // Handled by FollowBackfillHandler reacting to FollowAccepted
                 }
                 Ok(())
             }

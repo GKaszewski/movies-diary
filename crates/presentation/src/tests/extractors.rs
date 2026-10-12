@@ -16,12 +16,13 @@ use domain::{
         Person, PersonCredits, PersonEnrichmentData, PersonId, Review, ReviewHistory, SearchQuery,
         SearchResults, UserStats, UserTrends,
         collections::{PageParams, Paginated},
+        insights::WatchRow,
     },
     ports::{
-        AuthService, DiaryQuery, EventPublisher, FollowGraphQuery, MetadataClient, MovieCommand,
-        MovieQuery, ObjectStorage, PasswordHasher, PersonCommand, PersonQuery, PosterFetcherClient,
-        ReviewRepository, SearchCommand, SearchPort, StatsRepository, UserRepository,
-        WatchlistRepository,
+        AuthService, DiaryQuery, EventPublisher, FollowGraphQuery, InsightsQuery, MetadataClient,
+        MovieCommand, MovieQuery, ObjectStorage, PasswordHasher, PersonCommand, PersonQuery,
+        PosterFetcherClient, ReviewRepository, SearchCommand, SearchPort, StatsRepository,
+        UserRepository, WatchlistRepository,
     },
     testing::InMemoryUserRepository,
     value_objects::{
@@ -165,6 +166,12 @@ impl StatsRepository for Panic {
         panic!()
     }
     async fn count_reviews_in_year(&self, _: &UserId, _: u16) -> Result<u32, DomainError> {
+        panic!()
+    }
+}
+#[async_trait::async_trait]
+impl InsightsQuery for Panic {
+    async fn get_watch_rows(&self, _: &UserId) -> Result<Vec<WatchRow>, DomainError> {
         panic!()
     }
 }
@@ -794,6 +801,7 @@ pub(crate) fn test_repositories() -> Repositories {
         federation_admin: Arc::new(domain::ports::noop::NoopFederationAdminQuery) as _,
         wrapup_stats: Arc::clone(&repo) as _,
         wrapup_repo: Arc::clone(&repo) as _,
+        insights: Arc::clone(&repo) as _,
         goal_command: Arc::clone(&repo) as _,
         goal_query: Arc::clone(&repo) as _,
         user_settings: Arc::clone(&repo) as _,

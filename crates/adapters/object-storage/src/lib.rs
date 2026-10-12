@@ -55,7 +55,6 @@ impl ObjectStorage for ObjectStorageAdapter {
             Err(DomainError::NotFound(_)) if !has_image_ext(key) => {}
             Err(e) => return Err(e),
         }
-        // Key may reference a pre-conversion path; try converted extensions.
         for ext in [".webp", ".avif"] {
             let candidate = format!("{key}{ext}");
             if let Ok(bytes) = self.get_exact(&candidate).await {

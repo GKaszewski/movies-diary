@@ -30,7 +30,7 @@ use domain::value_objects::{FollowTarget, InstanceIdentity, SocialActor, SocialI
 use template_askama::{BlockedActorsTemplate, BlockedDomainsTemplate};
 use template_askama::{FollowersTemplate, FollowingTemplate, RemoteActorData};
 
-use super::helpers::{build_page_context, encode_error};
+use super::helpers::{build_page_context, encode_domain_error};
 
 fn social_actor_to_dto(actor: SocialActor, instance: &InstanceIdentity) -> RemoteActorDto {
     RemoteActorDto {
@@ -576,7 +576,7 @@ pub async fn follow_user(
         Ok(()) => Redirect::to(&redirect_base).into_response(),
         Err(e) => {
             tracing::error!("follow error: {:?}", e);
-            let msg = encode_error(&e.to_string());
+            let msg = encode_domain_error(&e);
             let sep = if redirect_base.contains('?') {
                 '&'
             } else {
@@ -614,7 +614,7 @@ pub async fn unfollow_user(
             Redirect::to(&format!("/users/{}/following-list", profile_user_uuid)).into_response()
         }
         Err(e) => {
-            let msg = encode_error(&e.to_string());
+            let msg = encode_domain_error(&e);
             Redirect::to(&format!(
                 "/users/{}/following-list?error={}",
                 profile_user_uuid, msg
@@ -649,7 +649,7 @@ pub async fn accept_follower_html(
     {
         Ok(_) => Redirect::to(&format!("/users/{}", profile_user_uuid)).into_response(),
         Err(e) => {
-            let msg = encode_error(&e.to_string());
+            let msg = encode_domain_error(&e);
             Redirect::to(&format!("/users/{}?error={}", profile_user_uuid, msg)).into_response()
         }
     }
@@ -680,7 +680,7 @@ pub async fn reject_follower_html(
     {
         Ok(_) => Redirect::to(&format!("/users/{}", profile_user_uuid)).into_response(),
         Err(e) => {
-            let msg = encode_error(&e.to_string());
+            let msg = encode_domain_error(&e);
             Redirect::to(&format!("/users/{}?error={}", profile_user_uuid, msg)).into_response()
         }
     }
@@ -896,7 +896,7 @@ pub async fn remove_follower_html(
             Redirect::to(&format!("/users/{}/followers-list", profile_user_uuid)).into_response()
         }
         Err(e) => {
-            let msg = encode_error(&e.to_string());
+            let msg = encode_domain_error(&e);
             Redirect::to(&format!(
                 "/users/{}/followers-list?error={}",
                 profile_user_uuid, msg
@@ -1104,9 +1104,6 @@ mod tests {
         }
     }
 
-    /// The bug: a local actor used to serialize as `local:{uuid}`, which
-    /// `identify` cannot parse, so every POST echoing this url back resolved
-    /// to Remote and was routed to ActivityPub.
     #[test]
     fn local_actor_dto_url_round_trips_back_to_the_same_identity() {
         let instance = InstanceIdentity::new("https://md.example");

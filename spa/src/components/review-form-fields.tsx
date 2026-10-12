@@ -8,6 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar"
 import { StarRating } from "@/components/star-rating"
 import { WatchMediumPicker } from "@/components/watch-medium-picker"
+import { withPickedDay } from "@/lib/date"
 
 type ReviewFormFieldsProps = {
   rating: number
@@ -55,7 +56,7 @@ export function ReviewFormFields({
               mode="single"
               fixedWeeks
               selected={watchedAt}
-              onSelect={(d) => d && onWatchedAtChange(d)}
+              onSelect={(d) => d && onWatchedAtChange(withPickedDay(watchedAt, d))}
               disabled={(d) => d > new Date()}
               autoFocus
             />

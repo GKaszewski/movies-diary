@@ -4,9 +4,6 @@ use serde::Deserialize;
 pub struct PlexParser;
 
 impl MediaServerParser for PlexParser {
-    /// Plex sends multipart form data with a `payload` JSON field.
-    /// The caller must extract the JSON string from the multipart body
-    /// and pass it here as raw bytes.
     fn parse_playback_event(
         &self,
         body: &[u8],

@@ -9,9 +9,6 @@ use domain::{
 use crate::diary::commands::MovieInput;
 use crate::diary::movie_resolver::{MovieResolver, MovieResolverDeps};
 
-/// Resolves a movie from input, persists it, and publishes `MovieDiscovered` if new.
-///
-/// Returns `(movie, is_new_movie)`.
 pub async fn resolve_and_persist_movie(
     input: &MovieInput,
     movie_command: &dyn MovieCommand,

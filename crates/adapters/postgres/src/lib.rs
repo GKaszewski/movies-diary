@@ -6,6 +6,7 @@ mod goals;
 mod image_ref;
 mod import_profile;
 mod import_session;
+mod insights;
 mod models;
 mod movie;
 mod movie_dedup;
@@ -25,6 +26,7 @@ pub use diary::PostgresDiaryRepository;
 pub use image_ref::{PostgresImageRefAdapter, create_image_ref};
 pub use import_profile::PostgresImportProfileRepository;
 pub use import_session::PostgresImportSessionRepository;
+pub use insights::PostgresInsightsQuery;
 pub use movie::PostgresMovieRepository;
 pub use movie_dedup::PostgresMovieDeduplicator;
 pub use persons::{PostgresPersonAdapter, create_person_adapter};
@@ -68,6 +70,7 @@ pub struct PostgresWireOutput {
     pub ap_content: std::sync::Arc<dyn domain::ports::LocalApContentQuery>,
     pub wrapup_repo: std::sync::Arc<dyn domain::ports::WrapUpRepository>,
     pub wrapup_stats: std::sync::Arc<dyn domain::ports::WrapUpStatsQuery>,
+    pub insights: std::sync::Arc<dyn domain::ports::InsightsQuery>,
     pub goal_command: std::sync::Arc<dyn domain::ports::GoalCommand>,
     pub goal_query: std::sync::Arc<dyn domain::ports::GoalQuery>,
     pub user_settings: std::sync::Arc<dyn domain::ports::UserSettingsRepository>,
@@ -111,6 +114,7 @@ pub async fn wire(database_url: &str) -> anyhow::Result<PostgresWireOutput> {
         ap_content: std::sync::Arc::new(PostgresApContentQuery::new(pool.clone())) as _,
         wrapup_repo: std::sync::Arc::new(PostgresWrapUpRepository::new(pool.clone())) as _,
         wrapup_stats: std::sync::Arc::new(PostgresWrapUpStatsQuery::new(pool.clone())) as _,
+        insights: std::sync::Arc::new(PostgresInsightsQuery::new(pool.clone())) as _,
         goal_command: std::sync::Arc::new(goals::PostgresGoalRepository::new(pool.clone())) as _,
         goal_query: std::sync::Arc::new(goals::PostgresGoalRepository::new(pool.clone())) as _,
         user_settings: std::sync::Arc::clone(&user_settings_repo) as _,

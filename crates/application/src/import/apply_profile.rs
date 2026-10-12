@@ -5,8 +5,6 @@ use domain::{
 
 use super::{commands::ApplyImportProfileCommand, deps::ApplyProfileDeps};
 
-/// Copies the profile's field_mappings onto the session. Caller must then invoke
-/// apply_import_mapping to regenerate row_results with the new mappings.
 pub async fn execute(
     deps: &ApplyProfileDeps,
     cmd: ApplyImportProfileCommand,

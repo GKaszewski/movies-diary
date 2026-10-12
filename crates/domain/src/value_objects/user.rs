@@ -25,8 +25,6 @@ impl Username {
     const MIN_LENGTH: usize = 2;
     const MAX_LENGTH: usize = 30;
 
-    /// Accepts 2–30 chars: lowercase letters, digits, underscores, hyphens.
-    /// Lowercases input automatically.
     pub fn new(raw: String) -> Result<Self, DomainError> {
         let s = raw.trim().to_lowercase();
         if s.len() < Self::MIN_LENGTH || s.len() > Self::MAX_LENGTH {

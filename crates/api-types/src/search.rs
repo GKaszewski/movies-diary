@@ -6,21 +6,13 @@ pub use crate::common::{PaginatedMovieHits, PaginatedPersonHits};
 
 #[derive(Debug, Deserialize, IntoParams)]
 pub struct SearchQueryParams {
-    /// Free-text query matched across title, cast, crew, genres and keywords.
     pub q: Option<String>,
-    /// Filter by genre name (exact match, case-sensitive).
     pub genre: Option<String>,
-    /// Filter by release year.
     pub year: Option<u16>,
-    /// Filter by person ID (UUID).
     pub person_id: Option<Uuid>,
-    /// Filter crew results by department (e.g. "Directing", "Writing").
     pub department: Option<String>,
-    /// Filter by original language code (e.g. "en", "fr").
     pub language: Option<String>,
-    /// Max results to return (default 20).
     pub limit: Option<u32>,
-    /// Offset for pagination (default 0).
     pub offset: Option<u32>,
 }
 

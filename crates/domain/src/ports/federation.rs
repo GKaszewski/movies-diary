@@ -6,8 +6,6 @@ use crate::{
     models::{BlockedDomainInfo, FollowedActorInfo},
 };
 
-/// Serves ActivityPub documents for content negotiation. Presentation calls
-/// this when a peer sends `Accept: application/activity+json`.
 #[async_trait]
 pub trait ApDocumentPort: Send + Sync {
     async fn actor_json(&self, user_id: &str) -> Result<String, DomainError>;
@@ -23,8 +21,6 @@ pub trait ApDocumentPort: Send + Sync {
     ) -> Result<String, DomainError>;
 }
 
-/// Instance-wide domain blocklist administration. Presentation calls this from
-/// the admin API and the admin HTML pages; nothing outside presentation does.
 #[async_trait]
 pub trait InstanceBlocklistPort: Send + Sync {
     async fn get_blocked_domains(&self) -> Result<Vec<BlockedDomainInfo>, DomainError>;
@@ -36,8 +32,6 @@ pub trait InstanceBlocklistPort: Send + Sync {
     async fn remove_blocked_domain(&self, domain: &str) -> Result<(), DomainError>;
 }
 
-/// Pulling remote content in, and pushing local content out, after a follow
-/// is established. Worker-side only — no HTTP handler calls this.
 #[async_trait]
 pub trait ApBackfillPort: Send + Sync {
     async fn get_following(

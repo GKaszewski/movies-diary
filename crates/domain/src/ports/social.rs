@@ -127,35 +127,11 @@ pub trait LocalApContentQuery: Send + Sync {
     ) -> Result<Vec<DiaryEntry>, DomainError>;
 }
 
-/// Resolves a `FollowTarget` (a handle or an already-known identity) to the
-/// `SocialIdentity` that should be dispatched on — local vs. remote.
-///
-/// Split out from `SocialCommand::follow` because the decision must happen
-/// once, before dispatch, and both `LocalSocialService` and
-/// `CompositeSocialAdapter` need to observe its result rather than each
-/// re-deriving it (which would need `UserRepository` on the composite and
-/// duplicate the local/remote fallthrough logic).
 #[async_trait]
 pub trait FollowTargetResolver: Send + Sync {
     async fn resolve_target(&self, target: &FollowTarget) -> Result<SocialIdentity, DomainError>;
 }
 
-/// Performs the local follow write for a target whose `SocialIdentity` a caller
-/// has *already* resolved via `FollowTargetResolver::resolve_target`.
-///
-/// Exists so `CompositeSocialAdapter` — which must call `resolve_target` first
-/// to decide local vs. remote dispatch — doesn't then hand the raw
-/// `FollowTarget` to `SocialCommand::follow` and pay for a second resolution of
-/// the same handle. That second resolution wasn't just wasteful: on a
-/// federation-ON deployment it could also change the answer (the target user
-/// deleted between the two calls, e.g.), turning a local follow into a bogus
-/// "federation is not enabled" error.
-///
-/// `LocalSocialService::follow` is `resolve_target_identity` then
-/// `follow_resolved` — the self-follow guard and the two-sided write live only
-/// in the latter, so a caller that already has the identity (the composite)
-/// and one that doesn't (federation-off `SocialCommand::follow`, wired
-/// directly) both end up running the exact same write path.
 #[async_trait]
 pub trait ResolvedFollow: Send + Sync {
     async fn follow_resolved(
@@ -165,15 +141,6 @@ pub trait ResolvedFollow: Send + Sync {
     ) -> Result<(), DomainError>;
 }
 
-/// The subset of social behavior that needs no ActivityPub — everything a
-/// single-instance deployment can do with only its own database.
-///
-/// A marker supertrait with a blanket impl, so any type implementing all five
-/// parts is usable as `Arc<dyn LocalSocial>` without a separate registration.
-/// Same shape as `k_ap::FollowRepository` over its five follow traits.
-///
-/// `CompositeSocialAdapter` takes one of these for its local branches, which is
-/// what lets the `activitypub` crate stay unaware of `application`.
 pub trait LocalSocial:
     SocialCommand + FollowGraphQuery + BlockQuery + FollowTargetResolver + ResolvedFollow
 {
@@ -333,8 +300,6 @@ mod local_social_tests {
         }
     }
 
-    /// The blanket impl must make any type implementing all five usable as
-    /// `Arc<dyn LocalSocial>`, and `LocalSocial` must stay object-safe.
     #[test]
     fn blanket_impl_yields_a_trait_object() {
         let local: Arc<dyn LocalSocial> = Arc::new(Stub);

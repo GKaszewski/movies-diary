@@ -28,7 +28,6 @@ pub struct PersistedReview {
     pub watch_medium: Option<WatchMedium>,
 }
 
-/// Partial update for a review. `None` = unchanged, `Some(None)` = clear, `Some(Some(v))` = set.
 #[derive(Clone, Debug, Default)]
 pub struct ReviewEdit {
     pub rating: Option<Rating>,
@@ -133,7 +132,6 @@ impl Review {
     pub fn watch_medium(&self) -> Option<&WatchMedium> {
         self.watch_medium.as_ref()
     }
-    /// Returns [star1_filled, star2_filled, ..., star5_filled]
     pub fn stars(&self) -> [bool; 5] {
         let r = self.rating.value();
         [r >= 1, r >= 2, r >= 3, r >= 4, r >= 5]

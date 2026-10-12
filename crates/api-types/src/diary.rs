@@ -60,7 +60,6 @@ pub struct FeedEntryDto {
 #[derive(Debug, Clone, Deserialize, utoipa::IntoParams)]
 #[into_params(parameter_in = Query)]
 pub struct ExportQueryParams {
-    /// Output format: `csv` (default) or `json`
     #[serde(default = "default_export_format")]
     pub format: String,
 }

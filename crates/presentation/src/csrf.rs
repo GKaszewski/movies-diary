@@ -52,7 +52,6 @@ pub async fn csrf_middleware(mut req: Request, next: Next) -> Response {
     response
 }
 
-/// Returns true if the form token does not match the cookie token.
 pub fn mismatch(token: &CsrfToken, form_value: &str) -> bool {
     token.0 != form_value || form_value.is_empty()
 }

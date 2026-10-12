@@ -44,8 +44,6 @@ async fn watchlist_for_owner_returns_local_when_user_row_exists() {
     let user = b.user_repo.find_by_email(&email).await.unwrap().unwrap();
     let uid = user.id().value();
 
-    // If the local-row decision were wrong and this reached the remote arm, the
-    // panic port below would fail the test instead of silently passing.
     let deps = GetWatchlistForOwnerDeps {
         user: b.user_repo.clone(),
         watchlist: InMemoryWatchlistRepository::new(),
@@ -75,9 +73,6 @@ async fn watchlist_for_owner_returns_remote_when_no_local_row() {
         },
     ]);
 
-    // No user row exists for `owner_id` in this fresh, empty user repo — the
-    // local-vs-remote decision must fall through to the remote arm. The panic
-    // port below proves the local arm is never touched.
     let deps = GetWatchlistForOwnerDeps {
         user: InMemoryUserRepository::new(),
         watchlist: Arc::new(PanicWatchlistRepository),
@@ -97,10 +92,6 @@ async fn watchlist_for_owner_returns_remote_when_no_local_row() {
     }
 }
 
-/// Pins a pre-existing quirk: the old handler validated `limit`/`offset` only on
-/// the local branch (inside `watchlist::get::execute`'s `PageParams::new` call) —
-/// the remote branch never looked at them at all. An out-of-range limit must
-/// still surface as a validation error on the local arm.
 #[tokio::test]
 async fn watchlist_for_owner_local_arm_validates_limit() {
     let b = TestContextBuilder::new();
@@ -126,9 +117,6 @@ async fn watchlist_for_owner_local_arm_validates_limit() {
     ));
 }
 
-/// Same quirk, other direction: an out-of-range limit is silently ignored on the
-/// remote arm, exactly as before — it must not turn into a validation error just
-/// because the use case now owns the branch decision.
 #[tokio::test]
 async fn watchlist_for_owner_remote_arm_ignores_invalid_limit() {
     let owner_id = Uuid::new_v4();

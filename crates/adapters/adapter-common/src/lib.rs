@@ -10,31 +10,25 @@ use domain::{
     },
 };
 
-/// Map a [`sqlx::Error`] to a [`DomainError::InfrastructureError`], logging the
-/// underlying database error at `error` level.
 pub fn map_sqlx_error(e: sqlx::Error) -> DomainError {
     tracing::error!("Database error: {:?}", e);
     DomainError::InfrastructureError("Database operation failed".into())
 }
 
-/// Parse a string as a UUID, returning a [`DomainError`] on failure.
 pub fn parse_uuid(s: &str) -> Result<uuid::Uuid, DomainError> {
     uuid::Uuid::parse_str(s)
         .map_err(|e| DomainError::InfrastructureError(format!("Invalid UUID '{}': {}", s, e)))
 }
 
-/// Parse a `%Y-%m-%d %H:%M:%S` string into a [`chrono::NaiveDateTime`].
 pub fn parse_datetime(s: &str) -> Result<chrono::NaiveDateTime, DomainError> {
     chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S")
         .map_err(|e| DomainError::InfrastructureError(format!("Invalid datetime '{}': {}", s, e)))
 }
 
-/// Format a [`chrono::NaiveDateTime`] as `%Y-%m-%d %H:%M:%S`.
 pub fn datetime_to_str(dt: &chrono::NaiveDateTime) -> String {
     dt.format("%Y-%m-%d %H:%M:%S").to_string()
 }
 
-/// Convert a `YYYY-MM` string into a human-readable label like `Jan '24`.
 pub fn format_year_month(ym: &str) -> String {
     let parts: Vec<&str> = ym.splitn(2, '-').collect();
     if parts.len() != 2 {
@@ -59,16 +53,6 @@ pub fn format_year_month(ym: &str) -> String {
     format!("{} '{}", month, year)
 }
 
-// ---------------------------------------------------------------------------
-// Shared row-to-domain conversion functions
-//
-// Each database adapter keeps its own `FromRow` structs (sqlite vs postgres
-// derive different impls) but the conversion from parsed row fields into
-// domain types is identical.  These functions capture that shared logic so
-// each adapter's `into_domain()` becomes a one-liner delegation.
-// ---------------------------------------------------------------------------
-
-/// Convert raw movie row fields into a [`Movie`] domain object.
 pub fn movie_row_to_domain(
     id: String,
     external_metadata_id: Option<String>,
@@ -94,7 +78,6 @@ pub fn movie_row_to_domain(
     ))
 }
 
-/// Convert raw review row fields into a [`Review`] domain object.
 #[allow(clippy::too_many_arguments)]
 pub fn review_row_to_domain(
     id: String,
@@ -132,10 +115,6 @@ pub fn review_row_to_domain(
     }))
 }
 
-/// Assemble a [`MovieSummary`] from an already-converted [`Movie`] and extra
-/// metadata fields.  The caller is responsible for converting genres into a
-/// `Vec<String>` (sqlite splits a comma-separated string, postgres receives a
-/// `Vec` directly).
 pub fn movie_summary_to_domain(
     movie: Movie,
     genres: Vec<String>,
@@ -154,7 +133,6 @@ pub fn movie_summary_to_domain(
     }
 }
 
-/// Convert raw aggregate stats into a [`MovieStats`] domain object.
 pub fn movie_stats_to_domain(
     total_count: i64,
     avg_rating: Option<f64>,
@@ -175,7 +153,6 @@ pub fn movie_stats_to_domain(
     }
 }
 
-/// Convert raw user summary row fields into a [`UserSummary`] domain object.
 #[allow(clippy::too_many_arguments)]
 pub fn user_summary_to_domain(
     id: String,
@@ -197,7 +174,6 @@ pub fn user_summary_to_domain(
     ))
 }
 
-/// Convert raw watchlist entry fields into a [`WatchlistEntry`] domain object.
 pub fn watchlist_entry_to_domain(
     id: String,
     user_id: String,
@@ -212,9 +188,6 @@ pub fn watchlist_entry_to_domain(
     })
 }
 
-/// Convert raw watchlist+movie row fields into a [`WatchlistWithMovie`].
-///
-/// Takes the watchlist entry fields and a pre-converted [`Movie`].
 pub fn watchlist_with_movie_to_domain(entry: WatchlistEntry, movie: Movie) -> WatchlistWithMovie {
     WatchlistWithMovie { entry, movie }
 }

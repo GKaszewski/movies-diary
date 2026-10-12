@@ -1,13 +1,11 @@
 use domain::value_objects::{InstanceIdentity, ReviewId, UserId};
 use url::Url;
 
-/// Builds the canonical actor URL: `{base_url}/users/{user_id}`
 pub fn actor_url(instance: &InstanceIdentity, user_id: uuid::Uuid) -> Url {
     Url::parse(&instance.actor_url_for(&UserId::from_uuid(user_id)))
         .expect("base_url is always a valid URL prefix")
 }
 
-/// Builds the canonical review URL: `{base_url}/reviews/{review_id}`
 pub fn review_url(instance: &InstanceIdentity, review_id: &ReviewId) -> Url {
     Url::parse(&format!(
         "{}/reviews/{}",
@@ -27,7 +25,6 @@ pub fn goal_url(instance: &InstanceIdentity, user_id: uuid::Uuid, year: u16) -> 
     .expect("base_url is always a valid URL prefix")
 }
 
-/// Builds the canonical watchlist entry URL: `{base_url}/users/{user_id}/watchlist/{movie_id}`
 pub fn watchlist_entry_url(
     instance: &InstanceIdentity,
     user_id: uuid::Uuid,

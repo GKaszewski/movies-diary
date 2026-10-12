@@ -54,10 +54,6 @@ fn unknown_query(user_id: uuid::Uuid) -> GetUserProfileQuery {
     }
 }
 
-/// `get_local_profile` is the local-only half of the former `get_profile` split
-/// (ADR-0004's closed wart). Unlike the old tolerant behavior, a user id with no
-/// local row must be `NotFound` here — the empty-string identity sentinel this
-/// replaces cannot be represented in `LocalProfileData` at all.
 #[tokio::test]
 async fn get_local_profile_is_not_found_for_unknown_user() {
     let b = TestContextBuilder::new();
@@ -272,10 +268,6 @@ async fn populates_handle_and_actor_url_for_a_local_user() {
     let user = user_repo.find_by_email(&email).await.unwrap().unwrap();
     let uid = user.id().value();
 
-    // `InMemoryUserRepository::update_profile` now actually persists (previously a
-    // no-op stub) — use it to give this test a real display_name/bio to assert,
-    // rather than asserting `None` for a mapping that could just as easily be
-    // wrong, inverted, or hardcoded.
     let update_deps = UpdateProfileDeps {
         user: user_repo.clone(),
         object_storage: b.object_storage.clone(),

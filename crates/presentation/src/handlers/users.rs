@@ -829,7 +829,7 @@ pub async fn post_profile_settings(
         tracing::error!("update_profile error: {:?}", e);
         return axum::response::Redirect::to(&format!(
             "/settings/profile?error={}",
-            super::helpers::encode_error(&e.to_string())
+            super::helpers::encode_domain_error(&e)
         ))
         .into_response();
     }
@@ -860,7 +860,7 @@ pub async fn post_profile_settings(
         tracing::error!("update_profile_fields error: {:?}", e);
         return axum::response::Redirect::to(&format!(
             "/settings/profile?error={}",
-            super::helpers::encode_error(&e.to_string())
+            super::helpers::encode_domain_error(&e)
         ))
         .into_response();
     }

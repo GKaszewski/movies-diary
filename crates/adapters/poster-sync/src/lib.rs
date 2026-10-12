@@ -116,7 +116,6 @@ impl EventHandler for PosterSyncHandler {
                 movie_id,
                 external_metadata_id,
             } => {
-                // Only sync poster if the movie doesn't have one yet
                 let already_has_poster = self
                     .movie_query
                     .get_movie_by_id(&MovieId::from_uuid(movie_id.value()))

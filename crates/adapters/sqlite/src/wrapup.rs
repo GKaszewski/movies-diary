@@ -437,7 +437,8 @@ fn in_placeholders(n: usize) -> String {
     s
 }
 
-async fn fetch_genres_sqlite(
+/// Shared by WrapUp and Insights: movie-id → genre names.
+pub(crate) async fn fetch_genres_sqlite(
     pool: &SqlitePool,
     movie_ids: &[String],
 ) -> Result<HashMap<String, Vec<String>>, DomainError> {

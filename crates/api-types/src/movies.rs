@@ -10,11 +10,8 @@ use crate::common::SocialFeedResponse;
 pub struct MoviesQueryParams {
     pub limit: Option<u32>,
     pub offset: Option<u32>,
-    /// Optional title filter (case-insensitive substring match)
     pub search: Option<String>,
-    /// Filter by genre name (case-insensitive)
     pub genre: Option<String>,
-    /// Filter by ISO language code (e.g. "en")
     pub language: Option<String>,
 }
 

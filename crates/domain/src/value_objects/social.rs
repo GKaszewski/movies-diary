@@ -37,8 +37,6 @@ pub struct SocialActor {
     pub avatar_url: Option<String>,
 }
 
-/// Both directions of the follow edge between a viewer and a target.
-/// `None` means no edge at all; `Some(Pending)` means requested but not accepted.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct FollowRelation {
     pub following: Option<FollowStatus>,

@@ -133,10 +133,6 @@ async fn ready_report_global_scope_ignores_user_id() {
         .unwrap();
 }
 
-/// The old handlers guarded `NaiveDate::from_ymd_opt` up front and returned a bare
-/// 400 for a year that can't form a valid date — that guard moved into the use
-/// case along with the rest of the year->date-range conversion. A distinguishable
-/// error (ValidationError, not NotFound) lets the handler still map it to 400.
 #[tokio::test]
 async fn ready_report_is_validation_error_for_unrepresentable_year() {
     let repo = InMemoryWrapUpRepository::new();

@@ -4,7 +4,6 @@ use crate::{errors::DomainError, value_objects::PosterUrl};
 
 #[async_trait]
 pub trait ObjectStorage: Send + Sync {
-    /// Stores `image_bytes` at `key` and returns the stored key.
     async fn store(&self, key: &str, image_bytes: &[u8]) -> Result<String, DomainError>;
     async fn get(&self, key: &str) -> Result<Vec<u8>, DomainError>;
     async fn get_stream(

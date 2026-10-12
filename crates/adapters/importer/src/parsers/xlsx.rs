@@ -58,14 +58,12 @@ fn cell_to_string(cell: &Data) -> String {
         Data::Int(i) => i.to_string(),
         Data::Bool(b) => b.to_string(),
         Data::DateTime(dt) => {
-            // ExcelDateTime::to_ymd_hms_milli() works without the chrono feature.
             let (year, month, day, _, _, _, _) = dt.to_ymd_hms_milli();
             format!("{:04}-{:02}-{:02}", year, month, day)
         }
         Data::DateTimeIso(s) => s.clone(),
         Data::DurationIso(s) => s.clone(),
         Data::Empty | Data::Error(_) => String::new(),
-        // Fallback for unexpected calamine Data variants; renders as debug string
         other => format!("{other:?}"),
     }
 }

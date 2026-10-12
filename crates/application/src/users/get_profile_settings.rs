@@ -1,12 +1,3 @@
-//! Absorbs BOTH of `handlers/users.rs::get_profile_settings`'s repository calls:
-//! the user lookup (`repos.user.find_by_id`) and the profile_fields join
-//! (`repos.profile_fields.get_fields`) — plus the avatar/banner URL derivation via
-//! `InstanceIdentity`, following the same pattern `get_local_profile` uses.
-//!
-//! Error policy: profile fields are primary content for this page (it's the page
-//! whose entire job is editing them), not page chrome, so a failed join
-//! propagates as `Err` rather than silently degrading to an empty list.
-
 use domain::{errors::DomainError, value_objects::UserId};
 use uuid::Uuid;
 
@@ -18,10 +9,6 @@ pub struct ProfileSettings {
     pub bio: Option<String>,
     pub avatar_url: Option<String>,
     pub banner_url: Option<String>,
-    /// Not in the brief's interface sketch, but the deleted handler code read
-    /// `user.also_known_as()` and rendered it in `ProfileSettingsTemplate` — this
-    /// use case absorbs that read too, or the settings page would silently stop
-    /// showing it.
     pub also_known_as: Option<String>,
     pub fields: Vec<(String, String)>,
 }

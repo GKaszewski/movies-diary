@@ -50,11 +50,6 @@ pub struct ListImportProfilesDeps {
     pub import_profile: Arc<dyn ImportProfileRepository>,
 }
 
-/// Backs `apply_profile_and_map`, which internally drives `apply_profile::execute`
-/// then `apply_mapping::execute` — these fields are exactly the union of
-/// `ApplyProfileDeps` and `ApplyMappingDeps`'s fields, cloned once here and used to
-/// build each nested deps struct inline at the call site (see that file's doc
-/// comment for why: no use-case signature changes, per this task's constraints).
 pub struct ApplyProfileAndMapDeps {
     pub import_profile: Arc<dyn ImportProfileRepository>,
     pub import_session: Arc<dyn ImportSessionRepository>,

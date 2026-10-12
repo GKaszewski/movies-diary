@@ -2,12 +2,12 @@ use std::sync::Arc;
 
 use domain::ports::{
     BlockQuery, DiaryQuery, FederatedProfileQuery, FederationAdminQuery, FollowGraphQuery,
-    GoalCommand, GoalQuery, ImportProfileRepository, ImportSessionRepository, MovieCommand,
-    MovieProfileRepository, MovieQuery, PersonCommand, PersonQuery, RefreshSessionRepository,
-    RemoteGoalRepository, RemoteWatchlistRepository, ReviewRepository, SearchCommand, SearchPort,
-    SocialCommand, StatsRepository, UserProfileFieldsRepository, UserRepository,
-    UserSettingsRepository, WatchEventCommand, WatchEventQuery, WatchlistRepository,
-    WebhookTokenRepository, WrapUpRepository, WrapUpStatsQuery,
+    GoalCommand, GoalQuery, ImportProfileRepository, ImportSessionRepository, InsightsQuery,
+    MovieCommand, MovieProfileRepository, MovieQuery, PersonCommand, PersonQuery,
+    RefreshSessionRepository, RemoteGoalRepository, RemoteWatchlistRepository, ReviewRepository,
+    SearchCommand, SearchPort, SocialCommand, StatsRepository, UserProfileFieldsRepository,
+    UserRepository, UserSettingsRepository, WatchEventCommand, WatchEventQuery,
+    WatchlistRepository, WebhookTokenRepository, WrapUpRepository, WrapUpStatsQuery,
 };
 
 #[derive(Clone)]
@@ -37,6 +37,7 @@ pub struct Repositories {
     pub federation_admin: Arc<dyn FederationAdminQuery>,
     pub wrapup_stats: Arc<dyn WrapUpStatsQuery>,
     pub wrapup_repo: Arc<dyn WrapUpRepository>,
+    pub insights: Arc<dyn InsightsQuery>,
     pub goal_command: Arc<dyn GoalCommand>,
     pub goal_query: Arc<dyn GoalQuery>,
     pub user_settings: Arc<dyn UserSettingsRepository>,

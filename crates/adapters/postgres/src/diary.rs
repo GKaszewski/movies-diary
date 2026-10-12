@@ -276,7 +276,6 @@ impl DiaryQuery for PostgresDiaryRepository {
         let offset = page.offset as i64;
         let has_search = search.map(|s| !s.is_empty()).unwrap_or(false);
 
-        // Dynamic param counter
         let mut p: i32 = 0;
         let mut next_param = || {
             p += 1;
@@ -323,9 +322,6 @@ impl DiaryQuery for PostgresDiaryRepository {
 
         let where_clause = where_parts.join(" AND ");
 
-        // Reset counter for count query (reuse same where_clause string but re-bind)
-        // We need a separate counter for count SQL — but since where_clause is already built
-        // with the right $N references, both queries share it.
         let count_sql = format!(
             "SELECT COUNT(*) FROM reviews r
              INNER JOIN movies m ON m.id = r.movie_id
@@ -352,7 +348,6 @@ impl DiaryQuery for PostgresDiaryRepository {
             where_clause, order_clause, limit_param, offset_param
         );
 
-        // Bind helper closure — binds search + following params in order
         macro_rules! bind_filter_params {
             ($q:expr) => {{
                 let mut q = $q;

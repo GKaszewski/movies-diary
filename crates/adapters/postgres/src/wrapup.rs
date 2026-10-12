@@ -414,7 +414,8 @@ struct CastEntry {
     profile_path: Option<String>,
 }
 
-async fn fetch_genres_pg(
+/// Shared by WrapUp and Insights: movie-id → genre names.
+pub(crate) async fn fetch_genres_pg(
     pool: &PgPool,
     movie_ids: &[String],
 ) -> Result<HashMap<String, Vec<String>>, DomainError> {

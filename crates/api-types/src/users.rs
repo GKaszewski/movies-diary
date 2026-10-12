@@ -23,7 +23,6 @@ pub struct UsersResponse {
 #[derive(Debug, Clone, Deserialize, utoipa::IntoParams)]
 #[into_params(parameter_in = Query)]
 pub struct UserProfileQueryParams {
-    /// One of: `recent` (default), `ratings`, `history`, `trends`
     pub view: Option<String>,
     pub limit: Option<u32>,
     pub offset: Option<u32>,

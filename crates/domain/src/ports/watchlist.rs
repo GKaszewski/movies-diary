@@ -11,13 +11,10 @@ use crate::{
 
 #[async_trait]
 pub trait WatchlistRepository: Send + Sync {
-    /// Add a new entry. Silently succeeds if the entry already exists.
     async fn add(&self, entry: &WatchlistEntry) -> Result<(), DomainError>;
 
-    /// Remove an entry. Returns NotFound if the entry does not exist.
     async fn remove(&self, user_id: &UserId, movie_id: &MovieId) -> Result<(), DomainError>;
 
-    /// Remove an entry if it exists. Never returns NotFound.
     async fn remove_if_present(
         &self,
         user_id: &UserId,

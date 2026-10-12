@@ -37,7 +37,6 @@ impl MovieDeduplicator for PostgresMovieDeduplicator {
             .await
             .map_err(adapter_common::map_sqlx_error)?;
 
-        // 1. Upsert canonical movie record
         sqlx::query(
             "INSERT INTO movies (id, external_metadata_id, title, release_year, director, poster_path)
              VALUES ($1, $2, $3, $4, $5, $6)
@@ -48,7 +47,6 @@ impl MovieDeduplicator for PostgresMovieDeduplicator {
         .bind(&new).bind(&ext_id).bind(&title).bind(year).bind(&director).bind(&poster)
         .execute(&mut *tx).await.map_err(adapter_common::map_sqlx_error)?;
 
-        // 2. Re-point simple FK tables
         let reviews = sqlx::query("UPDATE reviews SET movie_id = $1 WHERE movie_id = $2")
             .bind(&new)
             .bind(&old)
@@ -74,7 +72,6 @@ impl MovieDeduplicator for PostgresMovieDeduplicator {
             .map_err(adapter_common::map_sqlx_error)?
             .rows_affected();
 
-        // 3. Re-point movie_profiles (PK — move only if canonical has none)
         let profiles = sqlx::query("UPDATE movie_profiles SET movie_id = $1 WHERE movie_id = $2")
             .bind(&new)
             .bind(&old)
@@ -83,8 +80,6 @@ impl MovieDeduplicator for PostgresMovieDeduplicator {
             .map_err(adapter_common::map_sqlx_error)?
             .rows_affected();
 
-        // 4. Re-point enrichment tables with composite PKs (INSERT … ON CONFLICT DO NOTHING + DELETE)
-        //    Canonical's existing rows win on conflict — old duplicates are discarded.
         sqlx::query(
             "INSERT INTO movie_genres (movie_id, tmdb_id, name)
              SELECT $1, tmdb_id, name FROM movie_genres WHERE movie_id = $2
@@ -139,7 +134,6 @@ impl MovieDeduplicator for PostgresMovieDeduplicator {
             .await
             .map_err(adapter_common::map_sqlx_error)?;
 
-        // 5. Delete the now-empty old movie record (remaining cascades are safe: all FKs cleared above)
         sqlx::query("DELETE FROM movies WHERE id = $1")
             .bind(&old)
             .execute(&mut *tx)

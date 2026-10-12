@@ -8,7 +8,6 @@ use tui::app::{self, Action, App, BulkImportStage, Command, Screen, SettingsFiel
 use tui::client::{ApiClient, ApiError};
 use tui::config::Config;
 
-/// Convert an API error into either `AuthExpired` (for 401s) or a `ShowError`.
 fn api_err_action(e: ApiError) -> Action {
     match e {
         ApiError::Unauthorized => Action::AuthExpired,
@@ -27,7 +26,6 @@ fn main() -> anyhow::Result<()> {
 async fn run() -> anyhow::Result<()> {
     let mut config = Config::load();
 
-    // env var override
     if let Ok(url) = std::env::var("MOVIES_API_URL") {
         match &mut config {
             Some(c) => c.api_url = url,
@@ -48,7 +46,6 @@ async fn run() -> anyhow::Result<()> {
     let (tx, mut rx) = mpsc::channel::<Action>(64);
     let mut terminal = ratatui::init();
 
-    // If we start directly in Main (saved token), trigger an initial diary load
     if matches!(app.screen, Screen::Main(_))
         && let Some(token) = &saved_token
     {
@@ -71,7 +68,6 @@ async fn run() -> anyhow::Result<()> {
         loop {
             terminal.draw(|f| tui::ui::render(f, &app))?;
 
-            // Poll keyboard — non-blocking with short timeout
             if event::poll(Duration::from_millis(50))?
                 && let Event::Key(key) = event::read()?
             {
@@ -89,7 +85,6 @@ async fn run() -> anyhow::Result<()> {
                 }
             }
 
-            // Drain async results
             while let Ok(action) = rx.try_recv() {
                 let cmds = app::update(&mut app, action);
                 for cmd in cmds {
@@ -273,7 +268,6 @@ fn tab_shortcut(code: KeyCode) -> Option<Action> {
 }
 
 fn key_to_action(app: &App, key: ratatui::crossterm::event::KeyEvent) -> Option<Action> {
-    // Ctrl+C always quits
     if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('c') {
         return Some(Action::Quit);
     }

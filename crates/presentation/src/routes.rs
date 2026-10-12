@@ -460,6 +460,7 @@ fn api_routes(rate_limit: u64) -> Router<AppState> {
             "/wrapups/{id}/report",
             routing::get(handlers::wrapup::get_report),
         )
+        .route("/insights", routing::get(handlers::insights::get_insights))
         .route(
             "/admin/reindex-search",
             routing::post(handlers::search::post_reindex_search),

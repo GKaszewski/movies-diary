@@ -218,6 +218,7 @@ async fn wire_dependencies() -> anyhow::Result<(AppState, axum::Router)> {
         federation_admin: Arc::new(domain::ports::noop::NoopFederationAdminQuery),
         wrapup_stats: db.wrapup_stats,
         wrapup_repo: db.wrapup_repo,
+        insights: db.insights,
         goal_command: db.goal_command,
         goal_query: db.goal_query,
         user_settings: db.user_settings,
@@ -312,9 +313,23 @@ async fn create_event_publisher(
 
 fn init_tracing() {
     tracing_subscriber::registry()
-        .with(tracing_subscriber::EnvFilter::new(
-            std::env::var("RUST_LOG").unwrap_or_else(|_| "server=debug,tower_http=debug".into()),
-        ))
+        .with(log_filter("server=debug,tower_http=debug"))
         .with(tracing_subscriber::fmt::layer())
         .init();
+}
+
+/// `RUST_LOG` names the crates to trace in detail; anything it doesn't name
+/// still reports warnings and errors. Without a baseline, a filter like
+/// `presentation=debug` silently drops adapter errors (e.g. the sqlx detail
+/// behind "Database operation failed").
+fn log_filter(default: &str) -> tracing_subscriber::EnvFilter {
+    let directives = std::env::var("RUST_LOG").unwrap_or_else(|_| default.to_string());
+    let has_baseline = directives
+        .split(',')
+        .any(|d| !d.trim().is_empty() && !d.contains('='));
+    if has_baseline {
+        tracing_subscriber::EnvFilter::new(directives)
+    } else {
+        tracing_subscriber::EnvFilter::new(format!("warn,{directives}"))
+    }
 }

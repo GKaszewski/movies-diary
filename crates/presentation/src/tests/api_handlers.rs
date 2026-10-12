@@ -163,13 +163,6 @@ async fn person_credits_endpoint_returns_404_for_unknown_id() {
     assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 }
 
-/// Proves stub injection reaches the prebuilt deps, not just the `Repositories`
-/// passed into `build_test_state_from`. Before the fix that added construct-time
-/// stub injection, this failed on the assertion below — exactly the false-green
-/// that would have silently broken the person-handler tests in Task 6. `AppContext`
-/// no longer carries a `repos` field (Plan C2), so the original companion
-/// assertion on `state.app_ctx.repos.person_query` was dropped along with the
-/// field; the assertion that matters — that `deps` itself holds the stub — stays.
 #[test]
 fn injected_stub_reaches_prebuilt_deps() {
     let stub: Arc<dyn domain::ports::PersonQuery> = Arc::new(PersonQueryStub);
@@ -209,7 +202,6 @@ async fn get_watchlist_requires_auth() {
 
 // --- Pending-follower-count endpoint tests ---
 
-/// Stub `FollowGraphQuery` returning a fixed pending-follower count.
 struct FixedPendingCount(usize);
 #[async_trait::async_trait]
 impl domain::ports::FollowGraphQuery for FixedPendingCount {
@@ -264,10 +256,6 @@ impl domain::ports::FollowGraphQuery for FixedPendingCount {
     }
 }
 
-/// The point of Task 4: one use case (`social::count_pending_followers`) now
-/// serves both the classic UI (via `get_page_viewer`) and this new HTTP
-/// endpoint. Seed the query port with a fixed count and assert the endpoint
-/// reflects it verbatim.
 #[tokio::test]
 async fn pending_count_endpoint_reports_the_use_case_result() {
     let uid = domain::value_objects::UserId::from_uuid(Uuid::new_v4());
@@ -351,9 +339,6 @@ impl domain::ports::ApDocumentPort for FailingApDocument {
     }
 }
 
-/// Swapping `ap_document` on the returned state is safe — unlike the `repos`
-/// fields, handlers read `app_ctx.ap_document` directly and no prebuilt deps
-/// struct carries a copy of it.
 #[cfg(feature = "federation")]
 fn state_with_failing_ap_document() -> crate::state::AppState {
     let mut state = test_app_state();

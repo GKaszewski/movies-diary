@@ -9,15 +9,6 @@ use domain::{
 use k_ap::ActivityPubService;
 use uuid::Uuid;
 
-/// Adapts the federation library's service to the three domain-owned ports.
-///
-/// A wrapper rather than a bare `impl ... for ActivityPubService` because the
-/// orphan rule forbids implementing a foreign trait for a foreign type, and
-/// from this crate both `ApDocumentPort` (owned by `domain`) and
-/// `ActivityPubService` (owned by the external `k-ap` crate) are foreign.
-///
-/// One type carrying all three impls mirrors `CompositeSocialAdapter`, which
-/// serves `SocialCommand`, `FollowGraphQuery`, and `BlockQuery` the same way.
 pub struct ApServiceAdapter {
     service: Arc<ActivityPubService>,
 }
@@ -28,10 +19,6 @@ impl ApServiceAdapter {
     }
 }
 
-/// Single conversion point from the federation library's `anyhow` errors to
-/// `DomainError`. The log line and the resulting error string reproduce what
-/// `presentation::handlers::social::ap_to_domain` produced before the port
-/// inversion moved the boundary here.
 fn ap_err(e: anyhow::Error) -> DomainError {
     tracing::error!("ActivityPub error: {:?}", e);
     DomainError::InfrastructureError(e.to_string())

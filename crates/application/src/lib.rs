@@ -9,6 +9,7 @@ pub mod auth;
 pub mod diary;
 pub mod goals;
 pub mod import;
+pub mod insights;
 pub mod integrations;
 pub mod movies;
 pub mod person;

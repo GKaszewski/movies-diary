@@ -8,22 +8,18 @@ use domain::{
 use crate::movies::{commands::EnrichMovieCommand, deps::EnrichMovieDeps};
 
 pub async fn execute(deps: &EnrichMovieDeps, cmd: EnrichMovieCommand) -> Result<(), DomainError> {
-    // 1. Persist the enriched profile (also handles movie_cast, movie_crew, genres, keywords)
     deps.movie_profile.upsert(&cmd.profile).await?;
 
-    // 2. Upsert persons extracted from cast + crew (no reads — only upsert)
     let persons = extract_persons(&cmd.profile.cast, &cmd.profile.crew);
     if !persons.is_empty() {
         deps.person_command.upsert_batch(&persons).await?;
     }
 
-    // 3. Fetch the movie for the search index document
     let Some(movie) = deps.movie_query.get_movie_by_id(&cmd.movie_id).await? else {
         tracing::warn!(movie_id = %cmd.movie_id.value(), "enrich_movie: movie not found after profile upsert");
         return Ok(());
     };
 
-    // 4. Index the movie in search
     deps.search_command
         .index(IndexableDocument::Movie {
             id: cmd.movie_id.clone(),
@@ -32,7 +28,6 @@ pub async fn execute(deps: &EnrichMovieDeps, cmd: EnrichMovieCommand) -> Result<
         })
         .await?;
 
-    // 5. Index each unique person in search (no reads — persons built from in-memory data)
     for person in &persons {
         deps.search_command
             .index(IndexableDocument::Person {
@@ -50,9 +45,6 @@ pub async fn execute(deps: &EnrichMovieDeps, cmd: EnrichMovieCommand) -> Result<
     Ok(())
 }
 
-/// Build unique Person values from cast and crew.
-/// Uses deterministic UUIDv5 so the same tmdb_person_id always maps to the same PersonId.
-/// No DB reads — persons are built entirely from in-memory TMDb data.
 fn extract_persons(cast: &[CastMember], crew: &[CrewMember]) -> Vec<Person> {
     let mut seen: HashMap<u64, Person> = HashMap::new();
 

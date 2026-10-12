@@ -501,9 +501,6 @@ fn auth_ok_uses_app_api_url_for_main_state() {
 
 // ── parse_csv ─────────────────────────────────────────────────────────────
 
-// CSV column order matches the export format:
-// title,year,director,rating,comment,watched_at,external_metadata_id
-
 #[test]
 fn parse_csv_valid_row_with_title() {
     let csv = "title,year,director,rating,comment,watched_at,external_metadata_id\nThe Matrix,1999,Wachowski,5,,1999-03-31T00:00:00,\n";

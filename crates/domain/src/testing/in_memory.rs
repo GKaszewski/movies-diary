@@ -347,9 +347,6 @@ impl WatchlistRepository for InMemoryWatchlistRepository {
 
 // ── InMemoryRemoteWatchlistRepository ─────────────────────────────────────────
 
-/// Unlike `NoopRemoteWatchlistRepository`, this actually stores what it's given —
-/// needed by tests that must prove a federated-watchlist read returns real seeded
-/// data, not just an empty default that happens to match by coincidence.
 pub struct InMemoryRemoteWatchlistRepository {
     store: Mutex<Vec<RemoteWatchlistEntry>>,
 }
@@ -405,10 +402,6 @@ impl RemoteWatchlistRepository for InMemoryRemoteWatchlistRepository {
         Ok(())
     }
 
-    /// Real adapters derive `uuid` from the actor URL via a SQL-side hash — not
-    /// domain logic, so this fake doesn't replicate it. It simply returns
-    /// everything seeded, which is all callers in this workspace need: tests seed
-    /// exactly the entries for the owner under test.
     async fn get_by_derived_uuid(
         &self,
         _uuid: Uuid,

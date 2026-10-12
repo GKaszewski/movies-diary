@@ -12,7 +12,7 @@ import { Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { posterUrl } from "@/lib/api/client"
 import { hapticMedium } from "@/lib/haptics"
-import { parseLocalDate, formatLocalDateTime } from "@/lib/date"
+import { formatWatchedAt, isDateOnly, parseWatchedAt } from "@/lib/date"
 import type { EditReviewRequest } from "@/features/diary"
 import type { MovieDto, ReviewDto } from "@/lib/api/common"
 
@@ -77,7 +77,7 @@ function LogMode({ open, onOpenChange }: { open: boolean; onOpenChange: (open: b
         manual_director: movie.director,
         rating,
         comment: comment || undefined,
-        watched_at: watchedAt.toISOString().replace("Z", "").split(".")[0]!,
+        watched_at: formatWatchedAt(watchedAt),
         watch_medium: watchMedium,
       },
       {
@@ -145,7 +145,7 @@ function EditMode({
   const { t } = useTranslation()
   const [rating, setRating] = useState(review.rating)
   const [comment, setComment] = useState(review.comment ?? "")
-  const [watchedAt, setWatchedAt] = useState<Date>(() => parseLocalDate(review.watched_at))
+  const [watchedAt, setWatchedAt] = useState<Date>(() => parseWatchedAt(review.watched_at))
   const [dateChanged, setDateChanged] = useState(false)
   const [watchMedium, setWatchMedium] = useState<string | undefined>(review.watch_medium)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -164,7 +164,7 @@ function EditMode({
     if (rating !== review.rating) data.rating = rating
     const newComment = comment || null
     if (newComment !== (review.comment ?? null)) data.comment = newComment
-    if (dateChanged) data.watched_at = formatLocalDateTime(watchedAt)
+    if (dateChanged) data.watched_at = formatWatchedAt(watchedAt, isDateOnly(review.watched_at))
     if (watchMedium !== review.watch_medium) data.watch_medium = watchMedium ?? null
 
     if (Object.keys(data).length === 0) {

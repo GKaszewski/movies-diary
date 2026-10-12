@@ -2,8 +2,9 @@ use application::auth::deps::{
     LoginDeps, LogoutDeps, RefreshDeps, RegisterAndLoginDeps, RegisterDeps,
 };
 use application::deps::{
-    AuthGroup, Deps, DiaryGroup, GoalsGroup, ImportGroup, IntegrationsGroup, MoviesGroup,
-    PersonGroup, SearchGroup, SocialGroup, UsersGroup, WatchlistGroup, WorkerDeps, WrapupGroup,
+    AuthGroup, Deps, DiaryGroup, GoalsGroup, ImportGroup, InsightsGroup, IntegrationsGroup,
+    MoviesGroup, PersonGroup, SearchGroup, SocialGroup, UsersGroup, WatchlistGroup, WorkerDeps,
+    WrapupGroup,
 };
 use application::diary::deps::{
     DeleteReviewDeps, EditReviewDeps, ExportDiaryDeps, GetActivityFeedDeps, GetDiaryDeps,
@@ -15,6 +16,7 @@ use application::import::deps::{
     DeleteImportProfileDeps, ExecuteImportDeps, GetMappingStageDeps, GetPreviewStageDeps,
     GetSessionStateDeps, ListImportProfilesDeps, SaveProfileDeps,
 };
+use application::insights::deps::GetInsightsDeps;
 use application::integrations::deps::{
     ConfirmWatchEventsDeps, DismissWatchEventsDeps, GenerateWebhookTokenDeps, GetWatchQueueDeps,
     GetWebhookTokensDeps, IngestWatchEventDeps, RevokeWebhookTokenDeps,
@@ -173,6 +175,11 @@ pub fn build_deps(
             },
             list_profiles: ListImportProfilesDeps {
                 import_profile: repos.import_profile.clone(),
+            },
+        },
+        insights: InsightsGroup {
+            get: GetInsightsDeps {
+                insights: repos.insights.clone(),
             },
         },
         integrations: IntegrationsGroup {

@@ -26,7 +26,7 @@ use api_types::{
 };
 use template_askama::{ActivityFeedTemplate, NewReviewTemplate, build_page_items};
 
-use super::helpers::{build_export_response, build_page_context, encode_error};
+use super::helpers::{build_export_response, build_page_context, encode_domain_error};
 
 // ── API ──────────────────────────────────────────────────────────────────────
 
@@ -238,7 +238,7 @@ pub async fn post_review_html(
     {
         Ok(_) => Redirect::to("/").into_response(),
         Err(e) => {
-            let msg = encode_error(&e.to_string());
+            let msg = encode_domain_error(&e);
             Redirect::to(&format!("/reviews/new?error={}", msg)).into_response()
         }
     }

@@ -1,16 +1,8 @@
-//! The mapping-page stage gate: a session must exist and have a `parsed_file`
-//! before its columns/sample rows can be shown for field mapping. Absorbs
-//! `handlers/import.rs::get_mapping_page`'s two early-return checks (session
-//! missing, `parsed_file` absent) — both collapse to `NotFound` here since the
-//! handler redirected to the same place (`/import`) for either.
-
 use domain::{errors::DomainError, value_objects::ImportSessionId};
 use uuid::Uuid;
 
 use crate::import::deps::GetMappingStageDeps;
 
-/// Cap on sample rows shown on the mapping page — was a bare `.take(5)` in the
-/// handler.
 pub const SAMPLE_ROW_LIMIT: usize = 5;
 
 pub struct MappingStage {

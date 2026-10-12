@@ -13,6 +13,7 @@ use crate::import::deps::{
     DeleteImportProfileDeps, ExecuteImportDeps, GetMappingStageDeps, GetPreviewStageDeps,
     GetSessionStateDeps, ListImportProfilesDeps, SaveProfileDeps,
 };
+use crate::insights::deps::GetInsightsDeps;
 use crate::integrations::deps::{
     ConfirmWatchEventsDeps, DismissWatchEventsDeps, GenerateWebhookTokenDeps, GetWatchQueueDeps,
     GetWebhookTokensDeps, IngestWatchEventDeps, RevokeWebhookTokenDeps,
@@ -92,6 +93,10 @@ pub struct IntegrationsGroup {
     pub plex_parser: Arc<dyn MediaServerParser>,
 }
 
+pub struct InsightsGroup {
+    pub get: GetInsightsDeps,
+}
+
 pub struct MoviesGroup {
     pub sync_poster: SyncPosterDeps,
     pub get_movie_profile: GetMovieProfileDeps,
@@ -159,6 +164,7 @@ pub struct Deps {
     pub diary: DiaryGroup,
     pub goals: GoalsGroup,
     pub import: ImportGroup,
+    pub insights: InsightsGroup,
     pub integrations: IntegrationsGroup,
     pub movies: MoviesGroup,
     pub person: PersonGroup,

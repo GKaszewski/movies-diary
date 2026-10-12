@@ -103,9 +103,6 @@ impl FakeDiaryQuery {
             .insert(movie.id().value(), (movie, reviews));
     }
 
-    /// Configures what `query_diary` returns. Without this, `query_diary` keeps
-    /// its original always-empty behavior — this is purely opt-in for tests that
-    /// need to prove entries actually flow through a use case.
     pub fn set_diary_page(&self, page: Paginated<DiaryEntry>) {
         *self.diary_page.lock().unwrap() = Some(page);
     }

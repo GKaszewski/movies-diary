@@ -16,7 +16,6 @@ pub struct RemoteActorDto {
     pub handle: String,
     pub display_name: Option<String>,
     pub url: String,
-    /// `Some` for local actors, so the SPA can link internally to `/users/{id}`.
     pub user_id: Option<Uuid>,
     pub avatar_url: Option<String>,
 }
@@ -79,12 +78,11 @@ pub struct PendingCountResponse {
     pub count: usize,
 }
 
+//todo: move out to separate file
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    /// Task 7's SPA zod schema parses these exact lowercase literals —
-    /// a casing or naming drift here breaks the SPA at runtime.
     #[test]
     fn follow_state_dto_serializes_to_lowercase_strings() {
         assert_eq!(

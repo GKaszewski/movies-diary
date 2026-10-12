@@ -2,6 +2,7 @@ mod auth;
 mod diary;
 mod goals;
 mod import;
+mod insights;
 mod movies;
 mod search;
 mod social;
@@ -46,6 +47,7 @@ fn build() -> utoipa::openapi::OpenApi {
     api.merge(goals::GoalsDoc::openapi());
     api.merge(webhook::WebhookDoc::openapi());
     api.merge(wrapup::WrapUpDoc::openapi());
+    api.merge(insights::InsightsDoc::openapi());
     #[cfg(feature = "federation")]
     api.merge(social::SocialDoc::openapi());
     SecurityAddon.modify(&mut api);

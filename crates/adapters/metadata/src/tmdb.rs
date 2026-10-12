@@ -68,7 +68,7 @@ impl TmdbProvider {
         struct Details {
             imdb_id: Option<String>,
             title: String,
-            release_date: String, // "YYYY-MM-DD"
+            release_date: String,
             poster_path: Option<String>,
             credits: Credits,
         }
@@ -88,7 +88,6 @@ impl TmdbProvider {
                 ))
             })?;
 
-        // Prefer IMDB ID; fall back to "tmdb:{id}" so the record is still usable.
         let raw_id = d
             .imdb_id
             .filter(|s| !s.is_empty())

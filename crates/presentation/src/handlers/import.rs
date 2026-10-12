@@ -40,7 +40,7 @@ use crate::{
     state::AppState,
 };
 
-use super::helpers::encode_error;
+use super::helpers::encode_domain_error;
 
 fn str_to_domain_field(field: &str) -> Option<DomainField> {
     match field {
@@ -171,7 +171,7 @@ pub async fn post_upload(
     {
         Ok(r) => Redirect::to(&format!("/import/{}/mapping", r.session_id.value())).into_response(),
         Err(e) => {
-            Redirect::to(&format!("/import?error={}", encode_error(&e.to_string()))).into_response()
+            Redirect::to(&format!("/import?error={}", encode_domain_error(&e))).into_response()
         }
     }
 }
@@ -258,7 +258,7 @@ pub async fn post_mapping(
         Err(e) => Redirect::to(&format!(
             "/import/{}/mapping?error={}",
             session_id_str,
-            encode_error(&e.to_string())
+            encode_domain_error(&e)
         ))
         .into_response(),
     }
@@ -375,7 +375,7 @@ pub async fn post_confirm(
         ))
         .into_response(),
         Err(e) => {
-            Redirect::to(&format!("/import?error={}", encode_error(&e.to_string()))).into_response()
+            Redirect::to(&format!("/import?error={}", encode_domain_error(&e))).into_response()
         }
     }
 }
