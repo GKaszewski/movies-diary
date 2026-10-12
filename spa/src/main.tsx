@@ -4,9 +4,12 @@ import { QueryClientProvider } from "@tanstack/react-query"
 import { createRouter, RouterProvider } from "@tanstack/react-router"
 import { AuthProvider } from "@/components/auth-provider"
 import { queryClient } from "@/lib/query-client"
+import { applyEffectsLevel } from "@/lib/effects"
 import { routeTree } from "./routeTree.gen"
 import "@/i18n"
 import "./index.css"
+
+applyEffectsLevel()
 
 const router = createRouter({ routeTree, basepath: "/app" })
 

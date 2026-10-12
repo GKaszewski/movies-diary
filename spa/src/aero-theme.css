@@ -44,6 +44,11 @@
   --aero-primary-light: oklch(0.93 0.07 91.936);
   --aero-primary-glow: oklch(0.852 0.199 91.936 / 0.3);
   --aero-glass-bg: rgba(255, 255, 255, 0.12);
+  /* Blur-free surface for the many in-flow elements (cards, list rows): a dark
+     base keeps text readable over the crisp wallpaper, the white tint keeps the
+     glass tone. */
+  --aero-surface-bg: linear-gradient(rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1)),
+    rgba(12, 12, 20, 0.35);
   --aero-glass-border: rgba(255, 255, 255, 0.2);
   --aero-glass-shadow: 0 8px 32px oklch(0.852 0.199 91.936 / 0.1);
   --aero-glass-inset: inset 0 1px 0 rgba(255, 255, 255, 0.4);
@@ -87,15 +92,20 @@
 
 /* ── Background treatment ─────────────────────────────────────── */
 
+/* Wallpaper lives on its own fixed layer rather than `background-attachment:
+   fixed`, which repaints the whole page on every scroll frame (and is ignored
+   by iOS). A fixed layer is painted once and composited. */
 body {
-  background: url("./assets/background.avif") center / cover no-repeat fixed;
+  background: #0a0a0f;
 }
 
 body::before {
   content: "";
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.25);
+  background:
+    linear-gradient(rgba(0, 0, 0, 0.25), rgba(0, 0, 0, 0.25)),
+    url("./assets/background.avif") center / cover no-repeat;
   z-index: 0;
   pointer-events: none;
 }
@@ -107,17 +117,19 @@ body > #root {
 
 /* ── Utility classes ──────────────────────────────────────────── */
 
+/* Performance rule: `backdrop-filter` is reserved for few, floating surfaces
+   (bottom bar, overlays, toasts, popovers). In-flow elements that repeat down
+   a list (`glass`, `glass-card`, cards) only ever sit on the static wallpaper,
+   so they use the blur-free `--aero-surface-bg` — dozens of live blurs
+   re-rendered per scroll frame is what makes low-end devices lag. */
+
 @utility glass {
-  backdrop-filter: blur(var(--aero-blur));
-  -webkit-backdrop-filter: blur(var(--aero-blur));
-  background: var(--aero-glass-bg);
+  background: var(--aero-surface-bg);
   border: 1px solid var(--aero-glass-border);
 }
 
 @utility glass-card {
-  backdrop-filter: blur(var(--aero-blur));
-  -webkit-backdrop-filter: blur(var(--aero-blur));
-  background: var(--aero-glass-bg);
+  background: var(--aero-surface-bg);
   border: 1px solid var(--aero-glass-border);
   box-shadow: var(--aero-glass-shadow), var(--aero-glass-inset);
   position: relative;
@@ -175,9 +187,7 @@ body > #root {
 /* ── shadcn data-slot overrides ───────────────────────────────── */
 
 [data-slot="card"] {
-  background: var(--aero-glass-bg);
-  backdrop-filter: blur(var(--aero-blur));
-  -webkit-backdrop-filter: blur(var(--aero-blur));
+  background: var(--aero-surface-bg);
   border-color: var(--aero-glass-border);
   box-shadow: var(--aero-glass-shadow), var(--aero-glass-inset);
   --tw-ring-color: transparent;
@@ -190,10 +200,10 @@ body > #root {
   -webkit-backdrop-filter: blur(8px);
 }
 
+/* Panels sit on an already-blurred overlay and are near-opaque, so a second
+   full-screen blur pass on the panel itself buys nothing visible. */
 [data-slot="dialog-content"] {
-  background: rgba(20, 20, 30, 0.8);
-  backdrop-filter: blur(var(--aero-blur));
-  -webkit-backdrop-filter: blur(var(--aero-blur));
+  background: rgba(20, 20, 30, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.15);
   --tw-ring-color: transparent;
   --tw-ring-shadow: none;
@@ -206,9 +216,7 @@ body > #root {
 }
 
 [data-slot="sheet-content"] {
-  background: rgba(20, 20, 30, 0.85);
-  backdrop-filter: blur(var(--aero-blur));
-  -webkit-backdrop-filter: blur(var(--aero-blur));
+  background: rgba(20, 20, 30, 0.9);
   border-color: rgba(255, 255, 255, 0.15);
 }
 
@@ -263,8 +271,6 @@ body > #root {
 /* Destructive button — glassmorphic red */
 [data-slot="button"][data-variant="destructive"] {
   background: rgba(200, 60, 60, 0.65);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
   border: 1px solid rgba(220, 80, 80, 0.3);
 }
 
@@ -277,8 +283,6 @@ body > #root {
 /* Drawer content (used by log-sheet, wrapup, etc.) */
 [data-slot="drawer-content"] {
   background: rgba(20, 20, 30, 0.9);
-  backdrop-filter: blur(var(--aero-blur));
-  -webkit-backdrop-filter: blur(var(--aero-blur));
 }
 
 [data-slot="drawer-overlay"] {
@@ -326,6 +330,38 @@ body > #root {
 /* Star glow for filled amber stars */
 .aero-star-filled {
   filter: drop-shadow(0 0 4px var(--aero-primary-glow)) drop-shadow(0 0 1px var(--aero-primary));
+}
+
+/* ── Reduced effects ──────────────────────────────────────────
+   No live blur at all: set by the OS preference, or by `data-effects="reduced"`
+   which `lib/effects.ts` puts on <html> for low-memory / low-core devices.
+   Floating surfaces get more opaque to stay readable without it. */
+
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --aero-blur: 0px;
+  }
+  * {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+
+:root[data-effects="reduced"] {
+  --aero-blur: 0px;
+}
+
+:root[data-effects="reduced"] * {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+:root[data-effects="reduced"] .glass-heavy {
+  background: rgba(10, 10, 16, 0.92);
+}
+
+:root[data-effects="reduced"] [data-slot$="-overlay"] {
+  background: rgba(0, 0, 0, 0.6);
 }
 
 /* ── Keyframe animations ────────────────────────────────────── */
