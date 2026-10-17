@@ -20,6 +20,8 @@ pub struct LogReviewRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(value_type = Option<String>)]
     pub watch_medium: Option<domain::value_objects::WatchMedium>,
+    #[serde(default)]
+    pub spoilers: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
@@ -75,6 +77,8 @@ pub struct EditReviewRequest {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schema(value_type = Option<Option<String>>)]
     pub watch_medium: Option<Option<domain::value_objects::WatchMedium>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub spoilers: Option<bool>,
 }
 
 fn default_export_format() -> String {

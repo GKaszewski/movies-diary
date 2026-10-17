@@ -79,6 +79,7 @@ fn make_review() -> Review {
         Some(Comment::new("great".into()).unwrap()),
         chrono::Utc::now().naive_utc(),
         None,
+        false,
     )
     .unwrap()
 }
@@ -114,10 +115,12 @@ fn review_from_persistence() {
             actor_url: "https://example.com/actor".into(),
         },
         watch_medium: None,
+        spoilers: true,
     });
     assert_eq!(*r.id(), id);
     assert!(r.is_remote());
     assert_eq!(r.comment(), None);
+    assert!(r.spoilers());
 }
 
 // ── User ─────────────────────────────────────────────────────────────────────

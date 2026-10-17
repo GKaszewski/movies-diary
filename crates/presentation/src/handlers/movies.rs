@@ -168,11 +168,13 @@ pub async fn get_movie_detail(
                 .iter()
                 .map(|e| SocialReviewDto {
                     user_display: e.user_display_name().to_string(),
+                    user_id: e.review().user_id().value(),
                     rating: e.review().rating().value(),
                     comment: e.review().comment().map(|c| c.value().to_string()),
                     watched_at: domain::value_objects::format_watched_at(e.review().watched_at()),
                     is_federated: e.review().is_remote(),
                     watch_medium: e.review().watch_medium().copied(),
+                    spoilers: e.review().spoilers(),
                 })
                 .collect(),
             total_count: result.reviews.total_count,

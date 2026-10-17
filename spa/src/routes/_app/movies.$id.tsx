@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { posterUrl, tmdbProfileUrl } from "@/lib/api/client"
+import { useAuth } from "@/components/auth-provider"
 import { useMovie, useMovieHistory, useMovieProfile } from "@/features/movies"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import {
@@ -29,6 +30,7 @@ function MovieDetailPage() {
   const { t } = useTranslation()
   const { id } = Route.useParams()
   const { data, isPending } = useMovie(id)
+  const { auth } = useAuth()
   const { data: profile } = useMovieProfile(id)
   const { data: history } = useMovieHistory(id)
   useDocumentTitle(data?.movie.title)
@@ -105,7 +107,11 @@ function MovieDetailPage() {
         </section>
       )}
 
-      <CommunityReviews reviews={reviews} onShowDetail={setDetailReview} />
+      <CommunityReviews
+        reviews={reviews}
+        currentUserId={auth?.user_id}
+        onShowDetail={setDetailReview}
+      />
 
       {history && <ViewingHistory history={history} />}
 
@@ -114,8 +120,9 @@ function MovieDetailPage() {
           open={!!detailReview}
           onOpenChange={(open) => !open && setDetailReview(null)}
           movie={movie}
-          review={{ id: "", rating: detailReview.rating, comment: detailReview.comment, watched_at: detailReview.watched_at, watch_medium: detailReview.watch_medium }}
+          review={{ id: "", rating: detailReview.rating, comment: detailReview.comment, watched_at: detailReview.watched_at, watch_medium: detailReview.watch_medium, spoilers: detailReview.spoilers }}
           userName={detailReview.user_display}
+          veil={detailReview.user_id !== auth?.user_id}
         />
       )}
     </div>

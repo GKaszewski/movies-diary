@@ -27,7 +27,7 @@ fn stream_csv(
     use futures::StreamExt;
     let header = futures::stream::once(async {
         Ok(Bytes::from_static(
-            b"title,year,director,rating,comment,watched_at,external_metadata_id\n",
+            b"title,year,director,rating,comment,watched_at,external_metadata_id,spoilers\n",
         ))
     });
     let rows = entries.map(|r| r.map(|e| Bytes::from(csv_row(&e))));
@@ -80,9 +80,10 @@ fn csv_row(e: &DiaryEntry) -> String {
         .external_metadata_id()
         .map(|id| id.value().to_string())
         .unwrap_or_default();
+    let spoilers = e.review().spoilers();
     format!(
-        "{},{},{},{},{},{},{}\n",
-        title, year, director, rating, comment, watched_at, ext_id
+        "{},{},{},{},{},{},{},{}\n",
+        title, year, director, rating, comment, watched_at, ext_id, spoilers
     )
 }
 
@@ -103,6 +104,7 @@ fn entry_to_json(e: &DiaryEntry) -> serde_json::Value {
         "comment": e.review().comment().map(|c| c.value().to_string()),
         "watched_at": e.review().watched_at().format("%Y-%m-%d").to_string(),
         "external_metadata_id": e.movie().external_metadata_id().map(|id| id.value().to_string()),
+        "spoilers": e.review().spoilers(),
     })
 }
 

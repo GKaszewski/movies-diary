@@ -353,6 +353,10 @@
     "saved": "{{title}} updated!",
     "noChanges": "No changes to save"
   },
+  "review": {
+    "containsSpoilers": "Contains spoilers",
+    "showSpoilers": "Show"
+  },
   "logReview": {
     "title": "Log Review",
     "yourRating": "Your Rating",

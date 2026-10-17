@@ -11,6 +11,7 @@ pub struct RemoteReviewUpdate<'a> {
     pub watched_at: NaiveDateTime,
     pub poster_url: Option<&'a str>,
     pub watch_medium: Option<&'a str>,
+    pub spoilers: bool,
 }
 
 #[async_trait]

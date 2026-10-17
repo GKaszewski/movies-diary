@@ -17,6 +17,7 @@ pub struct LogReviewCommand {
     pub comment: Option<String>,
     pub watched_at: NaiveDateTime,
     pub watch_medium: Option<WatchMedium>,
+    pub spoilers: bool,
 }
 
 pub struct DeleteReviewCommand {
@@ -31,6 +32,7 @@ pub struct EditReviewCommand {
     pub comment: Option<Option<String>>,
     pub watched_at: Option<NaiveDateTime>,
     pub watch_medium: Option<Option<WatchMedium>>,
+    pub spoilers: Option<bool>,
 }
 
 #[derive(Clone)]

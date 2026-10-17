@@ -1,6 +1,7 @@
 import { VisuallyHidden } from "radix-ui"
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer"
 import { StarDisplay } from "@/components/star-display"
+import { SpoilerVeil } from "@/components/spoiler-veil"
 import { WatchMediumBadge } from "@/components/watch-medium-badge"
 import { shortDate } from "@/lib/date"
 import { posterUrl } from "@/lib/api/client"
@@ -12,9 +13,11 @@ type ReviewDetailSheetProps = {
   movie: MovieDto
   review: ReviewDto
   userName?: string
+  /** Blur the comment until revealed — set for every viewer except the author. */
+  veil?: boolean
 }
 
-export function ReviewDetailSheet({ open, onOpenChange, movie, review, userName }: ReviewDetailSheetProps) {
+export function ReviewDetailSheet({ open, onOpenChange, movie, review, userName, veil }: ReviewDetailSheetProps) {
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent className="mx-auto max-w-lg">
@@ -40,9 +43,13 @@ export function ReviewDetailSheet({ open, onOpenChange, movie, review, userName 
           </div>
 
           {review.comment && (
-            <p className="select-text whitespace-pre-wrap text-sm leading-relaxed">
-              {review.comment}
-            </p>
+            veil && review.spoilers ? (
+              <SpoilerVeil content={review.comment} className="text-sm leading-relaxed" />
+            ) : (
+              <p className="select-text whitespace-pre-wrap text-sm leading-relaxed">
+                {review.comment}
+              </p>
+            )
           )}
         </div>
       </DrawerContent>

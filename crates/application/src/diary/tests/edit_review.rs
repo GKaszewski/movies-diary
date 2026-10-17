@@ -20,6 +20,7 @@ fn make_review(user_id: UserId) -> Review {
         Some(Comment::new("original comment".into()).unwrap()),
         Utc::now().naive_utc(),
         Some(WatchMedium::Streaming),
+        false,
     )
     .unwrap()
 }
@@ -62,6 +63,7 @@ async fn edit_own_review_updates_rating() {
             comment: None,
             watched_at: None,
             watch_medium: None,
+            spoilers: None,
         },
     )
     .await
@@ -87,6 +89,7 @@ async fn edit_nonexistent_review_returns_not_found() {
             comment: None,
             watched_at: None,
             watch_medium: None,
+            spoilers: None,
         },
     )
     .await
@@ -108,6 +111,7 @@ async fn edit_other_users_review_returns_forbidden() {
             comment: None,
             watched_at: None,
             watch_medium: None,
+            spoilers: None,
         },
     )
     .await
@@ -129,6 +133,7 @@ async fn edit_publishes_review_updated_event() {
             comment: None,
             watched_at: None,
             watch_medium: None,
+            spoilers: None,
         },
     )
     .await
@@ -155,6 +160,7 @@ async fn edit_sets_watch_medium() {
             comment: None,
             watched_at: None,
             watch_medium: Some(Some(WatchMedium::Cinema)),
+            spoilers: None,
         },
     )
     .await

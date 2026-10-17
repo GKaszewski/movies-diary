@@ -12,6 +12,7 @@ fn make_review(watch_medium: Option<WatchMedium>) -> Review {
         Some(Comment::new("great film".into()).unwrap()),
         NaiveDateTime::parse_from_str("2024-06-15 20:00:00", "%Y-%m-%d %H:%M:%S").unwrap(),
         watch_medium,
+        false,
     )
     .unwrap()
 }
@@ -69,6 +70,23 @@ fn apply_edit_clears_watch_medium() {
         ..Default::default()
     });
     assert_eq!(edited.watch_medium(), None);
+}
+
+#[test]
+fn apply_edit_toggles_spoilers() {
+    let original = make_review(None);
+    let flag_on = original.apply_edit(ReviewEdit {
+        spoilers: Some(true),
+        ..Default::default()
+    });
+    assert!(flag_on.spoilers());
+    let flag_off = flag_on.apply_edit(ReviewEdit {
+        spoilers: Some(false),
+        ..Default::default()
+    });
+    assert!(!flag_off.spoilers());
+    let untouched = original.apply_edit(ReviewEdit::default());
+    assert!(!untouched.spoilers());
 }
 
 #[test]

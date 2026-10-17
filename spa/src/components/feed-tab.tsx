@@ -94,6 +94,7 @@ export function FeedTab() {
           onLoadMore={loadMore}
           renderItem={(entry) => {
             const isOwn = entry.user_id === auth?.user_id
+            const veil = !isOwn && !!entry.review.spoilers
             const card = (
               <ReviewCard
                 movie={entry.movie}
@@ -102,6 +103,7 @@ export function FeedTab() {
                 userId={entry.user_id}
                 isFederated={entry.is_federated}
                 actorUrl={entry.actor_url}
+                veil={veil}
                 onEdit={isOwn ? () => setEditingEntry(entry) : undefined}
                 onShowDetail={entry.review.comment ? () => setDetailEntry(entry) : undefined}
               />
@@ -139,6 +141,7 @@ export function FeedTab() {
           movie={detailEntry.movie}
           review={detailEntry.review}
           userName={detailEntry.user_display_name}
+          veil={detailEntry.user_id !== auth?.user_id}
         />
       )}
     </div>

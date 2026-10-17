@@ -46,8 +46,8 @@ impl RemoteReviewRepository for PostgresFederationRepository {
         let watched_at = datetime_to_str(review.watched_at());
         let created_at = datetime_to_str(review.created_at());
         sqlx::query(
-            "INSERT INTO reviews (id, movie_id, user_id, rating, comment, watched_at, created_at, remote_actor_url, ap_id)
-             VALUES ($1, $2, $3, $4, $5, $6::timestamptz, $7::timestamptz, $8, $9) ON CONFLICT DO NOTHING",
+            "INSERT INTO reviews (id, movie_id, user_id, rating, comment, watched_at, created_at, remote_actor_url, ap_id, spoilers)
+             VALUES ($1, $2, $3, $4, $5, $6::timestamptz, $7::timestamptz, $8, $9, $10) ON CONFLICT DO NOTHING",
         )
         .bind(&id)
         .bind(&movie_id)
@@ -58,6 +58,7 @@ impl RemoteReviewRepository for PostgresFederationRepository {
         .bind(&created_at)
         .bind(&actor_url)
         .bind(ap_id)
+        .bind(review.spoilers())
         .execute(&self.pool)
         .await?;
         Ok(())
@@ -75,13 +76,14 @@ impl RemoteReviewRepository for PostgresFederationRepository {
     async fn update_remote_review(&self, u: RemoteReviewUpdate<'_>) -> Result<()> {
         let watched_at_str = datetime_to_str(&u.watched_at);
         sqlx::query(
-            "UPDATE reviews SET rating = $1, comment = $2, watched_at = $3::timestamptz, watch_medium = $4
-             WHERE ap_id = $5 AND remote_actor_url = $6",
+            "UPDATE reviews SET rating = $1, comment = $2, watched_at = $3::timestamptz, watch_medium = $4, spoilers = $5
+             WHERE ap_id = $6 AND remote_actor_url = $7",
         )
         .bind(u.rating as i64)
         .bind(u.comment)
         .bind(&watched_at_str)
         .bind(u.watch_medium)
+        .bind(u.spoilers)
         .bind(u.ap_id)
         .bind(u.actor_url)
         .execute(&self.pool)

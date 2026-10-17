@@ -152,7 +152,14 @@
           {% endfor %}
         </div>
         {% if let Some(comment) = entry.review().comment() %}
+        {% if entry.review().spoilers() %}
+        <details class="embed-comment spoiler">
+          <summary style="cursor:pointer;opacity:.75">Contains spoilers</summary>
+          {{ comment.value() }}
+        </details>
+        {% else %}
         <div class="embed-comment">{{ comment.value() }}</div>
+        {% endif %}
         {% endif %}
         <div class="embed-watched-at">{{ entry.review().watched_at().format("%Y-%m-%d") }}</div>
       </div>

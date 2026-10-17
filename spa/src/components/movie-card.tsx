@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router"
 import { StarDisplay } from "@/components/star-display"
+import { SpoilerVeil } from "@/components/spoiler-veil"
 import { Card, CardContent } from "@/components/ui/card"
 import { posterUrl } from "@/lib/api/client"
 import type { MovieDto } from "@/lib/api/common"
@@ -11,10 +12,13 @@ type MovieCardProps = {
   subtitle?: React.ReactNode
   variant?: "compact" | "full"
   action?: React.ReactNode
+  /** Blur the comment until revealed — set for every viewer except the author. */
+  spoilers?: boolean
   onShowDetail?: () => void
 }
 
-export function MovieCard({ movie, rating, comment, subtitle, variant = "full", action, onShowDetail }: MovieCardProps) {
+export function MovieCard({ movie, rating, comment, subtitle, variant = "full", action, spoilers, onShowDetail }: MovieCardProps) {
+  const veiled = !!spoilers && !!comment
   if (variant === "compact") {
     return (
       <Link to="/movies/$id" params={{ id: movie.id }} className="glass flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors active:bg-muted/50">
@@ -25,13 +29,17 @@ export function MovieCard({ movie, rating, comment, subtitle, variant = "full", 
           <p className="truncate text-sm font-semibold">{movie.title}</p>
           {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
           {comment && (
-            <p
-              className="truncate text-xs text-muted-foreground/70"
-              role={onShowDetail ? "button" : undefined}
-              tabIndex={onShowDetail ? 0 : undefined}
-              onClick={onShowDetail ? (e) => { e.preventDefault(); onShowDetail() } : undefined}
-              onKeyDown={onShowDetail ? (e) => e.key === "Enter" && onShowDetail() : undefined}
-            >{comment}</p>
+            veiled ? (
+              <SpoilerVeil content={comment} className="truncate text-xs text-muted-foreground/70" />
+            ) : (
+              <p
+                className="truncate text-xs text-muted-foreground/70"
+                role={onShowDetail ? "button" : undefined}
+                tabIndex={onShowDetail ? 0 : undefined}
+                onClick={onShowDetail ? (e) => { e.preventDefault(); onShowDetail() } : undefined}
+                onKeyDown={onShowDetail ? (e) => e.key === "Enter" && onShowDetail() : undefined}
+              >{comment}</p>
+            )
           )}
         </div>
         {rating != null && <StarDisplay rating={rating} size="xs" />}
@@ -51,13 +59,17 @@ export function MovieCard({ movie, rating, comment, subtitle, variant = "full", 
             <p className="text-xs text-muted-foreground">{movie.release_year}{movie.director && ` · ${movie.director}`}</p>
             {rating != null && <div className="mt-1"><StarDisplay rating={rating} /></div>}
             {comment && (
-              <p
-                className="mt-1 line-clamp-2 text-xs text-muted-foreground"
-                role={onShowDetail ? "button" : undefined}
-                tabIndex={onShowDetail ? 0 : undefined}
-                onClick={onShowDetail ? (e) => { e.preventDefault(); onShowDetail() } : undefined}
-                onKeyDown={onShowDetail ? (e) => e.key === "Enter" && onShowDetail() : undefined}
-              >{comment}</p>
+              veiled ? (
+                <SpoilerVeil content={comment} className="mt-1 line-clamp-2 text-xs text-muted-foreground" />
+              ) : (
+                <p
+                  className="mt-1 line-clamp-2 text-xs text-muted-foreground"
+                  role={onShowDetail ? "button" : undefined}
+                  tabIndex={onShowDetail ? 0 : undefined}
+                  onClick={onShowDetail ? (e) => { e.preventDefault(); onShowDetail() } : undefined}
+                  onKeyDown={onShowDetail ? (e) => e.key === "Enter" && onShowDetail() : undefined}
+                >{comment}</p>
+              )
             )}
           </div>
           {action && <div className="flex items-center" onClick={(e) => e.preventDefault()}>{action}</div>}

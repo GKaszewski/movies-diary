@@ -18,6 +18,7 @@ import { TimeAgo } from "@/components/time-ago"
 import { WATCH_MEDIUMS } from "@/lib/watch-mediums"
 import { ReviewDetailSheet } from "@/components/review-detail-sheet"
 import { DiaryCalendar } from "@/components/diary-calendar"
+import { useAuth } from "@/components/auth-provider"
 import type { DiaryEntryDto } from "@/lib/api/common"
 import { tmdbProfileUrl } from "@/lib/api/client"
 import type { UserProfileResponse } from "@/features/users"
@@ -150,6 +151,7 @@ function StatCell({ label, value }: { label: string; value: string | number }) {
 
 function DiaryTab({ sortBy, userId, search }: { sortBy: string; userId?: string; search?: string }) {
   const { t } = useTranslation()
+  const { auth } = useAuth()
   const { data, isPending, hasNextPage, isFetchingNextPage, fetchNextPage } =
     useInfiniteDiary({ sort_by: sortBy, user_id: userId })
   const items = data?.pages.flatMap((p) => p.items) ?? []
@@ -179,6 +181,7 @@ function DiaryTab({ sortBy, userId, search }: { sortBy: string; userId?: string;
             comment={e.review.comment}
             subtitle={<><TimeAgo date={e.review.watched_at} /></>}
             variant="compact"
+            spoilers={userId && userId === auth?.user_id ? undefined : e.review.spoilers}
             onShowDetail={e.review.comment ? () => setDetailEntry(e) : undefined}
           />
         )}
@@ -189,6 +192,7 @@ function DiaryTab({ sortBy, userId, search }: { sortBy: string; userId?: string;
           onOpenChange={(open) => !open && setDetailEntry(null)}
           movie={detailEntry.movie}
           review={detailEntry.review}
+          veil={!!userId && userId !== auth?.user_id}
         />
       )}
     </>

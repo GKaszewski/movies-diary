@@ -52,6 +52,7 @@ function LogMode({ open, onOpenChange }: { open: boolean; onOpenChange: (open: b
   const [comment, setComment] = useState("")
   const [watchedAt, setWatchedAt] = useState<Date>(new Date())
   const [watchMedium, setWatchMedium] = useState<string | undefined>()
+  const [spoilers, setSpoilers] = useState(false)
   const logMutation = useLogReview()
 
   function reset() {
@@ -60,6 +61,7 @@ function LogMode({ open, onOpenChange }: { open: boolean; onOpenChange: (open: b
     setComment("")
     setWatchedAt(new Date())
     setWatchMedium(undefined)
+    setSpoilers(false)
   }
 
   function handleClose() {
@@ -79,6 +81,7 @@ function LogMode({ open, onOpenChange }: { open: boolean; onOpenChange: (open: b
         comment: comment || undefined,
         watched_at: formatWatchedAt(watchedAt),
         watch_medium: watchMedium,
+        spoilers: spoilers || undefined,
       },
       {
         onSuccess: () => {
@@ -118,6 +121,8 @@ function LogMode({ open, onOpenChange }: { open: boolean; onOpenChange: (open: b
                 onWatchedAtChange={setWatchedAt}
                 watchMedium={watchMedium}
                 onWatchMediumChange={setWatchMedium}
+                spoilers={spoilers}
+                onSpoilersChange={setSpoilers}
               />
 
               <Button onClick={handleSubmit} disabled={!rating || logMutation.isPending} className="w-full" size="lg">
@@ -148,6 +153,7 @@ function EditMode({
   const [watchedAt, setWatchedAt] = useState<Date>(() => parseWatchedAt(review.watched_at))
   const [dateChanged, setDateChanged] = useState(false)
   const [watchMedium, setWatchMedium] = useState<string | undefined>(review.watch_medium)
+  const [spoilers, setSpoilers] = useState(review.spoilers ?? false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const editMutation = useEditReview()
   const deleteMutation = useDeleteReview()
@@ -166,6 +172,7 @@ function EditMode({
     if (newComment !== (review.comment ?? null)) data.comment = newComment
     if (dateChanged) data.watched_at = formatWatchedAt(watchedAt, isDateOnly(review.watched_at))
     if (watchMedium !== review.watch_medium) data.watch_medium = watchMedium ?? null
+    if (spoilers !== (review.spoilers ?? false)) data.spoilers = spoilers
 
     if (Object.keys(data).length === 0) {
       toast.info(t("editReview.noChanges"))
@@ -206,6 +213,8 @@ function EditMode({
             onWatchedAtChange={handleDateChange}
             watchMedium={watchMedium}
             onWatchMediumChange={setWatchMedium}
+            spoilers={spoilers}
+            onSpoilersChange={setSpoilers}
           />
 
           <Button onClick={handleSubmit} disabled={!rating || editMutation.isPending} className="w-full" size="lg">

@@ -73,6 +73,7 @@ impl ReviewLogger for DefaultReviewLogger {
             comment,
             cmd.watched_at,
             cmd.watch_medium,
+            cmd.spoilers,
         )?;
         self.review_repo.save_review(&review).await?;
         let review_event = DomainEvent::ReviewLogged {

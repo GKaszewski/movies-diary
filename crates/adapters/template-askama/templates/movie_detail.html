@@ -129,8 +129,16 @@
           <span class="star {% if filled %}filled{% else %}empty{% endif %}">★</span>
           {% endfor %}
         </div>
+        {% let author = ctx.is_current_user(entry.review().user_id().value()) %}
         {% if let Some(comment) = entry.review().comment() %}
+        {% if !author && entry.review().spoilers() %}
+        <details class="comment spoiler">
+          <summary style="cursor:pointer;opacity:.75">Contains spoilers</summary>
+          {{ comment.value() }}
+        </details>
+        {% else %}
         <div class="comment">{{ comment.value() }}</div>
+        {% endif %}
         {% endif %}
         <div class="feed-meta">
           {% match entry.review().source() %}

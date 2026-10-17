@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next"
 import { CalendarIcon } from "lucide-react"
 import { format } from "date-fns"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
@@ -19,6 +21,8 @@ type ReviewFormFieldsProps = {
   onWatchedAtChange: (v: Date) => void
   watchMedium?: string
   onWatchMediumChange: (v: string | undefined) => void
+  spoilers: boolean
+  onSpoilersChange: (v: boolean) => void
 }
 
 export function ReviewFormFields({
@@ -30,6 +34,8 @@ export function ReviewFormFields({
   onWatchedAtChange,
   watchMedium,
   onWatchMediumChange,
+  spoilers,
+  onSpoilersChange,
 }: ReviewFormFieldsProps) {
   const { t } = useTranslation()
 
@@ -41,6 +47,17 @@ export function ReviewFormFields({
       </div>
 
       <AutoGrowTextarea value={comment} onChange={onCommentChange} placeholder={t("logReview.commentPlaceholder")} className="mb-5" />
+
+      <div className="mb-5 flex items-center gap-2">
+        <Checkbox
+          id="review-spoilers"
+          checked={spoilers}
+          onCheckedChange={(v) => onSpoilersChange(v === true)}
+        />
+        <Label htmlFor="review-spoilers" className="text-xs font-normal text-muted-foreground">
+          {t("review.containsSpoilers")}
+        </Label>
+      </div>
 
       <div className="mb-5">
         <p className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">{t("logReview.watchedAt")}</p>

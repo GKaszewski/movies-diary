@@ -56,7 +56,8 @@ impl PostgresDiaryRepository {
                     to_char(r.watched_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS watched_at,
                     to_char(r.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS created_at,
                     r.remote_actor_url,
-                    r.watch_medium
+                    r.watch_medium,
+                    r.spoilers
              FROM reviews r
              INNER JOIN movies m ON m.id = r.movie_id
              ORDER BY {}
@@ -90,7 +91,8 @@ impl PostgresDiaryRepository {
                     to_char(r.watched_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS watched_at,
                     to_char(r.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS created_at,
                     r.remote_actor_url,
-                    r.watch_medium
+                    r.watch_medium,
+                    r.spoilers
              FROM reviews r
              INNER JOIN movies m ON m.id = r.movie_id
              WHERE r.movie_id = $1
@@ -178,7 +180,8 @@ impl PostgresDiaryRepository {
                     to_char(r.watched_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS watched_at,
                     to_char(r.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS created_at,
                     r.remote_actor_url,
-                    r.watch_medium
+                    r.watch_medium,
+                    r.spoilers
              FROM reviews r
              INNER JOIN movies m ON m.id = r.movie_id
              WHERE r.user_id = $1{remote_clause}{search_clause}
@@ -336,6 +339,7 @@ impl DiaryQuery for PostgresDiaryRepository {
                     to_char(r.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS created_at,
                     r.remote_actor_url,
                     r.watch_medium,
+                    r.spoilers,
                     CASE WHEN r.remote_actor_url IS NOT NULL THEN COALESCE(a.handle, r.remote_actor_url)
                          ELSE COALESCE(u.email, r.user_id) END AS user_email
              FROM reviews r
@@ -412,7 +416,8 @@ impl DiaryQuery for PostgresDiaryRepository {
                     to_char(watched_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS watched_at,
                     to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS created_at,
                     remote_actor_url,
-                    watch_medium
+                    watch_medium,
+                    spoilers
              FROM reviews WHERE movie_id = $1 ORDER BY watched_at ASC",
         )
         .bind(&id_str)
@@ -434,7 +439,8 @@ impl DiaryQuery for PostgresDiaryRepository {
                     to_char(r.watched_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS watched_at,
                     to_char(r.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS created_at,
                     r.remote_actor_url,
-                    r.watch_medium
+                    r.watch_medium,
+                    r.spoilers
              FROM reviews r
              INNER JOIN movies m ON m.id = r.movie_id
              WHERE r.user_id = $1
@@ -461,7 +467,8 @@ impl DiaryQuery for PostgresDiaryRepository {
                         to_char(r.watched_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS watched_at,
                         to_char(r.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS created_at,
                         r.remote_actor_url,
-                        r.watch_medium
+                        r.watch_medium,
+                        r.spoilers
                  FROM reviews r
                  INNER JOIN movies m ON m.id = r.movie_id
                  WHERE r.user_id = $1
@@ -521,6 +528,7 @@ impl DiaryQuery for PostgresDiaryRepository {
                     to_char(r.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS created_at,
                     r.remote_actor_url,
                     r.watch_medium,
+                    r.spoilers,
                     CASE WHEN r.remote_actor_url IS NOT NULL THEN COALESCE(a.handle, r.remote_actor_url)
                          ELSE COALESCE(u.email, r.user_id) END AS user_email
              FROM reviews r

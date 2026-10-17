@@ -157,6 +157,7 @@ impl ApObjectHandler for ReviewObjectHandler {
                 actor_url: actor_url_str,
             },
             watch_medium,
+            spoilers: obj.contains_spoilers,
         });
 
         self.review_store
@@ -214,6 +215,7 @@ impl ApObjectHandler for ReviewObjectHandler {
                 watched_at: obj.watched_at.naive_utc(),
                 poster_url: obj.poster_url.as_deref(),
                 watch_medium: obj.watch_medium.as_deref(),
+                spoilers: obj.contains_spoilers,
             })
             .await?;
 

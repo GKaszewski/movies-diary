@@ -92,6 +92,8 @@ pub struct ReviewDto {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(value_type = Option<String>)]
     pub watch_medium: Option<domain::value_objects::WatchMedium>,
+    #[serde(default)]
+    pub spoilers: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
@@ -112,6 +114,7 @@ pub struct MovieStatsDto {
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct SocialReviewDto {
     pub user_display: String,
+    pub user_id: Uuid,
     pub rating: u8,
     pub comment: Option<String>,
     pub watched_at: String,
@@ -119,6 +122,8 @@ pub struct SocialReviewDto {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(value_type = Option<String>)]
     pub watch_medium: Option<domain::value_objects::WatchMedium>,
+    #[serde(default)]
+    pub spoilers: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]

@@ -4,6 +4,7 @@ import { TimeAgo } from "@/components/time-ago"
 import { StarDisplay } from "@/components/star-display"
 import { WatchMediumBadge } from "@/components/watch-medium-badge"
 import { EditableContextMenu } from "@/components/editable-context-menu"
+import { SpoilerVeil } from "@/components/spoiler-veil"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { posterUrl } from "@/lib/api/client"
@@ -16,11 +17,14 @@ type ReviewCardProps = {
   userId?: string
   isFederated?: boolean
   actorUrl?: string
+  /** Blur the comment until revealed — set for every viewer except the author. */
+  veil?: boolean
   onEdit?: () => void
   onShowDetail?: () => void
 }
 
-export function ReviewCard({ movie, review, userName, userId, isFederated, actorUrl, onEdit, onShowDetail }: ReviewCardProps) {
+export function ReviewCard({ movie, review, userName, userId, isFederated, actorUrl, veil, onEdit, onShowDetail }: ReviewCardProps) {
+  const showDetail = veil ? undefined : onShowDetail
   const card = (
     <Card size="sm">
       <CardContent className="flex gap-3">
@@ -61,15 +65,19 @@ export function ReviewCard({ movie, review, userName, userId, isFederated, actor
             {review.watch_medium && <WatchMediumBadge medium={review.watch_medium} />}
           </div>
           {review.comment && (
-            <p
-              className="mt-1 line-clamp-2 text-xs text-muted-foreground"
-              role={onShowDetail ? "button" : undefined}
-              tabIndex={onShowDetail ? 0 : undefined}
-              onClick={onShowDetail}
-              onKeyDown={onShowDetail ? (e) => e.key === "Enter" && onShowDetail() : undefined}
-            >
-              {review.comment}
-            </p>
+            veil ? (
+              <SpoilerVeil content={review.comment} className="mt-1 text-xs text-muted-foreground" />
+            ) : (
+              <p
+                className="mt-1 line-clamp-2 text-xs text-muted-foreground"
+                role={showDetail ? "button" : undefined}
+                tabIndex={showDetail ? 0 : undefined}
+                onClick={showDetail}
+                onKeyDown={showDetail ? (e) => e.key === "Enter" && showDetail() : undefined}
+              >
+                {review.comment}
+              </p>
+            )
           )}
         </div>
       </CardContent>
