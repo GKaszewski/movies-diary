@@ -67,6 +67,7 @@ async fn test_log_review_creates_movie_and_review() {
         comment: None,
         watched_at: Utc::now().naive_utc(),
         watch_medium: None,
+        spoilers: false,
     };
 
     log_review::execute(&logger, cmd).await.unwrap();
@@ -100,6 +101,7 @@ async fn test_log_review_reuses_existing_movie() {
         comment: None,
         watched_at: Utc::now().naive_utc(),
         watch_medium: None,
+        spoilers: false,
     };
 
     log_review::execute(&logger, cmd).await.unwrap();
@@ -122,6 +124,7 @@ async fn test_log_review_with_invalid_rating_fails() {
         comment: None,
         watched_at: Utc::now().naive_utc(),
         watch_medium: None,
+        spoilers: false,
     };
     let result = log_review::execute(&logger, cmd).await;
     assert!(result.is_err(), "rating > 5 should fail");

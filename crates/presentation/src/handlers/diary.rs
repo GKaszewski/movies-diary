@@ -137,6 +137,7 @@ pub async fn patch_review(
         comment: req.comment,
         watched_at,
         watch_medium: req.watch_medium,
+        spoilers: req.spoilers,
     };
     edit_review::execute(&state.app_ctx.deps.diary.edit_review, cmd).await?;
     Ok(StatusCode::OK)

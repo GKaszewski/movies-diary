@@ -26,11 +26,13 @@ export type MovieStatsDto = z.infer<typeof movieStatsDtoSchema>
 
 export const socialReviewDtoSchema = z.object({
   user_display: z.string(),
+  user_id: z.string(),
   rating: z.number(),
   comment: z.string().optional(),
   watched_at: z.string(),
   is_federated: z.boolean(),
   watch_medium: z.string().optional(),
+  spoilers: z.boolean().optional(),
 })
 export type SocialReviewDto = z.infer<typeof socialReviewDtoSchema>
 

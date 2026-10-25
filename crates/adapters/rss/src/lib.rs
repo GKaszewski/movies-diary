@@ -22,9 +22,14 @@ impl RssFeedRenderer for RssAdapter {
                     e.movie().title().value(),
                     e.movie().release_year().value()
                 );
-                let description = match e.review().comment() {
-                    Some(c) => format!("{}/5 — {}", e.review().rating().value(), c.value()),
-                    None => format!("{}/5", e.review().rating().value()),
+                let description = match (e.review().comment(), e.review().spoilers()) {
+                    (Some(_), true) => {
+                        format!("{}/5 — contains spoilers", e.review().rating().value())
+                    }
+                    (Some(c), false) => {
+                        format!("{}/5 — {}", e.review().rating().value(), c.value())
+                    }
+                    (None, _) => format!("{}/5", e.review().rating().value()),
                 };
                 let pub_date = e
                     .review()

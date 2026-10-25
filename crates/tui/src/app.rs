@@ -369,6 +369,7 @@ pub fn parse_csv(content: &str) -> Vec<ParsedRow> {
                 },
                 watched_at,
                 watch_medium: None,
+                spoilers: false,
             }),
         });
     }
@@ -829,6 +830,7 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
                     comment,
                     watched_at,
                     watch_medium: None,
+                    spoilers: false,
                 };
                 app.loading = true;
                 return vec![Command::CreateReview(req)];

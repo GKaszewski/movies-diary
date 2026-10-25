@@ -89,6 +89,7 @@ pub fn review_row_to_domain(
     created_at: String,
     remote_actor_url: Option<String>,
     watch_medium: Option<String>,
+    spoilers: bool,
 ) -> Result<Review, DomainError> {
     let id = ReviewId::from_uuid(parse_uuid(&id)?);
     let movie_id = MovieId::from_uuid(parse_uuid(&movie_id)?);
@@ -112,6 +113,7 @@ pub fn review_row_to_domain(
         created_at,
         source,
         watch_medium,
+        spoilers,
     }))
 }
 

@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next"
 import { TrendingUp } from "lucide-react"
 import { StarDisplay } from "@/components/star-display"
+import { SpoilerVeil } from "@/components/spoiler-veil"
 import { shortDate } from "@/lib/date"
 import type { ReviewHistoryResponse } from "@/features/movies"
 
@@ -24,7 +25,11 @@ export function ViewingHistory({ history }: { history: ReviewHistoryResponse }) 
             <div>
               <p className="text-sm font-medium">{shortDate(v.watched_at)}</p>
               {v.comment && (
-                <p className="mt-0.5 text-xs text-muted-foreground line-clamp-1">{v.comment}</p>
+                v.spoilers ? (
+                  <SpoilerVeil content={v.comment} className="mt-0.5 text-xs text-muted-foreground line-clamp-1" />
+                ) : (
+                  <p className="mt-0.5 text-xs text-muted-foreground line-clamp-1">{v.comment}</p>
+                )
               )}
             </div>
             <StarDisplay rating={v.rating} size="xs" />

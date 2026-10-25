@@ -60,6 +60,12 @@ pub struct ReviewObject {
     /// Discriminator so Movies Diary instances detect this as a review Note.
     #[serde(default)]
     pub(crate) review: bool,
+    /// Spoiler Flag. Movies-Diary peers veil the comment behind this boolean;
+    /// other fediverse apps render `summary` as a content warning (ADR-0011).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub(crate) contains_spoilers: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) summary: Option<String>,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub(crate) attachment: Vec<ApAttachment>,
     #[serde(default)]
@@ -98,6 +104,7 @@ pub fn review_to_ap_object(review: &Review, input: ReviewApInput) -> ReviewObjec
         String::new()
     };
     let watched_str = format!("Watched: {}", review.watched_at().format("%b %-d, %Y"));
+    let spoiler_flag = review.spoilers() && comment_text.is_some();
     let content = match &comment_text {
         Some(c) => format!(
             "{} {}{}\n{}\n{}",
@@ -145,6 +152,8 @@ pub fn review_to_ap_object(review: &Review, input: ReviewApInput) -> ReviewObjec
         watched_at: DateTime::from_naive_utc_and_offset(*review.watched_at(), Utc),
         watch_medium: review.watch_medium().map(|wm| wm.to_string()),
         review: true,
+        contains_spoilers: spoiler_flag,
+        summary: spoiler_flag.then(|| "Contains spoilers".to_string()),
         attachment,
         tag,
         to: vec![AS_PUBLIC.to_string()],

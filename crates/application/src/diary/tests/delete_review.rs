@@ -33,6 +33,7 @@ fn make_review(movie_id: MovieId, user_id: UserId) -> Review {
         None,
         Utc::now().naive_utc(),
         None,
+        false,
     )
     .unwrap()
 }

@@ -32,6 +32,7 @@ export const logReviewRequestSchema = z.object({
   comment: z.string().optional(),
   watched_at: z.string(),
   watch_medium: z.string().optional(),
+  spoilers: z.boolean().optional(),
 })
 export type LogReviewRequest = z.infer<typeof logReviewRequestSchema>
 
@@ -40,6 +41,7 @@ export const editReviewRequestSchema = z.object({
   comment: z.string().nullable().optional(),
   watched_at: z.string().optional(),
   watch_medium: z.string().nullable().optional(),
+  spoilers: z.boolean().optional(),
 })
 export type EditReviewRequest = z.infer<typeof editReviewRequestSchema>
 

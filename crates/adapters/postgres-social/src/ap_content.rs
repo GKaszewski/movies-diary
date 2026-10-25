@@ -69,6 +69,7 @@ struct ReviewRow {
     created_at: String,
     remote_actor_url: Option<String>,
     watch_medium: Option<String>,
+    spoilers: bool,
 }
 
 impl ReviewRow {
@@ -95,6 +96,7 @@ impl ReviewRow {
             created_at,
             source,
             watch_medium,
+            spoilers: self.spoilers,
         }))
     }
 }
@@ -116,6 +118,7 @@ struct DiaryRow {
     created_at: String,
     remote_actor_url: Option<String>,
     watch_medium: Option<String>,
+    spoilers: bool,
 }
 
 impl DiaryRow {
@@ -139,6 +142,7 @@ impl DiaryRow {
             created_at: self.created_at,
             remote_actor_url: self.remote_actor_url,
             watch_medium: self.watch_medium,
+            spoilers: self.spoilers,
         }
         .into_domain()?;
         Ok(DiaryEntry::new(movie, review))
@@ -226,7 +230,8 @@ impl LocalApContentQuery for PostgresApContentQuery {
                     to_char(r.watched_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS watched_at,
                     to_char(r.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS created_at,
                     r.remote_actor_url,
-                    r.watch_medium
+                    r.watch_medium,
+                    r.spoilers
              FROM reviews r
              INNER JOIN movies m ON m.id = r.movie_id
              WHERE r.movie_id = $1 AND r.remote_actor_url IS NULL
@@ -256,7 +261,8 @@ impl LocalApContentQuery for PostgresApContentQuery {
                         to_char(r.watched_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS watched_at,
                         to_char(r.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS created_at,
                         r.remote_actor_url,
-                        r.watch_medium
+                        r.watch_medium,
+                        r.spoilers
                  FROM reviews r
                  INNER JOIN movies m ON m.id = r.movie_id
                  WHERE r.user_id = $1 AND r.remote_actor_url IS NULL AND r.watched_at < $2::timestamptz
@@ -276,7 +282,8 @@ impl LocalApContentQuery for PostgresApContentQuery {
                         to_char(r.watched_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS watched_at,
                         to_char(r.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS created_at,
                         r.remote_actor_url,
-                        r.watch_medium
+                        r.watch_medium,
+                        r.spoilers
                  FROM reviews r
                  INNER JOIN movies m ON m.id = r.movie_id
                  WHERE r.user_id = $1 AND r.remote_actor_url IS NULL

@@ -20,6 +20,7 @@ export const reviewDtoSchema = z.object({
   comment: z.string().optional(),
   watched_at: z.string(),
   watch_medium: z.string().optional(),
+  spoilers: z.boolean().optional(),
 })
 export type ReviewDto = z.infer<typeof reviewDtoSchema>
 

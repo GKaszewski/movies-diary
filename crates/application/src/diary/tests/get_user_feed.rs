@@ -57,6 +57,7 @@ async fn user_feed_carries_author_and_entries() {
         None,
         chrono::Utc::now().naive_utc(),
         None,
+        false,
     )
     .unwrap();
     diary.set_diary_page(Paginated {

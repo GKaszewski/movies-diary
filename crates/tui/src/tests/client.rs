@@ -24,6 +24,7 @@ fn log_review_request_skips_none_fields() {
         comment: None,
         watched_at: "2024-01-15T20:00:00".into(),
         watch_medium: None,
+        spoilers: false,
     };
     let json = serde_json::to_string(&req).unwrap();
     assert!(!json.contains("external_metadata_id"));
@@ -44,6 +45,7 @@ fn log_review_request_includes_director_when_set() {
         comment: None,
         watched_at: "2024-01-15T20:00:00".into(),
         watch_medium: None,
+        spoilers: false,
     };
     let json = serde_json::to_string(&req).unwrap();
     assert!(json.contains("\"manual_director\":\"Denis Villeneuve\""));

@@ -26,6 +26,7 @@ pub struct PersistedReview {
     pub created_at: NaiveDateTime,
     pub source: ReviewSource,
     pub watch_medium: Option<WatchMedium>,
+    pub spoilers: bool,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -34,6 +35,7 @@ pub struct ReviewEdit {
     pub comment: Option<Option<Comment>>,
     pub watched_at: Option<NaiveDateTime>,
     pub watch_medium: Option<Option<WatchMedium>>,
+    pub spoilers: Option<bool>,
 }
 
 #[derive(Clone, Debug)]
@@ -47,6 +49,7 @@ pub struct Review {
     created_at: NaiveDateTime,
     source: ReviewSource,
     watch_medium: Option<WatchMedium>,
+    spoilers: bool,
 }
 
 impl Review {
@@ -57,6 +60,7 @@ impl Review {
         comment: Option<Comment>,
         watched_at: NaiveDateTime,
         watch_medium: Option<WatchMedium>,
+        spoilers: bool,
     ) -> Result<Self, DomainError> {
         Ok(Self {
             id: ReviewId::generate(),
@@ -68,6 +72,7 @@ impl Review {
             created_at: Utc::now().naive_utc(),
             source: ReviewSource::Local,
             watch_medium,
+            spoilers,
         })
     }
 
@@ -82,6 +87,7 @@ impl Review {
             created_at: row.created_at,
             source: row.source,
             watch_medium: row.watch_medium,
+            spoilers: row.spoilers,
         }
     }
 
@@ -102,6 +108,7 @@ impl Review {
                 Some(wm) => wm,
                 None => self.watch_medium,
             },
+            spoilers: edit.spoilers.unwrap_or(self.spoilers),
         }
     }
 
@@ -131,6 +138,9 @@ impl Review {
     }
     pub fn watch_medium(&self) -> Option<&WatchMedium> {
         self.watch_medium.as_ref()
+    }
+    pub fn spoilers(&self) -> bool {
+        self.spoilers
     }
     pub fn stars(&self) -> [bool; 5] {
         let r = self.rating.value();

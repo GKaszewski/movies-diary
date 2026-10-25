@@ -36,8 +36,8 @@ impl ReviewRepository for SqliteReviewRepository {
         };
 
         sqlx::query(
-            "INSERT INTO reviews (id, movie_id, user_id, rating, comment, watched_at, created_at, remote_actor_url, watch_medium)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO reviews (id, movie_id, user_id, rating, comment, watched_at, created_at, remote_actor_url, watch_medium, spoilers)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         )
         .bind(&id)
         .bind(&movie_id)
@@ -48,6 +48,7 @@ impl ReviewRepository for SqliteReviewRepository {
         .bind(&created_at)
         .bind(&remote_actor_url)
         .bind(review.watch_medium().map(|wm| wm.to_string()))
+        .bind(review.spoilers())
         .execute(&self.pool)
         .await
         .map_err(adapter_common::map_sqlx_error)?;
@@ -58,7 +59,7 @@ impl ReviewRepository for SqliteReviewRepository {
     async fn get_review_by_id(&self, review_id: &ReviewId) -> Result<Option<Review>, DomainError> {
         let id = review_id.value().to_string();
         sqlx::query_as::<_, ReviewRow>(
-            "SELECT id, movie_id, user_id, rating, comment, watched_at, created_at, remote_actor_url, watch_medium
+            "SELECT id, movie_id, user_id, rating, comment, watched_at, created_at, remote_actor_url, watch_medium, spoilers
              FROM reviews WHERE id = ?",
         )
         .bind(&id)
@@ -77,12 +78,13 @@ impl ReviewRepository for SqliteReviewRepository {
         let watch_medium = review.watch_medium().map(|wm| wm.to_string());
 
         sqlx::query(
-            "UPDATE reviews SET rating = ?, comment = ?, watched_at = ?, watch_medium = ? WHERE id = ?",
+            "UPDATE reviews SET rating = ?, comment = ?, watched_at = ?, watch_medium = ?, spoilers = ? WHERE id = ?",
         )
         .bind(rating)
         .bind(&comment)
         .bind(&watched_at)
         .bind(&watch_medium)
+        .bind(review.spoilers())
         .bind(&id)
         .execute(&self.pool)
         .await
@@ -104,7 +106,7 @@ impl ReviewRepository for SqliteReviewRepository {
     async fn get_all_reviews_for_user(&self, user_id: &UserId) -> Result<Vec<Review>, DomainError> {
         let uid = user_id.value().to_string();
         sqlx::query_as::<_, ReviewRow>(
-            "SELECT id, movie_id, user_id, rating, comment, watched_at, created_at, remote_actor_url, watch_medium
+            "SELECT id, movie_id, user_id, rating, comment, watched_at, created_at, remote_actor_url, watch_medium, spoilers
              FROM reviews WHERE user_id = ? ORDER BY watched_at DESC",
         )
         .bind(&uid)

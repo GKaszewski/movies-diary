@@ -62,6 +62,7 @@ fn make_entry_full(
             .and_hms_opt(0, 0, 0)
             .unwrap(),
         None,
+        false,
     )
     .unwrap();
     DiaryEntry::new(movie, review)
@@ -80,9 +81,9 @@ async fn csv_has_header_and_one_row() {
     let bytes =
         collect_stream(adapter.stream_entries(entry_stream(vec![entry]), ExportFormat::Csv)).await;
     let text = String::from_utf8(bytes).unwrap();
-    assert!(
-        text.starts_with("title,year,director,rating,comment,watched_at,external_metadata_id\n")
-    );
+    assert!(text.starts_with(
+        "title,year,director,rating,comment,watched_at,external_metadata_id,spoilers\n"
+    ));
     assert!(text.contains("Inception"));
     assert!(text.contains("2010"));
     assert!(text.contains("Christopher Nolan"));
@@ -149,7 +150,7 @@ async fn empty_entries_returns_csv_header_only() {
     let text = String::from_utf8(bytes).unwrap();
     assert_eq!(
         text,
-        "title,year,director,rating,comment,watched_at,external_metadata_id\n"
+        "title,year,director,rating,comment,watched_at,external_metadata_id,spoilers\n"
     );
 }
 

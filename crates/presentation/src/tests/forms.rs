@@ -10,6 +10,7 @@ fn make_form(watched_at: &str) -> LogReviewForm {
         comment: None,
         watched_at: watched_at.to_string(),
         watch_medium: None,
+        spoilers: false,
         csrf_token: String::new(),
     }
 }
@@ -24,6 +25,7 @@ fn make_request(watched_at: &str) -> LogReviewRequest {
         comment: None,
         watched_at: watched_at.to_string(),
         watch_medium: None,
+        spoilers: false,
     }
 }
 

@@ -36,8 +36,8 @@ impl ReviewRepository for PostgresReviewRepository {
         };
 
         sqlx::query(
-            "INSERT INTO reviews (id, movie_id, user_id, rating, comment, watched_at, created_at, remote_actor_url, watch_medium)
-             VALUES ($1, $2, $3, $4, $5, $6::timestamptz, $7::timestamptz, $8, $9)",
+            "INSERT INTO reviews (id, movie_id, user_id, rating, comment, watched_at, created_at, remote_actor_url, watch_medium, spoilers)
+             VALUES ($1, $2, $3, $4, $5, $6::timestamptz, $7::timestamptz, $8, $9, $10)",
         )
         .bind(&id)
         .bind(&movie_id)
@@ -48,6 +48,7 @@ impl ReviewRepository for PostgresReviewRepository {
         .bind(&created_at)
         .bind(&remote_actor_url)
         .bind(review.watch_medium().map(|wm| wm.to_string()))
+        .bind(review.spoilers())
         .execute(&self.pool)
         .await
         .map_err(adapter_common::map_sqlx_error)?;
@@ -62,7 +63,8 @@ impl ReviewRepository for PostgresReviewRepository {
                     to_char(watched_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS watched_at,
                     to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS created_at,
                     remote_actor_url,
-                    watch_medium
+                    watch_medium,
+                    spoilers
              FROM reviews WHERE id = $1",
         )
         .bind(&id)
@@ -81,12 +83,13 @@ impl ReviewRepository for PostgresReviewRepository {
         let watch_medium = review.watch_medium().map(|wm| wm.to_string());
 
         sqlx::query(
-            "UPDATE reviews SET rating = $1, comment = $2, watched_at = $3::timestamptz, watch_medium = $4 WHERE id = $5",
+            "UPDATE reviews SET rating = $1, comment = $2, watched_at = $3::timestamptz, watch_medium = $4, spoilers = $5 WHERE id = $6",
         )
         .bind(rating)
         .bind(&comment)
         .bind(&watched_at)
         .bind(&watch_medium)
+        .bind(review.spoilers())
         .bind(&id)
         .execute(&self.pool)
         .await
@@ -112,7 +115,8 @@ impl ReviewRepository for PostgresReviewRepository {
                     to_char(watched_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS watched_at,
                     to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS created_at,
                     remote_actor_url,
-                    watch_medium
+                    watch_medium,
+                    spoilers
              FROM reviews WHERE user_id = $1 ORDER BY watched_at DESC",
         )
         .bind(&uid)

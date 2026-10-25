@@ -34,6 +34,7 @@ pub async fn execute(deps: &EditReviewDeps, cmd: EditReviewCommand) -> Result<()
             .transpose()?,
         watched_at: cmd.watched_at,
         watch_medium: cmd.watch_medium,
+        spoilers: cmd.spoilers,
     });
 
     deps.review.update_review(&updated).await?;

@@ -46,8 +46,8 @@ impl RemoteReviewRepository for SqliteFederationRepository {
         let watched_at = datetime_to_str(review.watched_at());
         let created_at = datetime_to_str(review.created_at());
         sqlx::query(
-            "INSERT OR IGNORE INTO reviews (id, movie_id, user_id, rating, comment, watched_at, created_at, remote_actor_url, ap_id)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT OR IGNORE INTO reviews (id, movie_id, user_id, rating, comment, watched_at, created_at, remote_actor_url, ap_id, spoilers)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         )
         .bind(&id)
         .bind(&movie_id)
@@ -58,6 +58,7 @@ impl RemoteReviewRepository for SqliteFederationRepository {
         .bind(&created_at)
         .bind(&actor_url)
         .bind(ap_id)
+        .bind(review.spoilers())
         .execute(&self.pool)
         .await?;
         Ok(())
@@ -75,13 +76,14 @@ impl RemoteReviewRepository for SqliteFederationRepository {
     async fn update_remote_review(&self, u: RemoteReviewUpdate<'_>) -> Result<()> {
         let watched_at_str = datetime_to_str(&u.watched_at);
         sqlx::query(
-            "UPDATE reviews SET rating = ?, comment = ?, watched_at = ?, watch_medium = ?
+            "UPDATE reviews SET rating = ?, comment = ?, watched_at = ?, watch_medium = ?, spoilers = ?
              WHERE ap_id = ? AND remote_actor_url = ?",
         )
         .bind(u.rating as i64)
         .bind(u.comment)
         .bind(&watched_at_str)
         .bind(u.watch_medium)
+        .bind(u.spoilers)
         .bind(u.ap_id)
         .bind(u.actor_url)
         .execute(&self.pool)

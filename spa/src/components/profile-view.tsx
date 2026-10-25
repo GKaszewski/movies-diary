@@ -179,6 +179,7 @@ function DiaryTab({ sortBy, userId, search }: { sortBy: string; userId?: string;
             comment={e.review.comment}
             subtitle={<><TimeAgo date={e.review.watched_at} /></>}
             variant="compact"
+            spoilers={e.review.spoilers}
             onShowDetail={e.review.comment ? () => setDetailEntry(e) : undefined}
           />
         )}

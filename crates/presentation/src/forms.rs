@@ -39,6 +39,8 @@ pub struct LogReviewForm {
     pub watched_at: String,
     #[serde(default, deserialize_with = "empty_string_as_none")]
     pub watch_medium: Option<String>,
+    #[serde(default)]
+    pub spoilers: bool,
     #[serde(rename = "_csrf", default)]
     pub csrf_token: String,
 }
@@ -173,6 +175,7 @@ pub struct LogReviewData {
     pub comment: Option<String>,
     pub watched_at: NaiveDateTime,
     pub watch_medium: Option<domain::value_objects::WatchMedium>,
+    pub spoilers: bool,
 }
 
 #[derive(Debug)]
@@ -212,6 +215,7 @@ impl TryFrom<LogReviewForm> for LogReviewData {
             comment: form.comment,
             watched_at,
             watch_medium,
+            spoilers: form.spoilers,
         })
     }
 }
@@ -230,6 +234,7 @@ impl TryFrom<LogReviewRequest> for LogReviewData {
             comment: req.comment,
             watched_at,
             watch_medium: req.watch_medium,
+            spoilers: req.spoilers,
         })
     }
 }
@@ -249,6 +254,7 @@ impl LogReviewData {
             comment: self.comment,
             watched_at: self.watched_at,
             watch_medium: self.watch_medium,
+            spoilers: self.spoilers,
         }
     }
 }

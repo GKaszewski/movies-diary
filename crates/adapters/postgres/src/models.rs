@@ -77,6 +77,7 @@ pub(crate) struct ReviewRow {
     pub created_at: String,
     pub remote_actor_url: Option<String>,
     pub watch_medium: Option<String>,
+    pub spoilers: bool,
 }
 
 impl ReviewRow {
@@ -91,6 +92,7 @@ impl ReviewRow {
             self.created_at,
             self.remote_actor_url,
             self.watch_medium,
+            self.spoilers,
         )
     }
 }
@@ -112,6 +114,7 @@ pub(crate) struct DiaryRow {
     pub created_at: String,
     pub remote_actor_url: Option<String>,
     pub watch_medium: Option<String>,
+    pub spoilers: bool,
 }
 
 impl DiaryRow {
@@ -134,6 +137,7 @@ impl DiaryRow {
             self.created_at,
             self.remote_actor_url,
             self.watch_medium,
+            self.spoilers,
         )?;
         Ok(DiaryEntry::new(movie, review))
     }
@@ -156,6 +160,7 @@ pub(crate) struct FeedRow {
     pub created_at: String,
     pub remote_actor_url: Option<String>,
     pub watch_medium: Option<String>,
+    pub spoilers: bool,
     pub user_email: String,
 }
 
@@ -179,6 +184,7 @@ impl FeedRow {
             self.created_at,
             self.remote_actor_url,
             self.watch_medium,
+            self.spoilers,
         )?;
         let diary = DiaryEntry::new(movie, review);
         Ok(FeedEntry::new(diary, self.user_email))

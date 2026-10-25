@@ -105,7 +105,10 @@ function MovieDetailPage() {
         </section>
       )}
 
-      <CommunityReviews reviews={reviews} onShowDetail={setDetailReview} />
+      <CommunityReviews
+        reviews={reviews}
+        onShowDetail={setDetailReview}
+      />
 
       {history && <ViewingHistory history={history} />}
 
@@ -114,7 +117,7 @@ function MovieDetailPage() {
           open={!!detailReview}
           onOpenChange={(open) => !open && setDetailReview(null)}
           movie={movie}
-          review={{ id: "", rating: detailReview.rating, comment: detailReview.comment, watched_at: detailReview.watched_at, watch_medium: detailReview.watch_medium }}
+          review={{ id: "", rating: detailReview.rating, comment: detailReview.comment, watched_at: detailReview.watched_at, watch_medium: detailReview.watch_medium, spoilers: detailReview.spoilers }}
           userName={detailReview.user_display}
         />
       )}
