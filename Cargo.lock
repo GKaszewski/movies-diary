@@ -4670,6 +4670,7 @@ dependencies = [
 name = "rss"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "domain",
  "rss 2.0.13",
 ]

@@ -4,5 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-rss-feed = { package = "rss", version = "2" }
+rss-feed = { package = "rss", version = "2", features = ["atom"] }
 domain = { workspace = true }
+
+[dev-dependencies]
+chrono = { workspace = true }

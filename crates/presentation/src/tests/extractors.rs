@@ -416,7 +416,11 @@ impl domain::ports::DocumentParser for Panic {
 }
 
 impl domain::ports::RssFeedRenderer for Panic {
-    fn render_feed(&self, _: &[DiaryEntry], _: &str) -> Result<String, String> {
+    fn render_feed(
+        &self,
+        _: &[DiaryEntry],
+        _: &domain::ports::FeedChannel<'_>,
+    ) -> Result<String, String> {
         panic!()
     }
 }

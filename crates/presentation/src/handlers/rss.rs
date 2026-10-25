@@ -6,7 +6,7 @@ use axum::{
 use uuid::Uuid;
 
 use application::{diary::get_diary, diary::get_user_feed, diary::queries::GetDiaryQuery};
-use domain::{errors::DomainError, models::ReviewSortBy};
+use domain::{errors::DomainError, models::ReviewSortBy, ports::FeedChannel};
 
 use crate::{errors::ApiError, state::AppState};
 
@@ -21,10 +21,17 @@ pub async fn get_feed(State(state): State<AppState>) -> Result<impl IntoResponse
     let page = get_diary::execute(&state.app_ctx.deps.diary.get_diary, query).await?;
     let xml = state
         .rss_renderer
-        .render_feed(&page.items, "Movie Diary")
+        .render_feed(
+            &page.items,
+            &FeedChannel {
+                title: "Movie Diary",
+                link_path: "/",
+                self_path: "/feed.rss",
+            },
+        )
         .map_err(|e| ApiError(DomainError::InfrastructureError(e)))?;
     Ok((
-        [(header::CONTENT_TYPE, "application/rss+xml; charset=utf-8")],
+        [(header::CONTENT_TYPE, "application/xml; charset=utf-8")],
         xml,
     ))
 }
@@ -41,14 +48,23 @@ pub async fn get_user_feed(
     .await?;
 
     let title = format!("{}'s Movie Diary", feed.author.display_name);
+    let link_path = format!("/users/{user_id}");
+    let self_path = format!("/users/{user_id}/feed.rss");
 
     let xml = state
         .rss_renderer
-        .render_feed(&feed.entries, &title)
+        .render_feed(
+            &feed.entries,
+            &FeedChannel {
+                title: &title,
+                link_path: &link_path,
+                self_path: &self_path,
+            },
+        )
         .map_err(|e| ApiError(DomainError::InfrastructureError(e)))?;
 
     Ok((
-        [(header::CONTENT_TYPE, "application/rss+xml; charset=utf-8")],
+        [(header::CONTENT_TYPE, "application/xml; charset=utf-8")],
         xml,
     ))
 }

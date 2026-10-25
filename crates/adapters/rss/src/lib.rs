@@ -1,19 +1,30 @@
 use domain::models::DiaryEntry;
-use domain::ports::RssFeedRenderer;
+use domain::ports::{FeedChannel, RssFeedRenderer};
+use rss_feed::extension::atom::{self, AtomExtensionBuilder, Link};
 use rss_feed::{ChannelBuilder, GuidBuilder, ItemBuilder};
 
 pub struct RssAdapter {
-    feed_link: String,
+    base_url: String,
 }
 
 impl RssAdapter {
-    pub fn new(feed_link: String) -> Self {
-        Self { feed_link }
+    pub fn new(base_url: String) -> Self {
+        Self {
+            base_url: base_url.trim_end_matches('/').to_string(),
+        }
+    }
+
+    fn absolute(&self, path: &str) -> String {
+        format!("{}{}", self.base_url, path)
     }
 }
 
 impl RssFeedRenderer for RssAdapter {
-    fn render_feed(&self, entries: &[DiaryEntry], title: &str) -> Result<String, String> {
+    fn render_feed(
+        &self,
+        entries: &[DiaryEntry],
+        channel: &FeedChannel<'_>,
+    ) -> Result<String, String> {
         let items = entries
             .iter()
             .map(|e| {
@@ -37,12 +48,14 @@ impl RssFeedRenderer for RssAdapter {
                     .and_utc()
                     .format("%a, %d %b %Y %H:%M:%S +0000")
                     .to_string();
+                let link = self.absolute(&format!("/movies/{}", e.movie().id().value()));
                 let guid = GuidBuilder::default()
                     .value(e.review().id().value().to_string())
                     .permalink(false)
                     .build();
                 ItemBuilder::default()
                     .title(Some(item_title))
+                    .link(Some(link))
                     .description(Some(description))
                     .pub_date(Some(pub_date))
                     .guid(Some(guid))
@@ -50,10 +63,24 @@ impl RssFeedRenderer for RssAdapter {
             })
             .collect::<Vec<_>>();
 
+        let self_link = Link {
+            href: self.absolute(channel.self_path),
+            rel: "self".to_string(),
+            mime_type: Some("application/rss+xml".to_string()),
+            ..Default::default()
+        };
+
         let channel = ChannelBuilder::default()
-            .title(title.to_string())
-            .link(self.feed_link.clone())
-            .description(title.to_string())
+            .title(channel.title.to_string())
+            .link(self.absolute(channel.link_path))
+            .description(channel.title.to_string())
+            .language(Some("en".to_string()))
+            .namespace(("atom".to_string(), atom::NAMESPACE.to_string()))
+            .atom_ext(Some(
+                AtomExtensionBuilder::default()
+                    .links(vec![self_link])
+                    .build(),
+            ))
             .items(items)
             .build();
 
