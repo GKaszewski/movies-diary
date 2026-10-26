@@ -52,10 +52,6 @@ pub struct RequestAccountDeletionDeps {
     pub password_hasher: Arc<dyn PasswordHasher>,
 }
 
-pub struct EnsureActiveDeps {
-    pub user: Arc<dyn UserRepository>,
-}
-
 pub struct GetCurrentProfileDeps {
     pub user: Arc<dyn UserRepository>,
 }

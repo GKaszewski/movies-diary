@@ -163,8 +163,9 @@ pub async fn post_reindex_search(
     State(state): State<AppState>,
     _admin: crate::extractors::AdminApiUser,
 ) -> impl IntoResponse {
-    let event = domain::events::DomainEvent::SearchReindexRequested;
-    match state.app_ctx.services.event_publisher.publish(&event).await {
+    match application::search::request_reindex::execute(&state.app_ctx.deps.search.request_reindex)
+        .await
+    {
         Ok(()) => StatusCode::ACCEPTED.into_response(),
         Err(e) => {
             tracing::error!("failed to publish reindex event: {:?}", e);

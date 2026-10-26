@@ -29,7 +29,7 @@ exists), so two admins deleting each other concurrently cannot both succeed; the
 `count_active_admins` check is only the early, friendly refusal (409).
 
 **Immediate effects, before the purge runs.** Login is refused and tokens are rejected
-(`ensure_active` in the extractors; the user lookups filter `deleted_at IS NULL`). The user's
+(`auth::authenticate` in the extractors; the user lookups filter `deleted_at IS NULL`). The user's
 webhook tokens stop ingesting at once (`find_by_token_hash` ignores tokens of tombstoned users,
 so the endpoint answers 401). The profile
 and `?embed=true` pages 404. The ActivityPub actor document, inbox, outbox and featured answer

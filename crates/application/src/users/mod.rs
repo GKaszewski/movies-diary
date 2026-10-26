@@ -2,7 +2,6 @@ pub mod authorize_admin;
 pub mod commands;
 pub mod deps;
 mod diary_filter;
-pub mod ensure_active;
 pub mod get_current_profile;
 pub mod get_federated_profile;
 pub mod get_federated_profile_stats;

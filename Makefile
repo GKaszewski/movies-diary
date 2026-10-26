@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := check
 
-check: fmt-check clippy test test-federation-off check-appcontext check-handler-deps check-handler-repos check-http-adapter-deps check-federation-off-social check-sqlite-is-ap-free check-binaries-are-thin check-federation-off-deps check-nats-isolated check-no-second-web-stack
+check: fmt-check clippy test test-federation-off check-appcontext check-handler-deps check-handler-repos check-handler-services check-http-adapter-deps check-federation-off-social check-sqlite-is-ap-free check-binaries-are-thin check-federation-off-deps check-nats-isolated check-no-second-web-stack
 	@echo "✅ All checks passed"
 
 check-appcontext:
@@ -29,6 +29,16 @@ check-handler-repos:
 
 
 HTTP_ADAPTER_ALLOWED_ADAPTERS :=
+
+check-handler-services:
+	@hits=$$(find crates/adapters/http-axum/src -name '*.rs' -not -path '*/tests/*' -not -name tests.rs \
+	    | xargs perl -0ne 'while (/app_ctx\s*\.\s*services\s*\.\s*([a-z_]+)/g) { print "$$ARGV: services.$$1\n" unless $$1 eq "review_logger" }'); \
+	if [ -n "$$hits" ]; then \
+	    echo "❌ http-axum reaches a service port directly (call a use case instead):"; \
+	    echo "$$hits"; \
+	    exit 1; \
+	fi; \
+	echo "✅ No direct service-port calls in http-axum"
 
 check-http-adapter-deps:
 	@deps=$$(awk '/^\[dependencies\]/{f=1;next} /^\[/{f=0} f' crates/adapters/http-axum/Cargo.toml \
@@ -167,4 +177,4 @@ dev-spa:
 spa-dev:
 	@npm --prefix spa run dev
 
-.PHONY: check fmt fmt-check clippy test test-federation-off fix dev dev-stop dev-worker dev-spa spa-dev check-appcontext check-handler-deps check-handler-repos check-http-adapter-deps check-federation-off-social check-sqlite-is-ap-free check-binaries-are-thin check-federation-off-deps check-nats-isolated check-no-second-web-stack
+.PHONY: check fmt fmt-check clippy test test-federation-off fix dev dev-stop dev-worker dev-spa spa-dev check-appcontext check-handler-deps check-handler-repos check-handler-services check-http-adapter-deps check-federation-off-social check-sqlite-is-ap-free check-binaries-are-thin check-federation-off-deps check-nats-isolated check-no-second-web-stack

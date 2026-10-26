@@ -1,16 +1,17 @@
 use application::auth::deps::{
-    LoginDeps, LogoutDeps, RefreshDeps, RegisterAndLoginDeps, RegisterDeps,
+    AuthenticateDeps, LoginDeps, LogoutDeps, RefreshDeps, RegisterAndLoginDeps, RegisterDeps,
 };
 use application::deps::{
-    AuthGroup, Deps, DiaryGroup, GoalsGroup, ImportGroup, InsightsGroup, IntegrationsGroup,
-    MoviesGroup, PersonGroup, SearchGroup, SocialGroup, UsersGroup, WatchlistGroup, WorkerDeps,
-    WrapupGroup,
+    AuthGroup, Deps, DiaryGroup, GoalsGroup, ImagesGroup, ImportGroup, InsightsGroup,
+    IntegrationsGroup, MoviesGroup, PersonGroup, SearchGroup, SocialGroup, UsersGroup,
+    WatchlistGroup, WorkerDeps, WrapupGroup,
 };
 use application::diary::deps::{
     DeleteReviewDeps, EditReviewDeps, ExportDiaryDeps, GetActivityFeedDeps, GetDiaryDeps,
     GetMovieSocialPageDeps, GetReviewHistoryDeps, GetUserFeedDeps,
 };
 use application::goals::deps::{GoalCommandDeps, GoalQueryDeps};
+use application::images::deps::GetImageDeps;
 use application::import::deps::{
     ApplyMappingDeps, ApplyProfileAndMapDeps, ApplyProfileDeps, CreateSessionDeps,
     DeleteImportProfileDeps, ExecuteImportDeps, GetMappingStageDeps, GetPreviewStageDeps,
@@ -26,10 +27,10 @@ use application::movies::deps::{
 };
 use application::movies::merge_duplicates::MergeDuplicatesDeps;
 use application::person::deps::{EnrichPersonDeps, GetPersonDeps};
-use application::search::deps::SearchDeps;
+use application::search::deps::{RequestReindexDeps, SearchDeps};
 use application::social::deps::{SocialCommandDeps, SocialQueryDeps};
 use application::users::deps::{
-    AuthorizeAdminDeps, EnsureActiveDeps, GetCurrentProfileDeps, GetFederatedProfileDeps,
+    AuthorizeAdminDeps, GetCurrentProfileDeps, GetFederatedProfileDeps,
     GetFederatedProfileStatsDeps, GetLocalProfileDeps, GetPageViewerDeps, GetProfileSettingsDeps,
     GetSettingsDeps, GetUsersListDeps, RequestAccountDeletionDeps, ResolveUsernameDeps,
     UpdateProfileDeps, UpdateProfileFieldsDeps, UpdateSettingsDeps,
@@ -84,6 +85,10 @@ pub fn build_deps(
             logout: LogoutDeps {
                 refresh_session: repos.refresh_session.clone(),
             },
+            authenticate: AuthenticateDeps {
+                auth: services.auth.clone(),
+                user: repos.user.clone(),
+            },
         },
         diary: DiaryGroup {
             delete_review: DeleteReviewDeps {
@@ -127,6 +132,11 @@ pub fn build_deps(
             query: GoalQueryDeps {
                 goal_query: repos.goal_query.clone(),
                 stats: repos.stats.clone(),
+            },
+        },
+        images: ImagesGroup {
+            get_image: GetImageDeps {
+                object_storage: services.object_storage.clone(),
             },
         },
         import: ImportGroup {
@@ -236,6 +246,9 @@ pub fn build_deps(
             execute: SearchDeps {
                 search_port: repos.search_port.clone(),
             },
+            request_reindex: RequestReindexDeps {
+                event_publisher: services.event_publisher.clone(),
+            },
         },
         social: SocialGroup {
             command: SocialCommandDeps {
@@ -283,9 +296,6 @@ pub fn build_deps(
             request_account_deletion: RequestAccountDeletionDeps {
                 user: repos.user.clone(),
                 password_hasher: services.password_hasher.clone(),
-            },
-            ensure_active: EnsureActiveDeps {
-                user: repos.user.clone(),
             },
             get_current_profile: GetCurrentProfileDeps {
                 user: repos.user.clone(),

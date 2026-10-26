@@ -8,6 +8,7 @@ pub mod worker;
 pub mod auth;
 pub mod diary;
 pub mod goals;
+pub mod images;
 pub mod import;
 pub mod insights;
 pub mod integrations;

@@ -26,7 +26,7 @@ cd spa && bun install && bun run dev
 make check     # the full gate; plain `make` runs it too
 ```
 
-`make check` runs, in order: `fmt-check`, `clippy` (workspace, all targets, `-D warnings`), `test`, `test-federation-off` (workspace tests with default features off), then the layering guards (`check-appcontext`, `check-handler-deps`, `check-handler-repos`, `check-http-adapter-deps`, `check-federation-off-social`, `check-sqlite-is-ap-free`, `check-binaries-are-thin`, `check-federation-off-deps`, `check-nats-isolated`, `check-no-second-web-stack`). CI runs the same steps.
+`make check` runs, in order: `fmt-check`, `clippy` (workspace, all targets, `-D warnings`), `test`, `test-federation-off` (workspace tests with default features off), then the layering guards (`check-appcontext`, `check-handler-deps`, `check-handler-repos`, `check-handler-services`, `check-http-adapter-deps`, `check-federation-off-social`, `check-sqlite-is-ap-free`, `check-binaries-are-thin`, `check-federation-off-deps`, `check-nats-isolated`, `check-no-second-web-stack`). CI runs the same steps.
 
 For the SPA also run:
 

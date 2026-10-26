@@ -7,15 +7,16 @@ use domain::{
     value_objects::{Email, UserId},
 };
 
-use application::{
-    auth::{deps::RegisterDeps, register},
-    users::{deps::EnsureActiveDeps, ensure_active},
+use application::auth::{
+    authenticate,
+    deps::{AuthenticateDeps, RegisterDeps},
+    register,
 };
 
 use crate::support::{TestContextBuilder, register_command};
 
 #[tokio::test]
-async fn a_live_user_is_active() {
+async fn a_live_users_token_authenticates() {
     let store = InMemoryStore::new();
     let b = TestContextBuilder::new().with_users(Arc::clone(&store) as _);
     let reg = RegisterDeps {
@@ -33,15 +34,20 @@ async fn a_live_user_is_active() {
         .unwrap()
         .id()
         .clone();
-    let deps = EnsureActiveDeps {
+    let deps = AuthenticateDeps {
+        auth: b.auth_service.clone(),
         user: b.user_repo.clone(),
     };
 
-    ensure_active::execute(&deps, &id).await.unwrap();
+    let authenticated = authenticate::execute(&deps, &id.value().to_string())
+        .await
+        .unwrap();
+
+    assert_eq!(authenticated, id);
 }
 
 #[tokio::test]
-async fn a_deleted_user_is_rejected() {
+async fn a_deleted_users_token_is_rejected() {
     let store = InMemoryStore::new();
     let b = TestContextBuilder::new().with_users(Arc::clone(&store) as _);
     let reg = RegisterDeps {
@@ -60,23 +66,42 @@ async fn a_deleted_user_is_rejected() {
         .id()
         .clone();
     store.mark_deleted(&id, &[]).await.unwrap();
-    let deps = EnsureActiveDeps {
+    let deps = AuthenticateDeps {
+        auth: b.auth_service.clone(),
         user: b.user_repo.clone(),
     };
 
-    let err = ensure_active::execute(&deps, &id).await.unwrap_err();
+    let err = authenticate::execute(&deps, &id.value().to_string())
+        .await
+        .unwrap_err();
 
     assert!(matches!(err, DomainError::Unauthorized(_)), "got {err:?}");
 }
 
 #[tokio::test]
-async fn an_unknown_user_is_rejected() {
+async fn an_unknown_users_token_is_rejected() {
     let b = TestContextBuilder::new();
-    let deps = EnsureActiveDeps {
+    let deps = AuthenticateDeps {
+        auth: b.auth_service.clone(),
         user: b.user_repo.clone(),
     };
 
-    let err = ensure_active::execute(&deps, &UserId::generate())
+    let err = authenticate::execute(&deps, &UserId::generate().value().to_string())
+        .await
+        .unwrap_err();
+
+    assert!(matches!(err, DomainError::Unauthorized(_)), "got {err:?}");
+}
+
+#[tokio::test]
+async fn an_invalid_token_is_rejected() {
+    let b = TestContextBuilder::new();
+    let deps = AuthenticateDeps {
+        auth: b.auth_service.clone(),
+        user: b.user_repo.clone(),
+    };
+
+    let err = authenticate::execute(&deps, "not-a-token")
         .await
         .unwrap_err();
 

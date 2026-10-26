@@ -40,4 +40,4 @@ jobs:
       # Layering guards. These live in the Makefile and were previously local-only,
       # so a PR could go green in CI while violating them.
       - name: guards
-        run: make check-appcontext check-handler-deps check-handler-repos check-http-adapter-deps check-federation-off-social check-sqlite-is-ap-free check-binaries-are-thin check-federation-off-deps check-nats-isolated check-no-second-web-stack
+        run: make check-appcontext check-handler-deps check-handler-repos check-handler-services check-http-adapter-deps check-federation-off-social check-sqlite-is-ap-free check-binaries-are-thin check-federation-off-deps check-nats-isolated check-no-second-web-stack

@@ -10,9 +10,8 @@ use domain::{errors::DomainError, value_objects::UserId};
 
 use crate::{errors::ApiError, state::AppState};
 
-async fn ensure_active(state: &AppState, user_id: &UserId) -> Result<(), DomainError> {
-    application::users::ensure_active::execute(&state.app_ctx.deps.users.ensure_active, user_id)
-        .await
+async fn authenticate(state: &AppState, token: &str) -> Result<UserId, DomainError> {
+    application::auth::authenticate::execute(&state.app_ctx.deps.auth.authenticate, token).await
 }
 
 pub struct AuthenticatedUser(pub UserId);
@@ -36,13 +35,7 @@ where
                     "Missing or invalid auth token".into(),
                 ))
             })?;
-        let user_id = app_state
-            .app_ctx
-            .services
-            .auth
-            .validate_token(token)
-            .await?;
-        ensure_active(&app_state, &user_id).await?;
+        let user_id = authenticate(&app_state, token).await?;
         Ok(AuthenticatedUser(user_id))
     }
 }
@@ -74,24 +67,14 @@ where
         let Some(token) = extract_token_from_cookie(parts) else {
             return Ok(OptionalCookieUser(None));
         };
-        let user_id = app_state
-            .app_ctx
-            .services
-            .auth
-            .validate_token(&token)
-            .await
-            .ok();
-        let user_id = match user_id {
-            Some(id) => match ensure_active(&app_state, &id).await {
-                Ok(()) => Some(id),
-                Err(e) => {
-                    if e.is_transient() {
-                        tracing::warn!("ensure_active failed, treating as anonymous: {e:?}");
-                    }
-                    None
+        let user_id = match authenticate(&app_state, &token).await {
+            Ok(id) => Some(id),
+            Err(e) => {
+                if e.is_transient() {
+                    tracing::warn!("authenticate failed, treating as anonymous: {e:?}");
                 }
-            },
-            None => None,
+                None
+            }
         };
         Ok(OptionalCookieUser(user_id))
     }
@@ -108,14 +91,7 @@ where
         let app_state = AppState::from_ref(state);
         let token = extract_token_from_cookie(parts)
             .ok_or_else(|| Redirect::to("/login").into_response())?;
-        let user_id = app_state
-            .app_ctx
-            .services
-            .auth
-            .validate_token(&token)
-            .await
-            .map_err(|_| Redirect::to("/login").into_response())?;
-        ensure_active(&app_state, &user_id)
+        let user_id = authenticate(&app_state, &token)
             .await
             .map_err(|e| match e {
                 DomainError::InfrastructureError(_) => {

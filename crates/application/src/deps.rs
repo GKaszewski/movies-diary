@@ -2,12 +2,15 @@ use std::sync::Arc;
 
 use domain::ports::{EventPublisher, MediaServerParser, ObjectStorage, PersonEnrichmentClient};
 
-use crate::auth::deps::{LoginDeps, LogoutDeps, RefreshDeps, RegisterAndLoginDeps, RegisterDeps};
+use crate::auth::deps::{
+    AuthenticateDeps, LoginDeps, LogoutDeps, RefreshDeps, RegisterAndLoginDeps, RegisterDeps,
+};
 use crate::diary::deps::{
     DeleteReviewDeps, EditReviewDeps, ExportDiaryDeps, GetActivityFeedDeps, GetDiaryDeps,
     GetMovieSocialPageDeps, GetReviewHistoryDeps, GetUserFeedDeps,
 };
 use crate::goals::deps::{GoalCommandDeps, GoalQueryDeps};
+use crate::images::deps::GetImageDeps;
 use crate::import::deps::{
     ApplyMappingDeps, ApplyProfileAndMapDeps, ApplyProfileDeps, CreateSessionDeps,
     DeleteImportProfileDeps, ExecuteImportDeps, GetMappingStageDeps, GetPreviewStageDeps,
@@ -23,10 +26,10 @@ use crate::movies::deps::{
 };
 use crate::movies::merge_duplicates::MergeDuplicatesDeps;
 use crate::person::deps::{EnrichPersonDeps, GetPersonDeps};
-use crate::search::deps::SearchDeps;
+use crate::search::deps::{RequestReindexDeps, SearchDeps};
 use crate::social::deps::{SocialCommandDeps, SocialQueryDeps};
 use crate::users::deps::{
-    AuthorizeAdminDeps, EnsureActiveDeps, GetCurrentProfileDeps, GetFederatedProfileDeps,
+    AuthorizeAdminDeps, GetCurrentProfileDeps, GetFederatedProfileDeps,
     GetFederatedProfileStatsDeps, GetLocalProfileDeps, GetPageViewerDeps, GetProfileSettingsDeps,
     GetSettingsDeps, GetUsersListDeps, RequestAccountDeletionDeps, ResolveUsernameDeps,
     UpdateProfileDeps, UpdateProfileFieldsDeps, UpdateSettingsDeps,
@@ -46,6 +49,7 @@ pub struct AuthGroup {
     pub refresh: RefreshDeps,
     pub register_and_login: RegisterAndLoginDeps,
     pub logout: LogoutDeps,
+    pub authenticate: AuthenticateDeps,
 }
 
 pub struct DiaryGroup {
@@ -62,6 +66,10 @@ pub struct DiaryGroup {
 pub struct GoalsGroup {
     pub command: GoalCommandDeps,
     pub query: GoalQueryDeps,
+}
+
+pub struct ImagesGroup {
+    pub get_image: GetImageDeps,
 }
 
 pub struct ImportGroup {
@@ -109,6 +117,7 @@ pub struct PersonGroup {
 
 pub struct SearchGroup {
     pub execute: SearchDeps,
+    pub request_reindex: RequestReindexDeps,
 }
 
 pub struct SocialGroup {
@@ -125,7 +134,6 @@ pub struct UsersGroup {
     pub get_users_list: GetUsersListDeps,
     pub update_profile: UpdateProfileDeps,
     pub request_account_deletion: RequestAccountDeletionDeps,
-    pub ensure_active: EnsureActiveDeps,
     pub get_current_profile: GetCurrentProfileDeps,
     pub update_profile_fields: UpdateProfileFieldsDeps,
     pub get_settings: GetSettingsDeps,
@@ -163,6 +171,7 @@ pub struct Deps {
     pub auth: AuthGroup,
     pub diary: DiaryGroup,
     pub goals: GoalsGroup,
+    pub images: ImagesGroup,
     pub import: ImportGroup,
     pub insights: InsightsGroup,
     pub integrations: IntegrationsGroup,

@@ -2,8 +2,6 @@ mod support;
 
 #[path = "users/authorize_admin_test.rs"]
 mod authorize_admin_test;
-#[path = "users/ensure_active_test.rs"]
-mod ensure_active_test;
 #[path = "users/get_current_profile_test.rs"]
 mod get_current_profile_test;
 #[path = "users/get_federated_profile_stats_test.rs"]

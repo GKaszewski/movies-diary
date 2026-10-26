@@ -1,5 +1,7 @@
 mod support;
 
+#[path = "auth/authenticate_test.rs"]
+mod authenticate_test;
 #[path = "auth/login_test.rs"]
 mod login_test;
 #[path = "auth/logout_test.rs"]

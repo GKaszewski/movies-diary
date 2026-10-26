@@ -32,6 +32,11 @@ pub struct RegisterAndLoginDeps {
     pub config: AppSettings,
 }
 
+pub struct AuthenticateDeps {
+    pub auth: Arc<dyn AuthService>,
+    pub user: Arc<dyn UserRepository>,
+}
+
 pub struct LogoutDeps {
     pub refresh_session: Arc<dyn RefreshSessionRepository>,
 }

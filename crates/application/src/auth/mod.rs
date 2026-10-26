@@ -1,3 +1,4 @@
+pub mod authenticate;
 pub mod commands;
 pub mod deps;
 pub mod login;
