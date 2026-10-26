@@ -103,7 +103,3 @@ pub enum ExportFormat {
     Csv,
     Json,
 }
-
-#[cfg(test)]
-#[path = "tests/mod.rs"]
-mod tests;

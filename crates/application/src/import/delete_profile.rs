@@ -18,7 +18,3 @@ pub async fn execute(
         .ok_or_else(|| DomainError::NotFound("import profile".into()))?;
     deps.import_profile.delete(&profile_id).await
 }
-
-#[cfg(test)]
-#[path = "tests/delete_profile.rs"]
-mod tests;

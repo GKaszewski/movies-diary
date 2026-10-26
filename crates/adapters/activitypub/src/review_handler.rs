@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use domain::{
     events::DomainEvent,
     models::ReviewSource,
-    ports::{DiaryQuery, EventPublisher, LocalApContentQuery, MovieQuery},
+    ports::{DiaryQuery, LocalApContentQuery, MovieQuery},
     value_objects::{
         Comment, ExternalMetadataId, InstanceIdentity, MovieId, Rating, ReviewId, UserId,
     },
@@ -13,7 +13,7 @@ use k_ap::{AS_PUBLIC, ApContentReader, ApObjectHandler, LocalObject};
 use url::Url;
 
 use crate::objects::{ReviewApInput, ReviewObject, review_to_ap_object};
-use crate::remote_review_repository::RemoteReviewRepository;
+use crate::remote_review_repository::{NewRemoteReview, RemoteReviewRepository};
 use crate::urls::{actor_url, review_url};
 
 pub struct ReviewObjectHandler {
@@ -21,7 +21,6 @@ pub struct ReviewObjectHandler {
     pub movie_repo: Arc<dyn MovieQuery>,
     pub diary_repo: Arc<dyn DiaryQuery>,
     pub review_store: Arc<dyn RemoteReviewRepository>,
-    pub event_publisher: Arc<dyn EventPublisher>,
     pub instance: InstanceIdentity,
 }
 
@@ -160,28 +159,30 @@ impl ApObjectHandler for ReviewObjectHandler {
             spoilers: obj.contains_spoilers,
         });
 
-        self.review_store
-            .save_remote_review(
-                &review,
-                obj.id.as_str(),
-                &obj.movie_title,
-                obj.release_year,
-                obj.external_metadata_id.as_deref(),
-                obj.poster_url.as_deref(),
-            )
-            .await?;
-
-        if let Some(ref ext_id_str) = obj.external_metadata_id
-            && let Ok(external_metadata_id) = ExternalMetadataId::new(ext_id_str.clone())
-        {
-            let _ = self
-                .event_publisher
-                .publish(&DomainEvent::MovieEnrichmentRequested {
+        let events: Vec<DomainEvent> = obj
+            .external_metadata_id
+            .as_ref()
+            .and_then(|ext_id| ExternalMetadataId::new(ext_id.clone()).ok())
+            .map(
+                |external_metadata_id| DomainEvent::MovieEnrichmentRequested {
                     movie_id: movie_id.clone(),
                     external_metadata_id,
-                })
-                .await;
-        }
+                },
+            )
+            .into_iter()
+            .collect();
+
+        self.review_store
+            .save_remote_review(NewRemoteReview {
+                review: &review,
+                ap_id: obj.id.as_str(),
+                movie_title: &obj.movie_title,
+                release_year: obj.release_year,
+                external_metadata_id: obj.external_metadata_id.as_deref(),
+                poster_url: obj.poster_url.as_deref(),
+                events: &events,
+            })
+            .await?;
 
         Ok(())
     }

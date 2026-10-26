@@ -66,7 +66,10 @@ impl ApUserRepository for DomainUserRepoAdapter {
         let user_id = UserId::from_uuid(id);
         let user = match self.repo.find_by_id(&user_id).await? {
             Some(u) => u,
-            None => return Ok(None),
+            None => match self.repo.find_tombstoned_by_id(&user_id).await? {
+                Some(u) => u,
+                None => return Ok(None),
+            },
         };
         Ok(Some(self.build_user(&user)))
     }

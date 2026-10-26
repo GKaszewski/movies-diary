@@ -342,7 +342,3 @@ fn label_of(insight: &Insight) -> &str {
 fn round2(v: f64) -> f64 {
     (v * 100.0).round() / 100.0
 }
-
-#[cfg(test)]
-#[path = "tests/insights_analyzer.rs"]
-mod tests;

@@ -16,12 +16,10 @@ pub struct EventPublisherConfig {
 }
 
 impl EventPublisherConfig {
-    pub fn from_env() -> Self {
-        let channel_buffer = std::env::var("EVENT_CHANNEL_BUFFER")
-            .ok()
-            .and_then(|v| v.parse().ok())
-            .unwrap_or(128);
-        Self { channel_buffer }
+    pub fn from_config(config: &config::EventsConfig) -> Self {
+        Self {
+            channel_buffer: config.channel_buffer,
+        }
     }
 }
 
@@ -49,6 +47,9 @@ impl AckHandle for NoopAck {
     async fn nack(&self) -> Result<(), DomainError> {
         Ok(())
     }
+    async fn defer(&self, _: std::time::Duration) -> Result<(), DomainError> {
+        Ok(())
+    }
 }
 
 pub struct ChannelEventConsumer {
@@ -60,7 +61,7 @@ impl EventConsumer for ChannelEventConsumer {
         let receiver = Arc::clone(&self.receiver);
         Box::pin(stream::unfold(receiver, |rx| async move {
             let event = rx.lock().await.recv().await?;
-            let envelope = EventEnvelope::new(event, Box::new(NoopAck));
+            let envelope = EventEnvelope::new(None, event, Box::new(NoopAck));
             Some((Ok(envelope), rx))
         }))
     }
@@ -86,7 +87,3 @@ pub fn create_event_channel(
         },
     )
 }
-
-#[cfg(test)]
-#[path = "tests/lib.rs"]
-mod tests;

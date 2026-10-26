@@ -15,6 +15,7 @@ pub(crate) struct TmdbProvider {
 
 impl TmdbProvider {
     pub(crate) fn new(api_key: String) -> Self {
+        let _ = rustls::crypto::ring::default_provider().install_default();
         Self {
             client: reqwest::Client::new(),
             api_key,

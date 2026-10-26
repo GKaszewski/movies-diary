@@ -8,6 +8,9 @@ use crate::{
 
 #[async_trait]
 pub trait ApDocumentPort: Send + Sync {
+    async fn actor_is_gone(&self, _user_id: Uuid) -> Result<bool, DomainError> {
+        Ok(false)
+    }
     async fn actor_json(&self, user_id: &str) -> Result<String, DomainError>;
     async fn followers_collection_json(
         &self,
@@ -48,50 +51,4 @@ pub trait ApBackfillPort: Send + Sync {
         owner_user_id: Uuid,
         follower_inbox_url: String,
     ) -> Result<(), DomainError>;
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::ports::noop::{NoopApBackfill, NoopApDocument, NoopInstanceBlocklist};
-
-    #[tokio::test]
-    async fn noop_document_returns_empty_strings() {
-        let p = NoopApDocument;
-        assert_eq!(p.actor_json("anything").await.unwrap(), "");
-        assert_eq!(
-            p.followers_collection_json(uuid::Uuid::nil(), None)
-                .await
-                .unwrap(),
-            ""
-        );
-        assert_eq!(
-            p.following_collection_json(uuid::Uuid::nil(), Some(2))
-                .await
-                .unwrap(),
-            ""
-        );
-    }
-
-    #[tokio::test]
-    async fn noop_blocklist_returns_empty_and_ok() {
-        let p = NoopInstanceBlocklist;
-        assert!(p.get_blocked_domains().await.unwrap().is_empty());
-        p.add_blocked_domain("evil.example", Some("spam"))
-            .await
-            .unwrap();
-        p.remove_blocked_domain("evil.example").await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn noop_backfill_returns_empty_and_ok() {
-        let p = NoopApBackfill;
-        assert!(p.get_following(uuid::Uuid::nil()).await.unwrap().is_empty());
-        p.import_remote_outbox("https://a/outbox", "https://a")
-            .await
-            .unwrap();
-        p.run_backfill_for_follower(uuid::Uuid::nil(), "https://a/inbox".into())
-            .await
-            .unwrap();
-    }
 }

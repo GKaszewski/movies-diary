@@ -19,7 +19,3 @@ pub async fn execute(deps: &GetPersonDeps, id: PersonId) -> Result<PersonCredits
     }
     Ok(credits)
 }
-
-#[cfg(test)]
-#[path = "tests/get_credits.rs"]
-mod tests;

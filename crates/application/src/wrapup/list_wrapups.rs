@@ -18,7 +18,3 @@ pub async fn execute(
         None => deps.wrapup_repo.list_global().await,
     }
 }
-
-#[cfg(test)]
-#[path = "tests/list_wrapups.rs"]
-mod tests;

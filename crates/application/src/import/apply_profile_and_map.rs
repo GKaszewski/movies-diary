@@ -1,4 +1,4 @@
-//! Absorbs `handlers/import.rs::api_apply_profile`'s three-step orchestration:
+//! Absorbs `http-axum/src/api/import/sessions.rs::api_apply_profile`'s three-step orchestration:
 //! apply the saved profile's field mappings onto the session, reload the
 //! session to read back the mappings `apply_profile` just wrote, then run
 //! `apply_mapping` to regenerate `row_results` from them. All three steps used
@@ -58,7 +58,3 @@ pub async fn execute(
     )
     .await
 }
-
-#[cfg(test)]
-#[path = "tests/apply_profile_and_map.rs"]
-mod tests;

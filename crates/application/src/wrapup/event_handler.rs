@@ -3,7 +3,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use domain::errors::DomainError;
 use domain::events::DomainEvent;
-use domain::ports::{EventHandler, EventPublisher, WrapUpRepository, WrapUpStatsQuery};
+use domain::ports::{EventHandler, WrapUpRepository, WrapUpStatsQuery};
 use tokio::sync::Semaphore;
 
 use super::deps::HandleWrapUpRequestedDeps;
@@ -16,13 +16,11 @@ pub struct WrapUpEventHandler {
 impl WrapUpEventHandler {
     pub fn new(
         wrapup_repo: Arc<dyn WrapUpRepository>,
-        event_publisher: Arc<dyn EventPublisher>,
         wrapup_stats: Arc<dyn WrapUpStatsQuery>,
     ) -> Self {
         Self {
             deps: HandleWrapUpRequestedDeps {
                 wrapup_repo,
-                event_publisher,
                 wrapup_stats,
             },
             semaphore: Arc::new(Semaphore::new(2)),
@@ -32,6 +30,10 @@ impl WrapUpEventHandler {
 
 #[async_trait]
 impl EventHandler for WrapUpEventHandler {
+    fn name(&self) -> &'static str {
+        "wrapup"
+    }
+
     async fn handle(&self, event: &DomainEvent) -> Result<(), DomainError> {
         match event {
             DomainEvent::WrapUpRequested {

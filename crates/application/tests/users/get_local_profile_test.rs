@@ -1,0 +1,333 @@
+use crate::support::{register_command, update_profile_command};
+use domain::errors::DomainError;
+use domain::value_objects::Email;
+
+use crate::support::TestContextBuilder;
+use application::auth::deps::RegisterDeps;
+use application::auth::register;
+use application::users::commands::UpdateProfileCommand;
+use application::users::deps::{GetLocalProfileDeps, UpdateProfileDeps};
+use application::users::get_local_profile;
+use application::users::queries::{GetUserProfileQuery, ProfileView};
+use application::users::update_profile;
+
+async fn setup_user(b: &TestContextBuilder, email: &str, username: &str) {
+    let deps = RegisterDeps {
+        user: b.user_repo.clone(),
+        password_hasher: b.password_hasher.clone(),
+        config: b.config.clone(),
+    };
+    register::execute(&deps, register_command(email, username))
+        .await
+        .unwrap();
+}
+
+fn deps(b: &TestContextBuilder) -> GetLocalProfileDeps {
+    GetLocalProfileDeps {
+        stats: b.stats_repo.clone(),
+        diary: b.diary_repo.clone(),
+        social_query: b.social_query_unified.clone(),
+        user: b.user_repo.clone(),
+        instance: domain::value_objects::InstanceIdentity::new(b.config.base_url.clone()),
+    }
+}
+
+fn unknown_query(user_id: uuid::Uuid) -> GetUserProfileQuery {
+    GetUserProfileQuery {
+        user_id,
+        view: ProfileView::Recent,
+        limit: None,
+        offset: None,
+        sort_by: domain::models::FeedSortBy::Date,
+        search: None,
+        is_own_profile: false,
+        include_remote: false,
+    }
+}
+
+#[tokio::test]
+async fn get_local_profile_is_not_found_for_unknown_user() {
+    let b = TestContextBuilder::new();
+    let d = deps(&b);
+
+    let unknown_id = uuid::Uuid::new_v4();
+    let err = match get_local_profile::execute(&d, unknown_query(unknown_id)).await {
+        Err(e) => e,
+        Ok(_) => panic!("expected Err(NotFound) for an unknown user id, got Ok"),
+    };
+    assert!(matches!(err, DomainError::NotFound(_)), "got {err:?}");
+}
+
+#[tokio::test]
+async fn returns_profile_with_empty_stats() {
+    let b = TestContextBuilder::new();
+    let user_repo = b.user_repo.clone();
+    let d = deps(&b);
+
+    setup_user(&b, "profile@test.com", "profuser").await;
+
+    let email = Email::new("profile@test.com".into()).unwrap();
+    let user = user_repo.find_by_email(&email).await.unwrap().unwrap();
+    let uid = user.id().value();
+
+    let result = get_local_profile::execute(
+        &d,
+        GetUserProfileQuery {
+            user_id: uid,
+            view: ProfileView::Recent,
+            limit: None,
+            offset: None,
+            sort_by: domain::models::FeedSortBy::Date,
+            search: None,
+            is_own_profile: true,
+            include_remote: false,
+        },
+    )
+    .await
+    .unwrap();
+
+    assert!(result.entries.is_some());
+}
+
+#[tokio::test]
+async fn returns_history_view() {
+    let b = TestContextBuilder::new();
+    let user_repo = b.user_repo.clone();
+    let d = deps(&b);
+
+    setup_user(&b, "hist@test.com", "histuser").await;
+
+    let email = Email::new("hist@test.com".into()).unwrap();
+    let user = user_repo.find_by_email(&email).await.unwrap().unwrap();
+    let uid = user.id().value();
+
+    let result = get_local_profile::execute(
+        &d,
+        GetUserProfileQuery {
+            user_id: uid,
+            view: ProfileView::History,
+            limit: None,
+            offset: None,
+            sort_by: domain::models::FeedSortBy::Date,
+            search: None,
+            is_own_profile: true,
+            include_remote: false,
+        },
+    )
+    .await
+    .unwrap();
+
+    assert!(result.history.is_some());
+    assert!(result.entries.is_none());
+    assert!(result.trends.is_none());
+}
+
+#[tokio::test]
+async fn returns_trends_view() {
+    let b = TestContextBuilder::new();
+    let user_repo = b.user_repo.clone();
+    let d = deps(&b);
+
+    setup_user(&b, "trends@test.com", "trendsuser").await;
+
+    let email = Email::new("trends@test.com".into()).unwrap();
+    let user = user_repo.find_by_email(&email).await.unwrap().unwrap();
+    let uid = user.id().value();
+
+    let result = get_local_profile::execute(
+        &d,
+        GetUserProfileQuery {
+            user_id: uid,
+            view: ProfileView::Trends,
+            limit: None,
+            offset: None,
+            sort_by: domain::models::FeedSortBy::Date,
+            search: None,
+            is_own_profile: true,
+            include_remote: false,
+        },
+    )
+    .await
+    .unwrap();
+
+    assert!(result.trends.is_some());
+    assert!(result.entries.is_none());
+    assert!(result.history.is_none());
+}
+
+#[tokio::test]
+async fn returns_ratings_view() {
+    let b = TestContextBuilder::new();
+    let user_repo = b.user_repo.clone();
+    let d = deps(&b);
+
+    setup_user(&b, "ratings@test.com", "ratingsuser").await;
+
+    let email = Email::new("ratings@test.com".into()).unwrap();
+    let user = user_repo.find_by_email(&email).await.unwrap().unwrap();
+    let uid = user.id().value();
+
+    let result = get_local_profile::execute(
+        &d,
+        GetUserProfileQuery {
+            user_id: uid,
+            view: ProfileView::Ratings,
+            limit: None,
+            offset: None,
+            sort_by: domain::models::FeedSortBy::Rating,
+            search: None,
+            is_own_profile: true,
+            include_remote: false,
+        },
+    )
+    .await
+    .unwrap();
+
+    assert!(result.entries.is_some());
+}
+
+#[tokio::test]
+async fn returns_recent_with_search() {
+    let b = TestContextBuilder::new();
+    let user_repo = b.user_repo.clone();
+    let d = deps(&b);
+
+    setup_user(&b, "search@test.com", "searchuser").await;
+
+    let email = Email::new("search@test.com".into()).unwrap();
+    let user = user_repo.find_by_email(&email).await.unwrap().unwrap();
+    let uid = user.id().value();
+
+    let result = get_local_profile::execute(
+        &d,
+        GetUserProfileQuery {
+            user_id: uid,
+            view: ProfileView::Recent,
+            limit: Some(10),
+            offset: Some(0),
+            sort_by: domain::models::FeedSortBy::Date,
+            search: Some("blade".into()),
+            is_own_profile: true,
+            include_remote: false,
+        },
+    )
+    .await
+    .unwrap();
+
+    assert!(result.entries.is_some());
+}
+
+#[tokio::test]
+async fn non_own_profile_skips_pending_followers() {
+    let b = TestContextBuilder::new();
+    let user_repo = b.user_repo.clone();
+    let d = deps(&b);
+
+    setup_user(&b, "other@test.com", "otheruser").await;
+
+    let email = Email::new("other@test.com".into()).unwrap();
+    let user = user_repo.find_by_email(&email).await.unwrap().unwrap();
+    let uid = user.id().value();
+
+    let result = get_local_profile::execute(
+        &d,
+        GetUserProfileQuery {
+            user_id: uid,
+            view: ProfileView::Recent,
+            limit: None,
+            offset: None,
+            sort_by: domain::models::FeedSortBy::Date,
+            search: None,
+            is_own_profile: false,
+            include_remote: false,
+        },
+    )
+    .await
+    .unwrap();
+
+    assert!(result.pending_followers.is_empty());
+}
+
+#[tokio::test]
+async fn populates_handle_and_actor_url_for_a_local_user() {
+    let b = TestContextBuilder::new();
+    let user_repo = b.user_repo.clone();
+    let d = deps(&b);
+
+    setup_user(&b, "handle@test.com", "gabriel").await;
+    let email = Email::new("handle@test.com".into()).unwrap();
+    let user = user_repo.find_by_email(&email).await.unwrap().unwrap();
+    let uid = user.id().value();
+
+    let update_deps = UpdateProfileDeps {
+        user: user_repo.clone(),
+        object_storage: b.object_storage.clone(),
+        event_publisher: b.event_publisher.clone(),
+    };
+    update_profile::execute(
+        &update_deps,
+        UpdateProfileCommand {
+            display_name: Some("Gabriel K".into()),
+            bio: Some("Movies and diaries.".into()),
+            ..update_profile_command(uid)
+        },
+    )
+    .await
+    .unwrap();
+
+    let result = get_local_profile::execute(
+        &d,
+        GetUserProfileQuery {
+            user_id: uid,
+            view: ProfileView::Recent,
+            limit: None,
+            offset: None,
+            sort_by: domain::models::FeedSortBy::Date,
+            search: None,
+            is_own_profile: true,
+            include_remote: false,
+        },
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(result.identity.username, "gabriel");
+    assert_eq!(result.identity.handle, "@gabriel@localhost:3000");
+    assert_eq!(
+        result.identity.actor_url,
+        format!("http://localhost:3000/users/{}", uid)
+    );
+    assert_eq!(result.identity.display_name, Some("Gabriel K".to_string()));
+    assert_eq!(result.identity.bio, Some("Movies and diaries.".to_string()));
+}
+
+#[tokio::test]
+async fn identity_display_name_and_bio_are_none_when_unset() {
+    let b = TestContextBuilder::new();
+    let user_repo = b.user_repo.clone();
+    let d = deps(&b);
+
+    setup_user(&b, "unset@test.com", "unsetuser").await;
+    let email = Email::new("unset@test.com".into()).unwrap();
+    let user = user_repo.find_by_email(&email).await.unwrap().unwrap();
+    let uid = user.id().value();
+
+    let result = get_local_profile::execute(
+        &d,
+        GetUserProfileQuery {
+            user_id: uid,
+            view: ProfileView::Recent,
+            limit: None,
+            offset: None,
+            sort_by: domain::models::FeedSortBy::Date,
+            search: None,
+            is_own_profile: true,
+            include_remote: false,
+        },
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(result.identity.display_name, None);
+    assert_eq!(result.identity.bio, None);
+}

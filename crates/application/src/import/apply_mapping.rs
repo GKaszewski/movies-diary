@@ -87,7 +87,3 @@ async fn mark_duplicates(
 
     Ok(())
 }
-
-#[cfg(test)]
-#[path = "tests/apply_mapping.rs"]
-mod tests;

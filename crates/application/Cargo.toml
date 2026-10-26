@@ -1,21 +1,20 @@
 [package]
 name = "application"
 version = "0.1.0"
-edition = "2024"
+edition.workspace = true
 
 [dependencies]
 async-trait = { workspace = true }
 domain = { workspace = true }
-infra-wiring = { workspace = true }
-uuid = { workspace = true }
-chrono = { workspace = true }
+config = { workspace = true }
+uuid = { workspace = true, features = ["v4"] }
+chrono = { workspace = true, features = ["clock"] }
 tracing = { workspace = true }
 futures = { workspace = true }
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["rt", "sync", "time", "macros"] }
 sha2 = { workspace = true }
 rand = { workspace = true }
 hex = { workspace = true }
-serde_json = { workspace = true }
 bytes = { workspace = true }
 
 [features]
@@ -23,5 +22,5 @@ xlsx = []
 federation = []
 
 [dev-dependencies]
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread"] }
 domain = { workspace = true, features = ["test-helpers"] }

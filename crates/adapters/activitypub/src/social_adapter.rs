@@ -3,7 +3,10 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use domain::{
     errors::DomainError,
-    ports::{BlockQuery, FollowGraphQuery, LocalSocial, SocialCommand, UserRepository},
+    events::DomainEvent,
+    ports::{
+        BlockQuery, EventPublisher, FollowGraphQuery, LocalSocial, SocialCommand, UserRepository,
+    },
     value_objects::{
         FollowRelation, FollowTarget, InstanceIdentity, SocialActor, SocialIdentity, UserId,
     },
@@ -16,6 +19,7 @@ pub struct CompositeSocialAdapter {
     ap_service: Arc<ActivityPubService>,
     user_repo: Arc<dyn UserRepository>,
     instance: InstanceIdentity,
+    event_publisher: Arc<dyn EventPublisher>,
 }
 
 impl CompositeSocialAdapter {
@@ -24,12 +28,22 @@ impl CompositeSocialAdapter {
         ap_service: Arc<ActivityPubService>,
         user_repo: Arc<dyn UserRepository>,
         instance: InstanceIdentity,
+        event_publisher: Arc<dyn EventPublisher>,
     ) -> Self {
         Self {
             local,
             ap_service,
             user_repo,
             instance,
+            event_publisher,
+        }
+    }
+
+    async fn announce(&self, events: &[DomainEvent]) {
+        for event in events {
+            if let Err(e) = self.event_publisher.publish(event).await {
+                tracing::warn!("failed to publish {event:?} after k_ap write: {e}");
+            }
         }
     }
 }
@@ -40,11 +54,19 @@ fn ap_err(e: anyhow::Error) -> DomainError {
 
 #[async_trait]
 impl SocialCommand for CompositeSocialAdapter {
-    async fn follow(&self, follower: &UserId, target: &FollowTarget) -> Result<(), DomainError> {
+    async fn follow(
+        &self,
+        follower: &UserId,
+        target: &FollowTarget,
+        events: &[DomainEvent],
+    ) -> Result<(), DomainError> {
         let identity = self.local.resolve_target(target).await?;
 
         if let SocialIdentity::Local(_) = identity {
-            return self.local.follow_resolved(follower, &identity).await;
+            return self
+                .local
+                .follow_resolved(follower, &identity, events)
+                .await;
         }
 
         let handle = match target {
@@ -64,21 +86,27 @@ impl SocialCommand for CompositeSocialAdapter {
         self.ap_service
             .follow(follower.value(), &handle)
             .await
-            .map_err(ap_err)
+            .map_err(ap_err)?;
+        self.announce(events).await;
+        Ok(())
     }
 
     async fn unfollow(
         &self,
         follower: &UserId,
         target: &SocialIdentity,
+        events: &[DomainEvent],
     ) -> Result<(), DomainError> {
         match target {
-            SocialIdentity::Local(_) => self.local.unfollow(follower, target).await,
-            SocialIdentity::Remote { .. } => self
-                .ap_service
-                .unfollow(follower.value(), &self.instance.actor_url_of(target))
-                .await
-                .map_err(ap_err),
+            SocialIdentity::Local(_) => self.local.unfollow(follower, target, events).await,
+            SocialIdentity::Remote { .. } => {
+                self.ap_service
+                    .unfollow(follower.value(), &self.instance.actor_url_of(target))
+                    .await
+                    .map_err(ap_err)?;
+                self.announce(events).await;
+                Ok(())
+            }
         }
     }
 
@@ -86,14 +114,18 @@ impl SocialCommand for CompositeSocialAdapter {
         &self,
         owner: &UserId,
         requester: &SocialIdentity,
+        events: &[DomainEvent],
     ) -> Result<(), DomainError> {
         match requester {
-            SocialIdentity::Local(_) => self.local.accept_follow(owner, requester).await,
-            SocialIdentity::Remote { .. } => self
-                .ap_service
-                .accept_follower(owner.value(), &self.instance.actor_url_of(requester))
-                .await
-                .map_err(ap_err),
+            SocialIdentity::Local(_) => self.local.accept_follow(owner, requester, events).await,
+            SocialIdentity::Remote { .. } => {
+                self.ap_service
+                    .accept_follower(owner.value(), &self.instance.actor_url_of(requester))
+                    .await
+                    .map_err(ap_err)?;
+                self.announce(events).await;
+                Ok(())
+            }
         }
     }
 
@@ -101,14 +133,18 @@ impl SocialCommand for CompositeSocialAdapter {
         &self,
         owner: &UserId,
         requester: &SocialIdentity,
+        events: &[DomainEvent],
     ) -> Result<(), DomainError> {
         match requester {
-            SocialIdentity::Local(_) => self.local.reject_follow(owner, requester).await,
-            SocialIdentity::Remote { .. } => self
-                .ap_service
-                .reject_follower(owner.value(), &self.instance.actor_url_of(requester))
-                .await
-                .map_err(ap_err),
+            SocialIdentity::Local(_) => self.local.reject_follow(owner, requester, events).await,
+            SocialIdentity::Remote { .. } => {
+                self.ap_service
+                    .reject_follower(owner.value(), &self.instance.actor_url_of(requester))
+                    .await
+                    .map_err(ap_err)?;
+                self.announce(events).await;
+                Ok(())
+            }
         }
     }
 
@@ -116,31 +152,49 @@ impl SocialCommand for CompositeSocialAdapter {
         &self,
         owner: &UserId,
         follower: &SocialIdentity,
+        events: &[DomainEvent],
     ) -> Result<(), DomainError> {
         match follower {
-            SocialIdentity::Local(_) => self.local.remove_follower(owner, follower).await,
-            SocialIdentity::Remote { .. } => self
-                .ap_service
-                .remove_follower(owner.value(), &self.instance.actor_url_of(follower))
-                .await
-                .map_err(ap_err),
+            SocialIdentity::Local(_) => self.local.remove_follower(owner, follower, events).await,
+            SocialIdentity::Remote { .. } => {
+                self.ap_service
+                    .remove_follower(owner.value(), &self.instance.actor_url_of(follower))
+                    .await
+                    .map_err(ap_err)?;
+                self.announce(events).await;
+                Ok(())
+            }
         }
     }
 
-    async fn block(&self, blocker: &UserId, target: &SocialIdentity) -> Result<(), DomainError> {
+    async fn block(
+        &self,
+        blocker: &UserId,
+        target: &SocialIdentity,
+        events: &[DomainEvent],
+    ) -> Result<(), DomainError> {
         let actor_url = self.instance.actor_url_of(target);
         self.ap_service
             .block_actor(blocker.value(), &actor_url)
             .await
-            .map_err(ap_err)
+            .map_err(ap_err)?;
+        self.announce(events).await;
+        Ok(())
     }
 
-    async fn unblock(&self, blocker: &UserId, target: &SocialIdentity) -> Result<(), DomainError> {
+    async fn unblock(
+        &self,
+        blocker: &UserId,
+        target: &SocialIdentity,
+        events: &[DomainEvent],
+    ) -> Result<(), DomainError> {
         let actor_url = self.instance.actor_url_of(target);
         self.ap_service
             .unblock_actor(blocker.value(), &actor_url)
             .await
-            .map_err(ap_err)
+            .map_err(ap_err)?;
+        self.announce(events).await;
+        Ok(())
     }
 }
 

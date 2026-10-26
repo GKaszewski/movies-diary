@@ -14,7 +14,3 @@ pub async fn execute(
     let movie_id = MovieId::from_uuid(query.movie_id);
     deps.watchlist.contains(&user_id, &movie_id).await
 }
-
-#[cfg(test)]
-#[path = "tests/is_on.rs"]
-mod tests;

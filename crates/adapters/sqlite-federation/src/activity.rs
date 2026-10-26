@@ -4,7 +4,7 @@ use chrono::Utc;
 use k_ap::ActivityRepository;
 
 use super::SqliteFederationRepository;
-use adapter_common::datetime_to_str;
+use sqlite::persistence::datetime_to_str;
 
 #[async_trait]
 impl ActivityRepository for SqliteFederationRepository {

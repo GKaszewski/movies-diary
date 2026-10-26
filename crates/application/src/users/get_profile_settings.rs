@@ -45,7 +45,3 @@ pub async fn execute(
         fields,
     })
 }
-
-#[cfg(test)]
-#[path = "tests/get_profile_settings.rs"]
-mod tests;

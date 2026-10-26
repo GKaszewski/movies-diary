@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use domain::ports::{
-    EventPublisher, MetadataClient, MovieCommand, MovieQuery, RemoteWatchlistRepository,
-    UserRepository, WatchlistRepository,
+    MetadataClient, MovieCommand, MovieQuery, RemoteWatchlistRepository, UserRepository,
+    WatchlistRepository,
 };
 
 pub struct WatchlistAddDeps {
@@ -10,7 +10,6 @@ pub struct WatchlistAddDeps {
     pub movie_query: Arc<dyn MovieQuery>,
     pub metadata: Arc<dyn MetadataClient>,
     pub watchlist: Arc<dyn WatchlistRepository>,
-    pub event_publisher: Arc<dyn EventPublisher>,
 }
 
 pub struct GetWatchlistForOwnerDeps {
@@ -29,5 +28,4 @@ pub struct IsOnWatchlistDeps {
 
 pub struct RemoveFromWatchlistDeps {
     pub watchlist: Arc<dyn WatchlistRepository>,
-    pub event_publisher: Arc<dyn EventPublisher>,
 }

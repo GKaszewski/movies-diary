@@ -1,22 +1,23 @@
-use activitypub::{RemoteReviewRepository, RemoteReviewUpdate};
+use activitypub::{NewRemoteReview, RemoteReviewRepository, RemoteReviewUpdate};
 use anyhow::{Result, anyhow};
 use async_trait::async_trait;
-use domain::models::{Review, ReviewSource};
+use domain::models::ReviewSource;
 
 use super::SqliteFederationRepository;
-use adapter_common::datetime_to_str;
+use sqlite::persistence::{datetime_to_str, enqueue_events};
 
 #[async_trait]
 impl RemoteReviewRepository for SqliteFederationRepository {
-    async fn save_remote_review(
-        &self,
-        review: &Review,
-        ap_id: &str,
-        movie_title: &str,
-        release_year: u16,
-        external_metadata_id: Option<&str>,
-        poster_url: Option<&str>,
-    ) -> Result<()> {
+    async fn save_remote_review(&self, new: NewRemoteReview<'_>) -> Result<()> {
+        let NewRemoteReview {
+            review,
+            ap_id,
+            movie_title,
+            release_year,
+            external_metadata_id,
+            poster_url,
+            events,
+        } = new;
         let actor_url = match review.source() {
             ReviewSource::Remote { actor_url } => actor_url.clone(),
             ReviewSource::Local => {
@@ -24,6 +25,7 @@ impl RemoteReviewRepository for SqliteFederationRepository {
             }
         };
         let movie_id = review.movie_id().value().to_string();
+        let mut tx = self.pool.begin().await?;
         let _ = sqlx::query(
             "INSERT INTO movies (id, external_metadata_id, title, release_year, director, poster_path)
              VALUES (?, ?, ?, ?, NULL, ?)
@@ -36,7 +38,7 @@ impl RemoteReviewRepository for SqliteFederationRepository {
         .bind(movie_title)
         .bind(release_year.max(1888) as i64)
         .bind(poster_url)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await?;
 
         let id = review.id().value().to_string();
@@ -59,8 +61,10 @@ impl RemoteReviewRepository for SqliteFederationRepository {
         .bind(&actor_url)
         .bind(ap_id)
         .bind(review.spoilers())
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await?;
+        enqueue_events(&mut tx, events).await?;
+        tx.commit().await?;
         Ok(())
     }
 

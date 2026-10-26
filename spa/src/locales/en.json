@@ -193,7 +193,29 @@
     "exportDesc": "Download your diary",
     "exportCsv": "CSV",
     "exportJson": "JSON",
-    "exporting": "Exporting..."
+    "exporting": "Exporting...",
+    "dangerZone": "Danger zone",
+    "deleteAccount": "Delete account",
+    "deleteAccountDesc": "Permanently delete your account and everything in it",
+    "deleteAccountWarning": "This is permanent and cannot be undone. Your reviews, watchlist, goals and follows will be removed, fediverse servers will be notified that your account is gone, and your username can never be reused.",
+    "deleteAccountPassword": "Enter your password to confirm",
+    "deleteAccountConfirm": "Delete my account"
+  },
+  "deleteUser": {
+    "action": "Delete user",
+    "title": "Delete {{name}}?",
+    "warning": "This permanently removes this user, their reviews, watchlist, goals and follows, and notifies fediverse servers. Their username can never be reused.",
+    "adminPassword": "Enter your admin password to confirm",
+    "confirm": "Delete user",
+    "password": "Password",
+    "done": "User deleted",
+    "errors": {
+      "wrongPassword": "Wrong password",
+      "lastAdmin": "The last admin account cannot be deleted",
+      "forbidden": "Only admins can delete other users",
+      "notFound": "User not found",
+      "generic": "Could not delete account"
+    }
   },
   "goals": {
     "yearGoal": "{{year}} Goal",

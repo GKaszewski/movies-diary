@@ -3,11 +3,9 @@ pub struct PosterFetcherConfig {
 }
 
 impl PosterFetcherConfig {
-    pub fn from_env() -> Self {
-        let timeout_seconds = std::env::var("POSTER_FETCH_TIMEOUT_SECONDS")
-            .ok()
-            .and_then(|v| v.parse().ok())
-            .unwrap_or(30);
-        Self { timeout_seconds }
+    pub fn from_config(config: &::config::MetadataConfig) -> Self {
+        Self {
+            timeout_seconds: config.poster_fetch_timeout_seconds,
+        }
     }
 }

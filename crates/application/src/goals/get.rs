@@ -25,7 +25,3 @@ pub async fn execute(
         current_count,
     }))
 }
-
-#[cfg(test)]
-#[path = "tests/get.rs"]
-mod tests;

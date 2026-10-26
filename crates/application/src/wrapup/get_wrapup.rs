@@ -10,7 +10,3 @@ pub async fn execute(
 ) -> Result<Option<WrapUpRecord>, DomainError> {
     deps.wrapup_repo.get_by_id(&id).await
 }
-
-#[cfg(test)]
-#[path = "tests/get_wrapup.rs"]
-mod tests;

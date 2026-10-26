@@ -126,6 +126,8 @@ pub struct UserProfileResponse {
     pub goals: Option<Vec<GoalDto>>,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub is_federated: bool,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub is_service_account: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub handle: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -151,6 +153,11 @@ pub struct ProfileFieldDto {
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct UpdateProfileFieldsRequest {
     pub fields: Vec<ProfileFieldDto>,
+}
+
+#[derive(Debug, Clone, Deserialize, utoipa::ToSchema)]
+pub struct DeleteAccountRequest {
+    pub password: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]

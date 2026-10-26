@@ -1,14 +1,16 @@
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
-import { Clock, ExternalLink, UserCheck, UserPlus } from "lucide-react"
+import { Clock, ExternalLink, Trash2, UserCheck, UserPlus } from "lucide-react"
 import { BackButton } from "@/components/back-button"
 import { Button } from "@/components/ui/button"
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { ProfileView, ProfileSkeleton } from "@/components/profile-view"
 import { GoalCard } from "@/components/goal-card"
-import { useAuth } from "@/components/auth-provider"
-import { useUserProfile } from "@/features/users"
+import { useAuth, useIsAdmin } from "@/components/auth-provider"
+import { DeleteAccountDialog } from "@/components/delete-account-dialog"
+import { toast } from "sonner"
+import { useAdminDeleteUser, useUserProfile } from "@/features/users"
 import { useFollow, useUnfollow, useCancelFollow, useRelationship } from "@/features/social"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import type { FollowState } from "@/features/social"
@@ -35,6 +37,10 @@ function UserProfilePage() {
 
   const [search, setSearch] = useState("")
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const isAdmin = useIsAdmin()
+  const navigate = useNavigate()
+  const adminDelete = useAdminDeleteUser()
   useDocumentTitle(data?.username)
 
   if (isPending) return <ProfileSkeleton />
@@ -142,6 +148,42 @@ function UserProfilePage() {
                   </Button>
                 </a>
               )}
+              {isAdmin && !data.is_federated && !data.is_service_account && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setDeleteOpen(true)}
+                  className="border-red-400/60 text-red-400 hover:text-red-300"
+                >
+                  <Trash2 className="mr-1 size-3.5" />
+                  {t("deleteUser.action")}
+                </Button>
+              )}
+              <DeleteAccountDialog
+                open={deleteOpen}
+                onOpenChange={(o) => {
+                  if (!o) adminDelete.reset()
+                  setDeleteOpen(o)
+                }}
+                title={t("deleteUser.title", { name: data.display_name ?? data.username })}
+                description={t("deleteUser.warning")}
+                passwordLabel={t("deleteUser.adminPassword")}
+                confirmLabel={t("deleteUser.confirm")}
+                pending={adminDelete.isPending}
+                error={adminDelete.error}
+                onSubmit={(password) =>
+                  adminDelete.mutate(
+                    { id, password },
+                    {
+                      onSuccess: () => {
+                        toast.success(t("deleteUser.done"))
+                        setDeleteOpen(false)
+                        navigate({ to: "/social" })
+                      },
+                    },
+                  )
+                }
+              />
               <ConfirmDialog
                 open={confirmOpen}
                 onOpenChange={setConfirmOpen}

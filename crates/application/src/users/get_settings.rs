@@ -9,7 +9,3 @@ pub async fn execute(
     let uid = UserId::from_uuid(user_id);
     deps.user_settings.get(&uid).await
 }
-
-#[cfg(test)]
-#[path = "tests/get_settings.rs"]
-mod tests;

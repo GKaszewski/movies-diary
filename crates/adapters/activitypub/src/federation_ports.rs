@@ -4,18 +4,20 @@ use async_trait::async_trait;
 use domain::{
     errors::DomainError,
     models::{BlockedDomainInfo, FollowedActorInfo},
-    ports::{ApBackfillPort, ApDocumentPort, InstanceBlocklistPort},
+    ports::{ApBackfillPort, ApDocumentPort, InstanceBlocklistPort, UserRepository},
+    value_objects::UserId,
 };
 use k_ap::ActivityPubService;
 use uuid::Uuid;
 
 pub struct ApServiceAdapter {
     service: Arc<ActivityPubService>,
+    users: Arc<dyn UserRepository>,
 }
 
 impl ApServiceAdapter {
-    pub fn new(service: Arc<ActivityPubService>) -> Self {
-        Self { service }
+    pub fn new(service: Arc<ActivityPubService>, users: Arc<dyn UserRepository>) -> Self {
+        Self { service, users }
     }
 }
 
@@ -26,6 +28,13 @@ fn ap_err(e: anyhow::Error) -> DomainError {
 
 #[async_trait]
 impl ApDocumentPort for ApServiceAdapter {
+    async fn actor_is_gone(&self, user_id: Uuid) -> Result<bool, DomainError> {
+        Ok(self
+            .users
+            .find_tombstoned_by_id(&UserId::from_uuid(user_id))
+            .await?
+            .is_some())
+    }
     async fn actor_json(&self, user_id: &str) -> Result<String, DomainError> {
         self.service.actor_json(user_id).await.map_err(ap_err)
     }

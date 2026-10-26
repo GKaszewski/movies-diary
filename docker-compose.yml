@@ -5,7 +5,7 @@ services:
     # build:
     #   context: .
     #   args:
-    #     FEATURES: sqlite,sqlite-federation
+    #     FEATURES: federation
     ports:
       - "3000:3000"
     env_file: .env
@@ -18,7 +18,7 @@ services:
     # build:
     #   context: .
     #   args:
-    #     FEATURES: sqlite,sqlite-federation
+    #     FEATURES: federation
     entrypoint: ["./worker"]
     env_file: .env
     volumes:

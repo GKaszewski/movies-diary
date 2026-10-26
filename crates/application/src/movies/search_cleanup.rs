@@ -24,6 +24,10 @@ impl SearchCleanupHandler {
 
 #[async_trait]
 impl EventHandler for SearchCleanupHandler {
+    fn name(&self) -> &'static str {
+        "search_cleanup"
+    }
+
     async fn handle(&self, event: &DomainEvent) -> Result<(), DomainError> {
         let movie_id = match event {
             DomainEvent::MovieDeleted { movie_id, .. } => movie_id.value().to_string(),

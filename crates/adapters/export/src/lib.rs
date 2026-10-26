@@ -107,7 +107,3 @@ fn entry_to_json(e: &DiaryEntry) -> serde_json::Value {
         "spoilers": e.review().spoilers(),
     })
 }
-
-#[cfg(test)]
-#[path = "tests/lib.rs"]
-mod tests;

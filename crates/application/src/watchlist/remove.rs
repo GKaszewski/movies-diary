@@ -13,16 +13,11 @@ pub async fn execute(
 ) -> Result<(), DomainError> {
     let user_id = UserId::from_uuid(cmd.user_id);
     let movie_id = MovieId::from_uuid(cmd.movie_id);
-    deps.watchlist.remove(&user_id, &movie_id).await?;
-
-    let _ = deps
-        .event_publisher
-        .publish(&DomainEvent::WatchlistEntryRemoved { user_id, movie_id })
-        .await;
+    let event = DomainEvent::WatchlistEntryRemoved {
+        user_id: user_id.clone(),
+        movie_id: movie_id.clone(),
+    };
+    deps.watchlist.remove(&user_id, &movie_id, &[event]).await?;
 
     Ok(())
 }
-
-#[cfg(test)]
-#[path = "tests/remove.rs"]
-mod tests;

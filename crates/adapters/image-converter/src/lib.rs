@@ -14,12 +14,13 @@ use std::sync::Arc;
 type ConversionPair = (Arc<dyn EventHandler>, Arc<dyn PeriodicJob>);
 
 pub fn build(
+    config: &::config::ImageConversionConfig,
     object_storage: Arc<dyn ObjectStorage>,
     image_ref_command: Arc<dyn ImageRefCommand>,
     image_ref_query: Arc<dyn ImageRefQuery>,
     event_publisher: Arc<dyn EventPublisher>,
 ) -> anyhow::Result<Option<ConversionPair>> {
-    let config = match ConversionConfig::from_env()? {
+    let config = match ConversionConfig::from_config(config)? {
         Some(c) => c,
         None => return Ok(None),
     };

@@ -150,3 +150,7 @@ Removing `repos` now would break every one of those 40 sites for no gain this pl
   it transitively via presentation/worker's default features` — pre-existing, not introduced or
   fixed by this plan, and invisible to `make check`'s workspace-wide `cargo test`, which enables
   the feature transitively.
+
+---
+
+Superseded in part by [ADR-0012](0012-sqlite-is-the-only-backend.md): the postgres backends, crates and features mentioned above no longer exist; SQLite is the only backend.

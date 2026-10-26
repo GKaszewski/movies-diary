@@ -27,6 +27,10 @@ impl MovieDiscoveryIndexer {
 
 #[async_trait]
 impl EventHandler for MovieDiscoveryIndexer {
+    fn name(&self) -> &'static str {
+        "movie_discovery_indexer"
+    }
+
     async fn handle(&self, event: &DomainEvent) -> Result<(), DomainError> {
         let movie_id = match event {
             DomainEvent::MovieDiscovered { movie_id, .. } => movie_id.clone(),

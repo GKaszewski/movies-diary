@@ -1,5 +1,5 @@
 //! The federated half of the former `get_profile` (ADR-0004's closed wart).
-//! `build_federated_profile_response` (`handlers/users.rs`) calls this with a
+//! `build_federated_profile_response` (`http-axum/src/api/user_profile.rs`) calls this with a
 //! synthetic `user_id` that has no row in the local `users` table — a federated
 //! actor's identity is built entirely from the resolved `FederatedProfile`, so
 //! this type carries no `identity` field at all: the old `get_profile` computed
@@ -83,7 +83,3 @@ pub async fn execute(
         }
     }
 }
-
-#[cfg(test)]
-#[path = "tests/get_federated_profile_stats.rs"]
-mod tests;

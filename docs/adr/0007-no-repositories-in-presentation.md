@@ -146,3 +146,5 @@ naming the exact file and line, before reverting.
 - `CONTRIBUTING.md`'s architecture rules were updated in this same commit to stop describing use cases
   as taking `&AppContext` (a claim already false before this plan) and instead describe the
   `&FooDeps`-struct convention this ADR documents.
+
+Now at `crates/adapters/http-axum/src` (was `crates/presentation/src`); see [ADR-0014](0014-http-adapter-and-one-refusal-shape.md).

@@ -6,6 +6,7 @@ pub mod event_handler;
 pub mod get_movie_profile;
 pub mod get_movies;
 pub mod merge_duplicates;
+pub mod poster_sync_handler;
 pub mod queries;
 pub mod reindex_search;
 pub mod request_enrichment;

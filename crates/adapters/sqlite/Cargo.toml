@@ -1,27 +1,25 @@
 [package]
 name = "sqlite"
 version = "0.1.0"
-edition = "2024"
+edition.workspace = true
 
 [dependencies]
-sqlx = { version = "0.8.6", features = [
-    "runtime-tokio-rustls",
-    "sqlite",
-    "uuid",
-    "macros",
-] }
+config = { workspace = true }
+sqlx = { workspace = true, features = ["macros", "chrono"] }
 
-adapter-common = { workspace = true }
 domain = { workspace = true }
-sqlite-social = { workspace = true }
+event-payload = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 anyhow = { workspace = true }
-uuid = { workspace = true }
-chrono = { workspace = true }
+uuid = { workspace = true, features = ["v4", "serde"] }
+chrono = { workspace = true, features = ["clock", "serde"] }
 tracing = { workspace = true }
 async-trait = { workspace = true }
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["rt", "sync", "time", "macros", "rt-multi-thread"] }
 futures = { workspace = true }
-bytes = { workspace = true }
 async-stream = { workspace = true }
+
+[dev-dependencies]
+domain = { workspace = true, features = ["test-helpers"] }
+tempfile = { workspace = true }

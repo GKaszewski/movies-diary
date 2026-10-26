@@ -33,7 +33,3 @@ pub async fn execute(
         sample_rows,
     })
 }
-
-#[cfg(test)]
-#[path = "tests/get_mapping_stage.rs"]
-mod tests;

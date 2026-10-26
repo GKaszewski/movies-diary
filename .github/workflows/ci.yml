@@ -23,28 +23,24 @@ jobs:
           components: rustfmt, clippy
 
       - name: Cache cargo
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-
+        uses: Swatinem/rust-cache@v2
 
       - name: fmt
         run: cargo fmt --all -- --check
 
       - name: clippy
-        run: cargo clippy --all-targets -- -D warnings
+        run: cargo clippy --workspace --all-targets -- -D warnings
 
       - name: test
-        run: cargo test
+        run: cargo test --workspace
+
+      - name: test (federation off)
+        run: cargo test --workspace --no-default-features
 
       # Layering guards. These live in the Makefile and were previously local-only,
       # so a PR could go green in CI while violating them.
       - name: guards
-        run: make check-appcontext check-handler-deps check-handler-repos check-presentation-adapters check-federation-off-social check-social-crates-are-ap-free
+        run: make check-appcontext check-handler-deps check-handler-repos check-http-adapter-deps check-federation-off-social check-sqlite-is-ap-free check-binaries-are-thin check-federation-off-deps check-nats-isolated check-no-second-web-stack
 
   docker:
     name: Build & Push Docker Image
@@ -57,6 +53,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -83,4 +82,6 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          build-args: FEATURES=sqlite,sqlite-federation
+          build-args: FEATURES=federation
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

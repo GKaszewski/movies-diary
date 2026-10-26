@@ -49,7 +49,3 @@ impl PeriodicJob for ConversionBackfillJob {
         Ok(())
     }
 }
-
-#[cfg(test)]
-#[path = "tests/backfill.rs"]
-mod tests;

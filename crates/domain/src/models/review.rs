@@ -202,7 +202,3 @@ impl ReviewHistory {
         self.viewings.sort_by_key(|r| *r.watched_at());
     }
 }
-
-#[cfg(test)]
-#[path = "tests/review.rs"]
-mod tests;

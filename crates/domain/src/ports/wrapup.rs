@@ -4,6 +4,7 @@ use uuid::Uuid;
 
 use crate::{
     errors::DomainError,
+    events::DomainEvent,
     models::wrapup::{
         DateRange, WrapUpMovieRow, WrapUpRecord, WrapUpReport, WrapUpScope, WrapUpStatus,
     },
@@ -12,14 +13,23 @@ use crate::{
 
 #[async_trait]
 pub trait WrapUpRepository: Send + Sync {
-    async fn create(&self, record: &WrapUpRecord) -> Result<(), DomainError>;
+    async fn create(
+        &self,
+        record: &WrapUpRecord,
+        events: &[DomainEvent],
+    ) -> Result<(), DomainError>;
     async fn update_status(
         &self,
         id: &WrapUpId,
         status: &WrapUpStatus,
         error: Option<&str>,
     ) -> Result<(), DomainError>;
-    async fn set_complete(&self, id: &WrapUpId, report: &WrapUpReport) -> Result<(), DomainError>;
+    async fn set_complete(
+        &self,
+        id: &WrapUpId,
+        report: &WrapUpReport,
+        events: &[DomainEvent],
+    ) -> Result<(), DomainError>;
     async fn get_by_id(&self, id: &WrapUpId) -> Result<Option<WrapUpRecord>, DomainError>;
     async fn list_for_user(&self, user_id: Uuid) -> Result<Vec<WrapUpRecord>, DomainError>;
     async fn list_global(&self) -> Result<Vec<WrapUpRecord>, DomainError>;

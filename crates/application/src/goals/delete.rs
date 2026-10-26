@@ -11,19 +11,12 @@ pub async fn execute(deps: &GoalCommandDeps, cmd: DeleteGoalCommand) -> Result<(
         .await?
         .ok_or_else(|| DomainError::NotFound(format!("Goal for year {}", cmd.year)))?;
 
-    deps.goal_command.delete(g.id(), &user_id).await?;
-
-    deps.event_publisher
-        .publish(&DomainEvent::GoalDeleted {
-            goal_id: g.id().clone(),
-            user_id,
-            year: cmd.year,
-        })
-        .await?;
+    let event = DomainEvent::GoalDeleted {
+        goal_id: g.id().clone(),
+        user_id: user_id.clone(),
+        year: cmd.year,
+    };
+    deps.goal_command.delete(g.id(), &user_id, &[event]).await?;
 
     Ok(())
 }
-
-#[cfg(test)]
-#[path = "tests/delete.rs"]
-mod tests;

@@ -79,7 +79,7 @@ pub fn wire(
     instance: domain::value_objects::InstanceIdentity,
 ) -> activitypub::FederationRepos {
     let fed = std::sync::Arc::new(SqliteFederationRepository::new(pool.clone()));
-    let social = std::sync::Arc::new(sqlite_social::SqliteSocialRepository::new(pool, instance));
+    let social = std::sync::Arc::new(sqlite::SqliteSocialRepository::new(pool, instance));
     activitypub::FederationRepos {
         activity: std::sync::Arc::clone(&fed) as _,
         follow: std::sync::Arc::clone(&fed) as _,
@@ -92,15 +92,3 @@ pub fn wire(
         follow_query: social as _,
     }
 }
-
-#[cfg(test)]
-#[path = "tests/actor_block_tests.rs"]
-mod actor_block_tests;
-
-#[cfg(test)]
-#[path = "tests/domain_block_tests.rs"]
-mod domain_block_tests;
-
-#[cfg(test)]
-#[path = "tests/lib.rs"]
-mod tests;

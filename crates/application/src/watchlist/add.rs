@@ -18,28 +18,19 @@ pub async fn execute(
         deps.movie_command.as_ref(),
         deps.movie_query.as_ref(),
         deps.metadata.as_ref(),
-        deps.event_publisher.as_ref(),
     )
     .await?;
 
     let entry = WatchlistEntry::new(user_id.clone(), movie.id().clone());
-    deps.watchlist.add(&entry).await?;
-
-    let _ = deps
-        .event_publisher
-        .publish(&DomainEvent::WatchlistEntryAdded {
-            user_id,
-            movie_id: movie.id().clone(),
-            movie_title: movie.title().value().to_string(),
-            release_year: movie.release_year().value(),
-            external_metadata_id: movie.external_metadata_id().map(|e| e.value().to_string()),
-            added_at: entry.added_at,
-        })
-        .await;
+    let event = DomainEvent::WatchlistEntryAdded {
+        user_id,
+        movie_id: movie.id().clone(),
+        movie_title: movie.title().value().to_string(),
+        release_year: movie.release_year().value(),
+        external_metadata_id: movie.external_metadata_id().map(|e| e.value().to_string()),
+        added_at: entry.added_at,
+    };
+    deps.watchlist.add(&entry, &[event]).await?;
 
     Ok(())
 }
-
-#[cfg(test)]
-#[path = "tests/add.rs"]
-mod tests;

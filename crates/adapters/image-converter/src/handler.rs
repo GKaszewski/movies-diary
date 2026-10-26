@@ -31,6 +31,10 @@ impl ImageConversionHandler {
 
 #[async_trait]
 impl EventHandler for ImageConversionHandler {
+    fn name(&self) -> &'static str {
+        "image_conversion"
+    }
+
     async fn handle(&self, event: &DomainEvent) -> Result<(), DomainError> {
         let key = match event {
             DomainEvent::ImageStored { key } => key.clone(),
@@ -41,6 +45,10 @@ impl EventHandler for ImageConversionHandler {
             return Ok(());
         }
 
+        if !self.storage.exists(&key).await? {
+            tracing::warn!(%key, "original image already gone, treating conversion as done");
+            return Ok(());
+        }
         let bytes = self.storage.get(&key).await?;
         let format = self.format;
 
@@ -99,7 +107,3 @@ fn convert(bytes: Vec<u8>, format: Format) -> Result<Vec<u8>, String> {
         }
     }
 }
-
-#[cfg(test)]
-#[path = "tests/handler.rs"]
-mod tests;

@@ -59,7 +59,7 @@ pub async fn execute(deps: &SyncPosterDeps, cmd: SyncPosterCommand) -> Result<()
     let poster_path = PosterPath::new(stored_path)?;
 
     movie.update_poster(poster_path);
-    deps.movie_command.upsert_movie(&movie).await?;
+    deps.movie_command.upsert_movie(&movie, &[]).await?;
 
     // Refresh search index so the new poster_path is reflected immediately.
     // Fetch existing profile if available for a complete index document.
@@ -83,7 +83,3 @@ pub async fn execute(deps: &SyncPosterDeps, cmd: SyncPosterCommand) -> Result<()
 
     Ok(())
 }
-
-#[cfg(test)]
-#[path = "tests/sync_poster.rs"]
-mod tests;

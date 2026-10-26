@@ -3,7 +3,7 @@ set -euo pipefail
 
 REGISTRY="registry.gabrielkaszewski.dev"
 REPO="movies-diary"
-DEFAULT_FEATURES="sqlite,sqlite-federation,nats"
+DEFAULT_FEATURES="federation,nats"
 
 features="${FEATURES:-$DEFAULT_FEATURES}"
 tag="latest"

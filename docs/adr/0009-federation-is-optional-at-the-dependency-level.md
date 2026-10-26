@@ -365,3 +365,9 @@ still fails with the same two pre-existing errors. This branch neither fixed nor
   leaked into `presentation`. ADR-0008's caveat carries over unchanged: the guard assumes directory
   name equals package name, true for all 28 today but not enforced.
 - The deferred items in ADR-0005/0006/0007/0008 are otherwise unaffected by this plan.
+
+---
+
+Superseded in part by [ADR-0012](0012-sqlite-is-the-only-backend.md): the postgres backends, crates and features mentioned above no longer exist; SQLite is the only backend.
+
+Now `make check-sqlite-is-ap-free` (was `check-social-crates-are-ap-free`); the sqlite social crates merged into `crates/adapters/sqlite`.

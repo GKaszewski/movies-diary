@@ -6,7 +6,7 @@ use domain::{
     events::DomainEvent,
     ports::{
         GoalQuery, LocalApContentQuery, MovieQuery, ReviewRepository, StatsRepository,
-        UserFederationSettingsQuery,
+        UserFederationSettingsQuery, UserRepository,
     },
     value_objects::{InstanceIdentity, MovieId, ReviewId, UserId},
 };
@@ -25,6 +25,7 @@ pub struct ActivityPubEventHandler {
     goal_repo: Arc<dyn GoalQuery>,
     stats_repo: Arc<dyn StatsRepository>,
     federation_settings: Arc<dyn UserFederationSettingsQuery>,
+    user_repo: Arc<dyn UserRepository>,
     instance: InstanceIdentity,
 }
 
@@ -38,6 +39,7 @@ impl ActivityPubEventHandler {
         goal_repo: Arc<dyn GoalQuery>,
         stats_repo: Arc<dyn StatsRepository>,
         federation_settings: Arc<dyn UserFederationSettingsQuery>,
+        user_repo: Arc<dyn UserRepository>,
         instance: InstanceIdentity,
     ) -> Self {
         Self {
@@ -48,6 +50,7 @@ impl ActivityPubEventHandler {
             goal_repo,
             stats_repo,
             federation_settings,
+            user_repo,
             instance,
         }
     }
@@ -55,7 +58,17 @@ impl ActivityPubEventHandler {
 
 #[async_trait]
 impl EventHandler for ActivityPubEventHandler {
+    fn name(&self) -> &'static str {
+        "activitypub"
+    }
+
     async fn handle(&self, event: &DomainEvent) -> Result<(), DomainError> {
+        if let Some(author) = self.outbound_author(event)
+            && self.is_tombstoned(&author).await
+        {
+            tracing::debug!(user = %author.value(), "skipping federation event of a deleted account");
+            return Ok(());
+        }
         match event {
             DomainEvent::ReviewLogged {
                 review_id, user_id, ..
@@ -139,13 +152,6 @@ impl EventHandler for ActivityPubEventHandler {
                 .on_goal_deleted(user_id, *year)
                 .await
                 .map_err(|e| DomainError::InfrastructureError(e.to_string())),
-            DomainEvent::UserDeleted { user_id } => {
-                let ap_id = actor_url(&self.instance, user_id.value());
-                self.ap_service
-                    .broadcast_delete_to_followers(user_id.value(), ap_id)
-                    .await
-                    .map_err(|e| DomainError::InfrastructureError(e.to_string()))
-            }
             DomainEvent::UserAccountMoved {
                 user_id,
                 new_actor_url,
@@ -164,6 +170,36 @@ impl EventHandler for ActivityPubEventHandler {
 }
 
 impl ActivityPubEventHandler {
+    fn outbound_author(&self, event: &DomainEvent) -> Option<UserId> {
+        match event {
+            DomainEvent::ReviewLogged { user_id, .. }
+            | DomainEvent::ReviewUpdated { user_id, .. }
+            | DomainEvent::ReviewDeleted { user_id, .. }
+            | DomainEvent::UserUpdated { user_id }
+            | DomainEvent::WatchlistEntryAdded { user_id, .. }
+            | DomainEvent::WatchlistEntryRemoved { user_id, .. }
+            | DomainEvent::GoalCreated { user_id, .. }
+            | DomainEvent::GoalUpdated { user_id, .. }
+            | DomainEvent::GoalDeleted { user_id, .. }
+            | DomainEvent::UserAccountMoved { user_id, .. } => Some(user_id.clone()),
+            DomainEvent::FederationDeliveryRequested {
+                activity_json,
+                signing_actor_id,
+                ..
+            } if activity_json.get("type").and_then(|t| t.as_str()) != Some("Delete") => {
+                Some(UserId::from_uuid(*signing_actor_id))
+            }
+            _ => None,
+        }
+    }
+
+    async fn is_tombstoned(&self, user: &UserId) -> bool {
+        matches!(
+            self.user_repo.find_tombstoned_by_id(user).await,
+            Ok(Some(_))
+        )
+    }
+
     async fn on_review_logged(&self, user_id: &UserId, review_id: &ReviewId) -> anyhow::Result<()> {
         let flags = self
             .federation_settings

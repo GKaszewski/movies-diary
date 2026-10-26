@@ -46,20 +46,17 @@ pub async fn execute(
         created_at: Utc::now().naive_utc(),
         completed_at: None,
     };
-    deps.wrapup_repo.create(&record).await?;
-
-    deps.event_publisher
-        .publish(&DomainEvent::WrapUpRequested {
-            wrapup_id: id.clone(),
-            user_id: cmd.user_id.map(UserId::from_uuid),
-            start_date: date_range.start(),
-            end_date: date_range.end(),
-        })
+    deps.wrapup_repo
+        .create(
+            &record,
+            &[DomainEvent::WrapUpRequested {
+                wrapup_id: id.clone(),
+                user_id: cmd.user_id.map(UserId::from_uuid),
+                start_date: date_range.start(),
+                end_date: date_range.end(),
+            }],
+        )
         .await?;
 
     Ok(id)
 }
-
-#[cfg(test)]
-#[path = "tests/generate.rs"]
-mod tests;

@@ -6,80 +6,41 @@ RUN npm ci
 COPY spa/ .
 RUN npm run build
 
-# ----- build -----
-FROM rust:slim-bookworm AS builder
-
-WORKDIR /build
-
-# Cache dependency compilation separately from source
-#
-# Every workspace member's Cargo.toml must be listed here by hand — `cargo fetch`
-# below reads the whole workspace graph, so a missing manifest fails the build with
-# "failed to read .../Cargo.toml". Adding a crate to crates/ means adding a line here.
-COPY Cargo.toml Cargo.lock ./
-COPY .cargo ./.cargo
-COPY crates/adapters/activitypub/Cargo.toml       crates/adapters/activitypub/Cargo.toml
-COPY crates/adapters/auth/Cargo.toml              crates/adapters/auth/Cargo.toml
-COPY crates/adapters/event-payload/Cargo.toml     crates/adapters/event-payload/Cargo.toml
-COPY crates/adapters/event-publisher/Cargo.toml   crates/adapters/event-publisher/Cargo.toml
-COPY crates/adapters/nats/Cargo.toml              crates/adapters/nats/Cargo.toml
-COPY crates/adapters/metadata/Cargo.toml          crates/adapters/metadata/Cargo.toml
-COPY crates/adapters/poster-fetcher/Cargo.toml    crates/adapters/poster-fetcher/Cargo.toml
-COPY crates/adapters/object-storage/Cargo.toml     crates/adapters/object-storage/Cargo.toml
-COPY crates/adapters/poster-sync/Cargo.toml       crates/adapters/poster-sync/Cargo.toml
-COPY crates/adapters/export/Cargo.toml            crates/adapters/export/Cargo.toml
-COPY crates/adapters/importer/Cargo.toml          crates/adapters/importer/Cargo.toml
-COPY crates/adapters/jellyfin/Cargo.toml          crates/adapters/jellyfin/Cargo.toml
-COPY crates/adapters/plex/Cargo.toml              crates/adapters/plex/Cargo.toml
-COPY crates/adapters/rss/Cargo.toml               crates/adapters/rss/Cargo.toml
-COPY crates/adapters/sqlite/Cargo.toml              crates/adapters/sqlite/Cargo.toml
-COPY crates/adapters/sqlite-federation/Cargo.toml   crates/adapters/sqlite-federation/Cargo.toml
-COPY crates/adapters/sqlite-social/Cargo.toml       crates/adapters/sqlite-social/Cargo.toml
-COPY crates/adapters/sqlite-event-queue/Cargo.toml  crates/adapters/sqlite-event-queue/Cargo.toml
-COPY crates/adapters/postgres/Cargo.toml            crates/adapters/postgres/Cargo.toml
-COPY crates/adapters/postgres-federation/Cargo.toml crates/adapters/postgres-federation/Cargo.toml
-COPY crates/adapters/postgres-social/Cargo.toml     crates/adapters/postgres-social/Cargo.toml
-COPY crates/adapters/postgres-event-queue/Cargo.toml crates/adapters/postgres-event-queue/Cargo.toml
-COPY crates/adapters/template-askama/Cargo.toml   crates/adapters/template-askama/Cargo.toml
-COPY crates/api-types/Cargo.toml                  crates/api-types/Cargo.toml
-COPY crates/application/Cargo.toml                crates/application/Cargo.toml
-COPY crates/adapters/tmdb-enrichment/Cargo.toml   crates/adapters/tmdb-enrichment/Cargo.toml
-COPY crates/domain/Cargo.toml                     crates/domain/Cargo.toml
-COPY crates/composition/Cargo.toml                crates/composition/Cargo.toml
-COPY crates/presentation/Cargo.toml               crates/presentation/Cargo.toml
-COPY crates/server/Cargo.toml                     crates/server/Cargo.toml
-COPY crates/tui/Cargo.toml                        crates/tui/Cargo.toml
-COPY crates/adapters/image-converter/Cargo.toml   crates/adapters/image-converter/Cargo.toml
-COPY crates/adapters/sqlite-search/Cargo.toml     crates/adapters/sqlite-search/Cargo.toml
-COPY crates/adapters/postgres-search/Cargo.toml   crates/adapters/postgres-search/Cargo.toml
-COPY crates/adapters/adapter-common/Cargo.toml   crates/adapters/adapter-common/Cargo.toml
-COPY crates/worker/Cargo.toml                     crates/worker/Cargo.toml
-COPY crates/infra-wiring/Cargo.toml               crates/infra-wiring/Cargo.toml
-
-# Stub every crate so cargo can resolve and fetch deps
-RUN find crates -name "Cargo.toml" | sed 's|/Cargo.toml||' | \
-    xargs -I{} sh -c 'mkdir -p {}/src && echo "fn main(){}" > {}/src/main.rs && echo "" > {}/src/lib.rs'
-
+# ----- chef base -----
+FROM rust:slim-bookworm AS chef
 # libwebp-dev: required at build time by the `webp` crate (C bindings)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libwebp-dev \
     pkg-config \
  && rm -rf /var/lib/apt/lists/*
+RUN cargo install cargo-chef --locked --version 0.1.78
+WORKDIR /build
 
-RUN cargo fetch
+FROM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
 
-# Now copy real sources (invalidates cache only on source changes)
-COPY crates ./crates
+# ----- build -----
+FROM chef AS builder
+
+# Features: federation (ActivityPub), nats (EVENT_BUS_BACKEND=nats).
+# Build without federation:  --build-arg FEATURES=
+# To add NATS support:       --build-arg FEATURES=federation,nats
+ARG FEATURES=federation
+
+COPY .cargo ./.cargo
+COPY --from=planner /build/recipe.json recipe.json
+RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,target=/usr/local/cargo/git,sharing=locked \
+    cargo chef cook --release -p server -p worker --no-default-features --features "${FEATURES}" --recipe-path recipe.json
 
 # All sqlx queries use the runtime API (no query! macros), so no database
 # or .sqlx cache is needed at compile time.
-#
-# To build with PostgreSQL backend instead:
-#   --build-arg FEATURES=postgres,postgres-federation
-# To add NATS support (EVENT_BUS_BACKEND=nats):
-#   --build-arg FEATURES=sqlite,sqlite-federation,nats
-ARG FEATURES=sqlite,sqlite-federation
-RUN cargo build --release -p server -p worker --no-default-features --features "${FEATURES}"
+COPY Cargo.toml Cargo.lock ./
+COPY crates ./crates
+RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,target=/usr/local/cargo/git,sharing=locked \
+    cargo build --release -p server -p worker --no-default-features --features "${FEATURES}"
 
 # ----- runtime -----
 FROM debian:bookworm-slim
@@ -100,6 +61,6 @@ COPY --from=spa-builder /spa/dist ./spa/dist
 
 EXPOSE 3000
 
-ENV RUST_LOG=server=info,tower_http=info
+ENV RUST_LOG=server=info,worker=info,bootstrap=info,config=info,http_axum=info,tower_http=info
 
 CMD ["./server"]

@@ -20,39 +20,26 @@ pub async fn execute(deps: &DeleteReviewDeps, cmd: DeleteReviewCommand) -> Resul
     }
 
     let movie_id = review.movie_id().clone();
-    deps.review.delete_review(&review_id).await?;
+    let poster_path = deps
+        .diary
+        .get_review_history(&movie_id)
+        .await?
+        .movie()
+        .poster_path()
+        .cloned();
 
-    if let Err(e) = deps
-        .event_publisher
-        .publish(&DomainEvent::ReviewDeleted {
-            review_id: review_id.clone(),
-            user_id: requesting_user_id.clone(),
-        })
-        .await
-    {
-        tracing::warn!("failed to publish ReviewDeleted: {e}");
-    }
-
-    let history = deps.diary.get_review_history(&movie_id).await?;
-    if history.viewings().is_empty() {
-        let poster_path = history.movie().poster_path().cloned();
-        deps.movie_command.delete_movie(&movie_id).await?;
-        // best-effort: movie is already deleted, so publish failure is non-fatal
-        if let Err(e) = deps
-            .event_publisher
-            .publish(&DomainEvent::MovieDeleted {
-                movie_id,
+    deps.review
+        .delete_review_and_orphaned_movie(
+            &review_id,
+            &movie_id,
+            &[DomainEvent::ReviewDeleted {
+                review_id: review_id.clone(),
+                user_id: requesting_user_id,
+            }],
+            &[DomainEvent::MovieDeleted {
+                movie_id: movie_id.clone(),
                 poster_path,
-            })
-            .await
-        {
-            tracing::warn!("failed to publish MovieDeleted event: {e}");
-        }
-    }
-
-    Ok(())
+            }],
+        )
+        .await
 }
-
-#[cfg(test)]
-#[path = "tests/delete_review.rs"]
-mod tests;

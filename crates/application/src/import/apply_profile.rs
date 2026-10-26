@@ -27,7 +27,3 @@ pub async fn execute(
     session.row_results = None;
     deps.import_session.update(&session).await
 }
-
-#[cfg(test)]
-#[path = "tests/apply_profile.rs"]
-mod tests;

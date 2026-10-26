@@ -52,7 +52,3 @@ pub async fn execute(
         Ok(WatchlistView::Remote(entries))
     }
 }
-
-#[cfg(test)]
-#[path = "tests/get_watchlist_for_owner.rs"]
-mod tests;

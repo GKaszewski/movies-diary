@@ -29,25 +29,17 @@ pub async fn execute(
         cmd.target_count,
         GoalType::Movies,
     )?;
-    deps.goal_command.save(&g).await?;
-
     let current_count = deps.stats.count_reviews_in_year(&user_id, cmd.year).await?;
-
-    deps.event_publisher
-        .publish(&DomainEvent::GoalCreated {
-            goal_id: g.id().clone(),
-            user_id,
-            year: cmd.year,
-            target_count: cmd.target_count,
-        })
-        .await?;
+    let event = DomainEvent::GoalCreated {
+        goal_id: g.id().clone(),
+        user_id: user_id.clone(),
+        year: cmd.year,
+        target_count: cmd.target_count,
+    };
+    deps.goal_command.save(&g, &[event]).await?;
 
     Ok(GoalWithProgress {
         goal: g,
         current_count,
     })
 }
-
-#[cfg(test)]
-#[path = "tests/create.rs"]
-mod tests;

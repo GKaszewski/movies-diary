@@ -1,10 +1,9 @@
 use std::sync::Arc;
 
-use domain::ports::{BlockQuery, EventPublisher, FollowGraphQuery, SocialCommand};
+use domain::ports::{BlockQuery, FollowGraphQuery, SocialCommand};
 
 pub struct SocialCommandDeps {
     pub social_command: Arc<dyn SocialCommand>,
-    pub event_publisher: Arc<dyn EventPublisher>,
 }
 
 pub struct SocialQueryDeps {

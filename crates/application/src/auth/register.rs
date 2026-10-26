@@ -21,7 +21,9 @@ pub async fn execute(deps: &RegisterDeps, cmd: RegisterCommand) -> Result<(), Do
         ));
     }
 
-    if deps.user.find_by_username(&username).await?.is_some() {
+    if deps.user.find_by_username(&username).await?.is_some()
+        || deps.user.is_username_retired(&username).await?
+    {
         return Err(DomainError::ValidationError(
             "Username already taken".into(),
         ));
@@ -32,7 +34,3 @@ pub async fn execute(deps: &RegisterDeps, cmd: RegisterCommand) -> Result<(), Do
         .save(&User::new(email, username, hash, cmd.role))
         .await
 }
-
-#[cfg(test)]
-#[path = "tests/register.rs"]
-mod tests;

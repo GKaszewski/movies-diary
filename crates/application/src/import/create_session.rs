@@ -41,7 +41,3 @@ pub async fn execute(
         sample_rows,
     })
 }
-
-#[cfg(test)]
-#[path = "tests/create_session.rs"]
-mod tests;

@@ -1,0 +1,52 @@
+[package]
+name = "bootstrap"
+version = "0.1.0"
+edition.workspace = true
+
+[features]
+default = []
+nats = ["dep:nats"]
+federation = [
+    "application/federation",
+    "http-axum/federation",
+    "dep:sqlite-federation",
+    "dep:activitypub",
+]
+
+[dependencies]
+config = { workspace = true }
+domain = { workspace = true }
+application = { workspace = true }
+http-axum = { workspace = true, default-features = false }
+auth = { workspace = true }
+metadata = { workspace = true }
+poster-fetcher = { workspace = true }
+object-storage = { workspace = true }
+tmdb-enrichment = { workspace = true }
+image-converter = { workspace = true }
+export = { workspace = true }
+importer = { workspace = true }
+rss-adapter = { workspace = true }
+media-server = { workspace = true }
+sqlite = { workspace = true }
+sqlx = { workspace = true }
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+axum = { workspace = true }
+tokio = { workspace = true, features = ["rt", "macros", "sync", "time", "net"] }
+futures = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["env-filter", "fmt", "ansi", "tracing-log", "smallvec"] }
+rustls = { workspace = true, features = ["ring", "std", "tls12", "logging"] }
+
+nats = { workspace = true, optional = true }
+activitypub = { workspace = true, optional = true }
+sqlite-federation = { workspace = true, optional = true }
+
+[dev-dependencies]
+reqwest = { workspace = true }
+chrono = { workspace = true, features = ["clock"] }
+uuid = { workspace = true, features = ["v4"] }
+serde_json = { workspace = true }
+tower = { workspace = true, features = ["util"] }
+domain = { workspace = true, features = ["test-helpers"] }

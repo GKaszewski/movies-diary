@@ -68,6 +68,15 @@ async function tryRefresh(): Promise<boolean> {
   }
 }
 
+async function isInvalidCredentials(res: Response): Promise<boolean> {
+  try {
+    const body = await res.clone().json()
+    return body?.code === "INVALID_CREDENTIALS"
+  } catch {
+    return false
+  }
+}
+
 async function request<T = void>(
   url: string,
   options?: RequestInit,
@@ -81,6 +90,11 @@ async function request<T = void>(
   })
   if (!res.ok) {
     if (res.status === 401) {
+      // A failed re-auth check (wrong password) is not an expired session:
+      // no refresh, no retry, no logout.
+      if (await isInvalidCredentials(res)) {
+        throw new ApiError(res.status, await res.text())
+      }
       if (url.includes("/auth/refresh") || url.includes("/auth/login")) {
         clearAuth()
         window.location.href = "/app/login"
@@ -170,6 +184,17 @@ export async function patch<T = void>(
 
 export async function del<T = void>(path: string): Promise<T> {
   return request<T>(buildUrl(path), { method: "DELETE" })
+}
+
+export async function delWithBody<T = void>(
+  path: string,
+  body: unknown,
+): Promise<T> {
+  return request<T>(buildUrl(path), {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  })
 }
 
 export async function upload<T>(

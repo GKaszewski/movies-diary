@@ -132,6 +132,10 @@ impl SearchReindexHandler {
 
 #[async_trait]
 impl EventHandler for SearchReindexHandler {
+    fn name(&self) -> &'static str {
+        "search_reindex"
+    }
+
     async fn handle(&self, event: &DomainEvent) -> Result<(), DomainError> {
         if !matches!(event, DomainEvent::SearchReindexRequested) {
             return Ok(());

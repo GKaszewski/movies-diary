@@ -79,7 +79,3 @@ fn set_field(row: &mut ImportRow, field: &DomainField, value: String) {
         DomainField::ExternalMetadataId => row.external_metadata_id = Some(value),
     }
 }
-
-#[cfg(test)]
-#[path = "tests/mapper.rs"]
-mod tests;

@@ -5,7 +5,7 @@ use k_ap::{ActorBlocklist, BlockedDomain, DomainBlocklist};
 use sqlx::Row;
 
 use super::SqliteFederationRepository;
-use adapter_common::datetime_to_str;
+use sqlite::persistence::datetime_to_str;
 
 #[async_trait]
 impl DomainBlocklist for SqliteFederationRepository {

@@ -37,25 +37,12 @@ pub async fn execute(deps: &EditReviewDeps, cmd: EditReviewCommand) -> Result<()
         spoilers: cmd.spoilers,
     });
 
-    deps.review.update_review(&updated).await?;
-
-    if let Err(e) = deps
-        .event_publisher
-        .publish(&DomainEvent::ReviewUpdated {
-            review_id: updated.id().clone(),
-            movie_id: updated.movie_id().clone(),
-            user_id: updated.user_id().clone(),
-            rating: updated.rating().clone(),
-            watched_at: *updated.watched_at(),
-        })
-        .await
-    {
-        tracing::warn!("failed to publish ReviewUpdated: {e}");
-    }
-
-    Ok(())
+    let event = DomainEvent::ReviewUpdated {
+        review_id: updated.id().clone(),
+        movie_id: updated.movie_id().clone(),
+        user_id: updated.user_id().clone(),
+        rating: updated.rating().clone(),
+        watched_at: *updated.watched_at(),
+    };
+    deps.review.update_review(&updated, &[event]).await
 }
-
-#[cfg(test)]
-#[path = "tests/edit_review.rs"]
-mod tests;

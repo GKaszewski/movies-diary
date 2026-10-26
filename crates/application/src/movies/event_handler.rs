@@ -70,6 +70,10 @@ impl MovieEnrichmentHandler {
 
 #[async_trait]
 impl EventHandler for MovieEnrichmentHandler {
+    fn name(&self) -> &'static str {
+        "movie_enrichment"
+    }
+
     async fn handle(&self, event: &DomainEvent) -> Result<(), DomainError> {
         let (movie_id, external_metadata_id) = match event {
             DomainEvent::MovieEnrichmentRequested {

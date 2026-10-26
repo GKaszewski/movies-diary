@@ -37,7 +37,3 @@ pub async fn execute(
 
     Ok(PreviewStage::Ready(PreviewRows { columns, rows }))
 }
-
-#[cfg(test)]
-#[path = "tests/get_preview_stage.rs"]
-mod tests;

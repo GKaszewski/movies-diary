@@ -2,49 +2,48 @@ use async_trait::async_trait;
 
 use crate::{
     errors::DomainError,
+    events::DomainEvent,
     value_objects::{FollowRelation, FollowStatus, SocialActor},
 };
 
+#[derive(Clone, Debug, PartialEq)]
+pub enum FollowWrite {
+    AddFollow {
+        follower_id: uuid::Uuid,
+        target_actor_url: String,
+        status: FollowStatus,
+    },
+    UpdateFollowStatus {
+        follower_id: uuid::Uuid,
+        target_actor_url: String,
+        status: FollowStatus,
+    },
+    RemoveFollow {
+        follower_id: uuid::Uuid,
+        target_actor_url: String,
+    },
+    AddFollower {
+        local_user_id: uuid::Uuid,
+        follower_actor_url: String,
+        status: FollowStatus,
+    },
+    UpdateFollowerStatus {
+        local_user_id: uuid::Uuid,
+        follower_actor_url: String,
+        status: FollowStatus,
+    },
+    RemoveFollowerRecord {
+        local_user_id: uuid::Uuid,
+        follower_actor_url: String,
+    },
+}
+
 #[async_trait]
 pub trait FollowCommand: Send + Sync {
-    async fn add_follow(
+    async fn apply(
         &self,
-        follower_id: uuid::Uuid,
-        target_actor_url: &str,
-        status: FollowStatus,
-    ) -> Result<(), DomainError>;
-
-    async fn update_follow_status(
-        &self,
-        follower_id: uuid::Uuid,
-        target_actor_url: &str,
-        status: FollowStatus,
-    ) -> Result<(), DomainError>;
-
-    async fn remove_follow(
-        &self,
-        follower_id: uuid::Uuid,
-        target_actor_url: &str,
-    ) -> Result<(), DomainError>;
-
-    async fn add_follower(
-        &self,
-        local_user_id: uuid::Uuid,
-        follower_actor_url: &str,
-        status: FollowStatus,
-    ) -> Result<(), DomainError>;
-
-    async fn update_follower_status(
-        &self,
-        local_user_id: uuid::Uuid,
-        follower_actor_url: &str,
-        status: FollowStatus,
-    ) -> Result<(), DomainError>;
-
-    async fn remove_follower_record(
-        &self,
-        local_user_id: uuid::Uuid,
-        follower_actor_url: &str,
+        writes: &[FollowWrite],
+        events: &[DomainEvent],
     ) -> Result<(), DomainError>;
 }
 

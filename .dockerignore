@@ -4,10 +4,20 @@ target/
 *.db
 *.db-shm
 *.db-wal
-# .cargo and .sqlx are needed at build time (SQLX_OFFLINE mode)
+# .cargo is needed at build time (registry config)
 docs/
 dev.db
 spa/node_modules/
 spa/dist/
 spa/.env
 spa/.env.local
+.sqlx/
+.superpowers/
+.worktrees/
+.claude/
+.github/
+.gitea/
+imgs/
+screenshots/
+test_data/
+*.md

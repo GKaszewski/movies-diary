@@ -1,7 +1,7 @@
 import { z } from "zod"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { diaryEntryDtoSchema, paginatedSchema } from "@/lib/api/common"
-import { get, post, put, putForm } from "@/lib/api/client"
+import { delWithBody, get, post, put, putForm } from "@/lib/api/client"
 
 export const userSummaryDtoSchema = z.object({
   id: z.string().uuid(),
@@ -112,6 +112,7 @@ export const userProfileResponseSchema = z.object({
   trends: userTrendsDtoSchema.optional(),
   goals: z.array(goalDtoSchema).optional(),
   is_federated: z.boolean().optional().default(false),
+  is_service_account: z.boolean().optional().default(false),
   handle: z.string().optional(),
   display_name: z.string().optional(),
   bio: z.string().optional(),
@@ -225,6 +226,29 @@ export function useUpdateProfileFields() {
     mutationFn: (data: UpdateProfileFieldsRequest) => updateProfileFields(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: userKeys.me })
+    },
+  })
+}
+
+export type DeleteAccountRequest = { password: string }
+
+export function useDeleteOwnAccount() {
+  return useMutation({
+    mutationFn: (data: DeleteAccountRequest) => delWithBody("/users/me", data),
+  })
+}
+
+export function useAdminDeleteUser() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, password }: DeleteAccountRequest & { id: string }) =>
+      delWithBody(`/users/${id}`, { password }),
+    onSuccess: (_data, { id }) => {
+      qc.removeQueries({
+        predicate: (q) => q.queryKey[0] === userKeys.all[0] && q.queryKey[1] === id,
+      })
+      qc.invalidateQueries({ queryKey: userKeys.all })
+      qc.invalidateQueries({ queryKey: ["activity-feed"] })
     },
   })
 }

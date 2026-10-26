@@ -1,10 +1,11 @@
 [package]
 name = "nats"
 version = "0.1.0"
-edition = "2024"
+edition.workspace = true
 
 [dependencies]
-async-nats = "0.48.0"
+config = { workspace = true }
+async-nats = { workspace = true }
 
 domain = { workspace = true }
 event-payload = { workspace = true }
@@ -12,7 +13,7 @@ async-trait = { workspace = true }
 anyhow = { workspace = true }
 tracing = { workspace = true }
 serde_json = { workspace = true }
-uuid = { workspace = true }
-chrono = { workspace = true }
-tokio = { workspace = true }
+uuid = { workspace = true, features = ["serde"] }
+chrono = { workspace = true, features = ["serde"] }
+tokio = { workspace = true, features = ["rt", "sync"] }
 futures = { workspace = true }

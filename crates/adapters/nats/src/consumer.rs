@@ -5,7 +5,7 @@ use async_nats::{
 use async_trait::async_trait;
 use domain::{
     errors::DomainError,
-    events::{AckHandle, DomainEvent, EventEnvelope},
+    events::{AckHandle, DomainEvent, EventEnvelope, EventId, retry_backoff},
     ports::EventConsumer,
 };
 use futures::{
@@ -15,12 +15,26 @@ use futures::{
 use std::sync::Arc;
 use tokio::sync::{Mutex, mpsc};
 
-use crate::{config::NatsConfig, payload::NatsEventPayload, subject::consumer_subject_filter};
+use crate::{config::NatsConfig, payload::NatsEventMessage, subject::consumer_subject_filter};
 
 // ── JetStream ack handle ─────────────────────────────────────────────────────
 
 struct NatsJetStreamAckHandle {
     message: async_nats::jetstream::Message,
+    event_id: Option<EventId>,
+    max_deliver: i64,
+}
+
+struct NakPlan {
+    delay: std::time::Duration,
+    exhausted: bool,
+}
+
+fn nak_plan(delivered: i64, max_deliver: i64) -> NakPlan {
+    NakPlan {
+        delay: retry_backoff(u32::try_from(delivered.max(0)).unwrap_or(u32::MAX)),
+        exhausted: max_deliver > 0 && delivered >= max_deliver,
+    }
 }
 
 #[async_trait]
@@ -38,13 +52,36 @@ impl AckHandle for NatsJetStreamAckHandle {
     }
 
     async fn nack(&self) -> Result<(), DomainError> {
-        tracing::debug!(
-            "negatively acknowledging message with sequence {}",
-            self.message.info().unwrap().stream_sequence
-        );
+        let info = self
+            .message
+            .info()
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        let plan = nak_plan(info.delivered, self.max_deliver);
+        if plan.exhausted {
+            tracing::error!(
+                event_id = ?self.event_id.map(|id| id.value()),
+                sequence = info.stream_sequence,
+                delivered = info.delivered,
+                "event exhausted max deliveries; it remains in the stream — see JetStream max-deliveries advisory"
+            );
+        } else {
+            tracing::debug!(
+                sequence = info.stream_sequence,
+                delivered = info.delivered,
+                "nak with backoff {:?}",
+                plan.delay
+            );
+        }
 
         self.message
-            .ack_with(AckKind::Nak(None))
+            .ack_with(AckKind::Nak(Some(plan.delay)))
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))
+    }
+
+    async fn defer(&self, delay: std::time::Duration) -> Result<(), DomainError> {
+        self.message
+            .ack_with(AckKind::Nak(Some(delay)))
             .await
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))
     }
@@ -62,25 +99,47 @@ impl AckHandle for NoopAck {
     async fn nack(&self) -> Result<(), DomainError> {
         Ok(())
     }
+    async fn defer(&self, _: std::time::Duration) -> Result<(), DomainError> {
+        Ok(())
+    }
 }
 
 // ── Envelope construction helpers ────────────────────────────────────────────
 
-fn decode_js(msg: async_nats::jetstream::Message) -> Result<EventEnvelope, DomainError> {
-    let payload: NatsEventPayload = serde_json::from_slice(&msg.payload)
+fn decode_message(bytes: &[u8]) -> Result<(Option<EventId>, DomainEvent), DomainError> {
+    let message: NatsEventMessage = serde_json::from_slice(bytes)
         .map_err(|e| DomainError::InfrastructureError(format!("deserialize: {e}")))?;
-    let event = DomainEvent::try_from(payload)?;
+    let id = message
+        .event_id
+        .as_deref()
+        .map(|s| {
+            uuid::Uuid::parse_str(s)
+                .map(EventId::from_uuid)
+                .map_err(|e| DomainError::InfrastructureError(format!("event_id: {e}")))
+        })
+        .transpose()?;
+    Ok((id, DomainEvent::try_from(message.payload)?))
+}
+
+fn decode_js(
+    msg: async_nats::jetstream::Message,
+    max_deliver: i64,
+) -> Result<EventEnvelope, DomainError> {
+    let (id, event) = decode_message(&msg.payload)?;
     Ok(EventEnvelope::new(
+        id,
         event,
-        Box::new(NatsJetStreamAckHandle { message: msg }),
+        Box::new(NatsJetStreamAckHandle {
+            message: msg,
+            event_id: id,
+            max_deliver,
+        }),
     ))
 }
 
 fn decode_core(msg: async_nats::Message) -> Result<EventEnvelope, DomainError> {
-    let payload: NatsEventPayload = serde_json::from_slice(&msg.payload)
-        .map_err(|e| DomainError::InfrastructureError(format!("deserialize: {e}")))?;
-    let event = DomainEvent::try_from(payload)?;
-    Ok(EventEnvelope::new(event, Box::new(NoopAck)))
+    let (id, event) = decode_message(&msg.payload)?;
+    Ok(EventEnvelope::new(id, event, Box::new(NoopAck)))
 }
 
 // ── Channel-bridge shared by both consumers ──────────────────────────────────
@@ -92,6 +151,31 @@ fn consume_from_rx(rx: EnvelopeRx) -> BoxStream<'static, Result<EventEnvelope, D
         let item = rx.lock().await.recv().await?;
         Some((item, rx))
     }))
+}
+
+const DEDUP_WINDOW: std::time::Duration = std::time::Duration::from_secs(60 * 60);
+
+const ACK_WAIT: std::time::Duration = std::time::Duration::from_secs(600);
+
+fn stream_config_update(existing: &StreamConfig) -> Option<StreamConfig> {
+    (existing.duplicate_window != DEDUP_WINDOW).then(|| StreamConfig {
+        duplicate_window: DEDUP_WINDOW,
+        ..existing.clone()
+    })
+}
+
+fn consumer_config_update(
+    existing: &jetstream::consumer::Config,
+    desired_max_deliver: i64,
+) -> Option<jetstream::consumer::Config> {
+    if existing.max_deliver == desired_max_deliver && existing.ack_wait == ACK_WAIT {
+        return None;
+    }
+    Some(jetstream::consumer::Config {
+        ack_wait: ACK_WAIT,
+        max_deliver: desired_max_deliver,
+        ..existing.clone()
+    })
 }
 
 // ── JetStream consumer ────────────────────────────────────────────────────────
@@ -109,9 +193,25 @@ impl NatsJetStreamConsumer {
                 name: cfg.stream_name.clone(),
                 subjects: vec![consumer_subject_filter(&cfg.subject_prefix)],
                 max_messages: 100_000,
+                duplicate_window: DEDUP_WINDOW,
                 ..Default::default()
             })
             .await?;
+        if let Some(updated) = stream_config_update(&stream.cached_info().config) {
+            tracing::warn!(
+                stream = %cfg.stream_name,
+                "existing JetStream stream has a different duplicate window; updating to {:?}",
+                DEDUP_WINDOW
+            );
+            if let Err(e) = js.update_stream(updated).await {
+                tracing::warn!(
+                    "could not update stream {}: {e}; continuing. Fix manually: nats stream edit {} --dupe-window {}s",
+                    cfg.stream_name,
+                    cfg.stream_name,
+                    DEDUP_WINDOW.as_secs()
+                );
+            }
+        }
 
         let subject_filter = consumer_subject_filter(&cfg.subject_prefix);
         let consumer = stream
@@ -120,14 +220,34 @@ impl NatsJetStreamConsumer {
                 pull::Config {
                     durable_name: Some(cfg.consumer_name.clone()),
                     filter_subject: subject_filter,
-                    ack_wait: std::time::Duration::from_secs(600),
+                    ack_wait: ACK_WAIT,
+                    max_deliver: cfg.max_deliver,
                     ..Default::default()
                 },
             )
             .await?;
+        if let Some(updated) =
+            consumer_config_update(&consumer.cached_info().config, cfg.max_deliver)
+        {
+            tracing::warn!(
+                consumer = %cfg.consumer_name,
+                "existing JetStream consumer has different max_deliver/ack_wait; updating to max_deliver={}",
+                cfg.max_deliver
+            );
+            if let Err(e) = stream.update_consumer(updated).await {
+                tracing::warn!(
+                    "could not update consumer {}: {e}; continuing. Fix manually: nats consumer edit {} {} --max-deliver {}",
+                    cfg.consumer_name,
+                    cfg.stream_name,
+                    cfg.consumer_name,
+                    cfg.max_deliver
+                );
+            }
+        }
 
         let (tx, rx) = mpsc::channel(128);
 
+        let max_deliver = cfg.max_deliver;
         tokio::spawn(async move {
             loop {
                 let mut messages = match consumer.messages().await {
@@ -144,7 +264,7 @@ impl NatsJetStreamConsumer {
                 while let Some(result) = messages.next().await {
                     let envelope = result
                         .map_err(|e| DomainError::InfrastructureError(e.to_string()))
-                        .and_then(decode_js);
+                        .and_then(|m| decode_js(m, max_deliver));
 
                     if tx.send(envelope).await.is_err() {
                         tracing::info!("consumer channel closed, stopping message processing");
@@ -211,3 +331,7 @@ fn _assert_send_sync() {
     check::<NatsJetStreamConsumer>();
     check::<NatsCoreConsumer>();
 }
+
+#[cfg(test)]
+#[path = "tests/consumer.rs"]
+mod tests;

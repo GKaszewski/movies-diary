@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use domain::ports::{
     DiaryQuery, EventPublisher, FederatedProfileQuery, FederationAdminQuery, FollowGraphQuery,
-    ObjectStorage, StatsRepository, UserProfileFieldsRepository, UserRepository,
+    ObjectStorage, PasswordHasher, StatsRepository, UserProfileFieldsRepository, UserRepository,
     UserSettingsRepository,
 };
 use domain::value_objects::InstanceIdentity;
@@ -47,9 +47,13 @@ pub struct UpdateProfileDeps {
     pub event_publisher: Arc<dyn EventPublisher>,
 }
 
-pub struct DeleteAccountDeps {
+pub struct RequestAccountDeletionDeps {
     pub user: Arc<dyn UserRepository>,
-    pub event_publisher: Arc<dyn EventPublisher>,
+    pub password_hasher: Arc<dyn PasswordHasher>,
+}
+
+pub struct EnsureActiveDeps {
+    pub user: Arc<dyn UserRepository>,
 }
 
 pub struct GetCurrentProfileDeps {
@@ -58,7 +62,6 @@ pub struct GetCurrentProfileDeps {
 
 pub struct UpdateProfileFieldsDeps {
     pub profile_fields: Arc<dyn UserProfileFieldsRepository>,
-    pub event_publisher: Arc<dyn EventPublisher>,
 }
 
 pub struct GetSettingsDeps {

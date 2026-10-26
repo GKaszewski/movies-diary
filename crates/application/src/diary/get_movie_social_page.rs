@@ -42,7 +42,3 @@ pub async fn execute(
         profile,
     })
 }
-
-#[cfg(test)]
-#[path = "tests/get_movie_social_page.rs"]
-mod tests;

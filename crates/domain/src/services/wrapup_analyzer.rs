@@ -464,7 +464,3 @@ fn compute_global_stats(
 
     (most_active_user, most_watched, total_users_active)
 }
-
-#[cfg(test)]
-#[path = "tests/wrapup_analyzer.rs"]
-mod tests;

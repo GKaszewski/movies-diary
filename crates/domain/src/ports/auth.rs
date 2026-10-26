@@ -23,7 +23,16 @@ pub trait UserRepository: Send + Sync {
         &self,
         user_id: &UserId,
         profile: &crate::models::UserProfile,
+        events: &[crate::events::DomainEvent],
     ) -> Result<(), DomainError>;
+    async fn mark_deleted(
+        &self,
+        user_id: &UserId,
+        events: &[crate::events::DomainEvent],
+    ) -> Result<(), DomainError>;
+    async fn find_tombstoned_by_id(&self, id: &UserId) -> Result<Option<User>, DomainError>;
+    async fn is_username_retired(&self, username: &Username) -> Result<bool, DomainError>;
+    async fn count_active_admins(&self) -> Result<u64, DomainError>;
 }
 
 #[async_trait]
@@ -36,6 +45,7 @@ pub trait UserProfileFieldsRepository: Send + Sync {
         &self,
         user_id: &UserId,
         fields: Vec<crate::models::ProfileField>,
+        events: &[crate::events::DomainEvent],
     ) -> Result<(), DomainError>;
 }
 

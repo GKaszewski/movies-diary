@@ -144,7 +144,3 @@ async fn load_social_counts(
         .collect();
     (following, followers, pending)
 }
-
-#[cfg(test)]
-#[path = "tests/get_local_profile.rs"]
-mod tests;

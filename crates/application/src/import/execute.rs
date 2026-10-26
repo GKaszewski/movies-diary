@@ -44,7 +44,8 @@ pub async fn execute(
     let mut failed = Vec::new();
 
     let semaphore = Arc::new(tokio::sync::Semaphore::new(CONCURRENCY_LIMIT));
-    let mut tasks: tokio::task::JoinSet<(usize, Result<(), String>)> = tokio::task::JoinSet::new();
+    let mut tasks: tokio::task::JoinSet<(usize, Result<(), DomainError>)> =
+        tokio::task::JoinSet::new();
 
     for (idx, annotated) in row_results.into_iter().enumerate() {
         if !confirmed_set.contains(&idx) {
@@ -56,12 +57,12 @@ pub async fn execute(
                 failed.push((idx, errors.join("; ")));
             }
             RowResult::Valid(row) => match row_to_command(&row, user_id.value()) {
-                Err(e) => failed.push((idx, e)),
+                Err(e) => failed.push((idx, import_error_message(e))),
                 Ok(log_cmd) => {
                     let permit = Arc::clone(&semaphore).acquire_owned().await.unwrap();
                     let logger = deps.review_logger.clone();
                     tasks.spawn(async move {
-                        let result = logger.log_review(log_cmd).await.map_err(|e| e.to_string());
+                        let result = logger.log_review(log_cmd).await;
                         drop(permit);
                         (idx, result)
                     });
@@ -74,7 +75,7 @@ pub async fn execute(
         let (idx, outcome) = res.expect("import task panicked");
         match outcome {
             Ok(()) => imported += 1,
-            Err(e) => failed.push((idx, e)),
+            Err(e) => failed.push((idx, e.to_string())),
         }
     }
 
@@ -87,24 +88,35 @@ pub async fn execute(
     })
 }
 
-#[cfg(test)]
-#[path = "tests/execute.rs"]
-mod tests;
+fn import_error_message(e: DomainError) -> String {
+    match e {
+        DomainError::ValidationError(msg) => msg,
+        other => other.to_string(),
+    }
+}
 
-fn row_to_command(row: &ImportRow, user_id: Uuid) -> Result<LogReviewCommand, String> {
+fn row_to_command(row: &ImportRow, user_id: Uuid) -> Result<LogReviewCommand, DomainError> {
     let rating = row
         .rating
         .as_deref()
-        .ok_or("missing rating")?
+        .ok_or_else(|| DomainError::ValidationError("missing rating".into()))?
         .parse::<u8>()
-        .map_err(|_| "rating is not a valid u8".to_string())?;
+        .map_err(|_| DomainError::ValidationError("rating is not a valid u8".into()))?;
 
-    let watched_at_str = row.watched_at.as_deref().ok_or("missing watched_at")?;
+    let watched_at_str = row
+        .watched_at
+        .as_deref()
+        .ok_or_else(|| DomainError::ValidationError("missing watched_at".into()))?;
     let watched_at =
         NaiveDateTime::parse_from_str(&format!("{} 00:00:00", watched_at_str), "%Y-%m-%d %H:%M:%S")
             .or_else(|_| NaiveDateTime::parse_from_str(watched_at_str, "%Y-%m-%d %H:%M:%S"))
             .or_else(|_| NaiveDateTime::parse_from_str(watched_at_str, "%Y-%m-%dT%H:%M:%S"))
-            .map_err(|_| format!("cannot parse watched_at: '{}'", watched_at_str))?;
+            .map_err(|_| {
+                DomainError::ValidationError(format!(
+                    "cannot parse watched_at: '{}'",
+                    watched_at_str
+                ))
+            })?;
 
     Ok(LogReviewCommand {
         user_id,

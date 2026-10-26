@@ -49,20 +49,16 @@ pub async fn execute(
         None,
     );
 
-    deps.watch_event_command.save(&event).await?;
-
-    let _ = deps
-        .event_publisher
-        .publish(&DomainEvent::WatchEventIngested {
-            user_id: event.user_id().clone(),
-            title: event.title().to_string(),
-            source: event.source().to_string(),
-        })
-        .await;
+    deps.watch_event_command
+        .save(
+            &event,
+            &[DomainEvent::WatchEventIngested {
+                user_id: event.user_id().clone(),
+                title: event.title().to_string(),
+                source: event.source().to_string(),
+            }],
+        )
+        .await?;
 
     Ok(())
 }
-
-#[cfg(test)]
-#[path = "tests/ingest.rs"]
-mod tests;

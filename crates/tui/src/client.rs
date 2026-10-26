@@ -46,6 +46,7 @@ pub struct ApiClient {
 
 impl ApiClient {
     pub fn new(url: &str) -> Self {
+        let _ = rustls::crypto::ring::default_provider().install_default();
         Self {
             base_url: std::sync::RwLock::new(url.to_string()),
             http: reqwest::Client::new(),

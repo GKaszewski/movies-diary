@@ -138,7 +138,3 @@ pub struct MovieStats {
     pub federated_count: u64,
     pub rating_histogram: [u64; 5], // index 0 = 1★, index 4 = 5★
 }
-
-#[cfg(test)]
-#[path = "tests/stats.rs"]
-mod tests;

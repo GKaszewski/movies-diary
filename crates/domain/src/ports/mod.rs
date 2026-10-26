@@ -1,3 +1,4 @@
+pub mod account_purge;
 pub mod auth;
 pub mod diary;
 pub mod events;
@@ -14,12 +15,14 @@ pub mod media_server;
 pub mod movie;
 pub mod noop;
 pub mod person;
+pub mod processed_events;
 pub mod rss;
 pub mod search;
 pub mod social;
 pub mod watchlist;
 pub mod wrapup;
 
+pub use account_purge::*;
 pub use auth::*;
 pub use diary::*;
 pub use events::*;
@@ -35,6 +38,7 @@ pub use jobs::*;
 pub use media_server::*;
 pub use movie::*;
 pub use person::*;
+pub use processed_events::*;
 pub use rss::*;
 pub use search::*;
 pub use social::*;

@@ -82,6 +82,14 @@ impl ObjectStorage for ObjectStorageAdapter {
         Ok(Box::pin(stream))
     }
 
+    async fn exists(&self, key: &str) -> Result<bool, DomainError> {
+        match self.store.head(&Path::from(key)).await {
+            Ok(_) => Ok(true),
+            Err(object_store::Error::NotFound { .. }) => Ok(false),
+            Err(e) => Err(DomainError::InfrastructureError(e.to_string())),
+        }
+    }
+
     async fn delete(&self, key: &str) -> Result<(), DomainError> {
         let path = Path::from(key);
         match self.store.delete(&path).await {
@@ -112,6 +120,10 @@ impl ImageCleanupHandler {
 
 #[async_trait]
 impl EventHandler for ImageCleanupHandler {
+    fn name(&self) -> &'static str {
+        "image_cleanup"
+    }
+
     async fn handle(&self, event: &DomainEvent) -> Result<(), DomainError> {
         let poster_path = match event {
             DomainEvent::MovieDeleted { poster_path, .. } => poster_path,
@@ -127,12 +139,34 @@ impl EventHandler for ImageCleanupHandler {
     }
 }
 
-pub fn create() -> anyhow::Result<Arc<dyn ObjectStorage>> {
+pub fn create(config: &::config::StorageConfig) -> anyhow::Result<Arc<dyn ObjectStorage>> {
     Ok(Arc::new(ObjectStorageAdapter::from_config(
-        StorageConfig::from_env()?,
+        StorageConfig::from_config(config)?,
     )))
 }
 
 #[cfg(test)]
-#[path = "tests/lib.rs"]
-mod tests;
+mod tests {
+    use super::*;
+    use domain::value_objects::{MovieId, PosterPath};
+    use object_store::memory::InMemory;
+
+    #[tokio::test]
+    async fn image_cleanup_is_idempotent_when_run_twice() {
+        let storage = Arc::new(ObjectStorageAdapter::new(Arc::new(InMemory::new())));
+        storage.store("posters/m1.webp", b"img").await.unwrap();
+        let handler = ImageCleanupHandler::new(storage.clone());
+        let event = DomainEvent::MovieDeleted {
+            movie_id: MovieId::from_uuid(uuid::Uuid::new_v4()),
+            poster_path: Some(PosterPath::new("posters/m1.webp".into()).unwrap()),
+        };
+
+        handler.handle(&event).await.unwrap();
+        handler.handle(&event).await.unwrap();
+
+        assert!(matches!(
+            storage.get("posters/m1.webp").await,
+            Err(DomainError::NotFound(_))
+        ));
+    }
+}

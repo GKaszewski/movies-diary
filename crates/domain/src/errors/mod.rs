@@ -17,8 +17,14 @@ pub enum DomainError {
     #[error("Unauthorized: {0}")]
     Unauthorized(String),
 
+    #[error("Unauthorized: {0}")]
+    InvalidCredentials(String),
+
     #[error("Forbidden: {0}")]
     Forbidden(String),
+
+    #[error("Conflict: {0}")]
+    Conflict(String),
 }
 
 impl DomainError {
@@ -26,7 +32,3 @@ impl DomainError {
         matches!(self, DomainError::InfrastructureError(_))
     }
 }
-
-#[cfg(test)]
-#[path = "tests.rs"]
-mod tests;

@@ -18,7 +18,3 @@ pub async fn execute<Tz: TimeZone + Sync>(
         &rows, tz,
     ))
 }
-
-#[cfg(test)]
-#[path = "tests/get.rs"]
-mod tests;

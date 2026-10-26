@@ -1,2 +1,0 @@
-ALTER TABLE user_settings ADD COLUMN federate_reviews BOOLEAN NOT NULL DEFAULT TRUE;
-ALTER TABLE user_settings ADD COLUMN federate_watchlist BOOLEAN NOT NULL DEFAULT TRUE;

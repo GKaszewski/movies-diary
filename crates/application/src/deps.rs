@@ -26,10 +26,10 @@ use crate::person::deps::{EnrichPersonDeps, GetPersonDeps};
 use crate::search::deps::SearchDeps;
 use crate::social::deps::{SocialCommandDeps, SocialQueryDeps};
 use crate::users::deps::{
-    AuthorizeAdminDeps, DeleteAccountDeps, GetCurrentProfileDeps, GetFederatedProfileDeps,
+    AuthorizeAdminDeps, EnsureActiveDeps, GetCurrentProfileDeps, GetFederatedProfileDeps,
     GetFederatedProfileStatsDeps, GetLocalProfileDeps, GetPageViewerDeps, GetProfileSettingsDeps,
-    GetSettingsDeps, GetUsersListDeps, ResolveUsernameDeps, UpdateProfileDeps,
-    UpdateProfileFieldsDeps, UpdateSettingsDeps,
+    GetSettingsDeps, GetUsersListDeps, RequestAccountDeletionDeps, ResolveUsernameDeps,
+    UpdateProfileDeps, UpdateProfileFieldsDeps, UpdateSettingsDeps,
 };
 use crate::watchlist::deps::{
     GetWatchlistDeps, GetWatchlistForOwnerDeps, IsOnWatchlistDeps, RemoveFromWatchlistDeps,
@@ -124,8 +124,8 @@ pub struct UsersGroup {
     pub get_profile_settings: GetProfileSettingsDeps,
     pub get_users_list: GetUsersListDeps,
     pub update_profile: UpdateProfileDeps,
-    /// Not reachable from the server binary; see the `Deps`-level note above. Pre-existing dead use case: `users::delete_account::execute` has zero callers anywhere in the workspace, worker included.
-    pub delete_account: DeleteAccountDeps,
+    pub request_account_deletion: RequestAccountDeletionDeps,
+    pub ensure_active: EnsureActiveDeps,
     pub get_current_profile: GetCurrentProfileDeps,
     pub update_profile_fields: UpdateProfileFieldsDeps,
     pub get_settings: GetSettingsDeps,
@@ -150,13 +150,13 @@ pub struct WrapupGroup {
     pub list_wrapups: ListWrapUpsDeps,
 }
 
-/// Every deps struct a handler can need, built once by the composition root.
+/// Every deps struct a handler can need, built once by `bootstrap`.
 /// Use cases still receive only their own narrow struct — nothing takes `&Deps`.
 ///
-/// `composition::build_deps` is called only from `crates/presentation/src/main.rs`.
+/// `bootstrap::build_deps` is called only from `bootstrap::build_server`.
 /// The worker-only groups this used to also carry now live in `WorkerDeps`, built by
-/// `composition::build_worker_deps` and consumed by `crates/worker/src/main.rs` —
-/// `crates/worker` no longer wires its own deps (its former `db.rs` is gone). Nothing
+/// `bootstrap::build_worker_deps` and consumed by `bootstrap::build_worker` —
+/// the worker binary no longer wires anything itself. Nothing
 /// in `Deps` below is worker-only anymore, except one field with no consumer anywhere
 /// in the workspace — see its comment.
 pub struct Deps {
@@ -188,7 +188,7 @@ pub struct WorkerServices {
     pub person_enrichment: Option<Arc<dyn PersonEnrichmentClient>>,
 }
 
-/// The deps structs the worker binary needs, built by `composition::build_worker_deps`.
+/// The deps structs the worker binary needs, built by `bootstrap::build_worker_deps`.
 /// These are the five groups that moved out of `Deps` during worker unification —
 /// they have no consumer the server binary can ever reach.
 pub struct WorkerDeps {

@@ -9,7 +9,3 @@ pub async fn execute(watch_event_command: Arc<dyn WatchEventCommand>) -> Result<
         .delete_non_pending_older_than(cutoff)
         .await
 }
-
-#[cfg(test)]
-#[path = "tests/cleanup.rs"]
-mod tests;

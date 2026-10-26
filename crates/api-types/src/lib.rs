@@ -4,6 +4,7 @@ pub mod diary;
 pub mod goals;
 pub mod import;
 pub mod insights;
+pub mod mappers;
 pub mod movies;
 pub mod rendering;
 pub mod search;

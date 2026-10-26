@@ -1,7 +1,7 @@
 [package]
 name = "tui"
 version = "0.1.0"
-edition = "2024"
+edition.workspace = true
 
 [features]
 default = []
@@ -13,23 +13,22 @@ linux-zbus = [
 windows = ["dep:windows-native-keyring-store"]
 
 [dependencies]
-ratatui = "0.30.0"
-keyring-core = "1.0.0"
-directories = "6"
-csv = "1"
+ratatui = { workspace = true }
+keyring-core = { workspace = true }
+directories = { workspace = true }
+csv = { workspace = true }
 
-apple-native-keyring-store = { version = "1.0.0", optional = true, features = [
-    "keychain",
-] }
-zbus-secret-service-keyring-store = { version = "1.0.0", optional = true }
-windows-native-keyring-store = { version = "1.0.0", optional = true }
+apple-native-keyring-store = { workspace = true, optional = true }
+zbus-secret-service-keyring-store = { workspace = true, optional = true }
+windows-native-keyring-store = { workspace = true, optional = true }
 
 api-types = { workspace = true }
 reqwest = { workspace = true }
-serde = { workspace = true }
+rustls = { workspace = true, features = ["ring", "std", "tls12", "logging"] }
+serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["rt", "rt-multi-thread", "sync", "macros", "time"] }
 anyhow = { workspace = true }
-uuid = { workspace = true }
+uuid = { workspace = true, features = ["serde"] }
 thiserror = { workspace = true }
 

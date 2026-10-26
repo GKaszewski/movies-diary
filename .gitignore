@@ -18,3 +18,4 @@ docs/*
 
 imgs/
 .sqlx/
+!crates/adapters/sqlite/tests/fixtures/*.db

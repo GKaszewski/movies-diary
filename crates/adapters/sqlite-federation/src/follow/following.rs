@@ -4,7 +4,7 @@ use chrono::Utc;
 use k_ap::{FollowingReader, FollowingStatus, FollowingWriter, RemoteActor, RemoteActorCache};
 
 use crate::{SqliteFederationRepository, remote_actor_from_row};
-use adapter_common::datetime_to_str;
+use sqlite::persistence::datetime_to_str;
 
 #[async_trait]
 impl FollowingWriter for SqliteFederationRepository {

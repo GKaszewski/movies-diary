@@ -32,6 +32,18 @@ impl MovieId {
 
 uuid_id!(ReviewId);
 uuid_id!(UserId);
+
+pub const SERVICE_ACTOR_UUID: Uuid =
+    Uuid::from_bytes([0, 0, 0, 0, 0, 0, 0x40, 0, 0x80, 0, 0, 0, 0, 0, 0, 0]);
+
+impl UserId {
+    pub const fn service_actor() -> Self {
+        Self(SERVICE_ACTOR_UUID)
+    }
+    pub fn is_service_actor(&self) -> bool {
+        self.0 == SERVICE_ACTOR_UUID
+    }
+}
 uuid_id!(ImportSessionId);
 uuid_id!(ImportProfileId);
 uuid_id!(WatchlistEntryId);

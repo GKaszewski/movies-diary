@@ -11,6 +11,7 @@ pub trait ObjectStorage: Send + Sync {
         key: &str,
     ) -> Result<futures::stream::BoxStream<'static, Result<bytes::Bytes, DomainError>>, DomainError>;
     async fn delete(&self, key: &str) -> Result<(), DomainError>;
+    async fn exists(&self, key: &str) -> Result<bool, DomainError>;
 }
 
 #[async_trait]

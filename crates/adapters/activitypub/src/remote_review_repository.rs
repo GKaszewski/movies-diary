@@ -1,7 +1,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use chrono::NaiveDateTime;
-use domain::models::Review;
+use domain::{events::DomainEvent, models::Review};
 
 pub struct RemoteReviewUpdate<'a> {
     pub ap_id: &'a str,
@@ -14,17 +14,19 @@ pub struct RemoteReviewUpdate<'a> {
     pub spoilers: bool,
 }
 
+pub struct NewRemoteReview<'a> {
+    pub review: &'a Review,
+    pub ap_id: &'a str,
+    pub movie_title: &'a str,
+    pub release_year: u16,
+    pub external_metadata_id: Option<&'a str>,
+    pub poster_url: Option<&'a str>,
+    pub events: &'a [DomainEvent],
+}
+
 #[async_trait]
 pub trait RemoteReviewRepository: Send + Sync {
-    async fn save_remote_review(
-        &self,
-        review: &Review,
-        ap_id: &str,
-        movie_title: &str,
-        release_year: u16,
-        external_metadata_id: Option<&str>,
-        poster_url: Option<&str>,
-    ) -> Result<()>;
+    async fn save_remote_review(&self, new: NewRemoteReview<'_>) -> Result<()>;
 
     async fn delete_remote_review(&self, ap_id: &str, actor_url: &str) -> Result<()>;
 

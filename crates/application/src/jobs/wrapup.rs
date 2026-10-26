@@ -5,26 +5,17 @@ use async_trait::async_trait;
 use chrono::Datelike;
 use domain::{
     errors::DomainError,
-    ports::{EventPublisher, PeriodicJob, UserRepository, WrapUpRepository},
+    ports::{PeriodicJob, UserRepository, WrapUpRepository},
 };
 
 pub struct WrapUpAutoGenerateJob {
     user: Arc<dyn UserRepository>,
     wrapup_repo: Arc<dyn WrapUpRepository>,
-    event_publisher: Arc<dyn EventPublisher>,
 }
 
 impl WrapUpAutoGenerateJob {
-    pub fn new(
-        user: Arc<dyn UserRepository>,
-        wrapup_repo: Arc<dyn WrapUpRepository>,
-        event_publisher: Arc<dyn EventPublisher>,
-    ) -> Self {
-        Self {
-            user,
-            wrapup_repo,
-            event_publisher,
-        }
+    pub fn new(user: Arc<dyn UserRepository>, wrapup_repo: Arc<dyn WrapUpRepository>) -> Self {
+        Self { user, wrapup_repo }
     }
 }
 
@@ -60,7 +51,6 @@ impl PeriodicJob for WrapUpAutoGenerateJob {
                     };
                     let deps = crate::wrapup::deps::GenerateWrapUpDeps {
                         wrapup_repo: self.wrapup_repo.clone(),
-                        event_publisher: self.event_publisher.clone(),
                     };
                     if let Err(e) = crate::wrapup::generate::execute(&deps, cmd).await {
                         tracing::warn!(
@@ -81,7 +71,6 @@ impl PeriodicJob for WrapUpAutoGenerateJob {
             };
             let deps = crate::wrapup::deps::GenerateWrapUpDeps {
                 wrapup_repo: self.wrapup_repo.clone(),
-                event_publisher: self.event_publisher.clone(),
             };
             if let Err(e) = crate::wrapup::generate::execute(&deps, cmd).await {
                 tracing::warn!("auto-generate global wrapup failed: {e}");

@@ -1,0 +1,54 @@
+mod account_purge;
+mod ap_content;
+mod diary;
+mod goals;
+mod image_ref;
+mod import_profile;
+mod import_session;
+mod insights;
+mod movie;
+mod movie_dedup;
+mod persons;
+mod processed_events;
+mod profile;
+mod profile_fields;
+mod refresh_sessions;
+mod remote_goals;
+mod review;
+mod search;
+mod social;
+mod stats;
+mod user_settings;
+mod users;
+mod watch_event;
+mod watchlist;
+mod wrapup;
+
+pub use account_purge::{
+    PAYLOAD_KEYED_USER_COLUMNS, PURGED_USER_TABLES, RETAINED_USER_TABLES, SqliteAccountPurger,
+    URL_KEYED_USER_COLUMNS,
+};
+pub use ap_content::SqliteApContentQuery;
+pub use diary::SqliteDiaryRepository;
+pub use goals::SqliteGoalRepository;
+pub use image_ref::{SqliteImageRefAdapter, create_image_ref};
+pub use import_profile::SqliteImportProfileRepository;
+pub use import_session::SqliteImportSessionRepository;
+pub use insights::SqliteInsightsQuery;
+pub use movie::SqliteMovieRepository;
+pub use movie_dedup::SqliteMovieDeduplicator;
+pub use persons::{SqlitePersonAdapter, create_person_adapter};
+pub use processed_events::SqliteProcessedEventLedger;
+pub use profile::SqliteMovieProfileRepository;
+pub use profile_fields::SqliteProfileFieldsRepository;
+pub use refresh_sessions::SqliteRefreshSessionAdapter;
+pub use remote_goals::SqliteRemoteGoalRepository;
+pub use review::SqliteReviewRepository;
+pub use search::create_search_adapter;
+pub use social::{SqliteSocialRepository, create_federated_profile_query};
+pub use stats::SqliteStatsRepository;
+pub use user_settings::SqliteUserSettingsRepository;
+pub use users::SqliteUserRepository;
+pub use watch_event::{SqliteWatchEventRepository, SqliteWebhookTokenRepository};
+pub use watchlist::SqliteWatchlistRepository;
+pub use wrapup::{SqliteWrapUpRepository, SqliteWrapUpStatsQuery};

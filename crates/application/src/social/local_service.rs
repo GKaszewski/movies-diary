@@ -3,9 +3,10 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use domain::{
     errors::DomainError,
+    events::DomainEvent,
     ports::{
         BlockQuery, FollowCommand, FollowGraphQuery, FollowQuery, FollowTargetResolver,
-        ResolvedFollow, SocialCommand, UserRepository,
+        FollowWrite, ResolvedFollow, SocialCommand, UserRepository,
     },
     value_objects::{
         FollowRelation, FollowStatus, FollowTarget, InstanceIdentity, SocialActor, SocialIdentity,
@@ -72,27 +73,41 @@ fn remote_unsupported(actor: &str) -> DomainError {
 
 #[async_trait]
 impl SocialCommand for LocalSocialService {
-    async fn follow(&self, follower: &UserId, target: &FollowTarget) -> Result<(), DomainError> {
+    async fn follow(
+        &self,
+        follower: &UserId,
+        target: &FollowTarget,
+        events: &[DomainEvent],
+    ) -> Result<(), DomainError> {
         let identity = self.resolve_target_identity(target).await?;
-        self.follow_resolved(follower, &identity).await
+        self.follow_resolved(follower, &identity, events).await
     }
 
     async fn unfollow(
         &self,
         follower: &UserId,
         target: &SocialIdentity,
+        events: &[DomainEvent],
     ) -> Result<(), DomainError> {
         let actor_url = self.instance.actor_url_of(target);
         match target {
             SocialIdentity::Local(target_id) => {
                 let follower_url = self.instance.actor_url_for(follower);
                 self.follow_command
-                    .remove_follow(follower.value(), &actor_url)
-                    .await?;
-                self.follow_command
-                    .remove_follower_record(target_id.value(), &follower_url)
-                    .await?;
-                Ok(())
+                    .apply(
+                        &[
+                            FollowWrite::RemoveFollow {
+                                follower_id: follower.value(),
+                                target_actor_url: actor_url,
+                            },
+                            FollowWrite::RemoveFollowerRecord {
+                                local_user_id: target_id.value(),
+                                follower_actor_url: follower_url,
+                            },
+                        ],
+                        events,
+                    )
+                    .await
             }
             SocialIdentity::Remote { .. } => Err(remote_unsupported(&actor_url)),
         }
@@ -102,18 +117,29 @@ impl SocialCommand for LocalSocialService {
         &self,
         owner: &UserId,
         requester: &SocialIdentity,
+        events: &[DomainEvent],
     ) -> Result<(), DomainError> {
         let actor_url = self.instance.actor_url_of(requester);
         match requester {
             SocialIdentity::Local(requester_id) => {
                 let owner_url = self.instance.actor_url_for(owner);
                 self.follow_command
-                    .update_follower_status(owner.value(), &actor_url, FollowStatus::Accepted)
-                    .await?;
-                self.follow_command
-                    .update_follow_status(requester_id.value(), &owner_url, FollowStatus::Accepted)
-                    .await?;
-                Ok(())
+                    .apply(
+                        &[
+                            FollowWrite::UpdateFollowerStatus {
+                                local_user_id: owner.value(),
+                                follower_actor_url: actor_url,
+                                status: FollowStatus::Accepted,
+                            },
+                            FollowWrite::UpdateFollowStatus {
+                                follower_id: requester_id.value(),
+                                target_actor_url: owner_url,
+                                status: FollowStatus::Accepted,
+                            },
+                        ],
+                        events,
+                    )
+                    .await
             }
             SocialIdentity::Remote { .. } => Err(remote_unsupported(&actor_url)),
         }
@@ -123,18 +149,28 @@ impl SocialCommand for LocalSocialService {
         &self,
         owner: &UserId,
         requester: &SocialIdentity,
+        events: &[DomainEvent],
     ) -> Result<(), DomainError> {
         let actor_url = self.instance.actor_url_of(requester);
         match requester {
             SocialIdentity::Local(requester_id) => {
                 let owner_url = self.instance.actor_url_for(owner);
                 self.follow_command
-                    .update_follower_status(owner.value(), &actor_url, FollowStatus::Rejected)
-                    .await?;
-                self.follow_command
-                    .remove_follow(requester_id.value(), &owner_url)
-                    .await?;
-                Ok(())
+                    .apply(
+                        &[
+                            FollowWrite::UpdateFollowerStatus {
+                                local_user_id: owner.value(),
+                                follower_actor_url: actor_url,
+                                status: FollowStatus::Rejected,
+                            },
+                            FollowWrite::RemoveFollow {
+                                follower_id: requester_id.value(),
+                                target_actor_url: owner_url,
+                            },
+                        ],
+                        events,
+                    )
+                    .await
             }
             SocialIdentity::Remote { .. } => Err(remote_unsupported(&actor_url)),
         }
@@ -144,24 +180,38 @@ impl SocialCommand for LocalSocialService {
         &self,
         owner: &UserId,
         follower: &SocialIdentity,
+        events: &[DomainEvent],
     ) -> Result<(), DomainError> {
         let actor_url = self.instance.actor_url_of(follower);
         match follower {
             SocialIdentity::Local(follower_id) => {
                 let owner_url = self.instance.actor_url_for(owner);
                 self.follow_command
-                    .remove_follower_record(owner.value(), &actor_url)
-                    .await?;
-                self.follow_command
-                    .remove_follow(follower_id.value(), &owner_url)
-                    .await?;
-                Ok(())
+                    .apply(
+                        &[
+                            FollowWrite::RemoveFollowerRecord {
+                                local_user_id: owner.value(),
+                                follower_actor_url: actor_url,
+                            },
+                            FollowWrite::RemoveFollow {
+                                follower_id: follower_id.value(),
+                                target_actor_url: owner_url,
+                            },
+                        ],
+                        events,
+                    )
+                    .await
             }
             SocialIdentity::Remote { .. } => Err(remote_unsupported(&actor_url)),
         }
     }
 
-    async fn block(&self, _blocker: &UserId, _target: &SocialIdentity) -> Result<(), DomainError> {
+    async fn block(
+        &self,
+        _blocker: &UserId,
+        _target: &SocialIdentity,
+        _events: &[DomainEvent],
+    ) -> Result<(), DomainError> {
         Err(DomainError::ValidationError(
             "blocking requires the federation feature".into(),
         ))
@@ -171,6 +221,7 @@ impl SocialCommand for LocalSocialService {
         &self,
         _blocker: &UserId,
         _target: &SocialIdentity,
+        _events: &[DomainEvent],
     ) -> Result<(), DomainError> {
         Err(DomainError::ValidationError(
             "blocking requires the federation feature".into(),
@@ -242,6 +293,7 @@ impl ResolvedFollow for LocalSocialService {
         &self,
         follower: &UserId,
         target: &SocialIdentity,
+        events: &[DomainEvent],
     ) -> Result<(), DomainError> {
         let SocialIdentity::Local(target_id) = target else {
             let actor_url = self.instance.actor_url_of(target);
@@ -255,15 +307,21 @@ impl ResolvedFollow for LocalSocialService {
         let follower_url = self.instance.actor_url_for(follower);
         let target_url = self.instance.actor_url_for(target_id);
         self.follow_command
-            .add_follower(target_id.value(), &follower_url, FollowStatus::Pending)
-            .await?;
-        self.follow_command
-            .add_follow(follower.value(), &target_url, FollowStatus::Pending)
-            .await?;
-        Ok(())
+            .apply(
+                &[
+                    FollowWrite::AddFollower {
+                        local_user_id: target_id.value(),
+                        follower_actor_url: follower_url,
+                        status: FollowStatus::Pending,
+                    },
+                    FollowWrite::AddFollow {
+                        follower_id: follower.value(),
+                        target_actor_url: target_url,
+                        status: FollowStatus::Pending,
+                    },
+                ],
+                events,
+            )
+            .await
     }
 }
-
-#[cfg(test)]
-#[path = "tests/local_service.rs"]
-mod tests;

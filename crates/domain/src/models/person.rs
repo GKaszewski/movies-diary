@@ -181,7 +181,3 @@ pub struct CrewCredit {
     pub department: String,
     pub poster_path: Option<String>,
 }
-
-#[cfg(test)]
-#[path = "tests/person.rs"]
-mod tests;

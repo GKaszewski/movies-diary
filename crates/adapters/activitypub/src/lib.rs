@@ -1,4 +1,5 @@
 pub mod composite_handler;
+pub mod deletion_notifier;
 pub mod event_handler;
 pub mod federation_event_bridge;
 pub mod federation_ports;
@@ -7,12 +8,12 @@ pub mod objects;
 pub mod remote_review_repository;
 pub mod review_handler;
 pub mod social_adapter;
+pub mod tombstone_gate;
 pub(crate) mod urls;
 pub mod user_adapter;
 pub mod watchlist_handler;
 
-pub const INSTANCE_ACTOR_ID: uuid::Uuid =
-    uuid::Uuid::from_bytes([0, 0, 0, 0, 0, 0, 0x40, 0, 0x80, 0, 0, 0, 0, 0, 0, 0]);
+pub const INSTANCE_ACTOR_ID: uuid::Uuid = domain::value_objects::SERVICE_ACTOR_UUID;
 
 pub use k_ap::{
     ActivityPubService, ActivityRepository, ActorRepository, ApContentReader, ApFederationConfig,
@@ -20,9 +21,10 @@ pub use k_ap::{
     FollowRepository, Follower, FollowerStatus, FollowingStatus, LocalObject, RemoteActor,
 };
 
+pub use deletion_notifier::ApDeletionNotifier;
 pub use event_handler::ActivityPubEventHandler;
 pub use federation_ports::ApServiceAdapter;
-pub use remote_review_repository::{RemoteReviewRepository, RemoteReviewUpdate};
+pub use remote_review_repository::{NewRemoteReview, RemoteReviewRepository, RemoteReviewUpdate};
 pub use review_handler::ReviewObjectHandler;
 pub use social_adapter::CompositeSocialAdapter;
 pub use user_adapter::DomainUserRepoAdapter;
@@ -46,6 +48,7 @@ pub struct ActivityPubWire {
     pub service: std::sync::Arc<ActivityPubService>,
     pub router: axum::Router,
     pub event_handler: std::sync::Arc<dyn domain::ports::EventHandler>,
+    pub deletion_notifier: std::sync::Arc<dyn domain::ports::FederationDeletionNotifier>,
 }
 
 pub struct ActivityPubDeps {
@@ -68,6 +71,7 @@ pub struct ActivityPubDeps {
     pub follow_query: std::sync::Arc<dyn domain::ports::FollowQuery>,
     pub instance: domain::value_objects::InstanceIdentity,
     pub allow_registration: bool,
+    pub federation: config::FederationConfig,
     pub event_publisher: std::sync::Arc<dyn domain::ports::EventPublisher>,
 }
 
@@ -92,6 +96,7 @@ pub async fn wire(deps: ActivityPubDeps) -> anyhow::Result<ActivityPubWire> {
         follow_query: _,
         instance,
         allow_registration,
+        federation,
         event_publisher,
     } = deps;
     let review_handler = std::sync::Arc::new(ReviewObjectHandler {
@@ -99,7 +104,6 @@ pub async fn wire(deps: ActivityPubDeps) -> anyhow::Result<ActivityPubWire> {
         movie_repo: std::sync::Arc::clone(&movie_repo),
         diary_repo,
         review_store,
-        event_publisher: std::sync::Arc::clone(&event_publisher),
         instance: instance.clone(),
     });
     let watchlist_handler = std::sync::Arc::new(watchlist_handler::WatchlistObjectHandler {
@@ -118,9 +122,7 @@ pub async fn wire(deps: ActivityPubDeps) -> anyhow::Result<ActivityPubWire> {
         goal: goal_handler,
     });
 
-    let federation_debug = std::env::var("FEDERATION_DEBUG")
-        .map(|v| v == "true" || v == "1")
-        .unwrap_or(false);
+    let federation_debug = federation.debug;
 
     if federation_debug {
         tracing::warn!(
@@ -140,7 +142,7 @@ pub async fn wire(deps: ActivityPubDeps) -> anyhow::Result<ActivityPubWire> {
             .actor_repo(actor_repo)
             .blocklist_repo(blocklist_repo)
             .user_repo(std::sync::Arc::new(DomainUserRepoAdapter::new(
-                user_repo,
+                std::sync::Arc::clone(&user_repo),
                 instance.clone(),
             )))
             .signed_fetch_actor_id(INSTANCE_ACTOR_ID)
@@ -158,7 +160,16 @@ pub async fn wire(deps: ActivityPubDeps) -> anyhow::Result<ActivityPubWire> {
             .await?,
     );
 
-    let router = concrete.router();
+    let router = concrete
+        .router()
+        .layer(axum::middleware::from_fn_with_state(
+            std::sync::Arc::clone(&user_repo),
+            tombstone_gate::tombstone_gate,
+        ));
+    let deletion_notifier = std::sync::Arc::new(ApDeletionNotifier::new(
+        std::sync::Arc::clone(&concrete),
+        instance.clone(),
+    )) as std::sync::Arc<dyn domain::ports::FederationDeletionNotifier>;
     let event_handler = std::sync::Arc::new(ActivityPubEventHandler::new(
         std::sync::Arc::clone(&concrete),
         local_ap_content,
@@ -167,11 +178,13 @@ pub async fn wire(deps: ActivityPubDeps) -> anyhow::Result<ActivityPubWire> {
         goal_repo,
         stats_repo,
         federation_settings,
+        std::sync::Arc::clone(&user_repo),
         instance,
     )) as std::sync::Arc<dyn domain::ports::EventHandler>;
 
     let ports = std::sync::Arc::new(federation_ports::ApServiceAdapter::new(
         std::sync::Arc::clone(&concrete),
+        std::sync::Arc::clone(&user_repo),
     ));
 
     Ok(ActivityPubWire {
@@ -183,5 +196,6 @@ pub async fn wire(deps: ActivityPubDeps) -> anyhow::Result<ActivityPubWire> {
         service: concrete,
         router,
         event_handler,
+        deletion_notifier,
     })
 }

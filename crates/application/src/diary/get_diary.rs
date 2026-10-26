@@ -29,7 +29,3 @@ pub async fn execute(
 
     deps.diary.query_diary(&filter).await
 }
-
-#[cfg(test)]
-#[path = "tests/get_diary.rs"]
-mod tests;

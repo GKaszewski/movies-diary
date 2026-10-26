@@ -1,78 +1,22 @@
 [package]
 name = "server"
 version = "0.1.0"
-edition = "2024"
+edition.workspace = true
 description = "Self-hosted movie diary with REST API and ActivityPub federation"
 license = "MIT"
 
 [features]
-default = ["sqlite", "sqlite-federation"]
-sqlite = ["dep:sqlite", "dep:sqlite-event-queue", "dep:sqlite-search", "infra-wiring/sqlite", "composition/sqlite"]
-postgres = ["dep:postgres", "dep:postgres-event-queue", "dep:postgres-search", "infra-wiring/postgres", "composition/postgres"]
-nats = ["dep:nats", "infra-wiring/nats", "composition/nats"]
-# Meta-feature: true when any federation adapter is active — keeps all #[cfg(feature = "federation")] gates working
-federation = ["application/federation", "presentation/federation"]
-sqlite-federation = [
-    "sqlite",
-    "dep:sqlite-federation",
-    "dep:sqlite-social",
-    "dep:activitypub",
-    "federation",
-    "composition/sqlite-federation",
-]
-postgres-federation = [
-    "postgres",
-    "dep:postgres-federation",
-    "dep:postgres-social",
-    "dep:activitypub",
-    "federation",
-    "composition/postgres-federation",
-]
+default = ["federation"]
+federation = ["bootstrap/federation"]
+nats = ["bootstrap/nats"]
+sqlite = []
+sqlite-federation = ["federation"]
 
 [dependencies]
-axum = { workspace = true }
-tokio = { workspace = true }
+bootstrap = { workspace = true }
+config = { workspace = true }
+axum = { workspace = true, features = ["http1", "tokio"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "net"] }
 anyhow = { workspace = true }
-tracing = { workspace = true }
-tracing-subscriber = { workspace = true }
 dotenvy = { workspace = true }
-
-domain = { workspace = true }
-application = { workspace = true }
-composition = { workspace = true }
-presentation = { path = "../presentation", default-features = false }
-auth = { workspace = true }
-metadata = { workspace = true }
-poster-fetcher = { workspace = true }
-object-storage = { workspace = true }
-rss = { workspace = true }
-export = { workspace = true }
-importer = { workspace = true }
-nats = { workspace = true, optional = true }
-sqlx = { workspace = true }
-infra-wiring = { workspace = true }
-async-trait = { workspace = true }
-
-# Optional — database backends
-sqlite = { workspace = true, optional = true }
-postgres = { workspace = true, optional = true }
-sqlite-event-queue   = { workspace = true, optional = true }
-postgres-event-queue = { workspace = true, optional = true }
-sqlite-search        = { workspace = true, optional = true }
-postgres-search      = { workspace = true, optional = true }
-
-# Optional — federation
-activitypub       = { workspace = true, optional = true }
-sqlite-federation = { workspace = true, optional = true }
-sqlite-social = { workspace = true, optional = true }
-postgres-federation = { workspace = true, optional = true }
-postgres-social = { workspace = true, optional = true }
-
-[dev-dependencies]
-bytes = { workspace = true }
-futures = { workspace = true }
-serde_json = { workspace = true }
-uuid = { workspace = true }
-tower = { version = "0.5", features = ["util"] }
-http-body-util = "0.1"
-domain = { workspace = true, features = ["test-helpers"] }
+tracing = { workspace = true }

@@ -91,6 +91,16 @@ pub async fn execute(
         }
     });
 
+    let mut events = vec![DomainEvent::UserUpdated {
+        user_id: user_id.clone(),
+    }];
+    if let Some(new_actor_url) = moved_to {
+        events.push(DomainEvent::UserAccountMoved {
+            user_id: user_id.clone(),
+            new_actor_url,
+        });
+    }
+
     deps.user
         .update_profile(
             &user_id,
@@ -102,28 +112,9 @@ pub async fn execute(
                 also_known_as: cmd.also_known_as,
                 profile_fields: vec![],
             },
+            &events,
         )
         .await?;
 
-    deps.event_publisher
-        .publish(&DomainEvent::UserUpdated {
-            user_id: user_id.clone(),
-        })
-        .await?;
-
-    if let Some(new_actor_url) = moved_to {
-        let _ = deps
-            .event_publisher
-            .publish(&DomainEvent::UserAccountMoved {
-                user_id,
-                new_actor_url,
-            })
-            .await;
-    }
-
     Ok(())
 }
-
-#[cfg(test)]
-#[path = "tests/update_profile.rs"]
-mod tests;

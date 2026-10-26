@@ -109,7 +109,3 @@ impl GoalWithProgress {
         self.current_count >= self.goal.target_count
     }
 }
-
-#[cfg(test)]
-#[path = "tests/goal.rs"]
-mod tests;

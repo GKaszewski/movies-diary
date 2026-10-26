@@ -2,6 +2,7 @@ use async_trait::async_trait;
 
 use crate::{
     errors::DomainError,
+    events::DomainEvent,
     models::{
         WatchlistEntry, WatchlistWithMovie,
         collections::{PageParams, Paginated},
@@ -11,14 +12,20 @@ use crate::{
 
 #[async_trait]
 pub trait WatchlistRepository: Send + Sync {
-    async fn add(&self, entry: &WatchlistEntry) -> Result<(), DomainError>;
+    async fn add(&self, entry: &WatchlistEntry, events: &[DomainEvent]) -> Result<(), DomainError>;
 
-    async fn remove(&self, user_id: &UserId, movie_id: &MovieId) -> Result<(), DomainError>;
+    async fn remove(
+        &self,
+        user_id: &UserId,
+        movie_id: &MovieId,
+        events: &[DomainEvent],
+    ) -> Result<(), DomainError>;
 
     async fn remove_if_present(
         &self,
         user_id: &UserId,
         movie_id: &MovieId,
+        events: &[DomainEvent],
     ) -> Result<bool, DomainError>;
 
     async fn get_for_user(

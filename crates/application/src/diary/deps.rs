@@ -1,22 +1,19 @@
 use std::sync::Arc;
 
 use domain::ports::{
-    DiaryExporter, DiaryQuery, EventPublisher, FollowGraphQuery, MovieCommand,
-    MovieProfileRepository, MovieQuery, ReviewRepository, UserRepository,
+    DiaryExporter, DiaryQuery, FollowGraphQuery, MovieProfileRepository, MovieQuery,
+    ReviewRepository, UserRepository,
 };
 
-use crate::config::AppConfig;
+use crate::config::AppSettings;
 
 pub struct DeleteReviewDeps {
     pub review: Arc<dyn ReviewRepository>,
     pub diary: Arc<dyn DiaryQuery>,
-    pub movie_command: Arc<dyn MovieCommand>,
-    pub event_publisher: Arc<dyn EventPublisher>,
 }
 
 pub struct EditReviewDeps {
     pub review: Arc<dyn ReviewRepository>,
-    pub event_publisher: Arc<dyn EventPublisher>,
 }
 
 pub struct GetMovieSocialPageDeps {
@@ -28,7 +25,7 @@ pub struct GetMovieSocialPageDeps {
 pub struct GetActivityFeedDeps {
     pub diary: Arc<dyn DiaryQuery>,
     pub social_query: Arc<dyn FollowGraphQuery>,
-    pub config: AppConfig,
+    pub config: AppSettings,
 }
 
 pub struct GetUserFeedDeps {

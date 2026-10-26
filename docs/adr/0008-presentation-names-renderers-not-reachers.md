@@ -259,3 +259,9 @@ recorded under Known follow-ups below, which is also pre-existing.
   established as legitimate — test helpers build a real `Repositories` and call `composition::build_deps`.
   `check-presentation-adapters` intentionally does not scan that section, and it does not need to:
   `composition` is not an adapter crate.
+
+---
+
+Superseded in part by [ADR-0012](0012-sqlite-is-the-only-backend.md): the postgres backends, crates and features mentioned above no longer exist; SQLite is the only backend.
+
+Now `make check-http-adapter-deps` over `crates/adapters/http-axum/Cargo.toml` (was `check-presentation-adapters`); see [ADR-0014](0014-http-adapter-and-one-refusal-shape.md).

@@ -179,7 +179,3 @@ impl ResolutionStrategy for ManualMovieStrategy {
         }
     }
 }
-
-#[cfg(test)]
-#[path = "tests/movie_resolver.rs"]
-mod tests;

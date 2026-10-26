@@ -3,6 +3,7 @@ use chrono::NaiveDateTime;
 
 use crate::{
     errors::DomainError,
+    events::DomainEvent,
     models::{ParsedPlaybackEvent, WatchEvent, WatchEventStatus, WebhookToken},
     value_objects::{UserId, WatchEventId, WebhookTokenId},
 };
@@ -14,7 +15,7 @@ pub trait MediaServerParser: Send + Sync {
 
 #[async_trait]
 pub trait WatchEventCommand: Send + Sync {
-    async fn save(&self, event: &WatchEvent) -> Result<(), DomainError>;
+    async fn save(&self, event: &WatchEvent, events: &[DomainEvent]) -> Result<(), DomainError>;
     async fn update_status(
         &self,
         id: &WatchEventId,

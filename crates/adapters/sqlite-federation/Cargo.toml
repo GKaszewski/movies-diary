@@ -1,22 +1,22 @@
 [package]
 name = "sqlite-federation"
 version = "0.1.0"
-edition = "2024"
+edition.workspace = true
 
 [dependencies]
 sqlx = { workspace = true }
 activitypub = { workspace = true }
-adapter-common = { workspace = true }
-k-ap = { version = "0.5.0", registry = "gitea" }
-sqlite-social = { workspace = true }
+k-ap = { workspace = true }
+sqlite = { workspace = true }
 domain = { workspace = true }
 anyhow = { workspace = true }
 serde_json = { workspace = true }
-uuid = { workspace = true }
-chrono = { workspace = true }
+uuid = { workspace = true, features = ["v4", "serde"] }
+chrono = { workspace = true, features = ["clock", "serde"] }
 tracing = { workspace = true }
 async-trait = { workspace = true }
 
 [dev-dependencies]
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["rt", "macros"] }
+domain = { workspace = true, features = ["test-helpers"] }
 uuid = { workspace = true }

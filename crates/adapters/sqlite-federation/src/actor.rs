@@ -5,7 +5,7 @@ use k_ap::{AnnounceRepository, Keypair, KeypairRepository, RemoteActor, RemoteAc
 use sqlx::Row;
 
 use super::{SqliteFederationRepository, remote_actor_from_row};
-use adapter_common::datetime_to_str;
+use sqlite::persistence::datetime_to_str;
 
 #[async_trait]
 impl KeypairRepository for SqliteFederationRepository {

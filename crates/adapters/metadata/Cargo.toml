@@ -1,11 +1,13 @@
 [package]
 name = "metadata"
 version = "0.1.0"
-edition = "2024"
+edition.workspace = true
 
 [dependencies]
+config = { workspace = true }
 anyhow = { workspace = true }
 async-trait = { workspace = true }
 reqwest = { workspace = true }
-serde = { workspace = true }
+rustls = { workspace = true, features = ["ring", "std"] }
+serde = { workspace = true, features = ["derive"] }
 domain = { workspace = true }

@@ -11,7 +11,3 @@ pub async fn execute(deps: &DeleteWrapUpDeps, id: WrapUpId) -> Result<(), Domain
 
     deps.wrapup_repo.delete(&id).await
 }
-
-#[cfg(test)]
-#[path = "tests/delete.rs"]
-mod tests;

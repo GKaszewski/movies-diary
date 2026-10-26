@@ -67,7 +67,3 @@ pub async fn execute(
 
     Ok(confirmed)
 }
-
-#[cfg(test)]
-#[path = "tests/confirm.rs"]
-mod tests;

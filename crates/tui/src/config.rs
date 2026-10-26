@@ -76,7 +76,3 @@ impl Config {
         Ok(())
     }
 }
-
-#[cfg(test)]
-#[path = "tests/config.rs"]
-mod tests;

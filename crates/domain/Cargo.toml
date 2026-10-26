@@ -1,22 +1,23 @@
 [package]
 name = "domain"
 version = "0.1.0"
-edition = "2024"
+edition.workspace = true
 
 [dependencies]
-uuid = { workspace = true }
-chrono = { workspace = true }
+uuid = { workspace = true, features = ["v4", "v5", "serde"] }
+chrono = { workspace = true, features = ["clock", "serde"] }
 async-trait = { workspace = true }
 thiserror = { workspace = true }
 bytes = { workspace = true }
 futures = { workspace = true }
-serde = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 
-email_address = "0.2.9"
+email_address = { workspace = true }
 
 [dev-dependencies]
-tokio = { workspace = true }
+domain = { path = ".", features = ["test-helpers"] }
+tokio = { workspace = true, features = ["rt", "macros"] }
 
 [features]
 test-helpers = []

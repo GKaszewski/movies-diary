@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Profile Settings</h1>
+<p style="font-size:.85em;opacity:.7;margin-bottom:1rem">
+  <a href="/settings/integrations">Integrations (Jellyfin/Plex)</a>
+</p>
+{% if saved %}
+<p class="success">Saved.</p>
+{% endif %}
+{% if let Some(err) = error %}
+<p class="error">{{ err }}</p>
+{% endif %}
+<form method="post" action="/settings/profile" enctype="multipart/form-data">
+  <input type="hidden" name="_csrf" value="{{ ctx.csrf_token }}">
+
+  <label>
+    Bio<br>
+    <textarea name="bio">{% if let Some(b) = bio %}{{ b }}{% endif %}</textarea>
+  </label>
+
+  <label>
+    Also known as (actor URL for account migration)<br>
+    <input type="text" name="also_known_as" value="{% if let Some(v) = also_known_as %}{{ v }}{% endif %}">
+  </label>
+
+  {% if let Some(url) = avatar_url %}
+  <div>
+    <p>Current avatar:</p>
+    <img src="{{ url }}" alt="Current avatar" style="max-width:128px;max-height:128px;">
+  </div>
+  {% endif %}
+  <label>
+    Avatar image<br>
+    <input type="file" name="avatar" accept="image/jpeg,image/png,image/webp">
+  </label>
+
+  {% if let Some(url) = banner_url %}
+  <div>
+    <p>Current banner:</p>
+    <img src="{{ url }}" alt="Current banner" style="max-width:600px;max-height:200px;">
+  </div>
+  {% endif %}
+  <label>
+    Banner image<br>
+    <input type="file" name="banner" accept="image/jpeg,image/png,image/webp">
+  </label>
+
+  <fieldset>
+    <legend>Profile fields (max 4)</legend>
+    {% for i in 0..4usize %}
+    <div>
+      <input type="text" name="field_name_{{ i }}" placeholder="Label"
+             value="{% if let Some((n, _)) = profile_fields.get(*i) %}{{ n }}{% endif %}">
+      <input type="text" name="field_value_{{ i }}" placeholder="Value"
+             value="{% if let Some((_, v)) = profile_fields.get(*i) %}{{ v }}{% endif %}">
+    </div>
+    {% endfor %}
+  </fieldset>
+
+  <button type="submit">Save</button>
+</form>
+
+<section style="margin-top:2rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.1)">
+  <h3>Embed widget</h3>
+  <p style="font-size:.85em;opacity:.7;margin-bottom:.5rem">Add your diary to your blog or website:</p>
+  <pre style="background:rgba(255,255,255,0.06);padding:12px;border-radius:8px;font-size:.8em;overflow-x:auto;white-space:pre-wrap;word-break:break-all"><code>&lt;iframe src="{{ embed_url }}" width="100%" height="600" style="border:none;border-radius:8px" loading="lazy"&gt;&lt;/iframe&gt;</code></pre>
+</section>
+
+<section style="margin-top:2rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.1)">
+  <h3>Delete account</h3>
+  <p style="font-size:.85em;opacity:.7;margin-bottom:.5rem">
+    Deleting your account is permanent and cannot be undone. Your reviews, watchlist, goals and follows are removed, fediverse servers are notified, and your username can never be reused.
+  </p>
+  <form method="post" action="/settings/account/delete">
+    <input type="hidden" name="_csrf" value="{{ ctx.csrf_token }}">
+    <label>
+      Confirm with your password<br>
+      <input type="password" name="password" required autocomplete="current-password">
+    </label>
+    <button type="submit" class="btn-small" style="color:#e57a7a;border-color:rgba(229,122,122,.3)">Delete my account</button>
+  </form>
+</section>
+{% endblock %}

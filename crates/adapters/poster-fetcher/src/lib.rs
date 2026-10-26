@@ -16,6 +16,7 @@ pub struct ReqwestPosterFetcher {
 
 impl ReqwestPosterFetcher {
     pub fn new(config: PosterFetcherConfig) -> anyhow::Result<Self> {
+        let _ = rustls::crypto::ring::default_provider().install_default();
         let client = reqwest::Client::builder()
             .timeout(Duration::from_secs(config.timeout_seconds))
             .build()?;
@@ -59,14 +60,18 @@ impl ImageFetcher for ReqwestPosterFetcher {
     }
 }
 
-pub fn create() -> anyhow::Result<std::sync::Arc<dyn domain::ports::PosterFetcherClient>> {
+pub fn create(
+    config: &::config::MetadataConfig,
+) -> anyhow::Result<std::sync::Arc<dyn domain::ports::PosterFetcherClient>> {
     Ok(std::sync::Arc::new(ReqwestPosterFetcher::new(
-        PosterFetcherConfig::from_env(),
+        PosterFetcherConfig::from_config(config),
     )?))
 }
 
-pub fn create_image_fetcher() -> anyhow::Result<std::sync::Arc<dyn domain::ports::ImageFetcher>> {
+pub fn create_image_fetcher(
+    config: &::config::MetadataConfig,
+) -> anyhow::Result<std::sync::Arc<dyn domain::ports::ImageFetcher>> {
     Ok(std::sync::Arc::new(ReqwestPosterFetcher::new(
-        PosterFetcherConfig::from_env(),
+        PosterFetcherConfig::from_config(config),
     )?))
 }

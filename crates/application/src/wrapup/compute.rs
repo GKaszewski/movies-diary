@@ -19,7 +19,3 @@ pub async fn execute(
         &rows,
     ))
 }
-
-#[cfg(test)]
-#[path = "tests/compute.rs"]
-mod tests;

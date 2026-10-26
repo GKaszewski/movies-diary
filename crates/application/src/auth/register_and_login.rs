@@ -44,7 +44,3 @@ pub async fn execute(
     )
     .await
 }
-
-#[cfg(test)]
-#[path = "tests/register_and_login.rs"]
-mod tests;

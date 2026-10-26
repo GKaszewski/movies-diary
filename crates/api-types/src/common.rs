@@ -21,3 +21,9 @@ pub type ActivityFeedResponse = PaginatedResponse<crate::diary::FeedEntryDto>;
 pub type WatchlistResponse = PaginatedResponse<crate::watchlist::WatchlistEntryDto>;
 pub type PaginatedMovieHits = PaginatedResponse<crate::search::MovieSearchHitDto>;
 pub type PaginatedPersonHits = PaginatedResponse<crate::search::PersonSearchHitDto>;
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct ErrorResponse {
+    pub error: String,
+    pub code: String,
+}

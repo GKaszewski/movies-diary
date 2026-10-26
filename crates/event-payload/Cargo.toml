@@ -1,0 +1,11 @@
+[package]
+name = "event-payload"
+version = "0.1.0"
+edition.workspace = true
+
+[dependencies]
+domain = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+chrono = { workspace = true, features = ["serde"] }
+uuid = { workspace = true, features = ["serde"] }
+serde_json = { workspace = true }

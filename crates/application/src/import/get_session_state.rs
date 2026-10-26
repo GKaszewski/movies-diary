@@ -1,4 +1,4 @@
-//! Backs `handlers/import.rs::api_get_session` — a plain state query, not a
+//! Backs `http-axum/src/api/import/sessions.rs::api_get_session` — a plain state query, not a
 //! redirect-driving gate (the API has nothing to redirect to; a missing
 //! session is just a 404).
 
@@ -37,7 +37,3 @@ pub async fn execute(
         row_count,
     })
 }
-
-#[cfg(test)]
-#[path = "tests/get_session_state.rs"]
-mod tests;

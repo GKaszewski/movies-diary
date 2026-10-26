@@ -1,0 +1,12 @@
+[package]
+name = "rss-adapter"
+version = "0.1.0"
+edition.workspace = true
+
+[dependencies]
+rss = { workspace = true, features = ["atom"] }
+domain = { workspace = true }
+
+[dev-dependencies]
+domain = { workspace = true, features = ["test-helpers"] }
+chrono = { workspace = true }

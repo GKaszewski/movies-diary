@@ -1,1 +1,1 @@
-pub use event_payload::EventPayload as NatsEventPayload;
+pub use event_payload::EventMessage as NatsEventMessage;

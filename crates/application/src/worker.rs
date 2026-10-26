@@ -1,8 +1,10 @@
 use std::sync::Arc;
+use std::time::Duration;
 
 use domain::{
+    errors::DomainError,
     events::EventEnvelope,
-    ports::{EventConsumer, EventHandler},
+    ports::{Begin, EventConsumer, EventHandler, ProcessedEventLedger},
 };
 use futures::StreamExt;
 use tokio::sync::Semaphore;
@@ -12,20 +14,40 @@ const DEFAULT_CONCURRENCY: usize = 4;
 pub struct WorkerService {
     consumer: Arc<dyn EventConsumer>,
     handlers: Vec<Arc<dyn EventHandler>>,
+    ledger: Arc<dyn ProcessedEventLedger>,
     semaphore: Arc<Semaphore>,
 }
 
 impl WorkerService {
-    pub fn new(consumer: Arc<dyn EventConsumer>, handlers: Vec<Arc<dyn EventHandler>>) -> Self {
-        Self {
+    pub fn new(
+        consumer: Arc<dyn EventConsumer>,
+        handlers: Vec<Arc<dyn EventHandler>>,
+        ledger: Arc<dyn ProcessedEventLedger>,
+    ) -> Result<Self, DomainError> {
+        let mut seen = std::collections::HashSet::new();
+        for handler in &handlers {
+            if !seen.insert(handler.name()) {
+                return Err(DomainError::ValidationError(format!(
+                    "duplicate event handler name `{}`",
+                    handler.name()
+                )));
+            }
+        }
+        Ok(Self {
             consumer,
             handlers,
+            ledger,
             semaphore: Arc::new(Semaphore::new(DEFAULT_CONCURRENCY)),
-        }
+        })
+    }
+
+    pub fn handler_names(&self) -> Vec<&'static str> {
+        self.handlers.iter().map(|h| h.name()).collect()
     }
 
     pub async fn run(self, mut shutdown: tokio::sync::watch::Receiver<bool>) {
         let handlers = Arc::new(self.handlers);
+        let ledger = self.ledger;
         let mut tasks = tokio::task::JoinSet::new();
         let mut stream = self.consumer.consume();
 
@@ -43,8 +65,9 @@ impl WorkerService {
                             let permit = self.semaphore.clone().acquire_owned().await;
                             let Ok(permit) = permit else { break };
                             let h = Arc::clone(&handlers);
+                            let ledger = Arc::clone(&ledger);
                             tasks.spawn(async move {
-                                dispatch(h, envelope).await;
+                                dispatch(h, ledger, envelope).await;
                                 drop(permit);
                             });
                         }
@@ -64,19 +87,73 @@ impl WorkerService {
     }
 }
 
-async fn dispatch(handlers: Arc<Vec<Arc<dyn EventHandler>>>, envelope: EventEnvelope) {
+const DEFER_MARGIN: Duration = Duration::from_secs(5);
+
+async fn dispatch(
+    handlers: Arc<Vec<Arc<dyn EventHandler>>>,
+    ledger: Arc<dyn ProcessedEventLedger>,
+    envelope: EventEnvelope,
+) {
+    let id = envelope.id().copied();
     let mut any_transient = false;
+    let mut blocked_for: Option<Duration> = None;
     for handler in handlers.iter() {
-        if let Err(e) = handler.handle(&envelope.event).await {
-            if e.is_transient() {
-                tracing::warn!("transient handler error, will retry: {e}");
-                any_transient = true;
-            } else {
-                tracing::warn!("permanent handler error (not retrying): {e}");
+        let name = handler.name();
+        let mut claim = None;
+        if let Some(id) = &id {
+            match ledger.begin(id, name).await {
+                Ok(Begin::Run(token)) => claim = Some(token),
+                Ok(Begin::AlreadyDone) => {
+                    tracing::debug!(handler = name, "already processed, skipping");
+                    continue;
+                }
+                Ok(Begin::InProgressElsewhere { retry_after }) => {
+                    tracing::debug!(handler = name, "running in another delivery, deferring");
+                    blocked_for = Some(blocked_for.map_or(retry_after, |b| b.max(retry_after)));
+                    continue;
+                }
+                Err(e) => {
+                    tracing::warn!(handler = name, "ledger claim failed, nacking delivery: {e}");
+                    any_transient = true;
+                    continue;
+                }
+            }
+        }
+        let result = handler.handle(&envelope.event).await;
+        match &result {
+            Ok(()) => {
+                if let (Some(id), Some(token)) = (&id, &claim)
+                    && let Err(e) = ledger.complete(id, name, token).await
+                {
+                    tracing::warn!(handler = name, "completing ledger claim failed: {e}");
+                }
+            }
+            Err(e) => {
+                if let (Some(id), Some(token)) = (&id, &claim)
+                    && let Err(le) = ledger.release(id, name, token).await
+                {
+                    tracing::warn!(handler = name, "releasing ledger claim failed: {le}");
+                }
+                if e.is_transient() {
+                    tracing::warn!(
+                        handler = name,
+                        "transient handler error, nacking delivery (the backend logs if attempts are exhausted): {e}"
+                    );
+                    any_transient = true;
+                } else {
+                    tracing::warn!(
+                        handler = name,
+                        "permanent handler error (not retrying): {e}"
+                    );
+                }
             }
         }
     }
-    if any_transient {
+    if let Some(wait) = blocked_for {
+        if let Err(e) = envelope.defer(wait + DEFER_MARGIN).await {
+            tracing::error!("defer failed: {e}");
+        }
+    } else if any_transient {
         if let Err(e) = envelope.nack().await {
             tracing::error!("nack failed: {e}");
         }
@@ -84,7 +161,3 @@ async fn dispatch(handlers: Arc<Vec<Arc<dyn EventHandler>>>, envelope: EventEnve
         tracing::error!("ack failed: {e}");
     }
 }
-
-#[cfg(test)]
-#[path = "tests/worker.rs"]
-mod tests;

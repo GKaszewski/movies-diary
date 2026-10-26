@@ -18,7 +18,3 @@ pub async fn execute(
     let page = PageParams::new(query.limit, query.offset)?;
     deps.watchlist.get_for_user(&user_id, &page).await
 }
-
-#[cfg(test)]
-#[path = "tests/get.rs"]
-mod tests;

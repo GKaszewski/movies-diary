@@ -2,6 +2,7 @@ use async_trait::async_trait;
 
 use crate::{
     errors::DomainError,
+    events::DomainEvent,
     models::{
         MetadataSearchCriteria, Movie, MovieFilter, MovieProfile, MovieSummary,
         collections::{PageParams, Paginated},
@@ -11,8 +12,12 @@ use crate::{
 
 #[async_trait]
 pub trait MovieCommand: Send + Sync {
-    async fn upsert_movie(&self, movie: &Movie) -> Result<(), DomainError>;
-    async fn delete_movie(&self, movie_id: &MovieId) -> Result<(), DomainError>;
+    async fn upsert_movie(&self, movie: &Movie, events: &[DomainEvent]) -> Result<(), DomainError>;
+    async fn delete_movie(
+        &self,
+        movie_id: &MovieId,
+        events: &[DomainEvent],
+    ) -> Result<(), DomainError>;
 }
 
 #[async_trait]

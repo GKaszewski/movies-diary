@@ -2,15 +2,19 @@
 title: Movies Diary — Hexagonal Architecture
 ---
 graph TB
-    subgraph Binaries["Binaries (Composition Root)"]
-        WEB["presentation<br/><i>Axum web server</i><br/>Routes, Handlers, Mappers"]
-        WORKER["worker<br/><i>Event consumer</i><br/>Concurrent dispatch, graceful shutdown"]
-        TUI["tui<br/><i>Terminal UI</i>"]
+    subgraph Binaries["Binaries (thin: config + bootstrap + run)"]
+        SERVER["server<br/><i>load config, bootstrap::build_server, axum::serve</i>"]
+        WORKER["worker<br/><i>bootstrap::build_worker</i><br/>Concurrent dispatch, graceful shutdown"]
+        TUI["tui<br/><i>Terminal UI (deprecated)</i>"]
+    end
+
+    subgraph Config["config"]
+        CFG["AppConfig<br/><i>defaults, config.toml / CONFIG_FILE,<br/>legacy env names</i>"]
     end
 
     subgraph Application["Application Layer"]
         direction TB
-        CTX["AppContext<br/><i>Repositories + Services</i>"]
+        DEPS["Deps<br/><i>one narrow deps struct per use case</i>"]
         APP_PORTS["ReviewLogger<br/><i>application-layer port</i>"]
         subgraph UseCases["Use Cases"]
             UC_AUTH["auth<br/>login, register"]
@@ -33,7 +37,7 @@ graph TB
             EH_CLEANUP["SearchCleanupHandler"]
             EH_REINDEX["SearchReindexHandler"]
             EH_WRAPUP["WrapUpEventHandler"]
-            EH_AP["ActivityPubEventHandler<br/><i>reviews, watchlist, goals,<br/>UserDeleted, UserAccountMoved</i>"]
+            EH_POSTER["PosterSyncHandler<br/><i>poster sync</i>"]
         end
         subgraph Jobs["Periodic Jobs"]
             JOB_IMPORT["ImportSessionCleanup"]
@@ -77,66 +81,68 @@ graph TB
         DTO["DTOs<br/><i>MovieDto, ReviewDto,<br/>FeedEntryDto, UserSummaryDto,<br/>HtmlPageContext, ...</i>"]
     end
 
-    subgraph InfraWiring["infra-wiring"]
-        IW["DbPool, EventBusBackend,<br/>AppConfig<br/><i>Shared infra types</i>"]
+    subgraph Bootstrap["bootstrap"]
+        BS["build_server, build_worker<br/><i>Composition root: the only crate that names adapters</i>"]
+    end
+
+    subgraph EventPayload["event-payload"]
+        EP["Serde payloads for domain events"]
     end
 
     subgraph Adapters["Adapters (implement Port Traits)"]
         direction TB
-        A_COMMON["adapter-common<br/><i>Shared row conversions,<br/>error mapping, date utils</i>"]
+        subgraph Http["HTTP driving adapter"]
+            A_HTTP["http-axum<br/><i>JSON API, classic HTML (askama),<br/>OpenAPI, federation-gated routes,<br/>one refusal shape</i>"]
+        end
         subgraph Storage["Storage"]
-            A_SQLITE["sqlite<br/><i>SQLite repos</i>"]
-            A_PG["postgres<br/><i>PostgreSQL repos</i>"]
-            A_SQLITE_SEARCH["sqlite-search<br/><i>FTS5</i>"]
-            A_PG_SEARCH["postgres-search<br/><i>tsvector/GIN</i>"]
+            A_SQLITE["sqlite<br/><i>repositories per aggregate, FTS5 search,<br/>social graph, durable event queue, migrations</i>"]
             A_OBJ["object-storage<br/><i>S3 / filesystem</i>"]
         end
         subgraph Messaging["Messaging"]
             A_NATS["nats<br/><i>JetStream / Core</i>"]
-            A_SQLITE_QUEUE["sqlite-event-queue<br/><i>Polling, dead-letter</i>"]
-            A_PG_QUEUE["postgres-event-queue<br/><i>Polling, dead-letter</i>"]
-            A_EVT_PUB["event-publisher<br/><i>In-memory (tests)</i>"]
-            A_PAYLOAD["event-payload<br/><i>Serde (de)serialization</i>"]
+            A_EVT_PUB["event-publisher<br/><i>In-memory channel</i>"]
         end
         subgraph External["External Services"]
-            A_METADATA["metadata<br/><i>TMDB search/details</i>"]
+            A_METADATA["metadata<br/><i>TMDB / OMDb search/details</i>"]
             A_TMDB["tmdb-enrichment<br/><i>Credits, keywords, cast</i>"]
             A_POSTER["poster-fetcher<br/><i>TMDB image download</i>"]
             A_AUTH["auth<br/><i>JWT tokens</i>"]
         end
         subgraph Federation["Federation (feature-gated)"]
-            A_AP["activitypub<br/><i>k_ap library</i>"]
-            A_SQLITE_FED["sqlite-federation"]
-            A_PG_FED["postgres-federation"]
+            A_AP["activitypub<br/><i>k_ap library; ActivityPubEventHandler<br/>(reviews, watchlist, goals, UserDeleted, UserAccountMoved)</i>"]
+            A_SQLITE_FED["sqlite-federation<br/><i>k_ap repositories</i>"]
         end
         subgraph Media["Media Processing"]
             A_IMG["image-converter<br/><i>AVIF/WebP</i>"]
-            A_POSTER_SYNC["poster-sync"]
         end
-        subgraph Presentation["Presentation Helpers"]
-            A_TEMPLATE["template-askama<br/><i>HTML templates</i>"]
+        subgraph Formats["Formats"]
             A_RSS["rss<br/><i>Feed generation</i>"]
             A_EXPORT["export<br/><i>CSV/JSON diary</i>"]
             A_IMPORT["importer<br/><i>CSV/JSON/XLSX parser</i>"]
-        end
-        subgraph Webhooks["Webhook Parsers"]
-            A_JELLYFIN["jellyfin"]
-            A_PLEX["plex"]
+            A_MEDIA_SERVER["media-server<br/><i>Jellyfin + Plex webhook parsers</i>"]
         end
     end
 
     %% Dependency arrows
-    WEB -->|"uses"| Application
-    WEB -->|"maps to"| ApiTypes
-    WORKER -->|"uses"| Application
+    SERVER -->|"loads"| Config
+    SERVER -->|"calls"| Bootstrap
+    WORKER -->|"loads"| Config
+    WORKER -->|"calls"| Bootstrap
+    Bootstrap -->|"wires"| Adapters
+    Bootstrap -->|"builds deps for"| Application
+    A_HTTP -->|"uses"| Application
+    A_HTTP -->|"maps to"| ApiTypes
+    TUI -->|"typed API access"| ApiTypes
 
     Application -->|"depends on"| Domain
     UC_WRAPUP -->|"delegates to"| DS_WRAPUP
 
     Adapters -.->|"implements"| Ports
+    A_NATS -.->|"serialises with"| EventPayload
+    A_SQLITE -.->|"event queue serialises with"| EventPayload
 
     %% Key data flows
-    WEB ===|"HTTP"| DTO
+    A_HTTP ===|"HTTP"| DTO
     WORKER ===|"Events"| EVENTS
 
     classDef domain fill:#1a1a2e,stroke:#e94560,color:#fff
@@ -150,4 +156,6 @@ graph TB
     class Application app
     class Adapters adapter
     class Binaries binary
+    class Config app
+    class Bootstrap binary
     class ApiTypes api

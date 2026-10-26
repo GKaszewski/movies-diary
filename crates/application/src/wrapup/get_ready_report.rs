@@ -30,7 +30,3 @@ pub async fn execute(
         .report
         .ok_or_else(|| DomainError::NotFound("wrap-up report".into()))
 }
-
-#[cfg(test)]
-#[path = "tests/get_ready_report.rs"]
-mod tests;

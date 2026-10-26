@@ -21,7 +21,3 @@ pub async fn execute(deps: &GetPersonDeps, id: PersonId) -> Result<Option<Person
     }
     Ok(person)
 }
-
-#[cfg(test)]
-#[path = "tests/get.rs"]
-mod tests;

@@ -5,21 +5,25 @@ use std::sync::Arc;
 pub struct StorageConfig(Arc<dyn ObjectStore>);
 
 impl StorageConfig {
-    pub fn from_env() -> anyhow::Result<Self> {
-        let backend = std::env::var("IMAGE_STORAGE_BACKEND").unwrap_or_else(|_| "local".into());
-
-        let store: Arc<dyn ObjectStore> = match backend.as_str() {
+    pub fn from_config(config: &::config::StorageConfig) -> anyhow::Result<Self> {
+        let store: Arc<dyn ObjectStore> = match config.backend.as_str() {
             "s3" => build_s3_store(
-                &std::env::var("MINIO_ENDPOINT").context("MINIO_ENDPOINT required")?,
-                &std::env::var("MINIO_ACCESS_KEY_ID").context("MINIO_ACCESS_KEY_ID required")?,
-                &std::env::var("MINIO_SECRET_ACCESS_KEY")
+                config
+                    .endpoint
+                    .as_deref()
+                    .context("MINIO_ENDPOINT required")?,
+                config
+                    .access_key_id
+                    .as_deref()
+                    .context("MINIO_ACCESS_KEY_ID required")?,
+                config
+                    .secret_access_key
+                    .as_deref()
                     .context("MINIO_SECRET_ACCESS_KEY required")?,
-                &std::env::var("MINIO_BUCKET").context("MINIO_BUCKET required")?,
-                &std::env::var("MINIO_REGION").unwrap_or_else(|_| "minio".to_string()),
+                config.bucket.as_deref().context("MINIO_BUCKET required")?,
+                &config.region,
             )?,
-            "local" => build_local_store(
-                &std::env::var("IMAGE_STORAGE_PATH").unwrap_or_else(|_| "./images".into()),
-            )?,
+            "local" => build_local_store(&config.path)?,
             other => {
                 anyhow::bail!("Unknown IMAGE_STORAGE_BACKEND: {other:?}. Valid values: s3, local")
             }
@@ -58,7 +62,3 @@ fn build_local_store(path: &str) -> anyhow::Result<Arc<dyn ObjectStore>> {
         .context("Failed to initialise local file system store")?;
     Ok(Arc::new(store))
 }
-
-#[cfg(test)]
-#[path = "tests/config.rs"]
-mod tests;

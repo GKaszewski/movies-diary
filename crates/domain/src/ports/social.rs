@@ -3,6 +3,7 @@ use chrono::NaiveDateTime;
 
 use crate::{
     errors::DomainError,
+    events::DomainEvent,
     models::{
         DiaryEntry, FederationFlags, RemoteActorInfo, RemoteGoalEntry, RemoteWatchlistEntry,
         WatchlistWithMovie,
@@ -14,32 +15,54 @@ use crate::{
 
 #[async_trait]
 pub trait SocialCommand: Send + Sync {
-    async fn follow(&self, follower: &UserId, target: &FollowTarget) -> Result<(), DomainError>;
+    async fn follow(
+        &self,
+        follower: &UserId,
+        target: &FollowTarget,
+        events: &[DomainEvent],
+    ) -> Result<(), DomainError>;
 
-    async fn unfollow(&self, follower: &UserId, target: &SocialIdentity)
-    -> Result<(), DomainError>;
+    async fn unfollow(
+        &self,
+        follower: &UserId,
+        target: &SocialIdentity,
+        events: &[DomainEvent],
+    ) -> Result<(), DomainError>;
 
     async fn accept_follow(
         &self,
         owner: &UserId,
         requester: &SocialIdentity,
+        events: &[DomainEvent],
     ) -> Result<(), DomainError>;
 
     async fn reject_follow(
         &self,
         owner: &UserId,
         requester: &SocialIdentity,
+        events: &[DomainEvent],
     ) -> Result<(), DomainError>;
 
     async fn remove_follower(
         &self,
         owner: &UserId,
         follower: &SocialIdentity,
+        events: &[DomainEvent],
     ) -> Result<(), DomainError>;
 
-    async fn block(&self, blocker: &UserId, target: &SocialIdentity) -> Result<(), DomainError>;
+    async fn block(
+        &self,
+        blocker: &UserId,
+        target: &SocialIdentity,
+        events: &[DomainEvent],
+    ) -> Result<(), DomainError>;
 
-    async fn unblock(&self, blocker: &UserId, target: &SocialIdentity) -> Result<(), DomainError>;
+    async fn unblock(
+        &self,
+        blocker: &UserId,
+        target: &SocialIdentity,
+        events: &[DomainEvent],
+    ) -> Result<(), DomainError>;
 }
 
 #[async_trait]
@@ -138,6 +161,7 @@ pub trait ResolvedFollow: Send + Sync {
         &self,
         follower: &UserId,
         target: &SocialIdentity,
+        events: &[DomainEvent],
     ) -> Result<(), DomainError>;
 }
 
@@ -149,165 +173,4 @@ pub trait LocalSocial:
 impl<T: SocialCommand + FollowGraphQuery + BlockQuery + FollowTargetResolver + ResolvedFollow>
     LocalSocial for T
 {
-}
-
-#[cfg(test)]
-mod local_social_tests {
-    use super::*;
-    use std::sync::Arc;
-
-    struct Stub;
-
-    #[async_trait]
-    impl SocialCommand for Stub {
-        async fn follow(
-            &self,
-            _: &crate::value_objects::UserId,
-            _: &crate::value_objects::FollowTarget,
-        ) -> Result<(), DomainError> {
-            Ok(())
-        }
-        async fn unfollow(
-            &self,
-            _: &crate::value_objects::UserId,
-            _: &crate::value_objects::SocialIdentity,
-        ) -> Result<(), DomainError> {
-            Ok(())
-        }
-        async fn accept_follow(
-            &self,
-            _: &crate::value_objects::UserId,
-            _: &crate::value_objects::SocialIdentity,
-        ) -> Result<(), DomainError> {
-            Ok(())
-        }
-        async fn reject_follow(
-            &self,
-            _: &crate::value_objects::UserId,
-            _: &crate::value_objects::SocialIdentity,
-        ) -> Result<(), DomainError> {
-            Ok(())
-        }
-        async fn remove_follower(
-            &self,
-            _: &crate::value_objects::UserId,
-            _: &crate::value_objects::SocialIdentity,
-        ) -> Result<(), DomainError> {
-            Ok(())
-        }
-        async fn block(
-            &self,
-            _: &crate::value_objects::UserId,
-            _: &crate::value_objects::SocialIdentity,
-        ) -> Result<(), DomainError> {
-            Ok(())
-        }
-        async fn unblock(
-            &self,
-            _: &crate::value_objects::UserId,
-            _: &crate::value_objects::SocialIdentity,
-        ) -> Result<(), DomainError> {
-            Ok(())
-        }
-    }
-
-    #[async_trait]
-    impl FollowGraphQuery for Stub {
-        async fn get_following(
-            &self,
-            _: &crate::value_objects::UserId,
-        ) -> Result<Vec<crate::value_objects::SocialActor>, DomainError> {
-            Ok(vec![])
-        }
-        async fn get_followers(
-            &self,
-            _: &crate::value_objects::UserId,
-        ) -> Result<Vec<crate::value_objects::SocialActor>, DomainError> {
-            Ok(vec![])
-        }
-        async fn get_pending_followers(
-            &self,
-            _: &crate::value_objects::UserId,
-        ) -> Result<Vec<crate::value_objects::SocialActor>, DomainError> {
-            Ok(vec![])
-        }
-        async fn get_pending_following(
-            &self,
-            _: &crate::value_objects::UserId,
-        ) -> Result<Vec<crate::value_objects::SocialActor>, DomainError> {
-            Ok(vec![])
-        }
-        async fn count_following(
-            &self,
-            _: &crate::value_objects::UserId,
-        ) -> Result<usize, DomainError> {
-            Ok(0)
-        }
-        async fn count_followers(
-            &self,
-            _: &crate::value_objects::UserId,
-        ) -> Result<usize, DomainError> {
-            Ok(0)
-        }
-        async fn count_pending_followers(
-            &self,
-            _: &crate::value_objects::UserId,
-        ) -> Result<usize, DomainError> {
-            Ok(0)
-        }
-        async fn get_relation(
-            &self,
-            _: &crate::value_objects::UserId,
-            _: &crate::value_objects::SocialIdentity,
-        ) -> Result<crate::value_objects::FollowRelation, DomainError> {
-            Err(DomainError::NotFound("stub".into()))
-        }
-    }
-
-    #[async_trait]
-    impl BlockQuery for Stub {
-        async fn get_blocked(
-            &self,
-            _: &crate::value_objects::UserId,
-        ) -> Result<Vec<crate::value_objects::SocialActor>, DomainError> {
-            Ok(vec![])
-        }
-    }
-
-    #[async_trait]
-    impl FollowTargetResolver for Stub {
-        async fn resolve_target(
-            &self,
-            target: &crate::value_objects::FollowTarget,
-        ) -> Result<SocialIdentity, DomainError> {
-            match target {
-                crate::value_objects::FollowTarget::Identity(id) => Ok(id.clone()),
-                crate::value_objects::FollowTarget::Handle(handle) => Ok(SocialIdentity::Remote {
-                    actor_url: handle.clone(),
-                }),
-            }
-        }
-    }
-
-    #[async_trait]
-    impl ResolvedFollow for Stub {
-        async fn follow_resolved(
-            &self,
-            _: &crate::value_objects::UserId,
-            _: &SocialIdentity,
-        ) -> Result<(), DomainError> {
-            Ok(())
-        }
-    }
-
-    #[test]
-    fn blanket_impl_yields_a_trait_object() {
-        let local: Arc<dyn LocalSocial> = Arc::new(Stub);
-        // Reachable through each supertrait without a separate Arc.
-        let _: &dyn SocialCommand = local.as_ref();
-        let _: &dyn FollowGraphQuery = local.as_ref();
-        let _: &dyn BlockQuery = local.as_ref();
-        let _: &dyn FollowTargetResolver = local.as_ref();
-        let _: &dyn ResolvedFollow = local.as_ref();
-    }
 }

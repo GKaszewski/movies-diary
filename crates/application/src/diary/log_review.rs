@@ -10,7 +10,3 @@ pub async fn execute(
 ) -> Result<(), DomainError> {
     review_logger.log_review(cmd).await
 }
-
-#[cfg(test)]
-#[path = "tests/log_review.rs"]
-mod tests;

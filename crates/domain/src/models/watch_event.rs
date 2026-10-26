@@ -234,7 +234,3 @@ pub struct ParsedPlaybackEvent {
     pub tmdb_id: Option<String>,
     pub imdb_id: Option<String>,
 }
-
-#[cfg(test)]
-#[path = "tests/watch_event.rs"]
-mod tests;

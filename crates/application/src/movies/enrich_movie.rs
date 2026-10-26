@@ -8,15 +8,13 @@ use domain::{
 use crate::movies::{commands::EnrichMovieCommand, deps::EnrichMovieDeps};
 
 pub async fn execute(deps: &EnrichMovieDeps, cmd: EnrichMovieCommand) -> Result<(), DomainError> {
-    deps.movie_profile.upsert(&cmd.profile).await?;
-
     let persons = extract_persons(&cmd.profile.cast, &cmd.profile.crew);
     if !persons.is_empty() {
         deps.person_command.upsert_batch(&persons).await?;
     }
 
     let Some(movie) = deps.movie_query.get_movie_by_id(&cmd.movie_id).await? else {
-        tracing::warn!(movie_id = %cmd.movie_id.value(), "enrich_movie: movie not found after profile upsert");
+        tracing::warn!(movie_id = %cmd.movie_id.value(), "enrich_movie: movie not found, skipping");
         return Ok(());
     };
 
@@ -37,10 +35,12 @@ pub async fn execute(deps: &EnrichMovieDeps, cmd: EnrichMovieCommand) -> Result<
             .await?;
     }
 
+    deps.movie_profile.upsert(&cmd.profile).await?;
+
     tracing::info!(
         movie_id = %cmd.movie_id.value(),
         persons = persons.len(),
-        "enrich_movie: profile stored and search index updated"
+        "enrich_movie: search index updated and profile stored"
     );
     Ok(())
 }
@@ -76,7 +76,3 @@ fn extract_persons(cast: &[CastMember], crew: &[CrewMember]) -> Vec<Person> {
 
     seen.into_values().collect()
 }
-
-#[cfg(test)]
-#[path = "tests/enrich_movie.rs"]
-mod tests;

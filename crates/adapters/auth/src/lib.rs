@@ -22,19 +22,17 @@ pub struct AuthConfig {
 }
 
 impl AuthConfig {
-    pub fn from_env() -> anyhow::Result<Self> {
-        let secret = std::env::var("JWT_SECRET")
-            .map_err(|_| anyhow::anyhow!("JWT_SECRET env var is required"))?;
+    pub fn from_config(config: &config::AuthConfig) -> anyhow::Result<Self> {
+        let secret = config
+            .jwt_secret
+            .clone()
+            .ok_or_else(|| anyhow::anyhow!("JWT_SECRET env var is required"))?;
         if secret.is_empty() {
             anyhow::bail!("JWT_SECRET must not be empty");
         }
-        let ttl_seconds = std::env::var("JWT_TTL_SECONDS")
-            .ok()
-            .and_then(|v| v.parse().ok())
-            .unwrap_or(900u64);
         Ok(Self {
             secret,
-            ttl_seconds,
+            ttl_seconds: config.jwt_ttl_seconds,
         })
     }
 }
@@ -107,11 +105,13 @@ impl PasswordHasher for Argon2PasswordHasher {
     }
 }
 
-pub fn create() -> anyhow::Result<(
+pub fn create(
+    config: &config::AuthConfig,
+) -> anyhow::Result<(
     std::sync::Arc<dyn domain::ports::AuthService>,
     std::sync::Arc<dyn domain::ports::PasswordHasher>,
 )> {
-    let config = AuthConfig::from_env()?;
+    let config = AuthConfig::from_config(config)?;
     Ok((
         std::sync::Arc::new(JwtAuthService::new(config)),
         std::sync::Arc::new(Argon2PasswordHasher),

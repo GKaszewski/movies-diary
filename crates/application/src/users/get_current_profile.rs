@@ -50,7 +50,3 @@ pub async fn execute(
         role: found.role().clone(),
     })
 }
-
-#[cfg(test)]
-#[path = "tests/get_current_profile.rs"]
-mod tests;

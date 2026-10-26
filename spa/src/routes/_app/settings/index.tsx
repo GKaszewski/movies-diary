@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
+import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useMutation } from "@tanstack/react-query"
 import {
@@ -13,13 +14,15 @@ import {
   ShieldBan,
   Sparkles,
   Target,
+  Trash2,
   Upload,
   User,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { useAuth, useIsAdmin } from "@/components/auth-provider"
-import { reindexSearch } from "@/features/users"
+import { DeleteAccountDialog } from "@/components/delete-account-dialog"
+import { reindexSearch, useDeleteOwnAccount } from "@/features/users"
 import { useSettings, useUpdateSettings } from "@/features/goals"
 import type { UpdateUserSettingsRequest } from "@/features/goals"
 import { useDocumentTitle } from "@/hooks/use-document-title"
@@ -121,6 +124,69 @@ function SettingsPage() {
         <LogOut className="size-4" />
         {t("settings.logOut")}
       </Button>
+
+      <DangerZone />
+    </div>
+  )
+}
+
+function DangerZone() {
+  const { t } = useTranslation()
+  const { logout } = useAuth()
+  const [open, setOpen] = useState(false)
+  const del = useDeleteOwnAccount()
+
+  const handleOpenChange = (next: boolean) => {
+    if (!next) del.reset()
+    setOpen(next)
+  }
+
+  const submit = (password: string) => {
+    del.mutate(
+      { password },
+      {
+        onSuccess: () => {
+          logout()
+          // Full page load: the classic public home, not the SPA login.
+          window.location.assign("/")
+        },
+      },
+    )
+  }
+
+  return (
+    <div>
+      <p className="mb-1.5 px-1 text-xs font-medium text-red-400">{t("settings.dangerZone")}</p>
+      <div className="rounded-xl border border-red-400/40 bg-card p-3">
+        <div className="flex items-center gap-3">
+          <span className="text-red-400">
+            <Trash2 className="size-4" />
+          </span>
+          <div className="flex-1">
+            <p className="text-sm font-medium">{t("settings.deleteAccount")}</p>
+            <p className="text-xs text-muted-foreground">{t("settings.deleteAccountDesc")}</p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setOpen(true)}
+            className="border-red-400/60 text-red-400 hover:text-red-300"
+          >
+            {t("common.delete")}
+          </Button>
+        </div>
+      </div>
+      <DeleteAccountDialog
+        open={open}
+        onOpenChange={handleOpenChange}
+        title={t("settings.deleteAccount")}
+        description={t("settings.deleteAccountWarning")}
+        passwordLabel={t("settings.deleteAccountPassword")}
+        confirmLabel={t("settings.deleteAccountConfirm")}
+        pending={del.isPending}
+        error={del.error}
+        onSubmit={submit}
+      />
     </div>
   )
 }

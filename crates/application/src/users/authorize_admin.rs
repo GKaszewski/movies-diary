@@ -13,7 +13,3 @@ pub async fn execute(
     let found = deps.user.find_by_id(&id).await?;
     Ok(found.map(|user| matches!(user.role(), UserRole::Admin)))
 }
-
-#[cfg(test)]
-#[path = "tests/authorize_admin.rs"]
-mod tests;

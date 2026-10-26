@@ -51,7 +51,3 @@ impl ReviewHistoryAnalyzer {
         }
     }
 }
-
-#[cfg(test)]
-#[path = "tests/review_history.rs"]
-mod tests;

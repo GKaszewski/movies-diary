@@ -76,7 +76,3 @@ pub async fn execute(
         }
     }))
 }
-
-#[cfg(test)]
-#[path = "tests/get_movie_profile.rs"]
-mod tests;

@@ -52,7 +52,3 @@ pub async fn execute(
         entries: page.items,
     })
 }
-
-#[cfg(test)]
-#[path = "tests/get_user_feed.rs"]
-mod tests;

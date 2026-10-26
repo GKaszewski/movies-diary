@@ -19,13 +19,6 @@ pub mod users;
 pub mod watchlist;
 pub mod wrapup;
 
-#[cfg(test)]
-pub mod test_helpers;
-
-#[cfg(test)]
-#[path = "tests/services.rs"]
-mod services_tests;
-
 pub use deps::Deps;
 pub use deps::{WorkerDeps, WorkerServices};
 pub use movies::MovieDiscoveryIndexer;

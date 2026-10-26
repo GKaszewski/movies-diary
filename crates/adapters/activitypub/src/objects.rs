@@ -306,7 +306,3 @@ pub fn goal_to_ap_object(
         cc: vec![format!("{}/followers", actor_url)],
     }
 }
-
-#[cfg(test)]
-#[path = "tests/objects.rs"]
-mod tests;

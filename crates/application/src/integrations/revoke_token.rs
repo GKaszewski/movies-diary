@@ -13,7 +13,3 @@ pub async fn execute(
     let token_id = WebhookTokenId::from_uuid(cmd.token_id);
     deps.webhook_token.delete(&token_id, &user_id).await
 }
-
-#[cfg(test)]
-#[path = "tests/revoke_token.rs"]
-mod tests;

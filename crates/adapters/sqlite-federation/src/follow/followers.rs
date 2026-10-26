@@ -5,7 +5,7 @@ use k_ap::{Follower, FollowerReader, FollowerStatus, FollowerWriter, RemoteActor
 use sqlx::Row;
 
 use crate::{SqliteFederationRepository, remote_actor_from_row, status_to_str, str_to_status};
-use adapter_common::datetime_to_str;
+use sqlite::persistence::datetime_to_str;
 
 #[async_trait]
 impl FollowerWriter for SqliteFederationRepository {

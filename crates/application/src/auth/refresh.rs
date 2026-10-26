@@ -50,7 +50,3 @@ pub async fn execute(
         expires_at: generated.expires_at,
     })
 }
-
-#[cfg(test)]
-#[path = "tests/refresh.rs"]
-mod tests;

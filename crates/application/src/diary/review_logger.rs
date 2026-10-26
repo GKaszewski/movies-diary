@@ -5,10 +5,7 @@ use domain::{
     errors::DomainError,
     events::DomainEvent,
     models::Review,
-    ports::{
-        EventPublisher, MetadataClient, MovieCommand, MovieQuery, ReviewRepository,
-        WatchlistRepository,
-    },
+    ports::{MetadataClient, MovieCommand, MovieQuery, ReviewRepository, WatchlistRepository},
     value_objects::{Comment, Rating, UserId},
 };
 
@@ -22,7 +19,6 @@ pub struct DefaultReviewLogger {
     review_repo: Arc<dyn ReviewRepository>,
     watchlist_repo: Arc<dyn WatchlistRepository>,
     metadata_client: Arc<dyn MetadataClient>,
-    event_publisher: Arc<dyn EventPublisher>,
 }
 
 impl DefaultReviewLogger {
@@ -32,7 +28,6 @@ impl DefaultReviewLogger {
         review_repo: Arc<dyn ReviewRepository>,
         watchlist_repo: Arc<dyn WatchlistRepository>,
         metadata_client: Arc<dyn MetadataClient>,
-        event_publisher: Arc<dyn EventPublisher>,
     ) -> Self {
         Self {
             movie_command,
@@ -40,7 +35,6 @@ impl DefaultReviewLogger {
             review_repo,
             watchlist_repo,
             metadata_client,
-            event_publisher,
         }
     }
 }
@@ -57,13 +51,12 @@ impl ReviewLogger for DefaultReviewLogger {
             self.movie_command.as_ref(),
             self.movie_query.as_ref(),
             self.metadata_client.as_ref(),
-            self.event_publisher.as_ref(),
         )
         .await?;
 
         // Always upsert: even existing movies may have updated metadata
         if !is_new_movie {
-            self.movie_command.upsert_movie(&movie).await?;
+            self.movie_command.upsert_movie(&movie, &[]).await?;
         }
 
         let review = Review::new(
@@ -75,7 +68,6 @@ impl ReviewLogger for DefaultReviewLogger {
             cmd.watch_medium,
             cmd.spoilers,
         )?;
-        self.review_repo.save_review(&review).await?;
         let review_event = DomainEvent::ReviewLogged {
             review_id: review.id().clone(),
             movie_id: review.movie_id().clone(),
@@ -84,33 +76,27 @@ impl ReviewLogger for DefaultReviewLogger {
             watched_at: *review.watched_at(),
         };
 
-        let was_on_watchlist = self
-            .watchlist_repo
-            .remove_if_present(review.user_id(), review.movie_id())
-            .await?;
-        if was_on_watchlist {
-            let _ = self
-                .event_publisher
-                .publish(&DomainEvent::WatchlistEntryRemoved {
+        let mut events = Vec::with_capacity(2);
+        if let Some(ext_id) = movie.external_metadata_id() {
+            events.push(DomainEvent::MovieEnrichmentRequested {
+                movie_id: movie.id().clone(),
+                external_metadata_id: ext_id.clone(),
+            });
+        }
+        events.push(review_event);
+        self.review_repo.save_review(&review, &events).await?;
+
+        self.watchlist_repo
+            .remove_if_present(
+                review.user_id(),
+                review.movie_id(),
+                &[DomainEvent::WatchlistEntryRemoved {
                     user_id: review.user_id().clone(),
                     movie_id: review.movie_id().clone(),
-                })
-                .await;
-        }
+                }],
+            )
+            .await?;
 
-        if let Some(ext_id) = movie.external_metadata_id() {
-            self.event_publisher
-                .publish(&DomainEvent::MovieEnrichmentRequested {
-                    movie_id: movie.id().clone(),
-                    external_metadata_id: ext_id.clone(),
-                })
-                .await?;
-        }
-
-        self.event_publisher.publish(&review_event).await
+        Ok(())
     }
 }
-
-#[cfg(test)]
-#[path = "tests/review_logger.rs"]
-mod tests;

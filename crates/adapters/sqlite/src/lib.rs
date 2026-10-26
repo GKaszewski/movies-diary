@@ -1,45 +1,28 @@
 use sqlx::SqlitePool;
 
-mod diary;
-mod goals;
-mod image_ref;
-mod import_profile;
-mod import_session;
-mod insights;
+mod event_queue;
 mod migrations;
-mod models;
-mod movie;
-mod movie_dedup;
-mod persons;
-mod profile;
-mod profile_fields;
-mod refresh_sessions;
-mod review;
-mod stats;
-mod user_settings;
-mod users;
-mod watch_event;
-mod watchlist;
-mod wrapup;
+mod repositories;
+mod shared;
 
-pub use diary::SqliteDiaryRepository;
-pub use image_ref::{SqliteImageRefAdapter, create_image_ref};
-pub use import_profile::SqliteImportProfileRepository;
-pub use import_session::SqliteImportSessionRepository;
-pub use insights::SqliteInsightsQuery;
-pub use movie::SqliteMovieRepository;
-pub use movie_dedup::SqliteMovieDeduplicator;
-pub use persons::{SqlitePersonAdapter, create_person_adapter};
-pub use profile::SqliteMovieProfileRepository;
-pub use profile_fields::SqliteProfileFieldsRepository;
-pub use refresh_sessions::SqliteRefreshSessionAdapter;
-pub use review::SqliteReviewRepository;
-pub use sqlite_social::SqliteApContentQuery;
-pub use stats::SqliteStatsRepository;
-pub use users::SqliteUserRepository;
-pub use watch_event::{SqliteWatchEventRepository, SqliteWebhookTokenRepository};
-pub use watchlist::SqliteWatchlistRepository;
-pub use wrapup::{SqliteWrapUpRepository, SqliteWrapUpStatsQuery};
+pub use event_queue::{DbEventQueueConfig, SqliteEventQueue};
+use repositories::SqliteUserSettingsRepository;
+pub use repositories::{
+    PAYLOAD_KEYED_USER_COLUMNS, PURGED_USER_TABLES, RETAINED_USER_TABLES, SqliteAccountPurger,
+    SqliteApContentQuery, SqliteDiaryRepository, SqliteGoalRepository, SqliteImageRefAdapter,
+    SqliteImportProfileRepository, SqliteImportSessionRepository, SqliteInsightsQuery,
+    SqliteMovieDeduplicator, SqliteMovieProfileRepository, SqliteMovieRepository,
+    SqlitePersonAdapter, SqliteProcessedEventLedger, SqliteProfileFieldsRepository,
+    SqliteRefreshSessionAdapter, SqliteRemoteGoalRepository, SqliteReviewRepository,
+    SqliteSocialRepository, SqliteStatsRepository, SqliteUserRepository,
+    SqliteWatchEventRepository, SqliteWatchlistRepository, SqliteWebhookTokenRepository,
+    SqliteWrapUpRepository, SqliteWrapUpStatsQuery, URL_KEYED_USER_COLUMNS,
+    create_federated_profile_query, create_image_ref, create_person_adapter, create_search_adapter,
+};
+
+pub mod persistence {
+    pub use crate::shared::{datetime_to_str, enqueue_events};
+}
 
 pub fn create_profile_fields_repo(
     pool: sqlx::SqlitePool,
@@ -91,14 +74,18 @@ pub async fn wire(database_url: &str) -> anyhow::Result<SqliteWireOutput> {
         .await
         .context("Failed to connect to SQLite database")?;
 
+    wire_pool(pool).await
+}
+
+pub async fn wire_pool(pool: SqlitePool) -> anyhow::Result<SqliteWireOutput> {
+    use anyhow::Context;
+
     migrate(&pool)
         .await
         .map_err(|e| anyhow::anyhow!("{e}"))
         .context("Database migration failed")?;
 
-    let user_settings_repo = std::sync::Arc::new(user_settings::SqliteUserSettingsRepository::new(
-        pool.clone(),
-    ));
+    let user_settings_repo = std::sync::Arc::new(SqliteUserSettingsRepository::new(pool.clone()));
 
     let movie_repo = std::sync::Arc::new(SqliteMovieRepository::new(pool.clone()));
 
@@ -118,13 +105,11 @@ pub async fn wire(database_url: &str) -> anyhow::Result<SqliteWireOutput> {
         wrapup_repo: std::sync::Arc::new(SqliteWrapUpRepository::new(pool.clone())) as _,
         wrapup_stats: std::sync::Arc::new(SqliteWrapUpStatsQuery::new(pool.clone())) as _,
         insights: std::sync::Arc::new(SqliteInsightsQuery::new(pool.clone())) as _,
-        goal_command: std::sync::Arc::new(goals::SqliteGoalRepository::new(pool.clone())) as _,
-        goal_query: std::sync::Arc::new(goals::SqliteGoalRepository::new(pool.clone())) as _,
+        goal_command: std::sync::Arc::new(SqliteGoalRepository::new(pool.clone())) as _,
+        goal_query: std::sync::Arc::new(SqliteGoalRepository::new(pool.clone())) as _,
         user_settings: std::sync::Arc::clone(&user_settings_repo) as _,
         federation_settings: user_settings_repo as _,
-        remote_goal: std::sync::Arc::new(sqlite_social::SqliteRemoteGoalRepository::new(
-            pool.clone(),
-        )) as _,
+        remote_goal: std::sync::Arc::new(SqliteRemoteGoalRepository::new(pool.clone())) as _,
         deduplicator: std::sync::Arc::new(SqliteMovieDeduplicator::new(pool)) as _,
     })
 }

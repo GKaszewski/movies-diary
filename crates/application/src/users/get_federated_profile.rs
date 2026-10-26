@@ -13,7 +13,3 @@ pub async fn execute(
         None => Ok(None),
     }
 }
-
-#[cfg(test)]
-#[path = "tests/get_federated_profile.rs"]
-mod tests;

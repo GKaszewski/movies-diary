@@ -26,8 +26,7 @@ and each then builds only the deps it can honestly use from it.
   with no server-reachable consumer — `enrich_movie`, `reindex_search`, `merge_duplicates`,
   `enrich_person`, `handle_requested` — moved into a new `application::WorkerDeps`, built by
   `composition::build_worker_deps` and consumed only by `crates/worker`. Every field of `Deps` is
-  now reachable from `presentation` except `users.delete_account` — see the dead-code exception
-  recorded below — and every field of `WorkerDeps` is reachable from `worker`. No field needs an
+  now reachable from `presentation` and every field of `WorkerDeps` is reachable from `worker`. No field needs an
   `Option` or a Noop port to express "not for this binary" — which container it lives in already
   says that.
 - `application::WorkerServices` is the analogous split on the services side: the strict subset of
@@ -42,11 +41,6 @@ and each then builds only the deps it can honestly use from it.
   sixth, `federated_profile`, is already `Option` in `Repositories` for unrelated reasons) have no
   worker-side adapter. `DatabaseOutput` only carries fields both binaries can genuinely fill, so
   passing it instead of `Repositories` needed no new `Option` and no fake adapter.
-- Exactly one field is unreachable from its own binary, and it is called out by name rather than
-  folded into a group comment: `Deps.users.delete_account` (`DeleteAccountDeps`) has zero callers
-  anywhere in the workspace — a pre-existing dead use case, not a consequence of this split. Every
-  other field that used to be described as "worker-only" or "not reachable" is now reachable from
-  the binary that reaches it, because it lives in that binary's own container.
 - Both binaries were booted under the default feature set (`sqlite`, `sqlite-federation`) to prove
   this: the worker reached its steady polling state without panicking, and the server served both
   a Bearer-authenticated API call and a cookie-authenticated HTML page. A container wired to the
@@ -75,3 +69,10 @@ unconditionally, with no `#[cfg(feature = "federation")]` gate. `cargo build -p 
 --no-default-features --features sqlite` (federation off) fails to compile because of it. This
 predates worker unification — confirmed byte-identical at the commit before this plan started —
 and is unrelated to the composition-root split; it needs its own fix.
+
+## Realised by `bootstrap` (ADR-0013)
+
+`crates/composition` is now `crates/bootstrap`, and `crates/infra-wiring` is absorbed into it. The
+server and worker `main.rs` files no longer wire anything: `bootstrap::build_server` and
+`bootstrap::build_worker` own the whole assembly, so the single composition root is now the only
+place adapters are named. See ADR-0013.

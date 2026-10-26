@@ -34,6 +34,17 @@ impl super::RemoteWatchlistRepository for NoopRemoteWatchlistRepository {
     }
 }
 
+// ── NoopFederationDeletionNotifier ───────────────────────────────────────────
+
+pub struct NoopFederationDeletionNotifier;
+
+#[async_trait]
+impl super::FederationDeletionNotifier for NoopFederationDeletionNotifier {
+    async fn notify_deleted(&self, _: &UserId) -> Result<(), DomainError> {
+        Ok(())
+    }
+}
+
 // ── NoopSocialCommand ────────────────────────────────────────────────────────
 
 pub struct NoopSocialCommand;
@@ -44,25 +55,56 @@ impl super::SocialCommand for NoopSocialCommand {
         &self,
         _: &UserId,
         _: &crate::value_objects::FollowTarget,
+        _: &[crate::events::DomainEvent],
     ) -> Result<(), DomainError> {
         Ok(())
     }
-    async fn unfollow(&self, _: &UserId, _: &SocialIdentity) -> Result<(), DomainError> {
+    async fn unfollow(
+        &self,
+        _: &UserId,
+        _: &SocialIdentity,
+        _: &[crate::events::DomainEvent],
+    ) -> Result<(), DomainError> {
         Ok(())
     }
-    async fn accept_follow(&self, _: &UserId, _: &SocialIdentity) -> Result<(), DomainError> {
+    async fn accept_follow(
+        &self,
+        _: &UserId,
+        _: &SocialIdentity,
+        _: &[crate::events::DomainEvent],
+    ) -> Result<(), DomainError> {
         Ok(())
     }
-    async fn reject_follow(&self, _: &UserId, _: &SocialIdentity) -> Result<(), DomainError> {
+    async fn reject_follow(
+        &self,
+        _: &UserId,
+        _: &SocialIdentity,
+        _: &[crate::events::DomainEvent],
+    ) -> Result<(), DomainError> {
         Ok(())
     }
-    async fn remove_follower(&self, _: &UserId, _: &SocialIdentity) -> Result<(), DomainError> {
+    async fn remove_follower(
+        &self,
+        _: &UserId,
+        _: &SocialIdentity,
+        _: &[crate::events::DomainEvent],
+    ) -> Result<(), DomainError> {
         Ok(())
     }
-    async fn block(&self, _: &UserId, _: &SocialIdentity) -> Result<(), DomainError> {
+    async fn block(
+        &self,
+        _: &UserId,
+        _: &SocialIdentity,
+        _: &[crate::events::DomainEvent],
+    ) -> Result<(), DomainError> {
         Ok(())
     }
-    async fn unblock(&self, _: &UserId, _: &SocialIdentity) -> Result<(), DomainError> {
+    async fn unblock(
+        &self,
+        _: &UserId,
+        _: &SocialIdentity,
+        _: &[crate::events::DomainEvent],
+    ) -> Result<(), DomainError> {
         Ok(())
     }
 }

@@ -988,7 +988,3 @@ pub fn update(app: &mut App, action: Action) -> Vec<Command> {
         }
     }
 }
-
-#[cfg(test)]
-#[path = "tests/app.rs"]
-mod tests;

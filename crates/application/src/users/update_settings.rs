@@ -20,7 +20,3 @@ pub async fn execute(
     settings.set_federate_watchlist(cmd.federate_watchlist);
     deps.user_settings.save(&settings).await
 }
-
-#[cfg(test)]
-#[path = "tests/update_settings.rs"]
-mod tests;

@@ -1,10 +1,9 @@
 use std::sync::Arc;
 
-use domain::ports::{EventPublisher, WrapUpRepository, WrapUpStatsQuery};
+use domain::ports::{WrapUpRepository, WrapUpStatsQuery};
 
 pub struct HandleWrapUpRequestedDeps {
     pub wrapup_repo: Arc<dyn WrapUpRepository>,
-    pub event_publisher: Arc<dyn EventPublisher>,
     pub wrapup_stats: Arc<dyn WrapUpStatsQuery>,
 }
 
@@ -18,7 +17,6 @@ pub struct DeleteWrapUpDeps {
 
 pub struct GenerateWrapUpDeps {
     pub wrapup_repo: Arc<dyn WrapUpRepository>,
-    pub event_publisher: Arc<dyn EventPublisher>,
 }
 
 pub struct GetWrapUpDeps {

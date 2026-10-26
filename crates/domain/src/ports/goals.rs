@@ -2,15 +2,21 @@ use async_trait::async_trait;
 
 use crate::{
     errors::DomainError,
+    events::DomainEvent,
     models::Goal,
     value_objects::{GoalId, UserId},
 };
 
 #[async_trait]
 pub trait GoalCommand: Send + Sync {
-    async fn save(&self, goal: &Goal) -> Result<(), DomainError>;
-    async fn update(&self, goal: &Goal) -> Result<(), DomainError>;
-    async fn delete(&self, id: &GoalId, user_id: &UserId) -> Result<(), DomainError>;
+    async fn save(&self, goal: &Goal, events: &[DomainEvent]) -> Result<(), DomainError>;
+    async fn update(&self, goal: &Goal, events: &[DomainEvent]) -> Result<(), DomainError>;
+    async fn delete(
+        &self,
+        id: &GoalId,
+        user_id: &UserId,
+        events: &[DomainEvent],
+    ) -> Result<(), DomainError>;
 }
 
 #[async_trait]

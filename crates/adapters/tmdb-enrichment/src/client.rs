@@ -7,9 +7,12 @@ pub struct TmdbEnrichmentClient {
 }
 
 impl TmdbEnrichmentClient {
-    pub fn from_env() -> Result<Self, DomainError> {
-        let api_key = std::env::var("TMDB_API_KEY")
-            .map_err(|_| DomainError::InfrastructureError("TMDB_API_KEY is not set".into()))?;
+    pub fn from_config(config: &config::MetadataConfig) -> Result<Self, DomainError> {
+        let api_key = config
+            .tmdb_api_key
+            .clone()
+            .ok_or_else(|| DomainError::InfrastructureError("TMDB_API_KEY is not set".into()))?;
+        let _ = rustls::crypto::ring::default_provider().install_default();
         Ok(Self {
             api_key,
             http: reqwest::Client::new(),

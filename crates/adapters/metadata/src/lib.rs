@@ -68,12 +68,16 @@ impl MetadataClient for MetadataClientImpl {
     }
 }
 
-pub fn create() -> anyhow::Result<std::sync::Arc<dyn domain::ports::MetadataClient>> {
+pub fn create(
+    config: &config::MetadataConfig,
+) -> anyhow::Result<std::sync::Arc<dyn domain::ports::MetadataClient>> {
     use anyhow::Context;
-    if let Ok(key) = std::env::var("TMDB_API_KEY") {
+    if let Some(key) = config.tmdb_api_key.clone() {
         Ok(std::sync::Arc::new(MetadataClientImpl::new_tmdb(key)))
     } else {
-        let key = std::env::var("OMDB_API_KEY")
+        let key = config
+            .omdb_api_key
+            .clone()
             .context("either TMDB_API_KEY or OMDB_API_KEY must be set")?;
         Ok(std::sync::Arc::new(MetadataClientImpl::new_omdb(key)))
     }

@@ -12,13 +12,9 @@ pub async fn execute(
     end_date: chrono::NaiveDate,
 ) -> Result<(), DomainError> {
     if let Ok(Some(rec)) = deps.wrapup_repo.get_by_id(&wrapup_id).await
-        && (rec.status == WrapUpStatus::Ready || rec.status == WrapUpStatus::Generating)
+        && rec.status == WrapUpStatus::Ready
     {
-        tracing::debug!(
-            "wrapup {} already {:?}, skipping",
-            wrapup_id.value(),
-            rec.status
-        );
+        tracing::debug!("wrapup {} already ready, skipping", wrapup_id.value());
         return Ok(());
     }
 
@@ -37,10 +33,14 @@ pub async fn execute(
 
     match compute::execute(deps.wrapup_stats.clone(), query).await {
         Ok(report) => {
-            deps.wrapup_repo.set_complete(&wrapup_id, &report).await?;
-
-            deps.event_publisher
-                .publish(&DomainEvent::WrapUpCompleted { wrapup_id })
+            deps.wrapup_repo
+                .set_complete(
+                    &wrapup_id,
+                    &report,
+                    &[DomainEvent::WrapUpCompleted {
+                        wrapup_id: wrapup_id.clone(),
+                    }],
+                )
                 .await?;
             Ok(())
         }
@@ -52,7 +52,3 @@ pub async fn execute(
         }
     }
 }
-
-#[cfg(test)]
-#[path = "tests/handle_requested.rs"]
-mod tests;

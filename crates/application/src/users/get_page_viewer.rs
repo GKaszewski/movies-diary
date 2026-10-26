@@ -1,10 +1,10 @@
 //! Backs page-chrome data: the nav bar's email/admin state and pending-follow
-//! badge. Absorbs `handlers/helpers.rs::build_page_context`'s inline user lookup
+//! badge. Absorbs `html/helpers.rs::build_page_context`'s inline user lookup
 //! and pending-follower count.
 //!
 //! **Error policy (deliberately no internal tolerance):** this function
 //! propagates every error from `user` and `follow_graph` with `?`. It does not
-//! itself decide to degrade — that's a presentation-layer policy
+//! itself decide to degrade — that's an http-adapter policy
 //! (`build_page_context` logs a warning and falls back to a zeroed `PageViewer`
 //! on `Err`). Page chrome degrading is a rendering decision, not a domain one.
 
@@ -38,7 +38,3 @@ pub async fn execute(deps: &GetPageViewerDeps, user_id: Uuid) -> Result<PageView
         pending_follow_count,
     })
 }
-
-#[cfg(test)]
-#[path = "tests/get_page_viewer.rs"]
-mod tests;

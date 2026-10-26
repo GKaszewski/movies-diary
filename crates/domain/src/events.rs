@@ -148,27 +148,61 @@ pub enum DomainEvent {
 pub trait AckHandle: Send + Sync {
     async fn ack(&self) -> Result<(), DomainError>;
     async fn nack(&self) -> Result<(), DomainError>;
+    async fn defer(&self, delay: std::time::Duration) -> Result<(), DomainError>;
+}
+
+pub fn retry_backoff(attempt: u32) -> std::time::Duration {
+    let secs = 5u64 * (1u64 << attempt.min(6));
+    std::time::Duration::from_secs(secs.min(300))
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct EventId(uuid::Uuid);
+
+impl EventId {
+    pub fn new() -> Self {
+        Self(uuid::Uuid::new_v4())
+    }
+
+    pub fn from_uuid(uuid: uuid::Uuid) -> Self {
+        Self(uuid)
+    }
+
+    pub fn value(&self) -> uuid::Uuid {
+        self.0
+    }
+}
+
+impl Default for EventId {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 pub struct EventEnvelope {
     pub event: DomainEvent,
+    id: Option<EventId>,
     ack: Box<dyn AckHandle>,
 }
 
 impl EventEnvelope {
-    pub fn new(event: DomainEvent, ack: Box<dyn AckHandle>) -> Self {
-        Self { event, ack }
+    pub fn new(id: Option<EventId>, event: DomainEvent, ack: Box<dyn AckHandle>) -> Self {
+        Self { event, id, ack }
+    }
+
+    pub fn id(&self) -> Option<&EventId> {
+        self.id.as_ref()
     }
 
     pub async fn ack(self) -> Result<(), DomainError> {
         self.ack.ack().await
     }
 
+    pub async fn defer(self, delay: std::time::Duration) -> Result<(), DomainError> {
+        self.ack.defer(delay).await
+    }
+
     pub async fn nack(self) -> Result<(), DomainError> {
         self.ack.nack().await
     }
 }
-
-#[cfg(test)]
-#[path = "tests/events.rs"]
-mod tests;

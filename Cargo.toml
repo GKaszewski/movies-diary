@@ -1,111 +1,152 @@
 [workspace]
+default-members = [
+    "crates/adapters/auth",
+    "crates/adapters/event-publisher",
+    "crates/adapters/metadata",
+    "crates/adapters/poster-fetcher",
+    "crates/adapters/object-storage",
+    "crates/adapters/rss-adapter",
+    "crates/adapters/sqlite",
+    "crates/adapters/sqlite-federation",
+    "crates/adapters/activitypub",
+    "crates/adapters/export",
+    "crates/adapters/nats",
+    "crates/adapters/tmdb-enrichment",
+    "crates/adapters/image-converter",
+    "crates/adapters/http-axum",
+    "crates/adapters/importer",
+    "crates/adapters/media-server",
+    "crates/event-payload",
+    "crates/api-types",
+    "crates/application",
+    "crates/domain",
+    "crates/bootstrap",
+    "crates/server",
+    "crates/worker",
+    "crates/config",
+]
 members = [
     "crates/adapters/auth",
     "crates/adapters/event-publisher",
     "crates/adapters/metadata",
     "crates/adapters/poster-fetcher",
     "crates/adapters/object-storage",
-    "crates/adapters/poster-sync",
-    "crates/adapters/rss",
+    "crates/adapters/rss-adapter",
     "crates/adapters/sqlite",
-    "crates/adapters/postgres",
     "crates/adapters/sqlite-federation",
-    "crates/adapters/sqlite-social",
-    "crates/adapters/postgres-federation",
-    "crates/adapters/postgres-social",
-    "crates/adapters/sqlite-event-queue",
-    "crates/adapters/postgres-event-queue",
-    "crates/adapters/template-askama",
     "crates/adapters/activitypub",
     "crates/adapters/export",
-    "crates/adapters/event-payload",
+    "crates/event-payload",
     "crates/adapters/nats",
     "crates/api-types",
     "crates/application",
     "crates/adapters/tmdb-enrichment",
     "crates/adapters/image-converter",
     "crates/domain",
-    "crates/composition",
-    "crates/presentation",
+    "crates/bootstrap",
+    "crates/adapters/http-axum",
     "crates/server",
     "crates/tui",
     "crates/worker",
     "crates/adapters/importer",
-    "crates/adapters/jellyfin",
-    "crates/adapters/plex",
-    "crates/adapters/sqlite-search",
-    "crates/adapters/postgres-search",
-    "crates/adapters/adapter-common",
-    "crates/infra-wiring",
+    "crates/adapters/media-server",
+    "crates/config",
 ]
 resolver = "2"
 
+[workspace.package]
+edition = "2024"
+
 [workspace.dependencies]
-tokio = { version = "1.0", features = ["macros", "net", "rt", "rt-multi-thread", "sync", "time"] }
+tokio = { version = "1.0", default-features = false }
 bytes = "1"
 futures = "0.3"
 async-stream = "0.3"
 dotenvy = "0.15"
-serde = { version = "1.0", features = ["derive"] }
+serde = { version = "1.0", default-features = false, features = ["std"] }
 serde_json = "1.0"
 anyhow = "1.0"
 thiserror = "2.0"
 tracing = "0.1"
-tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3.23", default-features = false }
 async-trait = "0.1.92"
-uuid = { version = "1.23.0", features = ["v4", "v5", "serde"] }
-chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.23.0", default-features = false, features = ["std"] }
+chrono = { version = "0.4", default-features = false, features = ["std"] }
 chrono-tz = "0.10"
-sqlx = { version = "0.8.6", features = [
-    "runtime-tokio-rustls",
+sqlx = { version = "0.8.6", default-features = false, features = [
+    "runtime-tokio",
     "sqlite",
     "uuid",
+    "derive",
+    "migrate",
 ] }
 rand = "0.9"
-reqwest = { version = "0.13", features = ["json", "query"] }
+tempfile = "3"
+reqwest = { version = "0.13", default-features = false, features = ["json", "query", "charset", "http2", "system-proxy", "rustls-no-provider"] }
 sha2 = "0.10"
 hex = "0.4"
-object_store = { version = "0.11", features = ["aws"] }
-axum = { version = "0.8.8", features = ["macros", "multipart"] }
+object_store = { version = "0.11", default-features = false, features = ["aws"] }
+axum = { version = "0.8.8", default-features = false }
 csv = "1"
+figment = { version = "0.10", features = ["toml"] }
+rustls = { version = "0.23", default-features = false }
+tower = { version = "0.5", default-features = false }
+tower-http = { version = "0.6.8", default-features = false }
+utoipa = "5.5.0"
+utoipa-swagger-ui = "9.0.2"
+askama = "0.16.0"
+infer = "0.19.0"
+percent-encoding = "2"
+axum-governor = "2"
+email_address = "0.2.9"
+jsonwebtoken = "9"
+argon2 = { version = "0.5", default-features = false }
+rand_core = { version = "0.6", default-features = false }
+async-nats = "0.48.0"
+k-ap = { version = "0.5.1", registry = "gitea" }
+url = "2"
+ammonia = "4"
+calamine = "0.35"
+image = { version = "0.25", default-features = false }
+ravif = { version = "0.11", default-features = false }
+webp = "0.3"
+rss = { version = "2" }
+ratatui = "0.30.0"
+keyring-core = "1.0.0"
+apple-native-keyring-store = { version = "1.0.0", features = ["keychain"] }
+zbus-secret-service-keyring-store = { version = "1.0.0" }
+windows-native-keyring-store = { version = "1.0.0" }
+directories = "6"
 
 api-types = { path = "crates/api-types" }
 domain = { path = "crates/domain" }
 tmdb-enrichment = { path = "crates/adapters/tmdb-enrichment" }
 application = { path = "crates/application" }
-composition = { path = "crates/composition" }
-presentation = { path = "crates/presentation" }
+bootstrap = { path = "crates/bootstrap" }
+http-axum = { path = "crates/adapters/http-axum" }
 auth = { path = "crates/adapters/auth" }
 metadata = { path = "crates/adapters/metadata" }
 poster-fetcher = { path = "crates/adapters/poster-fetcher" }
 object-storage = { path = "crates/adapters/object-storage" }
-poster-sync = { path = "crates/adapters/poster-sync" }
 event-publisher = { path = "crates/adapters/event-publisher" }
-rss = { path = "crates/adapters/rss" }
+rss-adapter = { path = "crates/adapters/rss-adapter" }
 export = { path = "crates/adapters/export" }
 sqlite = { path = "crates/adapters/sqlite" }
 sqlite-federation = { path = "crates/adapters/sqlite-federation" }
-sqlite-social = { path = "crates/adapters/sqlite-social" }
-postgres = { path = "crates/adapters/postgres" }
-postgres-federation = { path = "crates/adapters/postgres-federation" }
-postgres-social = { path = "crates/adapters/postgres-social" }
-template-askama = { path = "crates/adapters/template-askama" }
 activitypub = { path = "crates/adapters/activitypub" }
-event-payload = { path = "crates/adapters/event-payload" }
+event-payload = { path = "crates/event-payload" }
+media-server = { path = "crates/adapters/media-server" }
 nats = { path = "crates/adapters/nats" }
-sqlite-event-queue = { path = "crates/adapters/sqlite-event-queue" }
-postgres-event-queue = { path = "crates/adapters/postgres-event-queue" }
 importer = { path = "crates/adapters/importer" }
-jellyfin = { path = "crates/adapters/jellyfin" }
-plex = { path = "crates/adapters/plex" }
 image-converter = { path = "crates/adapters/image-converter" }
-sqlite-search = { path = "crates/adapters/sqlite-search" }
-postgres-search = { path = "crates/adapters/postgres-search" }
-adapter-common = { path = "crates/adapters/adapter-common" }
-infra-wiring = { path = "crates/infra-wiring" }
+config = { path = "crates/config" }
 
 [profile.dev]
 debug = 1                    # line tables only — still debuggable, much faster linking
 
 [profile.dev.package."*"]
 opt-level = 2                # compile deps faster at runtime; paid once, cached after
+
+[profile.release]
+codegen-units = 1
+strip = true

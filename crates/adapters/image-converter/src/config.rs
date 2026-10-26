@@ -18,34 +18,22 @@ pub struct ConversionConfig {
 }
 
 impl ConversionConfig {
-    pub fn from_env() -> anyhow::Result<Option<Self>> {
-        Self::from_vars(
-            std::env::var("IMAGE_CONVERSION_ENABLED").ok().as_deref(),
-            std::env::var("IMAGE_CONVERSION_FORMAT").ok().as_deref(),
-        )
-    }
-
-    fn from_vars(enabled: Option<&str>, format: Option<&str>) -> anyhow::Result<Option<Self>> {
-        if enabled != Some("true") {
+    pub fn from_config(config: &::config::ImageConversionConfig) -> anyhow::Result<Option<Self>> {
+        if !config.enabled {
             return Ok(None);
         }
 
-        let format_str = format.ok_or_else(|| {
-            anyhow::anyhow!("IMAGE_CONVERSION_FORMAT required when IMAGE_CONVERSION_ENABLED=true")
-        })?;
-
-        let format = match format_str {
-            "avif" => Format::Avif,
-            "webp" => Format::Webp,
-            other => anyhow::bail!(
+        let format = match config.format.as_deref() {
+            Some("avif") => Format::Avif,
+            Some("webp") => Format::Webp,
+            Some(other) => anyhow::bail!(
                 "Unknown IMAGE_CONVERSION_FORMAT: {other:?}. Valid values: avif, webp"
             ),
+            None => {
+                anyhow::bail!("IMAGE_CONVERSION_FORMAT required when IMAGE_CONVERSION_ENABLED=true")
+            }
         };
 
         Ok(Some(Self { format }))
     }
 }
-
-#[cfg(test)]
-#[path = "tests/config.rs"]
-mod tests;

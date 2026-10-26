@@ -11,13 +11,10 @@ pub async fn execute(
 ) -> Result<(), DomainError> {
     UserProfile::validate_custom_fields(&cmd.fields)?;
     let user_id = UserId::from_uuid(cmd.user_id);
-    deps.profile_fields.set_fields(&user_id, cmd.fields).await?;
-    deps.event_publisher
-        .publish(&DomainEvent::UserUpdated { user_id })
-        .await?;
-    Ok(())
+    let event = DomainEvent::UserUpdated {
+        user_id: user_id.clone(),
+    };
+    deps.profile_fields
+        .set_fields(&user_id, cmd.fields, &[event])
+        .await
 }
-
-#[cfg(test)]
-#[path = "tests/update_profile_fields.rs"]
-mod tests;

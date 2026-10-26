@@ -31,6 +31,10 @@ impl PersonEnrichmentHandler {
 
 #[async_trait]
 impl EventHandler for PersonEnrichmentHandler {
+    fn name(&self) -> &'static str {
+        "person_enrichment"
+    }
+
     async fn handle(&self, event: &DomainEvent) -> Result<(), DomainError> {
         let (person_id, external_person_id) = match event {
             DomainEvent::PersonEnrichmentRequested {

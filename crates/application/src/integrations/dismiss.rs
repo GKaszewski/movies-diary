@@ -41,7 +41,3 @@ pub async fn execute(
 
     Ok(count as u32)
 }
-
-#[cfg(test)]
-#[path = "tests/dismiss.rs"]
-mod tests;

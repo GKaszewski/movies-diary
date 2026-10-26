@@ -52,7 +52,3 @@ pub async fn execute(deps: &LoginDeps, query: LoginCommand) -> Result<LoginResul
         role: user.role().clone(),
     })
 }
-
-#[cfg(test)]
-#[path = "tests/login.rs"]
-mod tests;
